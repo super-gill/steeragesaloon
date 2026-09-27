@@ -164,13 +164,30 @@ function arrive(sh){
     if(S.cash>=c){sh.pendingYard='dock';sh.dockWarn=false;news(`SS ${sh.name} is below her ${sh.autoDock}% service threshold and goes into drydock at ${PN[sh.port]}.`);}
     else if(!sh.dockWarn){sh.dockWarn=true;news(`SS ${sh.name} is due for drydock but the account cannot cover ${fmt(c)}. She keeps sailing.`,'bad',true);}}
 }
+/* extra work added to a yard visit shares the dock, the cranes and the survey: 15% off, and most of it runs alongside */
+const YARD_BUNDLE=0.85,bundleCost=(sh,k)=>Math.round(refitCost(sh,k)*YARD_BUNDLE);
+const bundleDays=days=>{const d=days.slice().sort((a,b)=>b-a);return Math.round(d[0]+0.3*d.slice(1).reduce((a,b)=>a+b,0));};
 function enterYard(sh,k){
   const c=refitCost(sh,k);if(c)book('yard',-c,'_idle');
-  sh.state='yard';sh.yardKind=k;sh.yardLeft=yardDays(sh,k);
-  news(`SS ${sh.name} enters the yard at ${PN[sh.port]} for ${YARD_NAME[k]}${c?' ('+fmt(c)+')':''}${atOwnYard(sh)?', at your own yard':''}.`);
+  const add=[];for(const x of sh.yardAdd||[]){if(x===k)continue;const cx=bundleCost(sh,x);if(S.cash>=cx){if(cx)book('yard',-cx,'_idle');add.push(x);}
+    else news(`The account cannot cover ${YARD_NAME[x]} for SS ${sh.name} (${fmt(cx)}); the yard leaves it out.`,'bad');}
+  sh.yardAdd=add;sh.state='yard';sh.yardKind=k;sh.yardLeft=bundleDays([k,...add].map(x=>yardDays(sh,x)));
+  news(`SS ${sh.name} enters the yard at ${PN[sh.port]} for ${[k,...add].map(x=>YARD_NAME[x]).join(', ')}${c?' ('+fmt(c+add.reduce((a,x)=>a+bundleCost(sh,x),0))+')':''}${atOwnYard(sh)?', at your own yard':''}.`);
 }
+/* add a job to a ship already booked into the yard, or already there */
+function addYardJob(sh,k){
+  if(!yardAdd(sh,k))return false;const c=bundleCost(sh,k);
+  if(sh.state==='yard'){if(S.cash<c)return false;if(c)book('yard',-c,'_idle');const d=yardDays(sh,k);sh.yardLeft=Math.round(Math.max(sh.yardLeft,d)+0.3*Math.min(sh.yardLeft,d));}
+  (sh.yardAdd=sh.yardAdd||[]).push(k);return true;
+}
+const yardAdd=(sh,k)=>(sh.pendingYard||sh.state==='yard')&&sh.pendingYard!==k&&sh.yardKind!==k&&!(sh.yardAdd||[]).includes(k);
 function finishYard(sh){
-  const k=sh.yardKind;sh.up=sh.up||{};sh.foul=0;if(sh.rmk){delete sh.rmk.foul1;delete sh.rmk.foul2;delete sh.rmk.foul3;}
+  sh.up=sh.up||{};sh.foul=0;
+  for(const k of [sh.yardKind,...(sh.yardAdd||[])])yardJobDone(sh,k);
+  sh.yardKind=null;sh.yardAdd=[];sh.state='port';sh.portLeft=1;
+}
+function yardJobDone(sh,k){
+  if(sh.rmk){delete sh.rmk.foul1;delete sh.rmk.foul2;delete sh.rmk.foul3;}
   if(k==='dock'){const cap=Math.min(92,condCap(sh));sh.cond=Math.max(sh.cond,Math.min(cap,sh.cond+35));news(`SS ${sh.name} is out of drydock, scraped and painted${cap<85?`, but the yard could only bring her to ${cap}%: she is getting old`:' and sound'}.`,'good');}
   if(k==='replate'){const n=sh.replates||0,gain=[25,15,8,4][Math.min(3,n)];sh.replates=n+1;sh.fat=Math.max(0,fatOf(sh)-gain);sh.cond=Math.min(condCap(sh),sh.cond+20);news(`SS ${sh.name} is re-plated and her frames renewed. ${n?'Less of her is original each time; the gain is smaller.':'Good for years yet.'}`,'good');}
   if(k==='oil'){sh.fuel='oil';news(`SS ${sh.name} now burns oil. Half her stokers have been paid off.`,'good');}
@@ -180,7 +197,6 @@ function finishYard(sh){
   if(k==='refurb'){sh.fit=100;const ns=currentStyle();const re=ns!==(sh.style||'edw');sh.style=ns;news(`SS ${sh.name} returns freshly refurbished${re?', her public rooms redone in the '+STYLES[ns].name+' style':', her saloons like new'}.`,'good');}
   if(k==='lux'){sh.up.lux=true;sh.fit=100;news(`SS ${sh.name} returns with luxury first-class suites.`,'good');}
   if(UPGRADES[k]&&k!=='lux'){sh.up[k]=true;news(`SS ${sh.name} returns with ${UPGRADES[k].name.toLowerCase()}.`,'good');}
-  sh.yardKind=null;sh.state='port';sh.portLeft=1;
 }
 function exitShip(sh,how){
   const v=how==='scrap'?sh.grt*2:Math.round(shipValue(sh)*0.9);

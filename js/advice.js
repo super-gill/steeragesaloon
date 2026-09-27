@@ -246,7 +246,7 @@ function doAction(act,d){
     case 'setlineopt':{const [rk,k,v]=d;if(S.lines[rk]){S.lines[rk][k]=v;return true;}return false;}
     case 'setship':{const [id,k,v]=d;const x=ship(id);if(x){x[k]=v;return true;}return false;}
     case 'moveship':{const [id,rk]=d;const x=ship(id);if(!x)return false;x.line=rk||null;if(x.line&&x.state==='laid'){x.state='port';x.portLeft=1;}return true;}
-    case 'setyard':{const [id,k]=d;const x=ship(id);if(!x||x.pendingYard||x.state==='yard')return false;
+    case 'setyard':{const [id,k]=d;const x=ship(id);if(!x)return false;if(x.pendingYard||x.state==='yard')return addYardJob(x,k);
       if(x.state==='sea'||x.state==='repo'){x.pendingYard=k;return true;}if(S.cash>=refitCost(x,k)){enterYard(x,k);return true;}return false;}
     case 'sellship':{const [id]=d;const x=ship(id);if(!x||S.ships.length<2)return false;if(x.state==='sea'||x.state==='repo')x.pendingExit='sell';else exitShip(x,'sell');return true;}
     case 'hire':{const [id,cid]=d;const x=ship(id),c=(S.capPool||[]).find(q=>q.id===cid);if(!x||!c)return false;

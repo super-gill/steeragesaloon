@@ -57,7 +57,9 @@ document.addEventListener('click',e=>{
     case 'wireall':UI.wireAll=!UI.wireAll;break;
     case 'lineset':if(L)L[b.dataset.k]=+b.dataset.v;break;
     case 'yard':if(sh){const k=b.dataset.k;if(sh.state==='sea'||sh.state==='repo')sh.pendingYard=k;else if(S.cash>=refitCost(sh,k))enterYard(sh,k);}break;
-    case 'unyard':if(sh&&sh.pendingYard!=='repair')sh.pendingYard=null;break;
+    case 'unyard':if(sh&&sh.pendingYard!=='repair'){sh.pendingYard=(sh.yardAdd||[]).shift()||null;}break;
+    case 'yardadd':if(sh)addYardJob(sh,b.dataset.k);break;
+    case 'unyardx':if(sh&&sh.state!=='yard')sh.yardAdd=(sh.yardAdd||[]).filter(x=>x!==b.dataset.k);break;
     case 'askexit':UI.confirm=b.dataset.k+sh.id;break;
     case 'exit':if(sh){if(sh.state==='sea'||sh.state==='repo')sh.pendingExit=b.dataset.k;else exitShip(sh,b.dataset.k);}UI.confirm=null;break;
     case 'unexit':if(sh)sh.pendingExit=null;break;

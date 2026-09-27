@@ -197,6 +197,9 @@ function renderShipDetail(sh){
   const lines=Object.keys(S.lines);
   const yb=(k,label,show)=>{if(!show)return '';const c=refitCost(sh,k);
     if(sh.pendingYard===k)return `<button class="btn" data-act="unyard">Cancel ${label.toLowerCase()} order</button>`;
+    if((sh.yardAdd||[]).includes(k))return sh.state==='yard'?`<button class="btn" disabled>${label==='Fit'?'In hand':label+': in hand'}</button>`:`<button class="btn" data-act="unyardx" data-k="${k}">${label==='Fit'?'Take off the visit':'Take '+label.toLowerCase()+' off the visit'}</button>`;
+    if(sh.state==='yard'&&sh.yardKind===k)return `<button class="btn" disabled>${label==='Fit'?'In hand':label+': in hand'}</button>`;
+    if(yardAdd(sh,k)){const cb=bundleCost(sh,k);return `<button class="btn" data-act="yardadd" data-k="${k}" ${S.cash<(sh.state==='yard'?cb:0)||S.over?'disabled':''}>${label==='Fit'?'Add':'Add '+label.toLowerCase()+' to the visit'} · ${fmt(cb)}${label==='Fit'?'':' (15% off)'} · +${Math.round(0.3*Math.min(YARD_DAYS[k],sh.state==='yard'?sh.yardLeft:YARD_DAYS[sh.pendingYard]||0)+Math.max(0,YARD_DAYS[k]-(sh.state==='yard'?sh.yardLeft:YARD_DAYS[sh.pendingYard]||0)))} days</button>`;}
     return `<button class="btn" data-act="yard" data-k="${k}" ${sh.state==='yard'||sh.pendingYard||S.cash<c||S.over?'disabled':''}>${label} · ${fmt(c)} · ${YARD_DAYS[k]} days${atSea?' (on arrival)':''}</button>`;};
   const sellV=Math.round(shipValue(sh)*0.9),scrapV=sh.grt*2;
   let exitH='';
@@ -233,7 +236,8 @@ function renderShipDetail(sh){
       ${yb('dock','Drydock overhaul',true)}${yb('replate','Re-plate and renew frames',fatOf(sh)>35)}${yb('refurb','Refurbish',sh.fit<80)}${yb('oil','Convert to oil',sh.fuel==='coal')}${yb('tourist','Tourist Third refit',S.m>=48&&sh.berths.tt===0&&sh.berths.t>0)}</div>
       ${sh.pendingYard&&sh.pendingYard!=='repair'?`<p class="warnline">Booked into the yard for ${YARD_NAME[sh.pendingYard]} on arrival.</p>`:''}
       ${sh.pendingYard==='repair'?'<p class="badline">Goes straight to the yard for fire repairs on arrival.</p>':''}
-      ${atOwnYard(sh)?'<p class="note">She is at your own yard: work here is 30% cheaper and quicker.</p>':''}</div>
+      ${atOwnYard(sh)?'<p class="note">She is at your own yard: work here is 30% cheaper and quicker.</p>':''}
+      <p class="note">${sh.pendingYard||sh.state==='yard'?'While she is booked in or in the yard, more work can go on the same visit: 15% off each extra job, and most of it runs alongside.':'Book one job and more can be added to the same visit, 15% cheaper each and mostly done alongside.'}</p></div>
     <div class="ctl"><span class="lbl">Upgrades</span><div class="stack" style="gap:6px">${Object.keys(UPGRADES).map(k=>{const u=UPGRADES[k],on=sh.up&&sh.up[k];
       return `<div class="uprow" data-key="up${k}"><div><strong>${u.name}</strong>${on?' <span class="chip sea">Fitted</span>':''}<div class="meta">${u.desc}</div></div>${on?'':yb(k,'Fit',true)}</div>`;}).join('')}</div></div>
     <div class="ctl"><span class="lbl">Retire</span><div class="btns">${exitH||'<span class="note">You cannot retire your only ship.</span>'}</div></div>

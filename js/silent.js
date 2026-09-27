@@ -77,8 +77,8 @@ function silentDaily(){
     if(sh.brk&&sh.brk.o==='fail'&&!sh.towed&&!sh.em&&sh.state==='sea'&&Math.random()<sinkRisk(sh)*3)startEmergency(sh,'seam');
     if(!isSilent(sh))continue;
     const e=estimateOf(sh),to=PN[destOf(sh)];
-    if(e.over>=1&&!sh.overdue){sh.overdue=1;news(`SS ${sh.name} is overdue at ${to}. There has been no word of her since she sailed.`,'bad',true);}
-    if(e.over>=7&&sh.overdue===1){sh.overdue=2;news(`Grave anxiety for SS ${sh.name}, now a week overdue at ${to}. Ships on her track are asked to keep a lookout.`,'bad',true);}
+    if(e.over>=1&&!sh.overdue){sh.overdue=1;news(`SS ${sh.name} is overdue at ${to}. There has been no word of her since she sailed.`,'bad');}
+    if(e.over>=7&&sh.overdue===1){sh.overdue=2;news(`Grave anxiety for SS ${sh.name}, now a week overdue at ${to}. Ships on her track are asked to keep a lookout.`,'bad');}
     if(sh.state==='lost'&&e.over>=14){
       news(`SS ${sh.name} is posted missing at Lloyd's. The bell is rung once. Nothing is known of her fate.`,'bad',true);loseShip(sh);}
   }

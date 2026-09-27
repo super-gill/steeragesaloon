@@ -2,6 +2,13 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.8.2 (27 September 2026)
+- Yard visits can be combined. Once a ship is booked into the yard or is there, any other job or upgrade can be added to the same visit for 15% off, and most of the extra work runs alongside the first, so the visit grows by far less than the job's own time. Jobs added while she is at sea are paid when she goes in. Head office advice for yard work adds to a visit already booked.
+- Upgrade rows no longer squeeze their descriptions on narrow panels.
+
+## 0.8.1 (27 September 2026)
+- Overdue ship notices no longer pause the clock. The notices still appear.
+
 ## 0.8.0 (27 September 2026)
 - Money loses its value. Prices rise over the decades, slowly in the twenties and faster after the war, and fall in a slump. Wages, coal, dues, yard work, ships, shore property and line rates follow them; each January the lines revise their tariffs and your fares follow. Cash in the bank does not: hold ships, property or government stock instead. The Finance tab shows how far prices have moved.
 - Panics. From the mid-1930s the City panics every decade or so. First rumours, then the crash: trade falls away, second-hand ship prices collapse, the bank calls in part of its loans with three months to pay, lending stops for a year and interest rises. Sometimes the Line's own bank fails and most of the cash on deposit goes with it. Unpaid called loans are taken by seizing ships in port. Do nothing and the Line goes under.
