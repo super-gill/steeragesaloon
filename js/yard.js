@@ -72,6 +72,32 @@ const EXTRAS={
   radar:{name:'Radiolocation set',from:1946,cost:()=>32000,risk:0.7,blurb:'Sees other ships and ice through fog and darkness.'},
   fins:{name:'Fin stabilisers',from:1954,cost:g=>g*2,fs:1.05,gale:0.4,blurb:'Retractable fins that all but stop the roll.'}
 };
+/* hull layouts: how a ship is arranged, and so how she looks. A liner's decks of white superstructure; a tramp's three
+   islands and well decks; a cargo liner's centre castle and cargo posts; a modern motor ship; a white fruit ship.
+   The drawing office offers the layouts that suit her purpose and the year; older ships are classified by what they carry. */
+const LAYOUTS={
+  classic:{name:'Classic liner',blurb:'Tall funnels and deck upon deck of white superstructure.'},
+  stream:{name:'Streamlined liner',from:1930,fs:1.03,cost:1.03,blurb:'Rounded fronts, fewer and broader funnels, a cruiser stern: the look of the thirties. First class likes it.'},
+  modern:{name:'Post-war liner',from:1950,fs:1.05,cost:1.04,blurb:'One great funnel, a raked stem and a sleek house. The height of fashion.'},
+  island:{name:'Three-island tramp',to:1945,cost:0.92,cargo:0.97,blurb:'Raised bow, bridge and stern with well decks between. Cheap to build; the wells cost a little space.'},
+  castle:{name:'Centre-castle cargo liner',blurb:'A long raised midship section with a white house, and cargo posts at every hatch.'},
+  motor:{name:'Modern motor ship',from:1945,cost:1.03,cargo:1.03,blurb:'Raked stem, streamlined house and a squat funnel; a little more room in her holds.'},
+  fruit:{name:'Fruit ship',blurb:'White hull to keep the holds cool, a fine bow and a neat house amidships.'}
+};
+const LAYOUT_FOR={express:['classic','stream','modern'],inter:['classic','stream','modern'],emig:['classic','stream','modern'],tourist:['classic','stream','modern'],
+  mixed:['castle','classic','stream','modern'],cargo:['island','castle','motor'],reefer:['fruit','castle','motor']};
+const layoutOk=(k,y)=>{const l=LAYOUTS[k];return !!l&&(!l.from||y>=l.from)&&(!l.to||y<l.to);};
+function defaultLayout(pk,y){
+  const pref={cargo:y<1930?'island':y<1948?'castle':'motor',reefer:'fruit',mixed:'castle'}[pk]||(y>=1950?'modern':y>=1932?'stream':'classic');
+  return layoutOk(pref,y)?pref:(LAYOUT_FOR[pk]||['classic']).find(k=>layoutOk(k,y))||'classic';
+}
+function layoutOf(sh){
+  if(sh.design&&sh.design.layout)return sh.design.layout;
+  const b=sh.berths||{},pax=(b.f||0)+(b.s||0)+(b.t||0)+(b.tt||0),y=sh.built||1900;
+  if(pax<60)return sh.up&&sh.up.reefer&&(sh.cargo||0)<9000?'fruit':y<1930?'island':y<1948?'castle':'motor';
+  if(pax<400&&(sh.cargo||0)>2000)return 'castle';
+  return y>=1950?'modern':y>=1932?'stream':'classic';
+}
 const BUILDERS={
   clyde:{name:'Clydebank Engineering and Shipbuilding',port:'GLA',price:1,speed:1,quality:1.04,slips:3,max:90000,blurb:'Builders of record-breakers. Dear, and worth it.'},
   mersey:{name:'Birkenhead Iron Works',port:'LIV',price:0.97,speed:1,quality:1,slips:2,max:45000,blurb:'Solid Mersey work for the Liverpool lines.'},
@@ -97,7 +123,7 @@ function defaultDesign(pk){
   const g=Math.round((P.size[0]*0.65+P.size[1]*0.35)/500)*500,kn=Math.round(P.speed[0]+(P.speed[1]-P.speed[0])*0.35);
   return {purpose:pk||'inter',grt:g,knots:kn,form:y>=1929?'bulb':'cruiser',subdiv:'std',mach:kn>18?'geared':'quad',fuel:'oil',
     mix:{...P.mix},pax:P.pax,quality:1,style:y>=1933?'moderne':y>=1925?'deco':'edw',extras:{wireless:true,reefer:!!P.reefer,hatch:pk==='cargo'||pk==='reefer'},
-    fac:defaultFac(pk||'inter',g,y),funnels:g>=30000?3:g>=12000?2:1,builder:'clyde',contract:'fixed',name:'',line:'',auto:{mach:true,form:true}};
+    layout:defaultLayout(pk||'inter',y),fac:defaultFac(pk||'inter',g,y),funnels:g>=30000?3:g>=12000?2:1,builder:'clyde',contract:'fixed',name:'',line:'',auto:{mach:true,form:true}};
 }
 function builderOf(d){return d.builder==='own'?ownBuilder():BUILDERS[d.builder];}
 function ownBuilder(){const p=S.shore&&S.shore.slip;if(!p)return null;
@@ -116,7 +142,9 @@ function designStats(d){
   const tot=Math.max(1,d.mix.f+d.mix.s+d.mix.t+d.mix.tt);
   for(const c of ['f','s','t','tt'])berths[c]=Math.round(paxSpace*d.mix[c]/tot/per[c]);
   if(berths.tt&&y<1925)w.push('Tourist class does not exist yet.');
-  const cargo=Math.round((room*(1-d.pax)*1.45+g*0.1)/10)*10;
+  const LY=LAYOUTS[d.layout]||{};
+  if(d.layout&&!layoutOk(d.layout,y))w.push(`${LY.name||'That layout'} is not built any more, or not yet.`);
+  const cargo=Math.round((room*(1-d.pax)*1.45+g*0.1)*(LY.cargo||1)/10)*10;
   // costs: a longer, finer hull costs more steel per ton; engines cost by the horsepower
   const hull=g*22*H.cost*SUBDIV[d.subdiv].cost*P.cx*Math.pow(e.len/lenForSize(g),0.7);
   const power=e.shp*MACH_DATA[d.mach].pps*M.cost/1.1;
@@ -124,13 +152,13 @@ function designStats(d){
   let extras=fc.cost/PX();for(const k in d.extras)if(d.extras[k]&&EXTRAS[k])extras+=EXTRAS[k].cost(g);
   // the biggest ships cost far more than their tonnage: longer slips, heavier plate, more of everything done once only
   const sizeK=1+0.6*Math.pow(Math.max(0,(g-20000)/40000),1.3);
-  const base=(hull*sizeK+power+interiors+extras)*B.price*(d.contract==='fixed'?1.08:1)*PX();
+  const base=(hull*sizeK*(LY.cost||1)+power+interiors+extras)*B.price*(d.contract==='fixed'?1.08:1)*PX();
   const price=Math.round(base/1000)*1000;
   const months=Math.round((6+g/1600)*Math.pow(Math.max(1,e.shp/15000),0.12)*[0.95,1,1.08,1.15][d.quality]*B.speed*Math.sqrt(P.cx));
   // running character: coal or oil a day at service speed, set by her engines and her lines
   const fuelK=e.fuelDay/(g/(d.fuel==='coal'?70:95));
   const crewK=M.crew*(d.fuel==='oil'?0.9:1)*clamp(0.8+e.shp/g*0.25,0.8,1.6);
-  let fs=Q.appeal*(typeof M.appeal==='function'?M.appeal(y):(M.appeal||1)),t=1,gale=1,risk=1/(B.quality*M.rel*1.02);
+  let fs=(LY.fs||1)*Q.appeal*(typeof M.appeal==='function'?M.appeal(y):(M.appeal||1)),t=1,gale=1,risk=1/(B.quality*M.rel*1.02);
   for(const k in d.extras)if(d.extras[k]&&EXTRAS[k]){const x=EXTRAS[k];if(x.fs)fs*=x.fs;if(x.t)t*=x.t;if(x.gale)gale*=x.gale;if(x.risk)risk*=x.risk;}
   if(!d.name||!d.name.trim())w.push('She needs a name.');
   else if(S.ships.some(x=>x.name.toLowerCase()===d.name.trim().toLowerCase())||(S.orders||[]).some(o=>o.d.name.toLowerCase()===d.name.trim().toLowerCase()))w.push('You already have a ship of that name.');
@@ -142,7 +170,7 @@ function designShip(d,st){
   st=st||designStats(d);
   return {id:-1,name:(d.name||'Yard No. '+(S.yardNext||534)).trim(),built:Math.floor(yNow()),grt:d.grt,knots:d.knots,berths:st.berths,cargo:st.cargo,fuel:d.fuel,base:st.price,
     up:{reefer:!!d.extras.reefer,wireless:!!d.extras.wireless},fit:100,captain:null,pay:1,morale:65,cond:95,line:null,speed:1,maint:1,autoDock:50,state:'port',port:'GLA',
-    fac:{...(d.fac||{})},fuelK:st.fuelK,crewK:st.crewK,appFS:st.fs,appT:st.t,galeK:st.gale,riskK:st.risk,safety:st.safety,decayK:st.decay,style:d.style,novelty:true,design:{form:d.form,funnels:d.funnels,purpose:d.purpose},
+    fac:{...(d.fac||{})},fuelK:st.fuelK,crewK:st.crewK,appFS:st.fs,appT:st.t,galeK:st.gale,riskK:st.risk,safety:st.safety,decayK:st.decay,style:d.style,novelty:true,design:{form:d.form,funnels:d.funnels,purpose:d.purpose,layout:d.layout},
     len:st.eng.len,beam:st.eng.beam,draught:st.eng.draught,shp:st.eng.shp,range:st.eng.range};
 }
 /* the best of the lines you run, or of all routes, for a forecast */
@@ -242,7 +270,7 @@ function deliver(o,st,kn,B){
   const d=o.d,sh=makeShip({name:d.name,built:Math.floor(yNow()),grt:d.grt,knots:kn,berths:{...st.berths},cargo:st.cargo,fuel:d.fuel,base:o.price,pi0:o.pi0||1,reefer:!!d.extras.reefer},96,B.port);
   Object.assign(sh,{fuelK:st.fuelK*Math.pow(d.knots/kn,0),crewK:st.crewK,appFS:st.fs,appT:st.t,galeK:st.gale,riskK:st.risk,safety:st.safety,decayK:st.decay,style:d.style,newUntil:S.m+18,foul:0,
     len:st.eng.len,beam:st.eng.beam,draught:st.eng.draught,shp:st.eng.shp,range:st.eng.range,designLine:d.line||null,
-    design:{form:d.form,funnels:d.funnels,purpose:d.purpose,mach:d.mach,quality:d.quality,yardNo:o.id,builder:B.name,extras:Object.keys(d.extras).filter(k=>d.extras[k])},fit:100});
+    design:{layout:d.layout||null,form:d.form,funnels:d.funnels,purpose:d.purpose,mach:d.mach,quality:d.quality,yardNo:o.id,builder:B.name,extras:Object.keys(d.extras).filter(k=>d.extras[k])},fit:100});
   sh.up.wireless=!!d.extras.wireless;sh.up.lux=d.quality>=2;sh.fac={...(d.fac||{})};
   for(const k of ['stab','fins','aircon','pool','cinema','rphone','radar','hatch','heavy','deep'])if(d.extras[k])sh.up[k]=true;
   const pool=(S.capPool||[]).slice().sort((a,b)=>b.exp-a.exp);if(pool.length){sh.captain=pool[0];S.capPool=S.capPool.filter(q=>q!==pool[0]);}

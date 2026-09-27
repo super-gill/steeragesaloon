@@ -189,9 +189,10 @@ function advice(){
   const fleetV=S.ships.reduce((a,x)=>a+shipValue(x),0);
   if(S.market.length&&S.cash-reserve>Math.min(...deps)&&(!S.ships.length||S.debt<0.6*fleetV)){
     let best=null;
-    for(const m of S.market){const dep=Math.round(m.price*0.4);if(S.cash-reserve<dep||S.debt+m.price-dep>0.62*(fleetV+m.price))continue;
+    for(const m of S.market){const dep=Math.round(m.price*0.4);if(fatOf(m)>=70||S.cash-reserve<dep||S.debt+m.price-dep>0.62*(fleetV+m.price))continue;
       for(const rk of Object.keys(ROUTES)){const q=econYear(m,rk);const pay=q.pm-(m.price-dep)*0.065/12;if(!best||pay>best.pay)best={m,rk,pay,dep};}}
-    if(best&&best.pay>(slump(S.m)>0.3?1500:500))add({id:`buy:${best.m.name}`,scope:'co',sev:'tip',gain:best.pay,title:'Put idle cash to work',
+    // only when cash is really piling up: well over a year of running costs beyond the deposit
+    if(best&&best.pay>(slump(S.m)>0.3?1500:500)&&S.cash-best.dep>12*rc)add({id:`buy:${best.m.name}`,scope:'co',sev:'tip',gain:best.pay,title:'Put idle cash to work',
       why:`SS ${best.m.name} (${money(best.dep)} down) could earn about ${money(best.pay)} a month on ${ROUTES[best.rk].name}, averaged over a year of seasons and after mortgage interest. You would still hold three months of running costs in reserve.`,
       act:[['Buy her','buyship',best.m.name,best.rk],['See brokers','tabgo','brokers']]});
   }
@@ -206,19 +207,17 @@ function advice(){
   const early=S.m<12&&S.ships.length<2;
   if(!early)for(const p in calls){if(S.shore.piers[p]||!PIER_COST[p])continue;const save=calls[p]*0.6-350,cost=PIER_COST[p];
     if(save>0&&cost/save<=48&&canSpend(cost))add({id:`pier:${p}`,scope:'co',sev:'tip',gain:save,title:`Build a pier at ${PN[p]}`,
-      why:`Your ships pay about ${money(calls[p])} a month in dues there. Your own pier cuts that by 60% and takes a day off each turnaround. ${money(cost)}, repaid in about ${Math.ceil(cost/save)} months.`,act:[['Shore','tabgo','shore']]});}
+      why:`Your ships pay about ${money(calls[p])} a month in dues there. Your own pier cuts that by 60% and takes a day off each turnaround. ${money(cost)}, repaid in about ${Math.ceil(cost/save)} months.`,act:[['Build it','shorebuy','pier',p],['Shore','tabgo','shore']]});}
   if(!early)for(const a in AGENCY){if(S.shore.agents[a])continue;const cost=AGENCY[a].cost;if(!canSpend(cost))continue;
     const ships=S.ships.filter(x=>x.line&&ACTIVE.includes(x.state)&&AGENCY[a].ports.some(p=>ROUTES[x.line].calls.includes(p)));if(!ships.length)continue;
     let before=0;for(const x of ships)before+=econ(x,x.line).pm;S.shore.agents[a]=true;let after=0;try{for(const x of ships)after+=econ(x,x.line).pm;}finally{delete S.shore.agents[a];}
     const save=after-before-300;if(save>0&&cost/save<=30)add({id:`agency:${a}`,scope:'co',sev:'tip',gain:save,title:`Open ${AGENCY[a].name}`,
-      why:`Booking agents feed passengers to every line calling at ${AGENCY[a].ports.slice(0,4).map(p=>PN[p]).join(', ')}${AGENCY[a].ports.length>4?' and more':''}. About ${money(save)} a month more for ${money(cost)} and £300 a month.`,act:[['Shore','tabgo','shore']]});}
+      why:`Booking agents feed passengers to every line calling at ${AGENCY[a].ports.slice(0,4).map(p=>PN[p]).join(', ')}${AGENCY[a].ports.length>4?' and more':''}. About ${money(save)} a month more for ${money(cost)} and £300 a month.`,act:[['Appoint them','shorebuy','agency',a],['Shore','tabgo','shore']]});}
   const fuelLast=LM?-(LM.cat.fuel||0):0;
-  if(fuelLast>6000&&!(S.shore.bunker&&S.shore.bunker.until>=S.m)&&canSpend(10000))add({id:'bunker'+Math.floor(S.m/6),scope:'co',sev:'tip',gain:fuelLast*0.12-10000/24,title:'Sign a bunker contract',
-    why:`You spent ${money(fuelLast)} on coal and oil last month. A two-year contract with a bunkering firm takes 12% off for ${money(10000)} down.`,act:[['Shore','tabgo','shore']]});
+  if(fuelLast>6000&&!(S.shore.bunker&&S.shore.bunker.until>=S.m)&&canSpend(shoreCost('bunker')))add({id:'bunker'+Math.floor(S.m/6),scope:'co',sev:'tip',gain:fuelLast*0.12-10000/24,title:'Sign a bunker contract',
+    why:`You spent ${money(fuelLast)} on coal and oil last month. A two-year contract with a bunkering firm takes 12% off for ${money(shoreCost('bunker'))} down.`,act:[['Sign it','shorebuy','bunker'],['Shore','tabgo','shore']]});
   if(S.ships.length>=4&&Object.keys(S.depts).length===0)add({id:'dept'+Math.floor(S.m/12),scope:'co',sev:'tip',gain:200,title:'Your line has outgrown one office',
     why:'With four ships or more, departments pay their way: a Fares Office, a Traffic Department, a Marine Superintendent and a Crewing Office can each act on their own advice every month. See the Shore tab.',act:[['Shore','tabgo','shore']]});
-  if(S.rep<40&&S.rep>=25)add({id:'rep-mail',scope:'co',sev:'tip',gain:100,title:'Reputation 40 unlocks mail contracts',
-    why:`The Post Office only tenders mail to lines with a name (you are at ${Math.round(S.rep)}). A contract pays well over £1,000 a round trip, and ships need wireless to carry it. Lavish tables, faster ships, popular captains and emigrant hostels raise your standing.`,act:[]});
   if(S.rep<25&&Object.values(S.lines).some(l=>l.service===0))add({id:'rep-low',scope:'co',sev:'warn',gain:300,title:'Your name is suffering',
     why:'Spartan tables lower your standing, and standing is what first class passengers buy. Consider Standard service.',act:[]});
   if(!S.conf&&Object.keys(S.wars).length)add({id:'conf-war',scope:'co',sev:'tip',gain:200,title:'The conference is an option',
@@ -232,7 +231,7 @@ function advice(){
 const advFam=id=>id.startsWith('buy:')?'buy':id.replace(/:?\d+$/,'');
 function shownAdvice(){
   const A=advice(),seen=S.advSeen=S.advSeen||{},out=[];
-  for(const h of A){const f=advFam(h.id),q=seen[f],life=h.sev==='tip'?30:45,rest=h.sev==='tip'?120:60;
+  for(const h of A){const f=advFam(h.id),q=seen[f],life=h.sev==='tip'?30:45,rest=f==='buy'?540:h.sev==='tip'?120:60;
     if(q&&q.until){if(q.until>S.t)continue;delete seen[f];}
     if(!seen[f])seen[f]={from:S.t};
     else if(S.t-seen[f].from>life){seen[f]={until:S.t+rest};continue;}
@@ -348,6 +347,8 @@ function deptWeek(){
       if(act==='moveship'&&d[1]&&!S.lines[d[1]])continue;
       // one ship moved a week at most; a moved ship is left alone for two months to show what she can do
       if(act==='moveship'&&(movedNow||o.moved[d[0]]>S.t-60))continue;
+      // a ship the owner has placed or set himself is left alone for three months
+      if((act==='moveship'||act==='setship')&&((S.ships.find(q=>q.id===d[0])||{}).ownerSet>S.t-90))continue;
       // no second thoughts on the same item inside three weeks
       if(o.last[key]>S.t-21)continue;
       // fares set by eye, not to the shilling

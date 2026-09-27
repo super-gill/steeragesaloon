@@ -18,7 +18,7 @@ const H={
   buy(m){const dep=Math.round(m.price*0.4);if(S.cash<dep)return null;S.cash-=dep;S.debt+=m.price-dep;delete m.price;S.ships.push(m);S.market=S.market.filter(x=>x!==m);return m;},
   bestRoute(sh){let b=null;for(const rk of Object.keys(ROUTES)){const q=econ(sh,rk);if(!b||q.pm>b.pm)b={rk,pm:q.pm};}return b;},
   apply(h){const a=h.act[0];if(!a)return;const [l,act,...d]=a;
-    if(['setfare','setfares','setlineopt','setship','moveship','setyard','sellship','hire','buyship','openmove'].includes(act))doAction(act,d);
+    if(['setfare','setfares','setlineopt','setship','moveship','setyard','sellship','hire','buyship','openmove','shorebuy'].includes(act))doAction(act,d);
     else if(act==='build'){const dz=JSON.parse(JSON.stringify(d[0]));dz.name='Harness '+(S.yardNext||534);placeOrder(dz);}
     else if(act==='tabgo'&&d[0]==='shore'){const [k,key]=h.id.split(':');
       if(k==='pier'||k==='agency'){if(canSpend(shoreCost(k,key)))doAction('shorebuy',[k,key]);}

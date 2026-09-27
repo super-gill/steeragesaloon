@@ -13,7 +13,7 @@ document.addEventListener('click',e=>{
     case 'tabgo':UI.tab=(UI.wide&&b.dataset.tab==='overview')?UI.tab:b.dataset.tab;(S.tutSeen=S.tutSeen||{})[b.dataset.tab]=true;break;
     case 'tutoff':if(S.tut)S.tut.off=true;break;
     case 'setfare':case 'setfares':case 'setlineopt':case 'setship':case 'moveship':case 'setyard':case 'sellship':case 'hire':case 'shorebuy':case 'deptmode':case 'openmove':case 'buyship':case 'newhead':case 'propyes':case 'propno':case 'build':
-      doAction(a,JSON.parse(b.dataset.d||'[]'));ADV_CACHE.key=null;break;
+      {const d=JSON.parse(b.dataset.d||'[]');if(a==='moveship'||a==='openmove'||a==='setship'){const x=S.ships.find(q=>q.id===d[0]);if(x)x.ownerSet=S.t;}doAction(a,d);}ADV_CACHE.key=null;break;
     case 'cappool':UI.capPool=UI.capPool===+b.dataset.id?null:+b.dataset.id;break;
     case 'mkcode':UI.copied=null;(S.tutSeen=S.tutSeen||{}).code=true;makeSaveCode().then(c=>{UI.saveCode=c;UI.saveCodeAt=dateLong(S.t)+' (game date)';UI.dirty=true;});break;
     case 'copycode':case 'copylink':{const txt=a==='copylink'?location.href.split('#')[0]+'#save='+UI.saveCode:UI.saveCode;
@@ -28,7 +28,7 @@ document.addEventListener('click',e=>{
     case 'zoom':{const m=$('map');zoomAt(+b.dataset.v>0?1.3:1/1.3,m.clientWidth/2,m.clientHeight/2);break;}
     case 'zoomfit':zoomFit();break;
     case 'view':UI.view=b.dataset.v;break;
-    case 'shipset':if(sh){if(b.dataset.k==='autoDock')sh.autoDock=DOCK_TH[+b.dataset.v];else sh[b.dataset.k]=+b.dataset.v;}break;
+    case 'shipset':if(sh){sh.ownerSet=S.t;if(b.dataset.k==='autoDock')sh.autoDock=DOCK_TH[+b.dataset.v];else sh[b.dataset.k]=+b.dataset.v;}break;
     case 'alldock':if(sh)S.ships.forEach(x=>x.autoDock=sh.autoDock);break;
     case 'dzopen':openDesigner();break;
     case 'dzclose':closeDesigner();break;
@@ -91,7 +91,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('change',e=>{
   const t=e.target;
   if(t.dataset.fare&&S.lines[S.selLine]){S.lines[S.selLine].fares[t.dataset.fare]=clamp(Math.round(+t.value||1),1,500);}
-  if(t.dataset.shipline){const sh=S.ships.find(x=>x.id===S.selShip);if(sh){sh.line=t.value||null;if(sh.line&&sh.state==='laid'){sh.state='port';sh.portLeft=1;}}}
+  if(t.dataset.shipline){const sh=S.ships.find(x=>x.id===S.selShip);if(sh){sh.line=t.value||null;sh.ownerSet=S.t;if(sh.line&&sh.state==='laid'){sh.state='port';sh.portLeft=1;}}}
   if(t.dataset.autop)UI.autoPause=t.checked;
   if(t.dataset.wirert)UI.wireRoutine=t.checked;
   if(t.dataset.dzx&&UI.dz){UI.dz.extras[t.dataset.dzx]=t.checked;}

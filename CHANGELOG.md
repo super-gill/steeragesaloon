@@ -2,6 +2,25 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.10.2 (27 September 2026)
+- Removed the "Reputation 40 unlocks mail contracts" tip: the Post Office tells you itself when you qualify.
+- "Put idle cash to work" only appears when cash is really piling up (more than a year of running costs beyond the deposit), and once withdrawn stays away for a year and a half.
+
+## 0.10.1 (27 September 2026)
+- Fixed: acting departments undid your changes. A ship whose line, speed or settings you change yourself is left alone by the departments for three months.
+- Head office advice for a bunker contract, a pier or a booking agency now has a button that does it, not just one that opens the Shore tab.
+- Head office no longer advises buying a worn-out ship from the brokers.
+
+## 0.10.0 (27 September 2026)
+- Hull layouts. Ships are drawn by how they are arranged, not all as liners:
+  - Liners: classic (tall funnels and square decks), streamlined from 1930 (rounded fronts, terraced after decks, no more than two broad funnels, cruiser stern) and post-war from 1950 (a white hull, one great funnel, a raked stem, a mast on the bridge).
+  - Cargo ships: the three-island tramp until 1945 (raised bow, bridge and poop, masts with derricks over the well decks, a tall thin funnel), the centre-castle cargo liner (a white house, cargo posts at every hatch, cruiser stern) and the modern motor ship from 1945 (grey hull, streamlined house, squat funnel).
+  - Refrigerated ships: the white fruit ship, or either cargo layout.
+  - Passenger-cargo liners: the centre-castle layout or any liner layout.
+- Freighters no longer have rows of portholes: only the crew's few, or a row under the house when she carries passengers. The cutaway puts her passengers in the house and her cargo in the holds.
+- The drawing office has a Layout choice for each kind of ship. Layouts matter a little: a tramp is cheaper to build but loses some hold space, a motor ship gains a little, and first class likes the streamlined and post-war looks.
+- Ships already built or bought are drawn in the layout that fits what they carry and when they were built.
+
 ## 0.9.2 (27 September 2026)
 - Acting departments no longer lay ships up on their own: they propose it under Needs attention and you approve or decline. A declined lay-up is not proposed again for three months.
 - Unanswered department proposals lapse after two months.

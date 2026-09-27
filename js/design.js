@@ -18,6 +18,7 @@ function closeDesigner(){UI.designOpen=false;if(UI.dzPrev>0&&!S.over){UI.speed=U
 function dzSet(k,v){
   const d=UI.dz,P=()=>PURPOSES[d.purpose];
   if(k==='purpose'){const n=defaultDesign(v);n.name=d.name;n.builder=d.builder;n.contract=d.contract;n.line=d.line||'';UI.dz=n;return;}
+  if(k==='layout'){d.layout=v;if(v==='modern')d.funnels=1;else if(v==='stream')d.funnels=Math.min(2,d.funnels);return;}
   d.auto=d.auto||{mach:false,form:false};
   if(k==='mach'||k==='fuel')d.auto.mach=false;
   if(k==='form')d.auto.form=false;
@@ -98,6 +99,7 @@ function renderDesigner(){
     </div></div>
     <div class="dz-ctl">
       <section><h3>1 · The job</h3><div class="picks">${purposes}</div><p class="note">${P.blurb}</p>
+        <div class="ctl"><span class="lbl">Layout</span><div class="picks">${(LAYOUT_FOR[d.purpose]||['classic']).map(k=>{const Lz=LAYOUTS[k],ok=layoutOk(k,y);return pick('layout',k,Lz.name,Lz.blurb+(ok?'':Lz.from&&y<Lz.from?` From ${Lz.from}.`:' No longer built.'),(d.layout||defaultLayout(d.purpose,y))===k,!ok);}).join('')}</div></div>
         <div class="ctl"><span class="lbl">The line she is for</span>${lines}<span class="note">The architects fit her to its ports, weather and distances.</span></div></section>
       <section><h3>2 · Size and speed</h3>
         <div class="ctl"><div class="row"><span class="lbl">Size</span><span class="num">${int(d.grt)} tons</span></div><input type="range" min="${g0}" max="${Math.max(g0,g1)}" step="500" value="${d.grt}" data-dz="grt" aria-label="Gross tonnage"></div>
