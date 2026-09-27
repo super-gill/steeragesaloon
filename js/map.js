@@ -1,26 +1,29 @@
 /* ================= MAP ================= */
 const W=CHART.W,H=CHART.H;
-const RP={};
-for(const [k,pts] of Object.entries(CHART.routes)){
-  const cum=[0];for(let i=1;i<pts.length;i++)cum.push(cum[i-1]+Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]));
-  RP[k]={pts,cum,len:cum[cum.length-1]};
-}
-function pointAt(rk,f,rev){
-  const R=RP[rk];f=clamp(f,0,1);if(rev)f=1-f;
-  const d=f*R.len;let i=1;while(i<R.cum.length-1&&R.cum[i]<d)i++;
-  const a=R.pts[i-1],b=R.pts[i],seg=R.cum[i]-R.cum[i-1]||1,u=(d-R.cum[i-1])/seg;
+/* position along a route's sea lane by nautical miles from its first call; rev turns the heading for homeward ships */
+function pointAtNm(gk,nm,rev){
+  const R=CHART.routes[gk],n=R.nm;nm=clamp(nm,0,R.dist);
+  let lo=1,hi=n.length-1;while(lo<hi){const mid=(lo+hi)>>1;if(n[mid]<nm)lo=mid+1;else hi=mid;}
+  const i=lo,a=R.pts[i-1],b=R.pts[i],seg=(n[i]-n[i-1])||1,u=clamp((nm-n[i-1])/seg,0,1);
   let ang=Math.atan2(b[1]-a[1],b[0]-a[0])*180/Math.PI;if(rev)ang+=180;
   return {x:a[0]+(b[0]-a[0])*u,y:a[1]+(b[1]-a[1])*u,ang};
 }
-const PORT_XY=c=>CHART.ports[PN[c]];
-const PORT_LABEL={GLA:[8,-14,'left'],LIV:[8,4,'left'],NAP:[-8,-14,'right'],HAL:[-8,-16,'right'],NYC:[8,6,'left']};
-const PORT_STACK={GLA:[-14,-6,-11,0],LIV:[-14,6,-11,0],NAP:[0,14,0,10],HAL:[14,6,11,0],NYC:[14,-4,11,0]};
+const PORT_XY=c=>CHART.ports[c];
+// label offsets [dx, dy, side]: tuned so the crowded Channel, Irish Sea and Maritimes stay legible
+const PORT_LABEL={GLA:[8,-14,'left'],LIV:[8,-4,'left'],SOU:[8,-10,'left'],CHE:[8,2,'left'],AVO:[-8,-14,'right'],QUE:[-8,0,'right'],MOV:[-8,-14,'right'],
+  HAM:[8,-8,'left'],NYC:[8,4,'left'],HAL:[8,-2,'left'],SJN:[-8,-14,'right'],QBC:[-8,-14,'right'],MTL:[-8,2,'right'],NAP:[-8,-14,'right'],GEN:[8,-14,'left'],
+  GIB:[8,2,'left'],LIS:[-8,-6,'right'],NOL:[8,-14,'left'],GAL:[-8,-14,'right'],KIN:[8,2,'left'],FRE:[-8,-6,'right'],LAG:[8,-6,'left'],RIO:[8,-2,'left'],MVD:[8,2,'left'],BUE:[-8,-14,'right']};
+const PORT_STACK={GLA:[-14,-6,-11,0],LIV:[-14,6,-11,0],HAL:[14,8,11,0],NYC:[14,-4,11,0]};
+const stackOf=c=>PORT_STACK[c]||[12,10,10,0];
 document.getElementById('mapsvg').setAttribute('viewBox',`0 0 ${W} ${H}`);
 document.querySelector('#mapsvg rect').setAttribute('height',H);document.querySelector('#mapsvg rect').setAttribute('width',W);
 document.getElementById('land').setAttribute('d',CHART.land);
 document.getElementById('grat').setAttribute('d',CHART.grat);
-document.getElementById('portsO').innerHTML=Object.keys(PN).map(c=>{const [x,y]=PORT_XY(c),[dx,dy,side]=PORT_LABEL[c];
-  return `<div class="port" style="left:${x/W*100}%;top:${y/H*100}%"><i></i><span style="${side}:${side==='left'?dx:-dx}px;top:${dy}px">${PN[c]}</span></div>`;}).join('');
+function renderPorts(){
+  const used=new Set();for(const rk in S.lines)for(const p of ROUTES[rk].calls)used.add(p);if(S.lines.stl)geoEnds('stlw').forEach(p=>used.add(p));
+  setHTML(document.getElementById('portsO'),Object.keys(PN).map(c=>{const [x,y]=PORT_XY(c),[dx,dy,side]=PORT_LABEL[c]||[8,-6,'left'];
+    return `<div class="port${used.has(c)?'':' dim'}" data-key="p${c}" style="left:${x/W*100}%;top:${y/H*100}%"><i></i><span style="${side}:${side==='left'?dx:-dx}px;top:${dy}px">${PN[c]}</span></div>`;}).join(''));
+}
 
 /* pan and zoom: the world is sized in pixels so markers and labels stay crisp */
 const VIEW={s:null,x:0,y:0,fit:1,z:1};
@@ -57,18 +60,19 @@ function zoomFit(){VIEW.s=null;applyView();}
 function renderMap(){
   const g=Object.keys(ROUTES).map(rk=>{
     const open=!!S.lines[rk],war=open&&S.wars[rk],sel=S.selLine===rk&&UI.tab==='lines';
-    const pts=RP[rk].pts.map(p=>p.join(',')).join(' ');
+    const pts=GEO(geoKey(rk,S.m)).pts.map(p=>p.join(',')).join(' ');
     return `<polyline class="route ${open?'open':'closed'}${war?' war':''}${sel?' selr':''}" points="${pts}"/><polyline class="routehit" data-act="selline" data-id="${rk}" points="${pts}"><title>${ROUTES[rk].name}</title></polyline>`;
   }).join('');
   setHTML(document.getElementById('routesG'),g);
   let chips='';
   for(const rk of Object.keys(ROUTES)){
-    const p=pointAt(rk,0.5,false);const tags=[];
+    const gk=geoKey(rk,S.m),p=pointAtNm(gk,GEO(gk).dist*0.5,false);const tags=[];
     if(S.wars[rk]&&S.lines[rk])tags.push('<span class="chipm war" style="position:static;transform:none">Rate war</span>');
     if(S.mail[rk])tags.push('<span class="chipm mail" style="position:static;transform:none">Mail</span>');
     if(tags.length)chips+=`<div class="chipm" style="left:${p.x/W*100}%;top:${p.y/H*100}%;border:0;background:none;padding:0;display:flex;gap:4px">${tags.join('')}</div>`;
   }
   setHTML(document.getElementById('chipsHolder'),chips);
+  renderPorts();
   const b=document.getElementById('banner');
   if(UI.speed===0&&UI.banner&&!S.over){b.hidden=false;setHTML(b,`<span>${UI.banner}</span><button class="btn primary" data-act="speed" data-v="1">Resume</button>`);}
   else b.hidden=true;
@@ -84,9 +88,9 @@ function drawShips(){
     if(!el){el=document.createElement('div');el.className='shipm';el.dataset.act='selship';el.dataset.id=sh.id;
       el.innerHTML='<div class="hit"></div><div class="hull"></div><div class="tag"></div>';O.appendChild(el);MARKS[sh.id]=el;}
     let x,y,ang=0,ox=0,oy=0;
-    if(sh.state==='sea'){const p=pointAt(sh.legRoute,sh.pos/ROUTES[sh.legRoute].dist,sh.dir===1);x=p.x;y=p.y;ang=p.ang;}
+    if(sh.state==='sea'){const g=GEO(sh.geo),p=pointAtNm(sh.geo,sh.dir===0?sh.pos:g.dist-sh.pos,sh.dir===1);x=p.x;y=p.y;ang=p.ang;}
     else if(sh.state==='repo'){el.hidden=true;continue;}
-    else{const c=sh.port,i=stackN[c]=(stackN[c]||0)+1,st=PORT_STACK[c],[px,py]=PORT_XY(c);
+    else{const c=sh.port,i=stackN[c]=(stackN[c]||0)+1,st=stackOf(c),[px,py]=PORT_XY(c);
       x=px;y=py;ox=st[0]+st[2]*(i-1);oy=st[1]+st[3]*(i-1);ang=st[2]<0?180:st[2]>0?0:90;}
     el.hidden=false;
     el.style.left=(x/W*100)+'%';el.style.top=(y/H*100)+'%';
@@ -105,7 +109,7 @@ function drawRivals(){
   for(const x of S.rships||[]){
     seen.add(x.id);let el=RMARKS[x.id];
     if(!el){el=document.createElement('div');el.className='shipm rival';el.innerHTML='<div class="hull"></div>';O.prepend(el);RMARKS[x.id]=el;}
-    const out=x.phase<0.5,f=out?x.phase*2:(1-x.phase)*2,p=out?pointAt(x.route,f,false):pointAt(x.route,1-f,true);
+    const gk=geoKey(x.route,S.m),d=GEO(gk).dist,out=x.phase<0.5,p=pointAtNm(gk,(out?x.phase*2:(1-x.phase)*2)*d,!out);
     el.style.left=(p.x/W*100)+'%';el.style.top=(p.y/H*100)+'%';
     const h=el.firstChild;h.style.transform=`rotate(${p.ang}deg)`;h.style.background=RIVAL_P[x.owner].col;
     const t=`SS ${x.name}, ${RIVALS[x.owner].name}`;if(el.title!==t)el.title=t;

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* Steerage & Saloon balance harness.
-   Loads the real game simulation (no screen), fixes the dice to a seed, and plays 1921-1930
+   Loads the real game simulation (no screen), fixes the dice to a seed, and plays 1921-1935
    under scripted strategies. Usage:
      node tools/harness.js                 all strategies, 20 seeds each
      node tools/harness.js advisor 50      one strategy, 50 seeds
@@ -18,16 +18,15 @@ const H={
   buy(m){const dep=Math.round(m.price*0.4);if(S.cash<dep)return null;S.cash-=dep;S.debt+=m.price-dep;delete m.price;S.ships.push(m);S.market=S.market.filter(x=>x!==m);return m;},
   bestRoute(sh){let b=null;for(const rk of Object.keys(ROUTES)){const q=econ(sh,rk);if(!b||q.pm>b.pm)b={rk,pm:q.pm};}return b;},
   apply(h){const a=h.act[0];if(!a)return;const [l,act,...d]=a;
-    if(act==='setfare'){const [rk,c,v]=d;if(S.lines[rk])S.lines[rk].fares[c]=v;}
-    else if(act==='setfares'){const [rk,f,s2,t]=d;if(S.lines[rk])Object.assign(S.lines[rk].fares,{f,s:s2,t});}
-    else if(act==='setlineopt'){const [rk,k,v]=d;if(S.lines[rk])S.lines[rk][k]=v;}
-    else if(act==='setship'){const [id,k,v]=d;const x=S.ships.find(q=>q.id===id);if(x)x[k]=v;}
-    else if(act==='moveship'){const [id,rk]=d;const x=S.ships.find(q=>q.id===id);if(x)H.assign(x,rk);}
-    else if(act==='setyard'){const [id,k]=d;const x=S.ships.find(q=>q.id===id);if(x&&!x.pendingYard){if(x.state==='sea'||x.state==='repo')x.pendingYard=k;else if(S.cash>=refitCost(x,k))enterYard(x,k);}}
+    if(['setfare','setfares','setlineopt','setship','moveship','setyard','sellship','hire'].includes(act))doAction(act,d);
+    else if(act==='tabgo'&&d[0]==='shore'){const [k,key]=h.id.split(':');
+      if(k==='pier'||k==='agency'){if(canSpend(shoreCost(k,key)))doAction('shorebuy',[k,key]);}
+      else if(k.startsWith('bunker'))doAction('shorebuy',['bunker']);
+      else if(k.startsWith('dept')){const q=Object.keys(DEPTS).find(x=>!S.depts[x]);if(q&&canSpend(DEPTS[q].cost))doAction('shorebuy',['dept',q]);}}
     else if(act==='selline'){const [rk]=d;if(!S.lines[rk]&&S.cash>12000)H.openLine(rk);}
-    else if(act==='tabgo'&&d[0]==='brokers'){H.expand(12000);}
+    else if(act==='tabgo'&&d[0]==='brokers'){H.expand(12000,true);}
     UI.rev=(UI.rev||0)+1;},
-  expand(buffer){for(const m of S.market.slice()){const dep=Math.round(m.price*0.4);if(S.cash-dep<buffer)continue;
+  expand(buffer,prudent){buffer=Math.max(buffer,prudent?3*runningCost():0);for(const m of S.market.slice()){const dep=Math.round(m.price*0.4);if(S.cash-dep<buffer)continue;
       const b=H.bestRoute(m);if(!b||b.pm<500)continue;const sh=H.buy(m);if(!sh)continue;if(!S.lines[b.rk])H.openLine(b.rk);if(S.lines[b.rk])H.assign(sh,b.rk);return true;}return false;}
 };
 const STRATS={
@@ -35,6 +34,9 @@ const STRATS={
   cautious(){if(S.m===0)S.ships.forEach(s=>{s.autoDock=50;s.maint=1;});},
   advisor(){for(let i=0;i<4;i++){const A=advice().filter(h=>h.act.length);if(!A.length)break;H.apply(A[0]);S.dismiss[A[0].id]=S.m;}},
   expander(){H.expand(8000);},
+  prudent(){H.expand(12000,true);},
+  office(){for(const k of ['fares','marine','traffic','crew'])if(S.ships.length>=3&&!S.depts[k]&&canSpend(DEPTS[k].cost)){doAction('shorebuy',['dept',k]);doAction('deptmode',[k,true]);}
+    H.expand(12000,true);},
   undercutter(){for(const rk in S.lines){const L=S.lines[rk],r=ROUTES[rk];L.fares.t=Math.round(r.ref.t*0.75);L.fares.s=Math.round(r.ref.s*0.85);}H.expand(10000);},
   liverpool(){if(!S.lines.liv){if(H.openLine('liv'))S.ships.forEach(s=>H.assign(s,'liv'));}
     else{for(const m of S.market.slice()){const dep=Math.round(m.price*0.4);if(S.cash-dep>10000){const sh=H.buy(m);if(sh)H.assign(sh,'liv');break;}}}}
@@ -52,7 +54,7 @@ function runGame(strategy, seed) {
     const strat=STRATS['${strategy}'];
     const byYear={},routes={},first=[];let wars=0,lastM=-1;
     const origNews=news;news=function(t,k,p){if(/leads a rate war/.test(t))wars++;return origNews(t,k,p);};
-    while(!S.over&&S.t<3300){
+    while(!S.over&&S.t<5480){
       if(S.m!==lastM){lastM=S.m;
         if(S.lastMonth){for(const k in S.lastMonth.lines)if(ROUTES[k])routes[k]=(routes[k]||0)+S.lastMonth.lines[k];if(S.lastMonth.m<12)first.push(S.lastMonth.net);}
         if(S.m%12===0)byYear[1921+S.m/12]=Math.round(netWorth());
@@ -68,7 +70,7 @@ const k = v => (v < 0 ? '-' : '') + '£' + (Math.abs(v) >= 1e6 ? (Math.abs(v) / 
 function report(strategy, n) {
   const R = []; for (let i = 0; i < n; i++) R.push(runGame(strategy, i + 1));
   const busts = R.filter(r => r.bust !== null);
-  const yrs = [1922, 1924, 1926, 1928, 1930];
+  const yrs = [1922, 1924, 1926, 1928, 1930, 1932, 1935];
   const med = y => { const v = R.map(r => r.byYear[y]).filter(v => v !== undefined); return v.length ? k(pct(v, 0.5)) : '-'; };
   const routes = {}; R.forEach(r => { for (const q in r.routes) routes[q] = (routes[q] || 0) + r.routes[q] / n; });
   console.log(`\n${strategy.toUpperCase()}  (${n} runs)`);
@@ -82,5 +84,5 @@ function report(strategy, n) {
 const [, , only, nArg] = process.argv;
 const n = +nArg || 20;
 const t0 = Date.now();
-for (const s of only ? [only] : ['idle', 'cautious', 'advisor', 'expander', 'undercutter', 'liverpool']) report(s, n);
+for (const s of only ? [only] : ['idle', 'cautious', 'advisor', 'expander', 'prudent', 'office', 'undercutter', 'liverpool']) report(s, n);
 console.log(`\n(${((Date.now() - t0) / 1000).toFixed(1)}s)`);

@@ -11,7 +11,7 @@ function patchNode(a,b){
   for(const at of [...b.attributes]){if(focused&&at.name==='value')continue;if(a.getAttribute(at.name)!==at.value)a.setAttribute(at.name,at.value);}
   const tag=a.tagName;
   if(tag==='INPUT'){if(!focused){if(a.type==='checkbox'||a.type==='radio'){if(a.checked!==b.checked)a.checked=b.checked;}else if(a.value!==b.value)a.value=b.value;}return;}
-  if(tag==='TEXTAREA'){if(!focused&&a.value!==b.value)a.value=b.value;return;}
+  if(tag==='TEXTAREA'){if(!focused&&!a.hasAttribute('data-keep')&&a.value!==b.value)a.value=b.value;return;}
   patchChildren(a,b);
   if(tag==='SELECT'&&!focused){const o=b.querySelector('option[selected]');const v=o?o.value:(a.options[0]?a.options[0].value:'');if(a.value!==v)a.value=v;}
 }
@@ -40,20 +40,23 @@ function setHTML(el,h){
 const keyOf=t=>{let h=0;for(let i=0;i<t.length;i++)h=(h*31+t.charCodeAt(i))|0;return 'k'+(h>>>0).toString(36);};
 const condBar=c=>{const cls=c<40?'low':c<65?'mid':'';return `<div class="bar" aria-hidden="true"><i class="${cls}" style="width:${Math.round(c)}%"></i></div>`;};
 const seg=(act,k,v,labels,extra='')=>`<div class="seg" role="group">${labels.map((l,i)=>`<button data-act="${act}" data-k="${k}" data-v="${i}" aria-pressed="${v===i}" ${extra}>${l}</button>`).join('')}</div>`;
-const TABS=[['overview','Overview'],['fleet','Fleet'],['lines','Lines'],['brokers','Brokers'],['finance','Finance'],['company','Company']];
+const TABS=[['overview','Overview'],['fleet','Fleet'],['lines','Lines'],['brokers','Brokers'],['shore','Shore'],['finance','Finance'],['company','Company']];
 function shipStatus(sh){
-  if(sh.state==='sea'){const r=ROUTES[sh.legRoute],to=PN[sh.dir===0?r.b:r.a],left=(r.dist-sh.pos)/(sh.knots*SPD[sh.speed]*24*sh.slow*(sh.limp?0.4:1));
+  if(sh.state==='sea'){const g=GEO(sh.geo||geoKey(sh.legRoute,S.m)),to=PN[destOf(sh)],calls=sh.stops?sh.stops.length-sh.nextCall:0;
+    const left=(g.dist-sh.pos)/(knotsOf(sh)*SPD[sh.speed]*24*sh.slow*(sh.limp?0.4:1))+calls*CALL_DAYS,dl=Math.max(1,Math.ceil(left)),days=`${dl} day${dl>1?'s':''}`;
+    const nx=sh.stops&&sh.stops[sh.nextCall]?` Next call ${PN[sh.stops[sh.nextCall][0]]}.`:'';
     if(sh.incident)return {chip:'<span class="chip bad">Orders needed</span>',short:'Broken down, orders needed',text:`Broken down ${int(sh.incident.nm)} nm from the nearest port, ${to} bound.`};
-    if(sh.towed)return {chip:'<span class="chip bad">Under tow</span>',short:`Under tow to ${to}`,text:`Under tow to ${to} at 5 knots, about ${Math.max(1,Math.ceil((r.dist-sh.pos)/120))} days.`};
+    if(sh.towed)return {chip:'<span class="chip bad">Under tow</span>',short:`Under tow to ${to}`,text:`Under tow to ${to} at 5 knots, about ${Math.max(1,Math.ceil((g.dist-sh.pos)/120))} days.`};
     if(sh.stopLeft>0)return {chip:'<span class="chip bad">Broken down</span>',short:`Repairing at sea, ${Math.ceil(sh.stopLeft)} days`,text:`Stopped mid-ocean, ${to} bound. Engineers expect ${Math.ceil(sh.stopLeft)} more days.`};
-    return {chip:sh.limp?'<span class="chip bad">Limping</span>':'<span class="chip sea">At sea</span>',short:`${to} bound, ${Math.max(1,Math.ceil(left))} day${Math.max(1,Math.ceil(left))>1?'s':''}`,text:`Bound for ${to}. ${int(sh.pos)} of ${int(r.dist)} nm, about ${Math.max(1,Math.ceil(left))} day${Math.max(1,Math.ceil(left))>1?'s':''} to go.`};}
+    if(sh.callLeft>0)return {chip:'<span class="chip inport">Calling</span>',short:`Calling at ${PN[sh.callPort]}`,text:`Calling at ${PN[sh.callPort]} for passengers, mail and cargo, ${to} bound. About ${days} to go.`};
+    return {chip:sh.limp?'<span class="chip bad">Limping</span>':'<span class="chip sea">At sea</span>',short:`${to} bound, ${days}`,text:`Bound for ${to}. ${int(sh.pos)} of ${int(g.dist)} nm, about ${days} to go.${nx}`};}
   if(sh.state==='port')return {chip:'<span class="chip inport">In port</span>',short:`Loading at ${PN[sh.port]}`,text:`Loading at ${PN[sh.port]}. Sails in ${Math.max(1,Math.ceil(sh.portLeft))} day${Math.ceil(sh.portLeft)>1?'s':''}.`};
   if(sh.state==='repo')return {chip:'<span class="chip sea">Positioning</span>',short:`Sailing light to ${PN[sh.repoTo]}`,text:`Sailing light to ${PN[sh.repoTo]}, ${Math.max(1,Math.ceil(sh.repoLeft))} days out.`};
   if(sh.state==='yard')return {chip:'<span class="chip yard">In yard</span>',short:`In yard, ${Math.ceil(sh.yardLeft)} days`,text:`${YARD_NAME[sh.yardKind][0].toUpperCase()+YARD_NAME[sh.yardKind].slice(1)} at ${PN[sh.port]}, ${Math.ceil(sh.yardLeft)} days left.`};
   return {chip:'<span class="chip idle">Laid up</span>',short:`Laid up at ${PN[sh.port]}`,text:`Laid up at ${PN[sh.port]} on a skeleton crew. Assign her to a line to sail.`};
 }
 function renderHeader(){
-  setHTML($('brand'),`<span class="eyebrow">Steerage &amp; Saloon · The Morven Line</span><h1>${dateLong(S.t)}</h1>`);
+  setHTML($('brand'),`<span class="eyebrow">Steerage &amp; Saloon · The Morven Line <span class="ver">v${GAME_VERSION}</span></span><h1>${dateLong(S.t)}</h1>`);
   setHTML($('clock'),`<span class="lbl">Clock</span><div class="seg" role="group" aria-label="Game speed">${['Pause','1×','3×','7×'].map((l,i)=>`<button data-act="speed" data-v="${i}" aria-pressed="${UI.speed===i}" ${S.over?'disabled':''}>${l}</button>`).join('')}</div>`);
   setHTML($('stats'),`<div><dt>Cash</dt><dd class="${S.cash<0?'neg':''}">${fmt(S.cash)}</dd></div><div><dt>Bank debt</dt><dd>${fmt(S.debt)}</dd></div>
     <div><dt>Reputation</dt><dd>${Math.round(S.rep)} <small>${repWord(S.rep)}</small></dd></div><div><dt>Net worth</dt><dd>${fmt(netWorth())}</dd></div>`);
@@ -102,13 +105,13 @@ function renderOverview(){
   setHTML($('pane-overview'),`
     <section class="sec">${tiles}</section>
     <section class="sec"><h2>Needs attention</h2><div class="ratchet stack" data-key="r-alerts">${al}</div></section>
-    <section class="sec"><h2>Advice from Mr Ferguson, company secretary</h2><div class="ratchet stack" data-key="r-advice">${adviceHTML(UI.allAdvice?ADV:ADV.slice(0,3),'Mr Ferguson has no complaints. The books look sound at current settings.')}
+    <section class="sec"><h2>Advice from head office</h2><div class="ratchet stack" data-key="r-advice">${adviceHTML(UI.allAdvice?ADV:ADV.slice(0,3),'Mr Ferguson has no complaints. The books look sound at current settings.')}
       ${ADV.length>3?`<button class="btn quiet" data-act="alladvice" style="width:fit-content">${UI.allAdvice?'Show fewer':'Show all '+ADV.length+' suggestions'}</button>`:''}</div></section>
     <section class="sec"><h2>Fleet</h2><div class="glist">${fleet}</div></section>
     <section class="sec"><h2>Lines · month to date</h2><div class="glist">${lines||'<p class="note">No lines open.</p>'}</div></section>
     <section class="sec"><h2>Shortcuts</h2><div class="btns">
       <button class="btn" data-act="tabgo" data-tab="brokers">Buy a ship</button><button class="btn" data-act="newline">Open a new line</button>
-      <button class="btn" data-act="tabgo" data-tab="finance">Bank and ledger</button><button class="btn" data-act="tabgo" data-tab="company">Conference</button></div></section>
+      <button class="btn" data-act="tabgo" data-tab="finance">Bank and ledger</button><button class="btn" data-act="tabgo" data-tab="shore">Shore and offices</button><button class="btn" data-act="tabgo" data-tab="company">Conference</button><button class="btn" data-act="tabgo" data-tab="company">Save code</button></div></section>
     <section class="sec">${chart()}</section>
     <section class="sec"><div class="row"><h2>Shipping news</h2><label class="check"><input type="checkbox" id="autoP" data-autop="1" ${UI.autoPause?'checked':''}> Pause on big events</label></div>
       <ul class="news">${S.news.slice(0,25).map(n=>`<li class="${n.k}" data-key="${keyOf(n.d+n.t)}"><time>${dateLong(n.d)}</time>${n.t}</li>`).join('')}</ul></section>`);
@@ -125,7 +128,7 @@ function renderFleet(){
 }
 function decisionHTML(sh){
   const I=sh.incident;if(!I)return '';
-  const r=ROUTES[sh.legRoute],rep=Math.round(sh.grt*0.3),port=PN[I.back?(sh.dir===0?r.a:r.b):(sh.dir===0?r.b:r.a)];
+  const [gA,gB]=geoEnds(sh.geo),rep=Math.round(sh.grt*0.3),port=PN[I.back?(sh.dir===0?gA:gB):(sh.dir===0?gB:gA)];
   const refund=Math.round(0.7*sh.load.paxRev);
   return `<div class="card decision"><strong>SS ${sh.name} has broken down, ${int(I.nm)} nm from ${port}</strong>
     <button class="btn" data-act="incident" data-k="wait">Repair at sea<small>About ${I.wait} days adrift · repairs ${fmt(rep)} · passengers furious, reputation −3</small></button>
@@ -153,7 +156,7 @@ function renderShipDetail(sh){
   }
   setHTML($('detailD'),`
     <div><div class="row"><h3>SS ${sh.name}</h3>${st.chip}</div>
-    <div class="meta">Built ${sh.built} (${age} years) · ${int(sh.grt)} grt · ${sh.knots} knots · ${sh.fuel}-fired · worth about ${fmt(shipValue(sh))}</div></div>
+    <div class="meta">Built ${sh.built} (${age} years) · ${int(sh.grt)} grt · ${knotsOf(sh)} knots · ${sh.fuel}-fired · worth about ${fmt(shipValue(sh))}</div></div>
     <p style="margin:0">${st.text}</p>
     ${decisionHTML(sh)}
     <div class="ratchet stack" data-key="r-ship">${adviceHTML(advice().filter(h=>h.scope==='ship'&&h.ref===sh.id))}</div>
@@ -169,29 +172,54 @@ function renderShipDetail(sh){
     <div class="ctl"><span class="lbl">Service threshold</span>${seg('shipset','autoDock',DOCK_TH.indexOf(sh.autoDock),DOCK_TH.map(v=>v?v+'%':'Off'))}
       <span class="note">${sh.autoDock?`She books herself into drydock (${fmt(refitCost(sh,'dock'))}, ${YARD_DAYS.dock} days, +35 condition) at the first port after falling below ${sh.autoDock}%.`:'Off. You must send her to the yard yourself.'} Condition drops every crossing, faster at full speed and with age. Maintenance slows the decline.</span>
       <button class="btn" data-act="alldock" style="width:fit-content">Use ${sh.autoDock?sh.autoDock+'%':'Off'} for the whole fleet</button></div>
+    ${captainHTML(sh)}
+    <div class="ctl"><div class="row"><span class="lbl">Crew</span><span class="meta">Morale ${Math.round(sh.morale)} · ${sh.morale<40?'sullen':sh.morale<60?'grumbling':sh.morale<75?'content':'a happy ship'}</span></div>${condBar(sh.morale)}
+      ${seg('shipset','pay',sh.pay,['Low pay','Union rates','Good pay'])}
+      <span class="note">Wages ${fmt(crewCost(sh))} a month. Low pay saves money but a sullen crew breaks more, serves worse and deserts in port. Morale settles toward what pay and the master earn.</span></div>
+    <div class="ctl"><div class="row"><span class="lbl">Fittings</span><span class="meta">${Math.round(sh.fit)}%</span></div>${condBar(sh.fit)}
+      <span class="note">Cabins, saloons and linen wear out a few points a year. Tired fittings put off first and second class. A refurbishment restores them.</span></div>
     <div class="ctl"><span class="lbl">Shipyard</span><div class="btns">
-      ${yb('dock','Drydock overhaul',true)}${yb('oil','Convert to oil',sh.fuel==='coal')}${yb('tourist','Tourist Third refit',S.m>=48&&sh.berths.tt===0&&sh.berths.t>0)}</div>
+      ${yb('dock','Drydock overhaul',true)}${yb('refurb','Refurbish',sh.fit<80)}${yb('oil','Convert to oil',sh.fuel==='coal')}${yb('tourist','Tourist Third refit',S.m>=48&&sh.berths.tt===0&&sh.berths.t>0)}</div>
       ${sh.pendingYard&&sh.pendingYard!=='repair'?`<p class="warnline">Booked into the yard for ${YARD_NAME[sh.pendingYard]} on arrival.</p>`:''}
-      ${sh.pendingYard==='repair'?'<p class="badline">Goes straight to the yard for fire repairs on arrival.</p>':''}</div>
+      ${sh.pendingYard==='repair'?'<p class="badline">Goes straight to the yard for fire repairs on arrival.</p>':''}
+      ${atOwnYard(sh)?'<p class="note">She is at your own yard: work here is 30% cheaper and quicker.</p>':''}</div>
+    <div class="ctl"><span class="lbl">Upgrades</span><div class="stack" style="gap:6px">${Object.keys(UPGRADES).map(k=>{const u=UPGRADES[k],on=sh.up&&sh.up[k];
+      return `<div class="uprow" data-key="up${k}"><div><strong>${u.name}</strong>${on?' <span class="chip sea">Fitted</span>':''}<div class="meta">${u.desc}</div></div>${on?'':yb(k,'Fit',true)}</div>`;}).join('')}</div></div>
     <div class="ctl"><span class="lbl">Retire</span><div class="btns">${exitH||'<span class="note">You cannot retire your only ship.</span>'}</div></div>`);
 }
 
+function captainHTML(sh){
+  const c=sh.captain;if(!c)return '';
+  const tr=t=>`<span class="chip ${CAPT_TRAITS[t].good?'sea':'bad'}" title="${CAPT_TRAITS[t].desc}">${CAPT_TRAITS[t].name}</span>`;
+  const pool=UI.capPool===sh.id?`<div class="stack" style="gap:6px">${(S.capPool||[]).map(q=>`<div class="uprow" data-key="cp${q.id}"><div><strong>${q.name}</strong> ${q.traits.map(tr).join(' ')}<div class="meta">Age ${q.age} · ${q.exp} years in command · £${q.wage} a month${q.traits.length?' · '+q.traits.map(t=>CAPT_TRAITS[t].desc).join(' '):' · no marked habits'}</div></div>
+      <button class="btn" data-act="hire" data-d='${JSON.stringify([sh.id,q.id])}' ${S.over?'disabled':''}>Appoint</button></div>`).join('')||'<p class="note">No masters are looking for a ship this quarter.</p>'}<p class="note">The pool changes every quarter. A replaced master under 63 goes back into it.</p></div>`:'';
+  return `<div class="ctl"><span class="lbl">Master</span><div class="card" style="gap:4px"><div class="row"><strong>${c.name}</strong><span class="meta">£${c.wage} a month</span></div>
+    <div class="meta">Age ${c.age} · ${c.exp} years in command${c.age>=62?' · retires at 65':''}</div>
+    ${c.traits.length?`<div class="btns">${c.traits.map(tr).join('')}</div><p class="note" style="margin:0">${c.traits.map(t=>CAPT_TRAITS[t].desc).join(' ')}</p>`:'<p class="note" style="margin:0">A steady master with no marked habits.</p>'}
+    <button class="btn quiet" data-act="cappool" data-id="${sh.id}" style="width:fit-content">${UI.capPool===sh.id?'Close':'Masters available ('+(S.capPool||[]).length+')'}</button></div>${pool}</div>`;
+}
+const callsText=rk=>ROUTES[rk].calls.map(p=>PN[p]).join(' → ');
+function cargoText(rk){const r=ROUTES[rk],m=S.m,f=(cd,dir)=>{const c=COMM[cd.c],sn=c.season?cargoSeason(cd.c,m):1;
+  return `${dir}: ${c.name.toLowerCase()}, about ${int(cd.t)} t a sailing${c.reefer?' (refrigerated holds needed)':''}${c.season?`, ${sn>=1.2?'in season now':sn<=0.7?'out of season now':'fair this month'}`:''}`;};
+  return f(r.cargo.out,'Outward')+'. '+f(r.cargo.home,'Homeward')+'.';}
 /* ---------- Lines ---------- */
 function renderLines(){
   const net=rk=>S.mtd.lines[rk]||0;
-  const items=Object.keys(ROUTES).map(rk=>{const r=ROUTES[rk],open=!!S.lines[rk],n=shipsOn(rk).length,sel=S.selLine===rk,t=S.tension[rk]||0;
+  const item=rk=>{const r=ROUTES[rk],open=!!S.lines[rk],n=shipsOn(rk).length,sel=S.selLine===rk,t=S.tension[rk]||0;
     const chip=!open?'<span class="chip idle">Not served</span>':S.wars[rk]?'<span class="chip bad">Rate war</span>':t>=40&&!S.conf?`<span class="chip yard">${tensionWord(t)}</span>`:S.mail[rk]?'<span class="chip sea">Mail</span>':'';
     return `<button class="item${open?'':' off'}" data-key="l${rk}" data-act="selline" data-id="${rk}" aria-pressed="${sel}">
       <span class="row"><span class="nm">${r.name}</span>${chip}</span>
-      <span class="row meta"><span>${int(r.dist)} nm${open?` · ${n} ship${n===1?'':'s'}`:''}</span>${open?`<span class="num ${net(rk)<0?'neg':'pos'}">${fmt(net(rk))}</span>`:''}</span></button>`;}).join('');
+      <span class="row meta"><span>${r.calls.length>2?(r.calls.length-2)+' call'+(r.calls.length>3?'s':'')+' · ':''}${int(r.dist)} nm${open?` · ${n} ship${n===1?'':'s'}`:''}</span>${open?`<span class="num ${net(rk)<0?'neg':'pos'}">${fmt(net(rk))}</span>`:''}</span></button>`;};
+  const items=ROUTE_GROUPS.map(g=>`<div class="lgroup" data-key="lg${g}">${g}</div>`+Object.keys(ROUTES).filter(rk=>ROUTES[rk].group===g).map(item).join('')).join('');
+
   setHTML($('linesL'),`<h2>Lines · month to date</h2>${items}`);
   renderLineDetail(S.selLine||'hal');
 }
 function renderLineDetail(rk){
   const r=ROUTES[rk],L=S.lines[rk];
   if(!L){
-    setHTML($('lineD'),`<div><h3>${r.name}</h3><div class="meta">${int(r.dist)} nautical miles · line rates £${r.ref.f} / £${r.ref.s} / £${r.ref.t}</div></div>
-      <p style="margin:0">${r.blurb}</p>
+    setHTML($('lineD'),`<div><h3>${r.name}</h3><div class="meta">${callsText(rk)} · ${int(r.dist)} nautical miles · line rates £${r.ref.f} / £${r.ref.s} / £${r.ref.t}</div></div>
+      <p style="margin:0">${r.blurb}</p><p class="note">${cargoText(rk)}${r.winter?' From December to April the St Lawrence is frozen: sailings run to Saint John instead.':''}</p>
       <p class="note">Opening a line means setting up booking agents and a pier office at both ends. You then assign ships to it from the Fleet tab.</p>
       <button class="btn primary" data-act="openline" data-id="${rk}" ${S.cash<2500||S.over?'disabled':''} style="width:fit-content">Open this line · £2,500</button>${marketHTML(rk,null)}`);
     return;
@@ -204,28 +232,25 @@ function renderLineDetail(rk){
     const ld=(i)=>{const x=L.last[i];return x&&x.pax[c]?`${int(x.pax[c].n)}/${x.pax[c].cap}`:'–';};
     return `<tr><td>${CL_NAME[c]}</td><td><input type="number" id="fare-${rk}-${c}" data-fare="${c}" min="1" max="500" value="${L.fares[c]}" aria-label="${CL_NAME[c]} fare in pounds"></td>
       <td class="r num">£${lr}${S.conf?`<div class="meta">floor £${confFloor(rk,c)}</div>`:''}</td><td class="r num">${ld(0)}</td><td class="r num">${ld(1)}</td></tr>`;}).join('');
-  const rt=w.seaDays+e.seaDays+8;
-  const legNet=l=>l.paxRev+l.cargoRev+l.mail-l.fuelC-l.prov-l.agents-l.port;
-  const fixed=(crewCost(rep)+insCost(rep)+MAINT_COST[rep.maint]*rep.grt/8000)*rt/30;
-  const perMonth=(legNet(w)+legNet(e)-fixed)*30/rt-ADV_COST[L.adv]/Math.max(1,ships.length);
+  const ec=econ(rep,rk),rt=ec.rt,perMonth=ec.pm;
   const fp=l=>CL.filter(c=>l.pax[c]).map(c=>`${CL_NAME[c]} ${int(l.pax[c].n)}`).join(', ');
   const nAct=ships.filter(x=>ACTIVE.includes(x.state)).length;
   const estPax=ships.length?(CL.reduce((a,c)=>a+(w.pax[c]?w.pax[c].n:0)+(e.pax[c]?e.pax[c].n:0),0))*30/rt*Math.max(1,nAct):0;
   setHTML($('lineD'),`
-    <div><div class="row"><h3>${r.name}</h3>${war?'<span class="chip bad">Rate war</span>':''}</div><div class="meta">${int(r.dist)} nm · ${ships.length} ship${ships.length===1?'':'s'} · month to date ${fmt(S.mtd.lines[rk]||0)}</div></div>
-    <p class="note">${r.blurb}</p>
+    <div><div class="row"><h3>${r.name}</h3>${war?'<span class="chip bad">Rate war</span>':''}</div><div class="meta">${callsText(rk)} · ${int(r.dist)} nm · ${ships.length} ship${ships.length===1?'':'s'} · month to date ${fmt(S.mtd.lines[rk]||0)}</div></div>
+    <p class="note">${r.blurb} ${cargoText(rk)}${r.winter?(r.winter.months.includes(S.m%12)?' The St Lawrence is frozen: sailings run to Saint John until May.':' From December to April the St Lawrence freezes and sailings run to Saint John.'):''}</p>
     <div class="ratchet stack" data-key="r-line">${adviceHTML(advice().filter(h=>h.scope==='line'&&h.ref===rk))}</div>
     ${war?`<p class="badline">The conference lines have cut fares to ${Math.round(war.mult*100)}% of the line rate for ${war.left} more month${war.left>1?'s':''}.</p>`:''}
     ${S.mail[rk]?`<p class="note">Mail contract: ${fmt(S.mail[rk].pay)} per round trip. Ships at economical speed or broken down do not earn it.</p>`:''}
-    <div class="tablewrap"><table><thead><tr><th>Class</th><th>Fare £</th><th class="r">Line rate</th><th class="r">Last west</th><th class="r">Last east</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="tablewrap"><table><thead><tr><th>Class</th><th>Fare £</th><th class="r">Line rate</th><th class="r">Last out</th><th class="r">Last home</th></tr></thead><tbody>${rows}</tbody></table></div>
     <div class="grid2">
       <div class="ctl"><span class="lbl">Service and table</span>${seg('lineset','service',L.service,['Spartan','Standard','Lavish'])}</div>
       <div class="ctl"><span class="lbl">Advertising · £/month</span>${seg('lineset','adv',L.adv,['None','300','800','1,500'])}</div>
     </div>
     <div class="forecast"><span class="lbl">Next sailing forecast · SS ${rep.name}</span>
-      <dl class="kv"><dt>Westbound</dt><dd>${fmt(w.paxRev+w.cargoRev)}</dd><dt>Eastbound</dt><dd>${fmt(e.paxRev+e.cargoRev)}</dd>
+      <dl class="kv"><dt>Outward</dt><dd>${fmt(w.paxRev+w.cargoRev)}</dd><dt>Homeward</dt><dd>${fmt(e.paxRev+e.cargoRev)}</dd>
       <dt>Round trip</dt><dd>${Math.round(rt)} days</dd><dt><strong>Profit per ship per month</strong></dt><dd class="${perMonth<0?'neg':'pos'}"><strong>${fmt(perMonth)}</strong></dd></dl>
-      <p class="note">West: ${fp(w)||'none'}. East: ${fp(e)||'none'}. Before head office costs and bad luck.</p></div>
+      <p class="note">Out: ${fp(w)||'no passengers'}, ${int(w.cargoT)} t ${COMM[w.comm].name.toLowerCase()}. Home: ${fp(e)||'no passengers'}, ${int(e.cargoT)} t ${COMM[e.comm].name.toLowerCase()}. Before head office costs and bad luck.</p></div>
     ${marketHTML(rk,estPax,Math.max(1,nAct))}
     <div class="ctl"><span class="lbl">Ships on this line</span><div class="btns">${ships.map(s=>`<button class="btn" data-act="selship" data-id="${s.id}">SS ${s.name}</button>`).join('')||'<span class="note">None yet. Assign ships from the Fleet tab.</span>'}</div></div>
     <div class="btns">${UI.confirm==='close'+rk?`<button class="btn danger" data-act="closeline" data-id="${rk}">Confirm: close line</button><button class="btn" data-act="cancel">Keep it</button>`:`<button class="btn danger" data-act="askclose" data-id="${rk}">Close this line</button>`}</div>`);
@@ -261,11 +286,36 @@ function renderBrokers(){
   const body=S.market.length?S.market.map(sh=>{const dep=Math.round(sh.price*0.4);return `<div class="card" data-key="m${sh.id}">
       <div class="row"><strong>SS ${sh.name}</strong><span class="num">${fmt(sh.price)}</span></div>
       <div class="meta">Built ${sh.built} · ${int(sh.grt)} grt · ${sh.knots} knots · ${sh.fuel} · lying at ${PN[sh.port]}</div>
-      <div class="meta">${sh.berths.f} first, ${sh.berths.s} second, ${sh.berths.t} third · ${int(sh.cargo)} t cargo · condition ${sh.cond}%</div>
+      <div class="meta">${sh.berths.f} first, ${sh.berths.s} second, ${sh.berths.t} third · ${int(sh.cargo)} t cargo${sh.up&&sh.up.reefer?' (refrigerated)':''} · condition ${Math.round(sh.cond)}%${sh.up&&sh.up.wireless?' · wireless':''}</div>
+      <div class="meta">Comes with ${sh.captain.name}${sh.captain.traits.length?' ('+sh.captain.traits.map(t=>CAPT_TRAITS[t].name.toLowerCase()).join(', ')+')':''}</div>
       ${sh.note?`<div class="meta">${sh.note}</div>`:''}
       <button class="btn" data-act="buy" data-id="${sh.id}" ${S.cash<dep||S.over?'disabled':''} style="width:fit-content">Buy · ${fmt(dep)} down, ${fmt(sh.price-dep)} mortgaged</button></div>`;}).join('')
     :'<p class="note">Nothing on the lists. New ships come up every quarter.</p>';
   setHTML($('pane-brokers'),`<section class="sec"><h2>Ships for sale</h2><p class="note">The brokers send a new list every quarter. The bank mortgages 60% of the price; you pay the rest in cash. Bought ships arrive laid up where they lie.</p>${body}</section>`);
+}
+
+/* ---------- Shore ---------- */
+function renderShore(){
+  const sh=S.shore,buy=(kind,key,label)=>{const c=shoreCost(kind,key);return `<button class="btn" data-act="shorebuy" data-d='${JSON.stringify([kind,key])}' ${S.cash<c||S.over?'disabled':''}>${label||'Buy'} · ${fmt(c)}</button>`;};
+  const own='<span class="chip sea">Owned</span>';
+  const depts=Object.keys(DEPTS).map(k=>{const d=DEPTS[k],o=S.depts[k];
+    return `<div class="card" data-key="dp${k}"><div class="row"><strong>${d.name}</strong>${o?own:`<span class="meta">${fmt(d.upkeep)} a month</span>`}</div><p class="note" style="margin:0">${d.does}</p>
+      ${o?`<div class="row"><div class="seg" role="group"><button data-act="deptmode" data-d='${JSON.stringify([k,0])}' aria-pressed="${!o.auto}">Advise</button><button data-act="deptmode" data-d='${JSON.stringify([k,1])}' aria-pressed="${!!o.auto}">Act</button></div>
+        <span class="meta">${o.auto?'Acts on its own advice once a month and reports in the news':'Advice only; you decide'}</span></div>`:buy('dept',k,'Open')}</div>`;}).join('');
+  const myPorts=[...new Set(Object.keys(S.lines).flatMap(rk=>ROUTES[rk].calls).concat(Object.keys(sh.piers)))].filter(p=>PIER_COST[p]);
+  const piers=myPorts.map(p=>`<div class="uprow" data-key="pi${p}"><div><strong>${PN[p]}</strong><div class="meta">${S.ships.filter(x=>x.line&&ROUTES[x.line].calls.includes(p)).length} of your ships call here</div></div>${sh.piers[p]?own:buy('pier',p)}</div>`).join('')||'<p class="note">Open a line first. Piers can be built at the ports your lines call at.</p>';
+  const agents=Object.keys(AGENCY).map(a=>`<div class="uprow" data-key="ag${a}"><div><strong>${AGENCY[a].name}</strong><div class="meta">${AGENCY[a].ports.map(p=>PN[p]).join(', ')}</div></div>${sh.agents[a]?own:buy('agency',a,'Appoint')}</div>`).join('');
+  const hostels=HOSTEL_PORTS.map(p=>`<div class="uprow" data-key="ho${p}"><div><strong>${PN[p]}</strong></div>${sh.hostels[p]?own:buy('hostel',p,'Build')}</div>`).join('');
+  const yards=Object.keys(YARD_PORTS).map(p=>`<div class="uprow" data-key="yd${p}"><div><strong>A repair yard on ${YARD_PORTS[p]}</strong><div class="meta">At ${PN[p]}</div></div>${sh.yards[p]?own:buy('yard',p)}</div>`).join('');
+  const bk=sh.bunker&&sh.bunker.until>=S.m;
+  setHTML($('pane-shore'),`
+    <section class="sec"><h2>Head office</h2><p class="note">Each department gives advice in its own field for free once it exists, and can be told to act on it. Acting departments keep a cash reserve of three months' running costs and never buy ships or property. Mr Ferguson still advises on the rest.</p><div class="stack">${depts}</div></section>
+    <section class="sec"><h2>Piers</h2><p class="note">Your own pier cuts port dues there by 60% and takes a day off each turnaround. ${fmt(350)} a month each to run.</p><div class="stack" style="gap:6px">${piers}</div></section>
+    <section class="sec"><h2>Booking agencies</h2><p class="note">Agents in a region book passengers for every line calling there: steerage up 12%, cabin classes 6%. ${fmt(300)} a month each.</p><div class="stack" style="gap:6px">${agents}</div></section>
+    <section class="sec"><h2>Emigrant hostels</h2><p class="note">Clean beds and a medical check before sailing. Steerage up 8% on lines calling there, fewer quarantine scares, and a little reputation. ${fmt(250)} a month each.</p><div class="stack" style="gap:6px">${hostels}</div></section>
+    <section class="sec"><h2>Repair yards</h2><p class="note">Refits, overhauls and upgrades at your own yard cost 30% less and take 30% less time. The first step toward building your own ships. ${fmt(1200)} a month each.</p><div class="stack" style="gap:6px">${yards}</div></section>
+    <section class="sec"><h2>Bunkers</h2><div class="uprow"><div><strong>Bunker contract</strong><div class="meta">${bk?`12% off coal and oil until ${monthName(sh.bunker.until)}`:'Two years at 12% off coal and oil, paid up front'}</div></div>${bk?own:buy('bunker',null,'Sign')}</div></section>
+    <section class="sec"><p class="note">Shore establishment costs ${fmt(shoreUpkeep())} a month in all, and its property is worth about ${fmt(shoreValue())} to the bank.</p></section>`);
 }
 
 /* ---------- Finance ---------- */
@@ -309,23 +359,31 @@ function renderCompany(){
       <p class="note">Joining costs £3,000 plus £350 a month. Members accept a fare floor and a steerage quota in exchange for peace.</p>
       <button class="btn" data-act="join" ${S.cash<3000||S.over?'disabled':''} style="width:fit-content">Join for £3,000</button>`;
   setHTML($('pane-company'),`
+    <section class="sec"><h2>Save code</h2><p class="note">The game saves itself in this browser, but clearing site data wipes it. A save code holds the whole game as text: keep it somewhere safe, or paste it into another browser or computer to carry on there.</p>
+      <div class="btns"><button class="btn" data-act="mkcode">${UI.saveCode?'Make a fresh code':'Make a save code'}</button>${UI.saveCode?`<button class="btn" data-act="copycode">Copy code</button><button class="btn" data-act="copylink">Copy save link</button>`:''}</div>
+      ${UI.saveCode?`<textarea class="code" readonly rows="3" data-key="sc" onclick="this.select()">${UI.saveCode}</textarea><p class="note">Made ${UI.saveCodeAt}. ${int(UI.saveCode.length)} characters.${UI.copied?' <strong>'+UI.copied+'</strong>':''}</p>`:''}
+      <label class="lbl" for="loadCode">Load a save code</label><textarea id="loadCode" data-keep="1" class="code" rows="2" placeholder="Paste a code here"></textarea>
+      <div class="btns">${UI.confirm==='load'?`<button class="btn danger" data-act="loadcode">Confirm: replace this game</button><button class="btn" data-act="cancel">Cancel</button>`:`<button class="btn" data-act="askload">Load code</button>`}</div>
+      ${UI.loadMsg?`<p class="${UI.loadMsg.ok?'note':'badline'}">${UI.loadMsg.t}</p>`:''}</section>
     <section class="sec"><h2>North Atlantic conference</h2>${conf}</section>
     <section class="sec"><h2>Rival lines</h2>${Object.keys(RIVAL_P).map(o=>{const x=RIVALS[o],fleet=S.rships.filter(y=>y.owner===o),by=ownersByRoute(o),mv=S.rmoves.filter(q=>q.o===o).slice(0,2);
       return `<div class="card" data-key="rv${o}"><div class="row"><strong><span class="rdot" style="background:${RIVAL_P[o].col}"></span>${x.name}</strong><span class="chip ${S.rivals[o].cash<50000?'bad':S.rivals[o].cash<250000?'yard':'sea'}">${rivalHealth(S.rivals[o].cash)}</span></div>
         <div class="meta">${x.flag} · ${fleet.length} ship${fleet.length===1?'':'s'} · ${RIVAL_P[o].aggr>=1.1?'aggressive':RIVAL_P[o].aggr>=0.9?'combative':'cautious'}</div>
         <div class="meta">${by||'No ships at sea'}</div>
         ${mv.length?`<div class="meta">${mv.map(q=>`${MONTHS[q.m%12].slice(0,3)} ${1921+Math.floor(q.m/12)}: ${q.kind==='add'?'new SS '+q.ship+' on '+ROUTES[q.rk].name:q.kind==='move'?'moved SS '+q.ship+' to '+ROUTES[q.to].name:'scrapped SS '+q.ship}`).join('<br>')}</div>`:''}</div>`;}).join('')}</section>
+    <section class="sec"><h2>Milestones</h2><div class="stack" style="gap:4px">${MILESTONES.map(([id,label])=>`<div class="row" data-key="mi${id}"><span class="${S.miles[id]!==undefined?'':'meta'}">${label}</span><span class="meta">${S.miles[id]!==undefined?monthName(S.miles[id]):'Not yet'}</span></div>`).join('')}</div></section>
     <section class="sec"><h2>Settings</h2><label class="check"><input type="checkbox" id="autoP2" data-autop="1" ${UI.autoPause?'checked':''}> Pause the clock on big events</label></section>
-    <section class="sec"><h2>Game</h2><div class="btns">${UI.confirm==='new'?`<button class="btn danger" data-act="new">Confirm: start again</button><button class="btn" data-act="cancel">Keep playing</button>`:`<button class="btn" data-act="new">New game</button>`}</div></section>`);
+    <section class="sec"><h2>Game</h2><p class="note">Version <strong>${GAME_VERSION}</strong>, released ${GAME_BUILT}.</p><div class="btns">${UI.confirm==='new'?`<button class="btn danger" data-act="new">Confirm: start again</button><button class="btn" data-act="cancel">Keep playing</button>`:`<button class="btn" data-act="new">New game</button>`}</div></section>`);
 }
 function renderModal(){
   const el=$('modal');if(!S.over){el.innerHTML='';return;}
   const nw=netWorth();
-  const v=S.over==='bust'?'The bank has foreclosed. The Morven Line is finished.':nw<50000?'You survived the decade, just. The Line limps into the Depression.':
-    nw<250000?'A respectable independent line. The big companies know your name.':nw<600000?'A serious force on the Atlantic. The conference would rather have you inside than out.':'A great line. Your flagship is the talk of New York.';
-  setHTML(el,`<div class="modal" role="dialog" aria-modal="true" aria-labelledby="mt"><div class="panel"><h3 id="mt">${S.over==='bust'?'Foreclosed':'January 1930'}</h3><p style="margin:0">${v}</p>
+  const v='The bank has foreclosed. The Morven Line is finished.';
+  setHTML(el,`<div class="modal" role="dialog" aria-modal="true" aria-labelledby="mt"><div class="panel"><h3 id="mt">Foreclosed</h3><p style="margin:0">${v}</p>
     <dl class="kv"><dt>Net worth</dt><dd>${fmt(nw)}</dd><dt>Fleet</dt><dd>${S.ships.length}</dd><dt>Reputation</dt><dd>${Math.round(S.rep)}</dd><dt>Reached</dt><dd>${dateLong(S.t)}</dd></dl>
-    <button class="btn primary" data-act="newnow">Start a new line</button></div></div>`);
+    <button class="btn primary" data-act="newnow">Start a new line</button>
+    <label class="lbl" for="loadCode2">Or load a save code</label><textarea id="loadCode2" data-keep="1" class="code" rows="2" placeholder="Paste a code here"></textarea>
+    <button class="btn" data-act="loadcode" data-src="loadCode2" style="width:fit-content">Load code</button>${UI.loadMsg&&!UI.loadMsg.ok?`<p class="badline">${UI.loadMsg.t}</p>`:''}</div></div>`);
 }
 function layoutMode(){
   const w=window.innerWidth>=1280;if(w===UI.wide)return;UI.wide=w;
@@ -335,7 +393,7 @@ function layoutMode(){
   $('tabsN')._h=null;UI.dirty=true;VIEW.s=null;requestAnimationFrame(applyView);
 }
 window.addEventListener('resize',layoutMode);
-const PANE_RENDER={overview:renderOverview,fleet:renderFleet,lines:renderLines,brokers:renderBrokers,finance:renderFinance,company:renderCompany};
+const PANE_RENDER={overview:renderOverview,fleet:renderFleet,lines:renderLines,brokers:renderBrokers,shore:renderShore,finance:renderFinance,company:renderCompany};
 /* Grow-only slots: lists that change while the clock runs may grow, but never shrink under the pointer.
    The held space is released on the next user action (UI.rev) or when the selected ship or line changes. */
 function ratchet(){

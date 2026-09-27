@@ -4,18 +4,22 @@ document.addEventListener('click',e=>{
   UI.rev=(UI.rev||0)+1;
   const b=e.target.closest('[data-act]');if(!b||b.disabled)return;const prevTab=UI.tab;
   const a=b.dataset.act,sh=S.ships.find(x=>x.id===S.selShip),L=S.lines[S.selLine];
-  if(a!=='cancel'&&!a.startsWith('ask')&&!['exit','closeline','leave','new'].includes(a))UI.confirm=null;
+  if(a!=='cancel'&&!a.startsWith('ask')&&!['exit','closeline','leave','new','loadcode'].includes(a))UI.confirm=null;
   switch(a){
     case 'speed':if(!S.over){UI.speed=+b.dataset.v;if(UI.speed>0)UI.banner=null;else UI.banner='Paused.';}break;
     case 'selship':S.selShip=+b.dataset.id;UI.tab='fleet';break;
     case 'selline':S.selLine=b.dataset.id;UI.tab='lines';break;
     case 'tabgo':UI.tab=(UI.wide&&b.dataset.tab==='overview')?UI.tab:b.dataset.tab;break;
-    case 'setfare':{const [rk,c,v]=JSON.parse(b.dataset.d);if(S.lines[rk])S.lines[rk].fares[c]=v;break;}
-    case 'setfares':{const [rk,f,s2,t]=JSON.parse(b.dataset.d);if(S.lines[rk])Object.assign(S.lines[rk].fares,{f,s:s2,t});break;}
-    case 'setlineopt':{const [rk,k,v]=JSON.parse(b.dataset.d);if(S.lines[rk])S.lines[rk][k]=v;break;}
-    case 'setship':{const [id,k,v]=JSON.parse(b.dataset.d);const x=S.ships.find(q=>q.id===id);if(x)x[k]=v;break;}
-    case 'moveship':{const [id,rk]=JSON.parse(b.dataset.d);const x=S.ships.find(q=>q.id===id);if(x){x.line=rk||null;if(x.line&&x.state==='laid'){x.state='port';x.portLeft=1;}}break;}
-    case 'setyard':{const [id,k]=JSON.parse(b.dataset.d);const x=S.ships.find(q=>q.id===id);if(x&&!x.pendingYard){if(x.state==='sea'||x.state==='repo')x.pendingYard=k;else if(S.cash>=refitCost(x,k))enterYard(x,k);}break;}
+    case 'setfare':case 'setfares':case 'setlineopt':case 'setship':case 'moveship':case 'setyard':case 'sellship':case 'hire':case 'shorebuy':case 'deptmode':
+      doAction(a,JSON.parse(b.dataset.d||'[]'));ADV_CACHE.key=null;break;
+    case 'cappool':UI.capPool=UI.capPool===+b.dataset.id?null:+b.dataset.id;break;
+    case 'mkcode':UI.copied=null;makeSaveCode().then(c=>{UI.saveCode=c;UI.saveCodeAt=dateLong(S.t)+' (game date)';UI.dirty=true;});break;
+    case 'copycode':case 'copylink':{const txt=a==='copylink'?location.href.split('#')[0]+'#save='+UI.saveCode:UI.saveCode;
+      const ok=()=>{UI.copied=a==='copylink'?'Link copied.':'Code copied.';UI.dirty=true;},fail=()=>{UI.copied='Your browser blocked copying: select the text and copy it by hand.';UI.dirty=true;};
+      try{navigator.clipboard.writeText(txt).then(ok,fail);}catch(err){fail();}break;}
+    case 'askload':if(($('loadCode').value||'').trim())UI.confirm='load';else UI.loadMsg={ok:false,t:'Paste a code into the box first.'};break;
+    case 'loadcode':{const el=$(b.dataset.src||'loadCode'),code=el?el.value:'';UI.confirm=null;
+      loadSaveCode(code).then(s2=>{UI.loadMsg={ok:true,t:`Loaded: ${dateLong(s2.t)}, ${s2.ships.length} ship${s2.ships.length===1?'':'s'}.`};layoutMode();applyView();},e2=>{UI.loadMsg={ok:false,t:e2.message||'That code could not be read.'};UI.dirty=true;});break;}
     case 'dismiss':S.dismiss[b.dataset.id]=S.m+1;break;
     case 'alladvice':UI.allAdvice=!UI.allAdvice;break;
     case 'newline':{const rk=Object.keys(ROUTES).find(k=>!S.lines[k]);if(rk)S.selLine=rk;UI.tab='lines';break;}
@@ -62,4 +66,6 @@ document.addEventListener('keydown',e=>{
 window.addEventListener('pagehide',()=>save());
 
 S=load();if(!S)newGame();
+if(location.hash.startsWith('#save=')){const code=location.hash.slice(1);history.replaceState(null,'',location.pathname+location.search);
+  loadSaveCode(code).then(()=>news('Game loaded from a save link.'),e=>{UI.loadMsg={ok:false,t:'The save link could not be read: '+(e.message||'damaged code')};UI.tab='company';UI.dirty=true;});}
 layoutMode();UI.dirty=true;applyView();requestAnimationFrame(frame);

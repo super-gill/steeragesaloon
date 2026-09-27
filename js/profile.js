@@ -20,7 +20,7 @@ function profileSVG(sh,mode){
   const mc=cut?'var(--muted)':'#2B2E30';
   s+=`<g stroke="${mc}" fill="none"><line x1="${fm}" y1="${dy}" x2="${fm}" y2="${mastH}" stroke-width="2.2"/><line x1="${am}" y1="${dy}" x2="${am}" y2="${mastH+6}" stroke-width="2.2"/>
     <line x1="${fm}" y1="${mastH}" x2="${x0+L}" y2="${dy-7}" stroke-width=".7" opacity=".6"/><line x1="${am}" y1="${mastH+6}" x2="${x0+1}" y2="${dy}" stroke-width=".7" opacity=".6"/>
-    <line x1="${fm}" y1="${mastH+2}" x2="${am}" y2="${mastH+8}" stroke-width=".6" opacity=".55"/>
+    ${sh.up&&sh.up.wireless?`<line x1="${fm}" y1="${mastH+2}" x2="${am}" y2="${mastH+8}" stroke-width=".6" opacity=".55"/>`:''}
     <line x1="${fm}" y1="${dy-18}" x2="${fm+22}" y2="${dy-4}" stroke-width="1.2"/><line x1="${am}" y1="${dy-18}" x2="${am-22}" y2="${dy-4}" stroke-width="1.2"/></g>`;
   if(!cut){
     // smoke
