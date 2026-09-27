@@ -442,24 +442,76 @@ function chart(){
     ${mn<0?`<line x1="${P}" x2="${W2-P}" y1="${y(0)}" y2="${y(0)}" style="stroke:var(--muted)" stroke-dasharray="3 3"/>`:''}
     <polyline points="${pts}" style="fill:none;stroke:var(--brass)" stroke-width="1.8"/><circle cx="${x(h.length-1)}" cy="${y(h[h.length-1])}" r="3.5" style="fill:${h[h.length-1]<0?'var(--bad)':'var(--brass)'}"/></svg></div>`;
 }
+/* profit and loss by ship: four figures a ship, and the company's own costs below, adding up to the Line's result */
+const PL_TAKE=['fares','onboard','cargo','mail'],PL_RUN=['fuel','port','crew','upkeep'];
+const avgOf=list=>{const o={};for(const c of list)for(const k in c)o[k]=(o[k]||0)+c[k]/list.length;return o;};
+function plData(){
+  const mode=UI.plMonth||'year',LM=S.lastMonth,H=S.plHist||[];
+  if(mode==='year'&&H.length)return {mode,n:H.length,cat:avgOf(H.map(h=>h.cat)),ship:x=>x.plc&&x.plc.length?avgOf(x.plc):null,nOf:x=>(x.plc||[]).length};
+  if((mode==='last'||mode==='year')&&LM&&LM.ships)return {mode:'last',cat:LM.cat,ship:x=>LM.ships[x.id]||null};
+  return {mode:'now',cat:S.mtd.cat,ship:x=>(S.mtd.ships||{})[x.id]||null};
+}
+/* what is costing her: each cost against her takings, and the one or two things worth doing about it */
+function plDiagnosis(x,o){
+  const t=PL_TAKE.reduce((a,k)=>a+(o[k]||0),0),cost=k=>-(o[k]||0),pct=v=>t>0?Math.round(v/t*100):null;
+  const run=PL_RUN.reduce((a,k)=>a+cost(k),0),yard=['yard','salvage','refund','legal'].reduce((a,k)=>a+cost(k),0),pr=t-run-yard;
+  const out=[];
+  if(t<=0){out.push(x.state==='laid'||!x.line?'Laid up: she earns nothing and still pays a skeleton crew and insurance.':'No takings booked yet in this period.');}
+  else{
+    const share=[['fuel','Coal and oil'],['crew','Crew and provisions'],['port','Ports, agents and handling'],['upkeep','Maintenance and insurance']].map(([k,l])=>[k,l,pct(cost(k))]).filter(q=>q[2]>0).sort((a,b)=>b[2]-a[2]);
+    out.push(`Of every £100 she takes: ${share.map(([,l,p])=>`${l.toLowerCase()} £${p}`).join(', ')}${yard>0?`, yard and mishaps £${pct(yard)}`:''}; ${pr>=0?`£${pct(pr)} left over`:`she is £${-pct(pr)} short`}.`);
+    const hint=[];
+    if(run>t)hint.push('Her takings do not cover her running costs on this line.');
+    if(pct(cost('fuel'))>=32)hint.push(x.fuel==='coal'?'Coal is her biggest bill: economical speed, or conversion to oil, would cut it.':'Fuel is her biggest bill: economical speed would cut it.');
+    if(pct(cost('crew'))>=32)hint.push((x.pay||1)>=2?'Crew costs are heavy: good pay is expensive on a ship that takes this little.':'Crew costs are heavy for what she takes: she may be too big a crew for this trade, or too empty.');
+    if(pct(cost('port'))>=25)hint.push('Port and handling costs are heavy: a pier or transit sheds at her ports would cut them.');
+    if(pct(yard)>=20)hint.push(fatOf(x)>=62?'Yard bills and mishaps are eating her profit: she is getting old and breaking down.':'Yard bills and mishaps are eating her profit this period: a one-off overhaul, or bad luck at sea.');
+    out.push(...hint.slice(0,2));
+  }
+  if(x.state!=='lost'){const opts=shipOptions(x),best=opts[0],cur=opts.find(q=>q.rk===x.line);
+    if(best&&(!cur||best.pm-cur.pm>=400))out.push(`She should make about ${fmt(Math.round(best.pm/10)*10)} a month on ${ROUTES[best.rk].name}${cur?`, against ${fmt(Math.round(cur.pm/10)*10)} where she is`:''}${best.open?'':' (not yet open)'}.`);
+    else if(cur&&cur.pm<-idleCost(x))out.push(`No line pays her way at present: laid up she would cost about ${fmt(Math.round(idleCost(x)/10)*10)} a month.`);}
+  return out.map(t=>`<p class="note" style="margin:0 0 4px">${t}</p>`).join('');
+}
+function plHTML(){
+  const D=plData(),pick=(o,ks)=>ks.reduce((a,k)=>a+((o||{})[k]||0),0),all=o=>Object.values(o||{}).reduce((a,b)=>a+b,0);
+  const n=(v,b)=>`<td class="r num ${v<0?'neg':v>0&&b?'pos':''}">${b?'<strong>':''}${Math.abs(v)<0.5?'–':fmt(Math.round(v))}${b?'</strong>':''}</td>`;
+  let tt=0,tr=0,ty=0,tp=0;
+  const rows=S.ships.filter(x=>x.state!=='lost').map(x=>{const o=D.ship(x)||{},t=pick(o,PL_TAKE),r=pick(o,PL_RUN),y=all(o)-t-r,pr=t+r+y;tt+=t;tr+=r;ty+=y;tp+=pr;
+    const open=UI.plOpen===x.id;
+    const det=open?`<tr class="pldet"><td colspan="5">${plDiagnosis(x,o)}${D.mode==='year'&&D.nOf(x)<D.n?`<p class="note" style="margin:0 0 4px">Averaged over the ${D.nOf(x)} month${D.nOf(x)===1?'':'s'} she has been in the fleet.</p>`:''}
+      <div class="kv" style="margin-top:6px">${CATS.filter(([k])=>Math.abs(o[k]||0)>=0.5).map(([k,l])=>`<dt>${l}</dt><dd class="${o[k]<0?'neg':''}">${fmt(Math.round(o[k]))}</dd>`).join('')||'<dt>Nothing booked</dt><dd></dd>'}</div>
+      <button class="btn quiet" data-act="selship" data-id="${x.id}" style="margin-top:6px">Open SS ${x.name}</button></td></tr>`:'';
+    return `<tr class="plrow" data-act="plopen" data-id="${x.id}" aria-expanded="${open}"><td><div class="nm">${x.name}</div><div class="meta">${x.state==='laid'||!x.line?'laid up':ROUTES[x.line].name}</div></td>${n(t)}${n(r)}${n(y)}${n(pr,1)}</tr>${det}`;}).join('');
+  const adv=D.cat.adv||0,other=all(D.cat)-tp-adv,H=S.plHist||[],LM=S.lastMonth;
+  const seg=`<div class="seg" role="group"><button data-act="plmonth" data-id="year" aria-pressed="${D.mode==='year'}" ${H.length?'':'disabled'}>Last ${H.length>1?H.length+' months':'12 months'}</button><button data-act="plmonth" data-id="last" aria-pressed="${D.mode==='last'}" ${LM&&LM.ships?'':'disabled'}>${LM?MONTHS[LM.m%12]:'Last month'}</button><button data-act="plmonth" data-id="now" aria-pressed="${D.mode==='now'}">${MONTHS[S.m%12]} so far</button></div>`;
+  return `${seg}<p class="note" style="margin:4px 0 0">${D.mode==='year'?'<strong>A month, on average.</strong> Single months swing: a ship is paid when she arrives, so one month may catch two arrivals and the next none, and yard bills land all at once.':'One month on its own swings with arrivals and yard bills; the average is the truer picture.'}</p>
+    <div class="tablewrap"><table class="board pltab"><thead><tr><th>Ship</th><th class="r">Takings</th><th class="r">Running</th><th class="r">Yard etc</th><th class="r">Profit</th></tr></thead><tbody>${rows}
+    <tr class="bline"><td><strong>All ships</strong></td>${n(tt)}${n(tr)}${n(ty)}${n(tp,1)}</tr>
+    <tr><td colspan="4">Advertising on the lines</td>${n(adv)}</tr>
+    <tr><td colspan="4">Head office, shore, interest and the rest</td>${n(other)}</tr>
+    <tr class="btot"><td colspan="4"><strong>The Line</strong></td>${n(all(D.cat),1)}</tr></tbody></table></div>
+    <p class="note"><strong>Takings</strong>: fares, cargo, mail and money spent aboard. <strong>Running</strong>: coal, ports and agents, crew and provisions, maintenance and insurance. <strong>Yard etc</strong>: drydocks, refits, repairs, salvage, refunds and fines. Click a ship to see what is costing her.</p>`;
+}
 function ledgerHTML(){
   const M=S.mtd,LM=S.lastMonth,sum=o=>Object.values(o||{}).reduce((a,b)=>a+b,0);
   const n=v=>v===undefined||v===null?'<td class="r meta">–</td>':`<td class="r num ${v<0?'neg':''}">${fmt(Math.round(v))}</td>`;
-  const hd=t=>`<tr class="bline"><td><strong>${t}</strong></td><td></td><td></td></tr>`;
-  const cats=CATS.filter(([k])=>M.cat[k]||LM&&LM.cat[k]).map(([k,l])=>`<tr><td>${l}</td>${n(M.cat[k]||0)}${n(LM&&(LM.cat[k]||0))}</tr>`).join('');
+  const H=S.plHist||[],Y=H.length?{cat:avgOf(H.map(h=>h.cat)),lines:avgOf(H.map(h=>h.lines))}:null;
+  const hd=t=>`<tr class="bline"><td><strong>${t}</strong></td><td></td><td></td><td></td></tr>`;
+  const cats=CATS.filter(([k])=>M.cat[k]||LM&&LM.cat[k]).map(([k,l])=>`<tr><td>${l}</td>${n(M.cat[k]||0)}${n(LM&&(LM.cat[k]||0))}${n(Y&&(Y.cat[k]||0))}</tr>`).join('');
   const lk=[...new Set([...Object.keys(S.lines),...Object.keys(M.lines),...Object.keys(LM?LM.lines:{})])].filter(k=>k==='_office'||k==='_idle'||ROUTES[k]).sort((a,b)=>(a[0]==='_')-(b[0]==='_'));
-  const lines=lk.map(k=>`<tr${ROUTES[k]?` data-act="selline" data-id="${k}"`:''}><td>${k==='_office'?'Head office, shore and bank':k==='_idle'?'Laid up and in yard':ROUTES[k].name}</td>${n(M.lines[k]||0)}${n(LM&&LM.lines[k])}</tr>`).join('');
-  const ships=S.ships.filter(x=>x.state!=='lost').map(x=>`<tr data-act="selship" data-id="${x.id}"><td>SS ${x.name}</td>${n(sum((M.ships||{})[x.id]))}${n(LM&&LM.ships?sum(LM.ships[x.id]):(x.pl||[]).slice(-1)[0])}</tr>`).join('');
-  return `<div class="tablewrap"><table class="board ledger"><thead><tr><th></th><th class="r">${MONTHS[S.m%12].slice(0,3)} so far</th><th class="r">${LM?MONTHS[LM.m%12].slice(0,3):'Last'}</th></tr></thead><tbody>
-    ${hd('By account')}${cats||'<tr><td class="meta" colspan="3">Nothing booked yet</td></tr>'}
-    <tr class="btot"><td><strong>The Line</strong></td>${n(sum(M.cat))}${n(LM&&LM.net)}</tr>
-    ${hd('By line')}${lines}${hd('By ship')}${ships}</tbody></table></div>
-    <p class="note">A line's figures include its ships and its advertising; a ship's are her own takings and running costs, before head office.</p>`;
+  const lines=lk.map(k=>`<tr${ROUTES[k]?` data-act="selline" data-id="${k}"`:''}><td>${k==='_office'?'Head office, shore and bank':k==='_idle'?'Laid up and in yard':ROUTES[k].name}</td>${n(M.lines[k]||0)}${n(LM&&LM.lines[k])}${n(Y&&(Y.lines[k]||0))}</tr>`).join('');
+  return `<div class="tablewrap"><table class="board ledger"><thead><tr><th></th><th class="r">${MONTHS[S.m%12].slice(0,3)} so far</th><th class="r">${LM?MONTHS[LM.m%12].slice(0,3):'Last'}</th><th class="r">Avg month</th></tr></thead><tbody>
+    ${hd('By account')}${cats||'<tr><td class="meta" colspan="4">Nothing booked yet</td></tr>'}
+    <tr class="btot"><td><strong>The Line</strong></td>${n(sum(M.cat))}${n(LM&&LM.net)}${n(Y&&sum(Y.cat))}</tr>
+    ${hd('By line')}${lines}</tbody></table></div>
+    <p class="note">A line's figures include its ships and its advertising. The average is over the last ${H.length>1?H.length+' months':'twelve months'}.</p>`;
 }
 function renderFinance(){
   const c=S.mtd.cat;
   const LM=S.lastMonth,hr=headroom();
   setHTML($('pane-finance'),`
+    <section class="sec"><h2>Profit and loss by ship</h2>${plHTML()}</section>
     <section class="sec"><h2>Ledger</h2>${ledgerHTML()}
       ${LM?`<p class="note">${monthName(LM.m)} closed at <span class="num ${LM.net<0?'neg':'pos'}">${fmt(LM.net)}</span>, with ${fmt(LM.repay)} repaid to the bank.</p>`:''}
       ${chart()}</section>

@@ -2,6 +2,12 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.12.1 (27 September 2026)
+- Profit and loss by ship, at the top of Finance: one row a ship with her takings, running costs, yard bills and mishaps, and profit, then advertising and head office, adding up to the Line's result.
+- It shows a month on average over the last twelve months by default, since single months swing: a ship is paid when she arrives, so one month catches two arrivals and the next none, and yard bills land all at once. Last month and this month are a click away.
+- Click a ship to see what is costing her: each bill as a share of every £100 she takes, the one or two things worth doing about it (speed, oil firing, pay, piers and sheds, her age), whether another line would pay her better, and her full account.
+- The ledger has an average-month column beside this month and last month, by account and by line.
+
 ## 0.12.0 (27 September 2026)
 Every view regrouped so each question has one place to look.
 - Overview: Needs attention, Advice and Wireless, Fleet by line, and the news. The summary boxes, shortcuts and cash chart are gone (the chart is on Finance).

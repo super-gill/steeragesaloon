@@ -15,6 +15,8 @@ document.addEventListener('click',e=>{
     case 'setfare':case 'setfares':case 'setlineopt':case 'setship':case 'moveship':case 'setyard':case 'sellship':case 'hire':case 'shorebuy':case 'deptmode':case 'openmove':case 'buyship':case 'newhead':case 'propyes':case 'propno':case 'build':case 'scrapship':
       {const d=JSON.parse(b.dataset.d||'[]');if(a==='moveship'||a==='openmove'||a==='setship'){const x=S.ships.find(q=>q.id===d[0]);if(x)x.ownerSet=S.t;}doAction(a,d);}ADV_CACHE.key=null;break;
     case 'shipgrp':{const o=UI.shipGrp=UI.shipGrp||{earn:true,upkeep:true,crew:false,retire:false};o[b.dataset.id]=!o[b.dataset.id];break;}
+    case 'plopen':UI.plOpen=UI.plOpen===+b.dataset.id?null:+b.dataset.id;break;
+    case 'plmonth':UI.plMonth=b.dataset.id;break;
     case 'menu':UI.menu=!UI.menu;break;
     case 'fcship':(UI.fcShip=UI.fcShip||{})[b.dataset.k]=+b.dataset.id;break;
     case 'cappool':UI.capPool=UI.capPool===+b.dataset.id?null:+b.dataset.id;break;

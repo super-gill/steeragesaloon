@@ -437,3 +437,9 @@ input[type=range]{width:100%;accent-color:var(--brass)}
 .modal .panel.menu h3{font-size:26px}
 .ledger tr[data-act]{cursor:pointer} .ledger tr[data-act]:hover{background:var(--surface2)}
 .ledger td:first-child{white-space:normal}
+
+.board.pltab th:not(:first-child),.board.pltab td:not(:first-child){width:auto} .board.pltab{table-layout:auto} .board.pltab td.num{font-size:12px;padding-inline:4px} .board.pltab th{padding-inline:4px}
+.board.pltab .plrow{cursor:pointer} .board.pltab .plrow:hover{background:var(--surface2)}
+.board.pltab .plrow[aria-expanded="true"] td{background:var(--surface2)}
+.board.pltab .pldet td{padding:6px 10px 10px 18px;background:var(--surface2)}
+.board.pltab td[colspan]{white-space:normal}

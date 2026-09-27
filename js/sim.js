@@ -268,8 +268,10 @@ function dailyTick(){
 function monthRoll(pm){
   const repay=Math.min(S.debt,Math.round(S.debt*0.004));S.debt-=repay;S.cash-=repay;
   const net=Object.values(S.mtd.cat).reduce((a,b)=>a+b,0);
-  const shipAcc=S.mtd.ships||{};for(const sh of S.ships){if(sh.state==='lost')continue;const v=Object.values(shipAcc[sh.id]||{}).reduce((x,y)=>x+y,0);(sh.pl=sh.pl||[]).push(Math.round(v));if(sh.pl.length>12)sh.pl.shift();}
-  S.lastMonth={m:pm,cat:S.mtd.cat,lines:S.mtd.lines,ships:shipAcc,net,repay,capex:S.mtd.capex||0};S.mtd=blankLedger();
+  const shipAcc=S.mtd.ships||{};for(const sh of S.ships){if(sh.state==='lost')continue;const v=Object.values(shipAcc[sh.id]||{}).reduce((x,y)=>x+y,0);(sh.pl=sh.pl||[]).push(Math.round(v));if(sh.pl.length>12)sh.pl.shift();
+    const c={};for(const k in shipAcc[sh.id]||{})c[k]=Math.round(shipAcc[sh.id][k]);(sh.plc=sh.plc||[]).push(c);if(sh.plc.length>12)sh.plc.shift();}
+  S.lastMonth={m:pm,cat:S.mtd.cat,lines:S.mtd.lines,ships:shipAcc,net,repay,capex:S.mtd.capex||0};
+  {const r=o=>{const q={};for(const k in o)q[k]=Math.round(o[k]);return q;};(S.plHist=S.plHist||[]).push({m:pm,cat:r(S.mtd.cat),lines:r(S.mtd.lines)});if(S.plHist.length>12)S.plHist.shift();}S.mtd=blankLedger();
   inflate();giltsMonth();taxMonth(net);crashMonth();unionMonth();combineMonth();
   S.lastPax=S.pax;S.pax={};
   for(const id in RIVALS)S.rivalIdx[id]=clamp((S.rivalIdx[id]||1)+(Math.random()-0.5)*0.04,0.93,1.06);
