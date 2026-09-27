@@ -93,7 +93,8 @@ function facChange(sh,plan){
 }
 /* ---------- the refit office ---------- */
 const RF_JOBS=[ // yard jobs the refit office offers, by section
-  ['Hull and upkeep',[['dock','Drydock overhaul',sh=>true,'Scrape, paint and overhaul: +35 condition and a clean bottom.'],
+  ['Hull and upkeep',[['scrape','Scrape and paint the bottom',sh=>true,sh=>`A few days in dry dock for a clean bottom: her speed back and less coal burned. Nothing for her condition.${(sh.foul||0)>0.1?` She is ${sh.foul>0.6?'badly ':''}foul now.`:' Her bottom is clean at present.'}`],
+    ['dock','Drydock overhaul',sh=>true,'Scrape, paint and overhaul: +35 condition and a clean bottom.'],
     ['replate','Re-plate and renew frames',sh=>fatOf(sh)>35,'Buys years of hull life, less each time.'],
     ['refurb','Refurbish the public rooms',sh=>(sh.fit||0)<90,'Cabins, saloons and linen as new, in the style of the day.']]],
   ['Machinery and equipment',[['oil','Convert to oil firing',sh=>sh.fuel==='coal','Cuts her stokehold crew and her bunker bill.'],
@@ -106,7 +107,8 @@ const RF_JOBS=[ // yard jobs the refit office offers, by section
     ['deep','Deep tanks',sh=>sh.cargo>1500&&!(sh.up&&sh.up.deep),'Tanks for palm oil and other liquids in bulk: palm oil pays about 30% more.'],
     ['reefer','Refrigerated holds',sh=>sh.cargo>500&&!(sh.up&&sh.up.reefer),'Carries chilled beef and bananas.']]],
   ['Passenger spaces',[['tourist','Tourist Third refit',sh=>S.m>=48&&sh.berths.tt===0&&sh.berths.t>0,'Half her steerage rebuilt as Tourist Third Cabin for students and teachers.'],
-    ['lux','Luxury suites and a grand saloon',sh=>!(sh.up&&sh.up.lux),'First class appeal up a fifth.']]]
+    ['lux','Luxury suites and a grand saloon',sh=>!(sh.up&&sh.up.lux),'First class appeal up a fifth.'],
+    ['cruise','Convert her for cruising',sh=>!sh.cruiser&&CL.reduce((a,c)=>a+(sh.berths[c]||0),0)>=60,sh=>`Steerage out, cabins in, sun decks and a white hull: cruise passengers like her a quarter more. ${sh.berths.t?`Her ${int(sh.berths.t)} steerage berths become about ${int(Math.round(sh.berths.t*0.3))} Tourist cabins and a few more in first and second: she can no longer carry emigrants.`:'She keeps her berths.'}`]]]
 ];
 function openRefit(id,pre){
   const sh=S.ships.find(x=>x.id===id);if(!sh)return;
@@ -129,8 +131,10 @@ function rfPatch(sh,rf){
   const p={up:{...(sh.up||{})},upR:{...(sh.upR||{})},fac:{...rf.fac},berths:{...sh.berths}};
   const fc=facChange(sh,rf.fac);for(const c in fc.berths)p.berths[c]=Math.max(0,p.berths[c]-fc.berths[c]);
   for(const k in rf.jobs){if(!rf.jobs[k])continue;
+    if(k==='scrape')p.foul=0;
     if(k==='dock')p.cond=Math.max(sh.cond,Math.min(Math.min(92,condCap(sh)),sh.cond+35)),p.foul=0;
     if(k==='refurb')p.fit=100;if(k==='oil')p.fuel='oil';if(k==='replate')p.fat=Math.max(0,fatOf(sh)-[25,15,8,4][Math.min(3,sh.replates||0)]);
+    if(k==='cruise'){p.berths=cruiseBerths(p.berths);p.cruiser=true;}
     if(k==='tourist'){const cv=Math.round(p.berths.t*0.5);p.berths.t-=cv;p.berths.tt+=Math.round(cv*0.6);}
     if(['turbines','wireless','gear','reefer','lux','hatch','heavy','deep'].includes(k))p.up[k]=true;
     if(EQUIP[k]){p.up[k]=true;p.upR[k]=true;}}
@@ -164,7 +168,7 @@ function renderRefit(){
   const pk=k=>picks[k]?`<span class="rftag">${picks[k]<50?'Marine Superintendent recommends':`Marine Superintendent: +${fmt(picks[k])}/mo`}</span>`:'';
   const inPlan=k=>sh.pendingYard===k||sh.yardKind===k||(sh.yardAdd||[]).includes(k);
   const jobRow=([k,label,ok,desc])=>{if(!ok(sh))return '';const on=!!rf.jobs[k],c=refitCost(sh,k),booked=inPlan(k);
-    return `<label class="rfopt${on?' on':''}${picks['j:'+k]?' rfpick':''}"><input type="checkbox" data-rfjob="${k}" ${on?'checked':''} ${booked?'disabled':''}><span><b>${label}</b> <span class="num">${booked?'booked':fmt(c)+' · '+yardDays(sh,k)+' days'}</span>${pk('j:'+k)}<small>${desc}</small></span></label>`;};
+    return `<label class="rfopt${on?' on':''}${picks['j:'+k]?' rfpick':''}"><input type="checkbox" data-rfjob="${k}" ${on?'checked':''} ${booked?'disabled':''}><span><b>${label}</b> <span class="num">${booked?'booked':fmt(c)+' · '+yardDays(sh,k)+' days'}</span>${pk('j:'+k)}<small>${typeof desc==='function'?desc(sh):desc}</small></span></label>`;};
   const used=slotsUsed(rf.fac),slots=slotsOf(sh);
   const facRow=k=>{const F=FAC[k],cur=facLv(sh,k),tgt=rf.fac[k]||0;
     return `<div class="rffac${picks['f:'+k]?' rfpick':''}"><b>${F.name}</b>${pk('f:'+k)}<div class="rflv">${F.levels.map((L,i)=>{const ok=levelOk(k,i,sh.grt,y),room=i>tgt&&used-tgt+i>slots,why=!ok?(L.min&&sh.grt<L.min?`needs ${int(L.min)} tons`:`from ${L.from}`):room?'no venue free':'';

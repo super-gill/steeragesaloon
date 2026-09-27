@@ -11,7 +11,7 @@ function withTemp(sh,rk,patch,shPatch,fn){
 /* a ship's expected monthly result on a route this month, at current settings (patches try alternatives) */
 function econ(sh,rk,patch,shPatch){
   return withTemp(sh,rk,patch,shPatch,()=>{
-    const L=S.lines[rk],w=legCalc(sh,rk,0,null),e=legCalc(sh,rk,1,null),rt=w.seaDays+e.seaDays+2*TURN_DAYS;
+    const L=S.lines[rk],w=legCalc(sh,rk,0,null),e=legCalc(sh,rk,1,null),rt=w.seaDays+e.seaDays+turnPair(rk);
     const legNet=l=>l.paxRev+(l.onboard||0)+l.cargoRev+l.mail-l.fuelC-l.prov-l.agents-l.port;
     const n=Math.max(1,shipsOn(rk).length);
     const fixed=(crewCost(sh)+(sh.captain?sh.captain.wage:0)+insCost(sh)+MAINT_COST[sh.maint]*sh.grt/8000+(sh.fac?facMods(sh).staff*PX():0))*rt/30;
@@ -27,16 +27,31 @@ function econYear(sh,rk,patch,shPatch){
   finally{S.t=t0;}
   return {pm:pm/k};
 }
+/* the same averaged over given months of the year (a cruise's season), the next time each comes round */
+function econMonths(sh,rk,ms){
+  const t0=S.t;let pm=0;
+  try{for(const mo of ms){const m=S.m+((mo-S.m%12)+12)%12;S.t=(Date.UTC(1921+Math.floor(m/12),m%12,15)-T0)/864e5;pm+=econ(sh,rk).pm;}}
+  finally{S.t=t0;}
+  return pm/ms.length;
+}
+let CRUISE_EST={key:null};
+function cruiseEst(sh){
+  const key=S.m+'|'+UI.rev+'|'+sh.id;if(CRUISE_EST.key===key)return CRUISE_EST.v;
+  const home=sh.line&&sh.line===sh.wc?sh.homeLine:sh.line;
+  const v=Object.keys(ROUTES).filter(k=>isCruise(k)&&routeOpen(k,S.m)).map(k=>{const ms=ROUTES[k].cruise.months;
+    return {rk:k,pm:econMonths(sh,k,ms),home:home&&S.lines[home]&&!isCruise(home)?econMonths(sh,home,ms):-idleCost(sh)};});
+  CRUISE_EST={key,v};return v;
+}
 const lineShips=rk=>S.ships.filter(x=>x.line===rk&&x.state!=='laid');
 function lineEcon(rk,patch){let pm=0,pax=0;for(const sh of lineShips(rk)){const q=econ(sh,rk,patch);pm+=q.pm;pax+=q.pax;}return {pm,pax};}
 const WINTER=[10,11,0,1];
 const money=v=>fmt(Math.round(v/10)*10);
 const canSpend=cost=>S.cash-cost>=3*runningCost();
 const idleCost=sh=>0.25*crewCost(sh)+(sh.captain?sh.captain.wage:0)+insCost(sh);
-const DEPT_OF={cpay:'crew',ctrain:'crew',off:'crew',review:'sec',reserve:'sec',buy:'traffic',build:'traffic','rep-mail':'sec','rep-low':'sec','conf-war':'sec',pier:'sec',agency:'sec',bunker:'sec',dept:'sec',
+const DEPT_OF={wcr:'traffic',cpay:'crew',ctrain:'crew',off:'crew',review:'sec',reserve:'sec',buy:'traffic',build:'traffic','rep-mail':'sec','rep-low':'sec','conf-war':'sec',pier:'sec',agency:'sec',bunker:'sec',dept:'sec',
   fare:'fares',tension:'fares',adv:'fares',service:'fares',match:'fares',
   move:'traffic',unlay:'traffic',layup:'traffic',sell:'traffic',rin:'traffic',
-  speed:'marine',maint:'marine',thresh:'marine',dock:'marine',oil:'marine',refurb:'marine',reefer:'marine',wireless:'marine',replate:'marine',scrap:'marine',
+  speed:'marine',maint:'marine',thresh:'marine',dock:'marine',scrape:'marine',oil:'marine',refurb:'marine',reefer:'marine',wireless:'marine',replate:'marine',scrap:'marine',
   pay:'crew',captain:'crew'};
 const deptOf=h=>DEPT_OF[h.id.split(/[:0-9]/)[0]]||'sec';
 let ADV_CACHE={key:null,list:[]};
@@ -142,6 +157,11 @@ function advice(){
       title:`Lay SS ${sh.name} up for the winter`,
       why:`She is losing about ${money(-cur.pm)} a month in the winter trade. Laid up on a skeleton crew she would cost only ${money(idle)}. Bring her back in March.`,
       act:[['Lay up at next port','moveship',sh.id,'']]});
+    if(!sh.wc&&!isCruise(r0)&&CL.reduce((q,c)=>q+(sh.berths[c]||0),0)>=100&&[7,8,9,10,2,3,4].includes(mo)){
+      const best=cruiseEst(sh).slice().sort((p,q)=>(q.pm-q.home)-(p.pm-p.home))[0];
+      if(best&&best.pm>0&&best.pm-best.home>=800)add({id:`wcr:${sh.id}`,scope:'ship',ref:sh.id,sev:'tip',gain:best.pm-best.home,title:`Send SS ${sh.name} cruising in ${cruiseMonthsText(best.rk)}`,
+        why:`In those months she would make about ${money(best.pm)} a month cruising ${ROUTES[best.rk].cruise.cname}, against ${money(best.home)} on ${ROUTES[r0].name}. She goes back to her line when the season ends.${S.lines[best.rk]?'':` It means opening the cruise (${money(2500*PX())}).`}${sh.cruiser?'':' A cruise conversion would make her better at it.'}`,
+        act:[['Send her cruising','setwc',sh.id,best.rk],['View her','selship',sh.id]]});}
     let bs={v:sh.speed,pm:curY.pm};for(const v of [0,1,2]){if(v===sh.speed)continue;const q=econYear(sh,r0,null,{speed:v});if(q.pm>bs.pm)bs={v,pm:q.pm};}
     if(bs.v!==sh.speed&&bs.pm-curY.pm>=150&&!(S.mail[r0]&&bs.v===0))add({id:`speed:${sh.id}`,scope:'ship',ref:sh.id,sev:'tip',gain:bs.pm-curY.pm,
       title:`Run SS ${sh.name} at ${['economical','service','full'][bs.v]} speed`,
@@ -157,7 +177,8 @@ function advice(){
       const save=econYear(sh,r0,null,shPatch).pm-curY.pm;if(save>0&&cost/save<=30)add({id:`${k==='oil'?'oil':k}:${sh.id}`,scope:'ship',ref:sh.id,sev:'tip',gain:save,title:label,
         why:`${why} It would add about ${money(save)} a month and pay back its ${money(cost)} in about ${Math.ceil(cost/save)} months; she is out of service for ${yardDays(sh,k)} days.`,
         act:[['Book it','setyard',sh.id,k],['Refit office','refit',sh.id,k]]});};
-    if((sh.foul||0)>0.45)yard('dock',{foul:0,cond:Math.min(92,sh.cond+35)},`Drydock SS ${sh.name}`,`Her master reports her bottom foul: she is slower and burning more.`);
+    if((sh.foul||0)>0.45){if(sh.cond>=70)yard('scrape',{foul:0},`Scrape the bottom of SS ${sh.name}`,`Her master reports her bottom foul: she is slower and burning more. Her condition is good, so a few days' scrape will do.`);
+      else yard('dock',{foul:0,cond:Math.min(92,sh.cond+35)},`Drydock SS ${sh.name}`,`Her master reports her bottom foul: she is slower and burning more.`);}
     { const f=fatOf(sh),n=sh.replates||0;
       if(f>=62&&f<90&&n<3&&!sh.pendingYard&&canSpend(refitCost(sh,'replate'))&&shipValue(sh)>refitCost(sh,'replate'))add({id:`replate:${sh.id}`,scope:'ship',ref:sh.id,sev:'tip',gain:250+f*4,title:`Re-plate SS ${sh.name}`,
         why:`The surveyors find her plating wasting and her frames tired. New plate and frames (${money(refitCost(sh,'replate'))}, ${yardDays(sh,'replate')} days) buy her years of safe service${n?', though less than last time':''}. Left alone she gets more dangerous every crossing and loses her steerage certificate.`,act:[['Book it','setyard',sh.id,'replate']]});
@@ -255,7 +276,10 @@ function doAction(act,d){
     case 'setfares':{const [rk,f,s2,t]=d;if(S.lines[rk]){Object.assign(S.lines[rk].fares,{f,s:s2,t});return true;}return false;}
     case 'setlineopt':{const [rk,k,v]=d;if(S.lines[rk]){S.lines[rk][k]=v;return true;}return false;}
     case 'setship':{const [id,k,v]=d;const x=ship(id);if(x){x[k]=v;return true;}return false;}
-    case 'moveship':{const [id,rk]=d;const x=ship(id);if(!x)return false;x.line=rk||null;if(x.line&&x.state==='laid'){x.state='port';x.portLeft=1;}return true;}
+    case 'setwc':{const [id,rk]=d;const x=ship(id);if(!x)return false;if(!rk){if(x.line===x.wc&&x.homeLine!==undefined){x.line=x.homeLine;delete x.homeLine;}delete x.wc;return true;}
+      if(!ROUTES[rk]||!isCruise(rk)||!routeOpen(rk,S.m))return false;if(!S.lines[rk]){const fee=Math.round(2500*PX());if(S.cash<fee)return false;book('office',-fee,rk);S.lines[rk]={fares:defaultFares(rk),service:1,adv:1,last:[null,null]};news(`The Morven Line opens ${ROUTES[rk].name}.`,'good');}
+      x.wc=rk;delete x.wcHold;if(x.state==='laid'&&cruiseInSeason(rk,S.m)){x.state='port';x.portLeft=1;}return true;}
+    case 'moveship':{const [id,rk]=d;const x=ship(id);if(!x)return false;if(x.wc&&x.line===x.wc&&rk!==x.wc){x.wcHold=S.m+6;delete x.homeLine;} /* the owner's own choice wins this season */x.line=rk||null;if(x.line&&x.state==='laid'){x.state='port';x.portLeft=1;}return true;}
     case 'setyard':{const [id,k]=d;const x=ship(id);if(!x)return false;if(x.pendingYard||x.state==='yard')return addYardJob(x,k);
       if(x.state==='sea'||x.state==='repo'){x.pendingYard=k;return true;}if(S.cash>=refitCost(x,k)){enterYard(x,k);return true;}return false;}
     case 'crewset':{const [id,dp,k,v]=d;const x=ship(id);if(!x||!CDEPT[dp]||!['man','pay','train'].includes(k))return false;cwOf(x)[dp][k]=clamp(v|0,0,2);if(k==='pay')x.pay=cwOf(x).deck.pay;return true;}
@@ -278,7 +302,7 @@ function doAction(act,d){
       else return false;
       S.cash-=c;return true;}
     case 'deptmode':{const [k,auto]=d;if(!S.depts[k])return false;S.depts[k].auto=!!auto;return true;}
-    case 'openmove':{const [id,rk]=d;const x=ship(id);if(!x)return false;if(!S.lines[rk]){if(S.cash<2500)return false;book('office',-2500,rk);S.lines[rk]={fares:defaultFares(rk),service:1,adv:1,last:[null,null]};news(`The Morven Line opens a ${ROUTES[rk].name} service.`,'good');}
+    case 'openmove':{const [id,rk]=d;const x=ship(id);if(!x)return false;if(!S.lines[rk]){const fee=Math.round(2500*PX());if(S.cash<fee||!routeOpen(rk,S.m))return false;book('office',-fee,rk);S.lines[rk]={fares:defaultFares(rk),service:1,adv:1,last:[null,null]};news(`The Morven Line opens a ${ROUTES[rk].name} service.`,'good');}
       return doAction('moveship',[id,rk]);}
     case 'buyship':{const [name,rk]=d;const m=S.market.find(q=>q.name===name);if(!m)return false;const dep=Math.round(m.price*0.4);if(S.cash<dep)return false;
       S.cash-=dep;S.debt+=m.price-dep;delete m.price;m.acq=S.m;S.ships.push(m);S.market=S.market.filter(q=>q!==m);news(`Bought SS ${m.name}, lying at ${PN[m.port]}.`,'good');
@@ -298,6 +322,7 @@ function shoreCost(kind,key){const p=PX();return kind==='fagent'?FAGENCY[key]&&M
 function bestLine(sh,exclude){
   let bo=null,ba=null;
   for(const rk of Object.keys(ROUTES)){if(rk===exclude)continue;
+    if(!routeOpen(rk,S.m))continue;
     if(!S.lines[rk]&&S.dismiss['nomove:'+sh.id+':'+rk]>S.m)continue;
     const q=econYear(sh,rk);if(S.lines[rk]&&(!bo||q.pm>bo.pm))bo={rk,pm:q.pm};if(!ba||q.pm>ba.pm)ba={rk,pm:q.pm};}
   if(ba&&bo&&!S.lines[ba.rk]&&(bo.pm>=ba.pm*0.7||ba.pm-bo.pm<600))return bo;
@@ -308,7 +333,7 @@ function buildIdea(){
   if(S.ships.length<3||(S.orders||[]).length||yearNow()<1923)return null;
   if(S.buildIdea&&S.m-S.buildIdea.m<6)return S.buildIdea.v;
   let best=null;const reach=S.cash+headroom();
-  for(const pk of ['inter','emig','mixed','cargo','reefer','tourist','express']){if(!techOn(PURPOSES[pk].from,yearNow()))continue;
+  for(const pk of ['inter','emig','mixed','cargo','reefer','tourist','express','cruise']){if(!techOn(PURPOSES[pk].from,yearNow()))continue;
     const d=defaultDesign(pk);d.name='';const f=designForecast(d);if(!f.best||f.best.pm<=0)continue;
     if(reach<f.st.price*0.7)continue;const yrs=f.st.price/(f.best.pm*12);if(yrs>9)continue;
     if(!best||yrs<best.yrs)best={d,rk:f.best.rk,pm:Math.round(f.best.pm),price:f.st.price,yrs};}
@@ -324,7 +349,7 @@ function deptCost(k){const D=DEPTS[k],o=S.depts[k],[b,perShip,perLine]=D.staff;
   const clerks=staff*CLERK_WAGE,rent=D.rent+Math.max(0,staff-4)*6,sundries=Math.round(20+staff*3);
   return {staff,head,clerks,rent,sundries,total:head+clerks+rent+sundries};}
 /* big decisions a department may propose but never takes on its own */
-const BIG=['openmove','sellship','buyship','build'];
+const BIG=['openmove','sellship','buyship','build','setwc'];
 function propose(k,h,act,d){
   S.props=(S.props||[]).filter(p=>S.m-(p.m||0)<=2); // a proposal nobody answers lapses after two months
   const id=h.id;

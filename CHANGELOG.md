@@ -2,6 +2,21 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.14.0 (27 September 2026)
+Cruises.
+- Five cruises, a new group on the Lines tab and new routes on the chart: Madeira and the Canaries (winter sun, from Southampton), the Mediterranean (spring and autumn), Norway and the fjords (summer, from Glasgow), the West Indies (winter, from New York), and the cruises to nowhere (two nights from New York to beyond the limit, where the bar can open, until Prohibition ends in December 1933).
+- A cruise goes out by its calls, spends a day ashore at the far end, and comes home non-stop with the same passengers. The fare is for the whole cruise, and passengers spend far more aboard. There is no cargo, no mail and no conference, so no rate wars, but the market is small and shared with the Meridian Cruising Company. Cruise ships lie off and land passengers by launch, so dues are lighter. Each cruise has its own season, and cruising grows through the twenties, dips in the slump and booms again on cheap cruises.
+- Steerage sells nothing on a cruise (except the cruises to nowhere, which sell bunks cheap), so an emigrant ship makes a poor cruiser. Cabins, fittings and public rooms sell cruises; speed hardly matters.
+- Seasonal cruising, on each ship's panel: choose a cruise and she leaves her line for its season and goes back after; a laid-up ship comes out for the season and lays up again. It shows what she would make on each cruise in its season against her line in the same months. Head office suggests it when it would pay, and a Traffic Department proposes it.
+- Convert her for cruising, in the refit office: steerage out, a smaller number of Tourist cabins and a few more in first and second, sun decks and a white hull. Cruise passengers like her a quarter more; she can no longer carry emigrants.
+- The cruise ship, in the drawing office from 1928: one white ship of cabins, pools and public rooms, and no steerage.
+- Advertising is only charged while a line has a ship on it.
+
+Also:
+- Scrape and paint the bottom, a separate refit job: five days and about a fifth of the cost of an overhaul, for a clean bottom and her speed back, without the overhaul. Head office suggests a scrape rather than a full drydock for a foul ship in good condition.
+- The mails: when the Line's reputation first reaches 40 you are told that it now qualifies for mail contracts. Tenders come up more often (about every four months), and only for lines with a wireless ship on them, since only wireless ships carry the mails and a contract without one is soon lost. Each line's panel says where it stands for the mail.
+- Fixed: "Open it and assign her" from head office advice charged a flat £2,500 instead of the price-adjusted cost.
+
 ## 0.13.1 (27 September 2026)
 - A ship's crew is always yours to set, ship by ship, from her Master and crew section ("Manage her crew"). An acting Crewing Office manages crews for you, but anything you set on a ship yourself (manning, pay, training or an officer) it leaves alone for three months, the same rule as the other departments.
 - The crew window is now called "Her crew", so it is not confused with the Crewing Office department, and says whether the office is managing her and until when your own settings stand.

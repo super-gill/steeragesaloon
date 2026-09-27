@@ -19,6 +19,7 @@ function histMod(c,rk,m){
     else if(g==='Canada'&&m>=42) x*=1.2;
     else if(rk==='rpl'&&m>=110) x*=0.6; // Argentina closes its doors in the Depression
   } else { if(m<12)x*=0.85; if(m>=24)x*=1+0.035*(Math.min(m,105)-24)/12; }
+  if(ROUTES[rk].cruise){const y=1921+m/12;x*=y<1926?0.7+0.06*(y-1921):Math.min(1.12,1+0.03*(y-1926));if(y>=1934)x*=1.15;}
   x*=depression(c,m)*eraMod(c,rk,m)*crashMod(c,m)*(1-airShare(rk,c,m));
   return x;
 }
@@ -57,14 +58,16 @@ const crewCount=sh=>crewHands(sh); // by department: see crew.js
 const crewCost=sh=>crewCostOf(sh);
 const insCost=sh=>shipValue(sh)*0.05/12*(sh.cond<50?1.4:1)*(fatOf(sh)>=90?2:1+Math.max(0,fatOf(sh)-60)/40);
 const confFloor=(rk,c)=>Math.ceil(ROUTES[rk].ref[c]*0.95);
-function effFare(rk,c){let f=S.lines[rk].fares[c];if(S.conf)f=Math.max(f,confFloor(rk,c));return f;}
+function effFare(rk,c){let f=S.lines[rk].fares[c];if(S.conf&&!ROUTES[rk].cruise)f=Math.max(f,confFloor(rk,c));return f;} // the conference has no say over cruises
 function defaultFares(rk){const r=ROUTES[rk].ref;return {f:r.f,s:r.s,t:r.t,tt:r.tt};}
 function gcDist(p,q){const a=CHART.lonlat[p],b=CHART.lonlat[q],rad=Math.PI/180;
   const la1=a[1]*rad,la2=b[1]*rad,dl=(b[0]-a[0])*rad,dp=la2-la1;
   const h=Math.sin(dp/2)**2+Math.cos(la1)*Math.cos(la2)*Math.sin(dl/2)**2;return 2*6371*Math.asin(Math.sqrt(h))/1.852;}
 const ACTIVE=['sea','port','repo'];
 const shipsOn=rk=>S.ships.filter(x=>x.line===rk);
-const REFIT_BASE={hatch:g=>g*1.2,heavy:()=>9000,deep:g=>g*0.9,stab:g=>g*1.6,rphone:()=>7000,aircon:g=>g*1.3,radar:()=>32000,fins:g=>g*2,replate:g=>g*3,dock:g=>g*1.1,oil:g=>g*3.5,reefer:g=>g*3+5000,wireless:()=>2500,turbines:g=>g*5,lux:g=>g*2,refurb:g=>g*1.2,gear:g=>g*0.8};
+const REFIT_BASE={scrape:g=>g*0.22,cruise:g=>g*2.4+12000,hatch:g=>g*1.2,heavy:()=>9000,deep:g=>g*0.9,stab:g=>g*1.6,rphone:()=>7000,aircon:g=>g*1.3,radar:()=>32000,fins:g=>g*2,replate:g=>g*3,dock:g=>g*1.1,oil:g=>g*3.5,reefer:g=>g*3+5000,wireless:()=>2500,turbines:g=>g*5,lux:g=>g*2,refurb:g=>g*1.2,gear:g=>g*0.8};
+/* a cruise conversion: steerage becomes a smaller number of Tourist cabins and a few more in first and second */
+const cruiseBerths=b=>{const t=b.t||0;return {...b,t:0,tt:(b.tt||0)+Math.round(t*0.3),s:(b.s||0)+Math.round(t*0.06),f:(b.f||0)+Math.round(t*0.04)};};
 const atOwnYard=sh=>S.shore&&S.shore.yards[sh.port]&&sh.state!=='sea'&&sh.state!=='repo';
 function refitCost(sh,k){if(k==='fac')return sh.facPlan?Math.round(facChange(sh,sh.facPlan).cost*(atOwnYard(sh)?0.7:1)):0;let c=k==='tourist'?8000+Math.round(sh.berths.t*0.5)*12:REFIT_BASE[k]?REFIT_BASE[k](sh.grt):0;
   c*=PX();if(c&&atOwnYard(sh))c*=0.7;return Math.round(c);}

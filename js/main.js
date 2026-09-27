@@ -12,7 +12,7 @@ document.addEventListener('click',e=>{
     case 'selline':S.selLine=b.dataset.id;UI.tab='lines';(S.tutSeen=S.tutSeen||{}).lines=true;break;
     case 'tabgo':UI.tab=(UI.wide&&b.dataset.tab==='overview')?UI.tab:b.dataset.tab;(S.tutSeen=S.tutSeen||{})[b.dataset.tab]=true;break;
     case 'tutoff':if(S.tut)S.tut.off=true;break;
-    case 'setfare':case 'setfares':case 'setlineopt':case 'setship':case 'moveship':case 'setyard':case 'sellship':case 'hire':case 'shorebuy':case 'deptmode':case 'openmove':case 'buyship':case 'newhead':case 'propyes':case 'propno':case 'build':case 'scrapship':case 'crewset':case 'appoint':
+    case 'setfare':case 'setfares':case 'setlineopt':case 'setship':case 'moveship':case 'setyard':case 'sellship':case 'hire':case 'shorebuy':case 'deptmode':case 'openmove':case 'buyship':case 'newhead':case 'propyes':case 'propno':case 'build':case 'scrapship':case 'crewset':case 'appoint':case 'setwc':
       {const d=JSON.parse(b.dataset.d||'[]');if(a==='moveship'||a==='openmove'||a==='setship'){const x=S.ships.find(q=>q.id===d[0]);if(x)x.ownerSet=S.t;}if(a==='crewset'||a==='appoint'){const x=S.ships.find(q=>q.id===d[0]);if(x)x.crewSet=S.t;}doAction(a,d);}ADV_CACHE.key=null;break;
     case 'shipgrp':{const o=UI.shipGrp=UI.shipGrp||{earn:true,upkeep:true,crew:false,retire:false};o[b.dataset.id]=!o[b.dataset.id];break;}
     case 'plopen':UI.plOpen=UI.plOpen===+b.dataset.id?null:+b.dataset.id;break;
@@ -74,7 +74,7 @@ document.addEventListener('click',e=>{
     case 'askexit':UI.confirm=b.dataset.k+sh.id;break;
     case 'exit':if(sh){if(sh.state==='sea'||sh.state==='repo')sh.pendingExit=b.dataset.k;else exitShip(sh,b.dataset.k);}UI.confirm=null;break;
     case 'unexit':if(sh)sh.pendingExit=null;break;
-    case 'openline':{const rk=b.dataset.id,fee=Math.round(2500*PX());if(S.cash>=fee&&!S.lines[rk]){book('office',-fee,rk);S.lines[rk]={fares:defaultFares(rk),service:1,adv:1,last:[null,null]};news(`The Morven Line opens a ${ROUTES[rk].name} service.`,'good');}break;}
+    case 'openline':{const rk=b.dataset.id,fee=Math.round(2500*PX());if(S.cash>=fee&&!S.lines[rk]&&routeOpen(rk,S.m)){book('office',-fee,rk);S.lines[rk]={fares:defaultFares(rk),service:1,adv:1,last:[null,null]};news(`The Morven Line opens a ${ROUTES[rk].name} service.`,'good');}break;}
     case 'askclose':UI.confirm='close'+b.dataset.id;break;
     case 'closeline':{const rk=b.dataset.id;delete S.lines[rk];delete S.mail[rk];delete S.wars[rk];S.ships.forEach(x=>{if(x.line===rk){x.line=null;}});news(`The ${ROUTES[rk].name} service is closed.`);UI.confirm=null;break;}
     case 'buy':{const s2=S.market.find(x=>x.id===+b.dataset.id);if(s2){const dep=Math.round(s2.price*0.4);if(S.cash>=dep){S.cash-=dep;S.debt+=s2.price-dep;delete s2.price;s2.acq=S.m;S.ships.push(s2);S.market=S.market.filter(x=>x!==s2);S.selShip=s2.id;news(`Bought SS ${s2.name}, lying at ${PN[s2.port]}. Assign her to a line.`,'good');}}break;}

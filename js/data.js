@@ -1,5 +1,5 @@
 /* ================= DATA ================= */
-const GAME_VERSION='0.13.1',GAME_BUILT='27 September 2026'; // bump on every release; see CHANGELOG.md
+const GAME_VERSION='0.14.0',GAME_BUILT='27 September 2026'; // bump on every release; see CHANGELOG.md
 const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 const CL=['f','s','t','tt'];
 const CL_NAME={f:'First',s:'Second',t:'Third',tt:'Tourist Third'};
@@ -16,7 +16,7 @@ const COMM={
   palm:{name:'Palm oil and kernels',rate:2.0}
 };
 /* Services. Calls come from the chart in outbound order; homeward reverses them. base = passengers per round trip market unit. */
-const ROUTE_GROUPS=['North Atlantic','Canada','Mediterranean','Trades'];
+const ROUTE_GROUPS=['North Atlantic','Canada','Mediterranean','Trades','Cruises'];
 const ROUTES={
   exp:{group:'North Atlantic',prestige:1.7,ref:{f:70,s:28,t:13,tt:21},base:{f:130,s:230,t:450,tt:300},cargo:{out:{c:'general',t:1000},home:{c:'general',t:1000}},war:0.04,
        blurb:'The express route to New York via Cherbourg. The richest first class on the ocean, the biggest and fastest rivals, and the Blue Riband.'},
@@ -42,14 +42,36 @@ const ROUTES={
   ban:{group:'Trades',prestige:0.9,ref:{f:45,s:25,t:10,tt:16},base:{f:30,s:40,t:0,tt:0},cargo:{out:{c:'general',t:800},home:{c:'bananas',t:2600}},war:0.01,
        blurb:'Bananas from Jamaica to Avonmouth. Fast refrigerated ships only: without cold holds the fruit rots. A few planters and tourists in the cabins.'},
   waf:{group:'Trades',prestige:0.8,ref:{f:50,s:28,t:14,tt:18},base:{f:28,s:40,t:40,tt:0},cargo:{out:{c:'manuf',t:2200},home:{c:'palm',t:2400}},war:0.01,
-       blurb:'Liverpool to Freetown and Lagos: cotton goods, salt and hardware out, palm oil and kernels home. Colonial officials in the cabins.'}
+       blurb:'Liverpool to Freetown and Lagos: cotton goods, salt and hardware out, palm oil and kernels home. Colonial officials in the cabins.'},
+  /* Cruises: out by the calls, a day ashore at the far end, then home non-stop with the same passengers. The fare is for the whole
+     cruise; there is no cargo, no mail and no steerage trade, and no conference. season: demand by month; months: when to send a ship. */
+  cwi:{group:'Cruises',prestige:0.8,ref:{f:62,s:35,t:14,tt:23},base:{f:60,s:50,t:0,tt:40},cargo:{out:{c:'general',t:0},home:{c:'general',t:0}},war:0,
+       dirw:{f:1,s:1,t:1,tt:1},season:[1,1,.95,.7,.35,.2,.15,.15,.25,.5,.8,1],cruise:{cname:'Madeira and the Canaries',turn:1,spend:1.8,months:[11,0,1,2]},
+       blurb:'Winter sun: Lisbon, Madeira and Tenerife and home, about two weeks. The English winter drives the cabin classes south from December to March.'},
+  cmd:{group:'Cruises',prestige:0.8,ref:{f:82,s:45,t:18,tt:30},base:{f:70,s:50,t:0,tt:35},cargo:{out:{c:'general',t:0},home:{c:'general',t:0}},war:0,
+       dirw:{f:1,s:1,t:1,tt:1},season:[.45,.6,.9,1,.85,.55,.45,.5,.9,1,.65,.45],cruise:{cname:'the Mediterranean',turn:1.5,spend:1.8,months:[2,3,4,8,9]},
+       blurb:'Gibraltar, the Riviera and Naples, two and a half weeks. Spring and autumn are the seasons; high summer is too hot for the cabin classes.'},
+  cfj:{group:'Cruises',prestige:0.8,ref:{f:42,s:24,t:9,tt:16},base:{f:45,s:45,t:0,tt:50},cargo:{out:{c:'general',t:0},home:{c:'general',t:0}},war:0,
+       dirw:{f:1,s:1,t:1,tt:1},season:[.05,.05,.08,.15,.5,.95,1,.95,.45,.1,.05,.05],cruise:{cname:'Norway and the fjords',turn:1,spend:1.6,months:[5,6,7]},
+       blurb:'A week to Bergen and the fjords and back: the midnight sun in summer, and nobody at all in winter.'},
+  cwx:{group:'Cruises',prestige:0.8,ref:{f:56,s:32,t:13,tt:21},base:{f:75,s:45,t:0,tt:45},cargo:{out:{c:'general',t:0},home:{c:'general',t:0}},war:0,
+       dirw:{f:1,s:1,t:1,tt:1},season:[1,1,.95,.75,.4,.25,.2,.2,.3,.55,.85,1],cruise:{cname:'the West Indies',turn:1,spend:2,months:[11,0,1,2]},
+       blurb:'Ten days from New York to Nassau and Havana and back, for Americans escaping the winter. Rum is legal in Havana.'},
+  cnw:{group:'Cruises',prestige:0.8,ref:{f:10,s:6,t:3,tt:4},base:{f:40,s:60,t:150,tt:0},cargo:{out:{c:'general',t:0},home:{c:'general',t:0}},war:0,
+       dirw:{f:1,s:1,t:1,tt:1},season:[.35,.35,.45,.6,.85,1,1,1,.85,.6,.45,.4],cruise:{cname:'cruises to nowhere',turn:0.4,home:1,spend:2,bar:{f:3.5,s:2.5,t:1.6,tt:2},steerage:true,months:[4,5,6,7,8],until:156},
+       blurb:'Two nights from New York to beyond the limit, where the bar can open, and back. Cheap, crowded and very profitable, until Prohibition ends in December 1933.'}
 };
 /* geography: a route (or its winter variant) as sailed in a given month */
 const geoKey=(rk,m)=>{const w=ROUTES[rk].winter;return w&&w.months.includes(((m%12)+12)%12)?w.key:rk;};
 const GEO=k=>CHART.routes[k];
 const geoEnds=k=>{const c=GEO(k).calls;return [c[0][0],c[c.length-1][0]];};
 for(const [k,r] of Object.entries(ROUTES)){const g=GEO(k);r.dist=g.dist;r.calls=g.calls.map(c=>c[0]);r.a=r.calls[0];r.b=r.calls[r.calls.length-1];
-  r.name=r.calls.length>2?PN[r.a]+' → '+PN[r.b]:PN[r.a]+' ↔ '+PN[r.b];r.via=r.calls.slice(1,-1).map(c=>PN[c]);}
+  r.name=r.cruise?PN[r.a]+' · '+r.cruise.cname:r.calls.length>2?PN[r.a]+' → '+PN[r.b]:PN[r.a]+' ↔ '+PN[r.b];r.via=r.calls.slice(1,-1).map(c=>PN[c]);}
+/* cruises: open to book in a given month (the cruise to nowhere dies with Prohibition), and demand by month */
+const isCruise=rk=>!!(ROUTES[rk]&&ROUTES[rk].cruise);
+const routeOpen=(rk,m)=>{const c=ROUTES[rk].cruise;return !(c&&c.until!==undefined&&m>=c.until);};
+const seasonOf=(rk,c,m)=>{const r=ROUTES[rk];return r.season?r.season[((m%12)+12)%12]:SEASON[c][((m%12)+12)%12];};
+const cruiseMonthsText=rk=>{const ms=ROUTES[rk].cruise.months;return ms.map(i=>MONTHS[i].slice(0,3)).join(', ');};
 const DIRW={f:.5,s:.5,t:.8,tt:.5}; // share of round-trip demand travelling westbound
 const SEASON={
   f:[.55,.55,.75,.95,1.2,1.45,1.5,1.4,1.1,.85,.65,.7],
@@ -61,13 +83,14 @@ const E={f:1.3,s:1.5,t:1.9,tt:1.8};
 const SERV={f:[.8,1,1.15],s:[.9,1,1.08],t:[.97,1,1.02],tt:[.88,1,1.1]};
 const SPD_D={f:[.92,1,1.06],s:[.95,1,1.04],t:[1,1,1],tt:[.95,1,1.03]};
 const PROV={f:1.2,s:.45,t:.12,tt:.25}; // catering, pounds per passenger per day
+const CRUISE_SPEND={f:.7,s:.35,t:.1,tt:.2}; // bars, deck games and shore excursions on a cruise, pounds per passenger per day
 const SERV_COST=[.7,1,1.9], SERV_REP=[-.8,.1,1.2];
 const SPD=[.85,1,1.1], SPD_REP=[-.3,0,.4], SPD_WEAR=[.8,1,1.7];
 const MAINT_COST=[0,700,1800], MAINT_GAIN=[0,1.4,3.2];
 const ADV_COST=[0,300,800,1500], ADV_MULT=[1,1.06,1.12,1.17];
 /* Yard work: maintenance jobs and upgrades. days are before any repair-yard discount. */
-const YARD_DAYS={hatch:25,heavy:15,deep:30,fac:20,stab:30,rphone:7,aircon:35,radar:10,fins:30,replate:60,dock:25,oil:55,tourist:30,repair:45,engine:10,reefer:40,wireless:7,turbines:70,lux:35,refurb:25,gear:15};
-const YARD_NAME={hatch:'more hatches and tween decks',heavy:'heavy-lift derricks',deep:'deep tanks',fac:'new public rooms',stab:'gyro stabilisers',rphone:'a radio-telephone',aircon:'air conditioning',radar:'a radiolocation set',fins:'fin stabilisers',replate:'re-plating and new frames',dock:'overhaul',oil:'oil conversion',tourist:'Tourist Third refit',repair:'fire repairs',engine:'engine repairs',
+const YARD_DAYS={scrape:5,cruise:40,hatch:25,heavy:15,deep:30,fac:20,stab:30,rphone:7,aircon:35,radar:10,fins:30,replate:60,dock:25,oil:55,tourist:30,repair:45,engine:10,reefer:40,wireless:7,turbines:70,lux:35,refurb:25,gear:15};
+const YARD_NAME={scrape:'a hull scrape',cruise:'conversion for cruising',hatch:'more hatches and tween decks',heavy:'heavy-lift derricks',deep:'deep tanks',fac:'new public rooms',stab:'gyro stabilisers',rphone:'a radio-telephone',aircon:'air conditioning',radar:'a radiolocation set',fins:'fin stabilisers',replate:'re-plating and new frames',dock:'overhaul',oil:'oil conversion',tourist:'Tourist Third refit',repair:'fire repairs',engine:'engine repairs',
   reefer:'refrigerated holds',wireless:'wireless telegraphy',turbines:'new turbines',lux:'luxury first-class refit',refurb:'refurbishment',gear:'new cargo gear'};
 /* Upgrades a ship can have fitted once. */
 const UPGRADES={
@@ -82,6 +105,7 @@ const RIVALS={
   imperial:{name:'Imperial Atlantic Line',flag:'British'},
   nordmark:{name:'Nordmark Line',flag:'German'},
   columbia:{name:'Columbia Steamship Co.',flag:'American, dry'},
+  meridian:{name:'Meridian Cruising Co.',flag:'British, cruises only'},
   dominion:{name:'Dominion Pacific Line',flag:'Canadian'},
   partenope:{name:'Navigazione Partenope',flag:'Italian'},
   aurore:{name:'Compagnie Aurore',flag:'French'},

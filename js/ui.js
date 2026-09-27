@@ -87,7 +87,7 @@ function alerts(){
     else if(!sh.autoDock&&sh.cond<50&&sh.state!=='yard'&&!sh.pendingYard)A.push({id:'nothresh'+sh.id,k:'warn',t:`SS ${sh.name} is at ${Math.round(sh.cond)}% and has no service threshold.`,b:[['Review','selship',sh.id]]});
     if(sh.dockWarn&&sh.state!=='yard')A.push({id:'dockwarn'+sh.id,k:'warn',t:`SS ${sh.name} is due a drydock the account cannot cover.`,b:[['Bank','tabgo','finance']]});
   }
-  if(S.offer)A.push({id:'offer',noNote:true,k:'good',t:`The Post Office offers ${fmt(S.offer.pay)} per round trip for the ${ROUTES[S.offer.route].name} mail. Miss a month and you are warned; miss two and it goes.`,b:[['Accept','accept'],['Decline','decline']]});
+  if(S.offer)A.push({id:'offer',noNote:true,k:'good',t:`The Post Office offers ${fmt(S.offer.pay)} per round trip for the ${ROUTES[S.offer.route].name} mail. Only ships with wireless carry it: miss a month and you are warned; miss two and it goes.`,b:[['Accept','accept'],['Decline','decline']]});
   for(const rk of Object.keys(S.lines)){
     const r=ROUTES[rk],t=S.tension[rk]||0;
     if(S.wars[rk])A.push({id:'war'+rk,k:'bad',t:`Rate war on ${r.name}, ${S.wars[rk].left} more month${S.wars[rk].left>1?'s':''}.`,b:[['View line','selline',rk]]});
@@ -280,7 +280,20 @@ function shipAccHTML(sh){
     ${brk(lm)}<span class="note">Her own takings and running costs: fares, cargo and mail against coal, crew, ports, upkeep and yard bills. Head office, advertising and interest are the company's.</span></div>
   <div class="ctl"><span class="lbl">Her line</span>
     <div class="tablewrap"><table class="lineopts"><thead><tr><th>Line</th><th class="r">£ a month</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
-    <span class="note">Expected profit a month for her on each line, averaged over the coming year at current fares.${atSea?' A change takes effect when she reaches port.':sh.line&&sh.state==='port'&&sh.port!==ROUTES[sh.line].a&&sh.port!==ROUTES[sh.line].b?' She will sail light to join the line.':''} Fares, table and advertising are set for the whole line in the Lines tab.</span></div>`;
+    <span class="note">Expected profit a month for her on each line, averaged over the coming year at current fares.${atSea?' A change takes effect when she reaches port.':sh.line&&sh.state==='port'&&sh.port!==ROUTES[sh.line].a&&sh.port!==ROUTES[sh.line].b?' She will sail light to join the line.':''} Fares, table and advertising are set for the whole line in the Lines tab.</span></div>
+  ${cruiseCtlHTML(sh)}`;
+}
+/* seasonal cruising: she leaves her line for a cruise's season and goes back after */
+function cruiseCtlHTML(sh){
+  if(CL.reduce((a,c)=>a+(sh.berths[c]||0),0)<60)return '';
+  const est=cruiseEst(sh),wc=sh.wc,now=wc&&sh.line===wc&&sh.homeLine!==undefined;
+  const rows=est.map(o=>{const on=wc===o.rk,gain=o.pm-o.home;
+    return `<tr${on?' class="cur"':''}><td>${ROUTES[o.rk].cruise.cname[0].toUpperCase()+ROUTES[o.rk].cruise.cname.slice(1)}<div class="meta">${cruiseMonthsText(o.rk)}${S.lines[o.rk]?'':' · not open yet'}</div></td>
+      <td class="r num ${o.pm<0?'neg':'pos'}">${fmt(Math.round(o.pm/10)*10)}</td><td class="r num ${gain<0?'neg':'pos'}">${gain>=0?'+':'−'}${fmt(Math.abs(Math.round(gain/10)*10))}</td>
+      <td class="r">${on?'<span class="chip sea">Chosen</span>':`<button class="btn" data-act="setwc" data-d='${JSON.stringify([sh.id,o.rk])}' ${S.over||(!S.lines[o.rk]&&S.cash<2500*PX())?'disabled':''}>${S.lines[o.rk]?'Choose':'Open and choose'}</button>`}</td></tr>`;}).join('');
+  return `<div class="ctl"><div class="row"><span class="lbl">Seasonal cruising</span>${wc?`<button class="btn quiet" data-act="setwc" data-d='${JSON.stringify([sh.id,''])}'>Stop cruising</button>`:''}</div>
+    <div class="tablewrap"><table class="lineopts"><thead><tr><th>Cruise</th><th class="r">In season</th><th class="r">Against her line</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+    <span class="note">${wc?`In ${cruiseMonthsText(wc)} she leaves her line to cruise ${ROUTES[wc].cruise.cname}, and goes back when the season ends.${now?` She is cruising now, and returns to ${sh.homeLine?'the '+ROUTES[sh.homeLine].name+' service':'her lay-up'} after.`:''}`:'Choose a cruise and she leaves her line for its season, then goes back. A laid-up ship comes out for the season and lays up again after.'} Profit a month in the cruise's season, against her line in the same months.${sh.cruiser?'':' Steerage berths sell nothing on a cruise; a cruise conversion in the refit office makes her a better cruiser.'}</span></div>`;
 }
 /* the ship panel in headed groups that fold away; which are open is remembered from ship to ship */
 function shipGrp(k,title,sum,body){
@@ -298,14 +311,16 @@ function captainHTML(sh){
     <button class="btn quiet" data-act="cappool" data-id="${sh.id}" style="width:fit-content">${UI.capPool===sh.id?'Close':'Masters available ('+(S.capPool||[]).length+')'}</button></div>${pool}</div>`;
 }
 const callsText=rk=>ROUTES[rk].calls.map(p=>PN[p]).join(' → ');
-function cargoText(rk){const r=ROUTES[rk],m=S.m,f=(cd,dir)=>{const c=COMM[cd.c],sn=c.season?cargoSeason(cd.c,m):1;
+function cargoText(rk){if(isCruise(rk))return cruiseText(rk);const r=ROUTES[rk],m=S.m,f=(cd,dir)=>{const c=COMM[cd.c],sn=c.season?cargoSeason(cd.c,m):1;
   return `${dir}: ${c.name.toLowerCase()}, about ${int(cd.t)} t a sailing${c.reefer?' (refrigerated holds needed)':''}${c.season?`, ${sn>=1.2?'in season now':sn<=0.7?'out of season now':'fair this month'}`:''}`;};
   return f(r.cargo.out,'Outward')+'. '+f(r.cargo.home,'Homeward')+'.';}
+function cruiseText(rk){const r=ROUTES[rk],c=r.cruise,v=r.via.concat(PN[r.b]==='the open sea'?[]:[PN[r.b]]),days=Math.round(2*r.dist/(14*24)+c.turn+(r.calls.length-2)*CALL_DAYS);
+  return `${PN[r.b]==='the open sea'?'Out beyond the limit and back':`Calls at ${v.slice(0,-1).join(', ')}${v.length>1?' and ':''}${v[v.length-1]}, with ${c.turn>=1?'a day':'a few hours'} ashore at ${PN[r.b]}, then home non-stop`}: about ${days} days at 14 knots. Best months: ${cruiseMonthsText(rk)}${cruiseInSeason(rk,S.m)?' (in season now)':''}. No cargo, no mails and no conference.${!routeOpen(rk,S.m)?' <strong>Closed: Prohibition is over.</strong>':c.until?` Until Prohibition ends in ${monthName(c.until-1)}.`:''}`;}
 /* ---------- Lines ---------- */
 function renderLines(){
   const net=rk=>S.mtd.lines[rk]||0;
   const item=rk=>{const r=ROUTES[rk],open=!!S.lines[rk],n=shipsOn(rk).length,sel=S.selLine===rk,t=S.tension[rk]||0;
-    const chip=!open?'<span class="chip idle">Not served</span>':S.wars[rk]?'<span class="chip bad">Rate war</span>':t>=40&&!S.conf?`<span class="chip yard">${tensionWord(t)}</span>`:S.mail[rk]?'<span class="chip sea">Mail</span>':'';
+    const chip=r.cruise&&!routeOpen(rk,S.m)?'<span class="chip idle">Closed</span>':r.cruise&&cruiseInSeason(rk,S.m)&&!open?'<span class="chip sea">In season</span>':!open?'<span class="chip idle">Not served</span>':S.wars[rk]?'<span class="chip bad">Rate war</span>':t>=40&&!S.conf?`<span class="chip yard">${tensionWord(t)}</span>`:S.mail[rk]?'<span class="chip sea">Mail</span>':'';
     return `<button class="item${open?'':' off'}" data-key="l${rk}" data-act="selline" data-id="${rk}" aria-pressed="${sel}">
       <span class="row"><span class="nm">${r.name}</span>${chip}</span>
       <span class="row meta"><span>${r.calls.length>2?(r.calls.length-2)+' call'+(r.calls.length>3?'s':'')+' · ':''}${int(r.dist)} nm${open?` · ${n} ship${n===1?'':'s'}`:''}</span>${open?`<span class="num ${net(rk)<0?'neg':'pos'}">${fmt(net(rk))}</span>`:''}</span></button>`;};
@@ -320,7 +335,7 @@ function renderLineDetail(rk){
     setHTML($('lineD'),`<div><h3>${r.name}</h3><div class="meta">${callsText(rk)} · ${int(r.dist)} nautical miles · line rates £${r.ref.f} / £${r.ref.s} / £${r.ref.t}${airShare(rk,'f',S.m)>0.005?` · the air takes about ${Math.round(airShare(rk,'f',S.m)*100)}% of first class${S.ships.some(x=>x.line===rk&&knotsOf(x)>=26)?' (your fast ships hold the rest)':'; a 26-knot ship holds more of it'}`:''}</div></div>
       <p style="margin:0">${r.blurb}</p><p class="note">${cargoText(rk)}${r.winter?' From December to April the St Lawrence is frozen: sailings run to Saint John instead.':''}</p>
       <p class="note">Opening a line means setting up booking agents and a pier office at both ends. You then assign ships to it from the Fleet tab.</p>
-      <button class="btn primary" data-act="openline" data-id="${rk}" ${S.cash<2500||S.over?'disabled':''} style="width:fit-content">Open this line · £2,500</button>${marketHTML(rk,null)}`);
+      <button class="btn primary" data-act="openline" data-id="${rk}" ${S.cash<2500*PX()||S.over||!routeOpen(rk,S.m)?'disabled':''} style="width:fit-content">Open this line · ${fmt(Math.round(2500*PX()))}</button>${marketHTML(rk,null)}`);
     return;
   }
   const war=S.wars[rk],ships=shipsOn(rk);
@@ -328,7 +343,7 @@ function renderLineDetail(rk){
   const rep=ships.find(x=>x.id===(UI.fcShip||{})[rk])||ships.slice().sort((a,b)=>CL.reduce((q,c)=>q+b.berths[c],0)-CL.reduce((q,c)=>q+a.berths[c],0))[0]||S.ships[0];
   const carried=c=>(ships.length?ships:[rep]).some(x=>x.berths[c]);
   const w=legCalc(rep,rk,0,null),e=legCalc(rep,rk,1,null);
-  const rows=CL.filter(c=>carried(c)||c==='tt'&&S.ships.some(s=>s.berths.tt)).map(c=>{
+  const rows=CL.filter(c=>!(r.cruise&&c==='t'&&!r.cruise.steerage)&&(carried(c)||c==='tt'&&S.ships.some(s=>s.berths.tt))).map(c=>{
     const lr=Math.round(r.ref[c]*(war?war.mult:1));
     const ld=(i)=>{const x=L.last[i];return x&&x.pax[c]?`${int(x.pax[c].n)}/${x.pax[c].cap}`:'–';};
     return `<tr><td>${CL_NAME[c]}</td><td><input type="number" id="fare-${rk}-${c}" data-fare="${c}" min="1" max="500" value="${L.fares[c]}" aria-label="${CL_NAME[c]} fare in pounds"></td>
@@ -342,7 +357,8 @@ function renderLineDetail(rk){
     <p class="note">${r.blurb} ${cargoText(rk)}${r.winter?(r.winter.months.includes(S.m%12)?' The St Lawrence is frozen: sailings run to Saint John until May.':' From December to April the St Lawrence freezes and sailings run to Saint John.'):''}</p>
     ${advRow('line'+rk,shownAdvice().filter(h=>h.scope==='line'&&h.ref===rk),'this line')}
     ${war?`<p class="badline">The conference lines have cut fares to ${Math.round(war.mult*100)}% of the line rate for ${war.left} more month${war.left>1?'s':''}.</p>`:''}
-    ${S.mail[rk]?`<p class="note">Mail contract: ${fmt(S.mail[rk].pay)} per round trip. Ships at economical speed or broken down do not earn it.</p>`:''}
+    ${S.mail[rk]?`<p class="note">Mail contract: ${fmt(S.mail[rk].pay)} per round trip. Only ships with wireless carry it; ships at economical speed or broken down do not earn it.${ships.some(x=>x.up&&x.up.wireless)?'':' <strong>None of her ships has wireless: the contract will be lost.</strong>'}</p>`
+      :r.cruise||r.group==='Trades'?'':`<p class="note">Mail: ${S.rep<40?`the Post Office tenders for the mails from reputation 40 (you are at ${Math.round(S.rep)}).`:ships.some(x=>x.up&&x.up.wireless)?'the Post Office invites tenders for this mail every few months; the offer comes to Needs attention.':'tenders need a ship with wireless on the line.'}</p>`}
     <div class="tablewrap"><table><thead><tr><th>Class</th><th>Fare £</th><th class="r">Line rate</th><th class="r">Last out</th><th class="r">Last home</th></tr></thead><tbody>${rows}</tbody></table></div>
     ${L.last[0]||L.last[1]?`<p class="note">Last out: ${L.last[0]?'SS '+L.last[0].name:'none yet'}. Last home: ${L.last[1]?'SS '+L.last[1].name:'none yet'}.</p>`:''}
     <div class="grid2">
@@ -386,8 +402,9 @@ function marketHTML(rk,estPax,n){
     tens=`<div class="ctl"><div class="row"><span class="lbl">Conference tension</span><span class="tier ${t>=65?'neg':t>=40?'':'pos'}" style="${t>=40&&t<65?'color:var(--warn)':''}">${tensionWord(t)} · ${Math.round(t)}</span></div>
       <div class="gauge" role="img" aria-label="Tension ${Math.round(t)} of 100"><b style="left:${t}%"></b><b class="proj" style="left:${clamp(next,0,100)}%"></b></div>
       <p class="note">At these fares, about <strong>${Math.round(next)}</strong> next month (dashed). Rate wars start above 40 and grow likely above 65; ${RIVALS[topRival(rk)].name} would lead one here. Tension rises with fares below the line rate, a large market share and extra ships. Rivals here are ${routeAggr(rk)>=1?'aggressive':routeAggr(rk)>=0.8?'watchful':'fairly relaxed'}.</p></div>`;
-  } else if(L&&S.conf)tens=`<div class="ctl"><span class="lbl">Conference</span><p class="note" style="margin:0">Member: no rate wars while you keep to the fare floor (95% of the line rate) and the steerage quota.</p>${confBtn()}</div>`;
-  if(L&&!S.conf)tens=tens.replace(/<\/div>$/,`${confBtn()}</div>`);
+  } else if(L&&S.conf&&!r.cruise)tens=`<div class="ctl"><span class="lbl">Conference</span><p class="note" style="margin:0">Member: no rate wars while you keep to the fare floor (95% of the line rate) and the steerage quota.</p>${confBtn()}</div>`;
+  if(r.cruise)tens=`<p class="note">No conference on cruises: no rate wars and no fare floor, but a small market shared with the cruising companies.</p>`;
+  else if(L&&!S.conf)tens=tens.replace(/<\/div>$/,`${confBtn()}</div>`);
   const mv=S.rmoves.filter(q=>q.rk===rk||q.to===rk).slice(0,4);
   const moves=mv.length?`<div class="ctl"><span class="lbl">Rival moves here</span><ul class="note" style="padding-left:18px;margin:0">${mv.map(q=>`<li>${MONTHS[q.m%12].slice(0,3)} ${1921+Math.floor(q.m/12)}: ${RIVALS[q.o].name} ${q.kind==='add'?'added SS '+q.ship:q.kind==='move'?(q.to===rk?'moved SS '+q.ship+' here':'took SS '+q.ship+' off to '+ROUTES[q.to].name):'scrapped SS '+q.ship}</li>`).join('')}</ul></div>`:'';
   return `<div class="ctl"><span class="lbl">Market report · this month, estimated</span>

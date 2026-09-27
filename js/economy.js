@@ -152,6 +152,7 @@ function airLevel(y){
   return 0.22;
 }
 function airShare(rk,c,m){
+  if(ROUTES[rk].cruise)return 0;
   const a=airLevel(1921+m/12)*(AIR_ROUTE[rk]||0.2)*(AIR_CLASS[c]||0);if(!a)return 0;
   const fast=typeof S!=='undefined'&&S.ships&&S.ships.some(x=>x.line===rk&&knotsOf(x)>=26);
   return Math.min(0.25,a*(fast?0.6:1));

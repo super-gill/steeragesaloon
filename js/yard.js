@@ -14,6 +14,8 @@ const PURPOSES={
     blurb:'Half passenger ship, half cargo ship, for the colonial and South American trades.'},
   cargo:{name:'Cargo liner',size:[4000,14000],speed:[10,18],mix:{f:100,s:0,t:0,tt:0},pax:0.05,cx:0.85,
     blurb:'Big holds and a dozen cabins. Earns her keep on freight.'},
+  cruise:{name:'Cruise ship',from:1928,size:[5000,30000],speed:[13,20],mix:{f:45,s:20,t:0,tt:35},pax:0.8,cx:1.12,cruiser:true,
+    blurb:'White, airy and built for pleasure: cabins, sun decks, pools and public rooms, and no steerage at all. Made for the cruises, though she can run a line in the off season.'},
   reefer:{name:'Refrigerated ship',size:[3500,15000],speed:[13,21],mix:{f:70,s:30,t:0,tt:0},pax:0.12,cx:1.1,reefer:true,
     blurb:'Fast insulated holds for bananas and chilled beef.'}
 };
@@ -84,7 +86,7 @@ const LAYOUTS={
   motor:{name:'Modern motor ship',from:1945,cost:1.03,cargo:1.03,blurb:'Raked stem, streamlined house and a squat funnel; a little more room in her holds.'},
   fruit:{name:'Fruit ship',blurb:'White hull to keep the holds cool, a fine bow and a neat house amidships.'}
 };
-const LAYOUT_FOR={express:['classic','stream','modern'],inter:['classic','stream','modern'],emig:['classic','stream','modern'],tourist:['classic','stream','modern'],
+const LAYOUT_FOR={express:['classic','stream','modern'],inter:['classic','stream','modern'],emig:['classic','stream','modern'],tourist:['classic','stream','modern'],cruise:['classic','stream','modern'],
   mixed:['castle','classic','stream','modern'],cargo:['island','castle','motor'],reefer:['fruit','castle','motor']};
 const layoutOk=(k,y)=>{const l=LAYOUTS[k];return !!l&&(!l.from||y>=l.from)&&(!l.to||y<l.to);};
 function defaultLayout(pk,y){
@@ -112,7 +114,7 @@ const yNow=()=>yearNow();
 /* the public rooms the architects pencil in for each kind of ship, within what her size allows */
 function defaultFac(pk,g,y){
   const want={express:{dineF:2,dineS:1,shows:2,pool:1,garden:1,shops:1},inter:{dineF:1,dineS:1,shows:1,garden:1},emig:{dineT:1,family:1},
-    tourist:{dineS:1,shows:1,cinema:1},mixed:{dineF:1},cargo:{},reefer:{}}[pk]||{};
+    tourist:{dineS:1,shows:1,cinema:1},cruise:{dineF:1,pool:1,garden:1,shows:1,shops:1,spa:1},mixed:{dineF:1},cargo:{},reefer:{}}[pk]||{};
   const f={};let n=0;const cap=2+Math.floor(g/8000);
   for(const k in want){let l=want[k];while(l>0&&!levelOk(k,l,g,y))l--;if(l>0&&n+l<=cap){f[k]=l;n+=l;}}
   return f;
@@ -170,7 +172,7 @@ function designShip(d,st){
   st=st||designStats(d);
   return {id:-1,name:(d.name||'Yard No. '+(S.yardNext||534)).trim(),built:Math.floor(yNow()),grt:d.grt,knots:d.knots,berths:st.berths,cargo:st.cargo,fuel:d.fuel,base:st.price,
     up:{reefer:!!d.extras.reefer,wireless:!!d.extras.wireless},fit:100,captain:null,pay:1,morale:65,cond:95,line:null,speed:1,maint:1,autoDock:50,state:'port',port:'GLA',
-    fac:{...(d.fac||{})},fuelK:st.fuelK,crewK:st.crewK,appFS:st.fs,appT:st.t,galeK:st.gale,riskK:st.risk,safety:st.safety,decayK:st.decay,style:d.style,novelty:true,design:{form:d.form,funnels:d.funnels,purpose:d.purpose,layout:d.layout},
+    fac:{...(d.fac||{})},cruiser:!!(PURPOSES[d.purpose]&&PURPOSES[d.purpose].cruiser),fuelK:st.fuelK,crewK:st.crewK,appFS:st.fs,appT:st.t,galeK:st.gale,riskK:st.risk,safety:st.safety,decayK:st.decay,style:d.style,novelty:true,design:{form:d.form,funnels:d.funnels,purpose:d.purpose,layout:d.layout},
     len:st.eng.len,beam:st.eng.beam,draught:st.eng.draught,shp:st.eng.shp,range:st.eng.range};
 }
 /* the best of the lines you run, or of all routes, for a forecast */
@@ -271,7 +273,7 @@ function deliver(o,st,kn,B){
   Object.assign(sh,{fuelK:st.fuelK*Math.pow(d.knots/kn,0),crewK:st.crewK,appFS:st.fs,appT:st.t,galeK:st.gale,riskK:st.risk,safety:st.safety,decayK:st.decay,style:d.style,newUntil:S.m+18,foul:0,
     len:st.eng.len,beam:st.eng.beam,draught:st.eng.draught,shp:st.eng.shp,range:st.eng.range,designLine:d.line||null,
     design:{layout:d.layout||null,form:d.form,funnels:d.funnels,purpose:d.purpose,mach:d.mach,quality:d.quality,yardNo:o.id,builder:B.name,extras:Object.keys(d.extras).filter(k=>d.extras[k])},fit:100});
-  sh.up.wireless=!!d.extras.wireless;sh.up.lux=d.quality>=2;sh.fac={...(d.fac||{})};
+  sh.up.wireless=!!d.extras.wireless;sh.up.lux=d.quality>=2;sh.fac={...(d.fac||{})};sh.cruiser=!!(PURPOSES[d.purpose]&&PURPOSES[d.purpose].cruiser);
   for(const k of ['stab','fins','aircon','pool','cinema','rphone','radar','hatch','heavy','deep'])if(d.extras[k])sh.up[k]=true;
   const pool=(S.capPool||[]).slice().sort((a,b)=>b.exp-a.exp);if(pool.length){sh.captain=pool[0];S.capPool=S.capPool.filter(q=>q!==pool[0]);}
   sh.acq=S.m;S.ships.push(sh);S.orders=S.orders.filter(x=>x!==o);

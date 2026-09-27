@@ -23,7 +23,10 @@ export const PORTS={
   NYC:['New York',-74.0,40.70], HAL:['Halifax',-63.57,44.65], SJN:['Saint John',-66.06,45.27], QBC:['Quebec',-71.21,46.81],
   MTL:['Montreal',-73.55,45.50], NOL:['New Orleans',-90.07,29.95], GAL:['Galveston',-94.80,29.30], KIN:['Kingston',-76.79,17.97],
   FRE:['Freetown',-13.23,8.48], LAG:['Lagos',3.39,6.45], RIO:['Rio de Janeiro',-43.17,-22.91], MVD:['Montevideo',-56.19,-34.91],
-  BUE:['Buenos Aires',-58.37,-34.60]
+  BUE:['Buenos Aires',-58.37,-34.60],
+  // cruise calls
+  MAD:['Madeira',-16.91,32.64], TEN:['Tenerife',-16.25,28.47], VIL:['Villefranche',7.31,43.70], BGN:['Bergen',5.32,60.39],
+  ALE:['Ålesund',6.15,62.47], NAS:['Nassau',-77.35,25.08], HAV:['Havana',-82.36,23.14], OFF:['the open sea',-70.3,38.9]
 };
 // Sea lanes between consecutive calls. '*' marks a great-circle leg to the next waypoint.
 const NYC_APPROACH=[[-68.5,40.4],[-72.8,40.2],[-73.8,40.45],[-74.0,40.7]];
@@ -54,7 +57,19 @@ const SEG={
   'LIV-LIS':[...MERSEY_OUT,[-8.3,51.5],[-10.5,50.5],[-10.6,43.5],[-9.9,39.5],[-9.4,38.65],[-9.14,38.72]],
   'LIS-RIO':[[-9.14,38.72],[-9.4,38.6],[-11.2,37.0],[-14.5,30.0],[-18.5,20.0],[-25.5,5.0],[-32.5,-5.0],[-34.2,-9.0],[-37.5,-18.0],[-40.8,-22.8],[-42.6,-23.3],[-43.15,-22.97],[-43.17,-22.91]],
   'RIO-MVD':[[-43.17,-22.91],[-43.2,-23.15],[-45.0,-24.6],[-47.9,-27.2],[-49.2,-29.5],[-50.9,-32.0],[-53.4,-34.8],[-54.7,-35.3],[-55.6,-35.2],[-56.19,-34.95]],
-  'MVD-BUE':[[-56.19,-34.91],[-56.7,-34.95],[-57.5,-34.75],[-58.37,-34.60]]
+  'MVD-BUE':[[-56.19,-34.91],[-56.7,-34.95],[-57.5,-34.75],[-58.37,-34.60]],
+  // cruises: out by the calls, home non-stop along the same track
+  'SOU-LIS':[...SOLENT_OUT,[-2.0,50.2],[-5.3,48.6],[-9.5,43.2],[-9.7,40.0],[-9.4,38.65],[-9.14,38.72]],
+  'LIS-MAD':[[-9.14,38.72],[-9.4,38.6],[-11.5,36.5],[-16.2,32.8],[-16.91,32.64]],
+  'MAD-TEN':[[-16.91,32.64],[-16.7,32.4],[-16.0,29.2],[-16.1,28.55],[-16.25,28.47]],
+  'SOU-GIB':[...SOLENT_OUT,[-2.0,50.2],[-5.3,48.6],[-9.5,43.2],[-9.7,40.0],[-9.3,37.0],[-8.2,36.7],[-7.2,36.2],[-5.35,36.14]],
+  'GIB-VIL':[[-5.35,36.14],[-4.5,36.2],[-2.0,36.6],[1.5,38.0],[4.6,39.0],[5.5,41.5],[7.0,43.4],[7.31,43.70]],
+  'VIL-NAP':[[7.31,43.70],[7.6,43.5],[9.0,43.3],[9.7,43.25],[9.8,42.9],[9.98,42.45],[10.8,41.85],[12.0,41.0],[13.0,40.65],[13.9,40.6],[14.27,40.84]],
+  'GLA-BGN':[...CLYDE_OUT,[-6.5,55.75],[-8.3,56.8],[-8.2,58.0],[-6.8,58.8],[-5.0,59.0],[-4.0,59.4],[-2.2,59.62],[0.5,60.0],[4.5,60.3],[5.32,60.39]],
+  'BGN-ALE':[[5.32,60.39],[5.0,60.45],[4.7,60.8],[4.6,61.5],[4.9,62.1],[5.7,62.35],[6.15,62.47]],
+  'NYC-NAS':[[-74.0,40.7],[-73.8,40.45],[-72.8,40.2],[-72.5,38.5],'*',[-76.0,26.5],[-77.1,25.3],[-77.35,25.08]],
+  'NAS-HAV':[[-77.35,25.08],[-77.8,25.5],[-78.9,25.55],[-79.6,25.0],[-80.4,24.1],[-81.8,23.5],[-82.36,23.14]],
+  'NYC-OFF':[[-74.0,40.7],[-73.8,40.45],[-72.8,40.2],[-71.6,39.6],[-70.3,38.9]]
 };
 // Positioning lanes: coastal and connecting passages no service sails, used when a ship moves light between lines.
 const LINKS={
@@ -74,7 +89,8 @@ const LINKS={
 const ROUTES={
   hal:['GLA','HAL'], lha:['LIV','HAL'], liv:['LIV','QUE','NYC'], gny:['GLA','MOV','NYC'], nap:['GEN','NAP','GIB','NYC'],
   stl:['GLA','MOV','QBC','MTL'], stlw:['GLA','MOV','SJN'], exp:['SOU','CHE','NYC'], ham:['HAM','SOU','CHE','NYC'],
-  cot:['LIV','NOL','GAL'], ban:['AVO','KIN'], waf:['LIV','FRE','LAG'], rpl:['LIV','LIS','RIO','MVD','BUE']
+  cot:['LIV','NOL','GAL'], ban:['AVO','KIN'], waf:['LIV','FRE','LAG'], rpl:['LIV','LIS','RIO','MVD','BUE'],
+  cwi:['SOU','LIS','MAD','TEN'], cmd:['SOU','GIB','VIL','NAP'], cfj:['GLA','BGN','ALE'], cwx:['NYC','NAS','HAV'], cnw:['NYC','OFF']
 };
 const hv=(a,b)=>{const R=6371,la1=a[1]*rad,la2=b[1]*rad,dl=(b[0]-a[0])*rad,dp=la2-la1;const h=Math.sin(dp/2)**2+Math.cos(la1)*Math.cos(la2)*Math.sin(dl/2)**2;return 2*R*Math.asin(Math.sqrt(h))/1.852;};
 function expand(L){const pts=[];for(let i=0;i<L.length;i++){if(L[i]==='*'){const a=L[i-1],b=L[i+1],f=geoInterpolate(a,b);for(let j=1;j<40;j++)pts.push(f(j/40));continue;}pts.push(L[i]);}return pts;}

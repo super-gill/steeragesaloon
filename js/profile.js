@@ -58,7 +58,7 @@ function profileSVG(sh,mode,build){
         for(let i=0;i<n;i++)s+=`<circle cx="${tx-10-i*16}" cy="${ty-5-i*5}" r="${(heavy?7:5)+i*2.2}" opacity="${(coal?0.55:0.35)-i*0.1}"/>`;s+='</g>';
         if(heavy)s+=`<circle cx="${tx}" cy="${ty+2}" r="4" style="fill:#E0632F" opacity=".8"/>`;}}
     // hull
-    const white=lay==='fruit'||lay==='modern',hc=white?'#F3F1EA':lay==='motor'?'#6E767B':'#1C2226',bootC=lay==='fruit'||lay==='motor'?'#3D6B3A':'#9C2F22';
+    const white=lay==='fruit'||lay==='modern'||!!sh.cruiser,hc=white?'#F3F1EA':lay==='motor'?'#6E767B':'#1C2226',bootC=lay==='fruit'||lay==='motor'?'#3D6B3A':'#9C2F22';
     s+=`<path d="${hull}" style="fill:${hc}${white?';stroke:#BDB6A6':''}" stroke-width=".6"/>`;
     s+=`<g clip-path="url(#${cid})"><rect x="${x0-5}" y="${inYard?wl-4:wl-4}" width="${L+10}" height="${inYard?30:8}" style="fill:${bootC}"/>${lay==='fruit'?`<rect x="${x0-5}" y="${dy+3}" width="${L+10}" height="2" style="fill:#1B4757"/>`:''}</g>`;
     if(!cargoLay){

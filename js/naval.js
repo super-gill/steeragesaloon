@@ -20,7 +20,7 @@ function roughness(rk,m){const g=ROUTES[rk].group,mo=m%12,winter=[10,11,0,1,2].i
   return winter?0.35:0.2;}
 const eraMaxLen=y=>Math.min(1150,950+Math.max(0,y-1921)*6);
 const lenForSize=g=>15*Math.pow(g,0.38);
-const DISP={express:1.25,inter:1.3,emig:1.35,tourist:1.3,mixed:1.5,cargo:2,reefer:1.6};
+const DISP={cruise:1.3,express:1.25,inter:1.3,emig:1.35,tourist:1.3,mixed:1.5,cargo:2,reefer:1.6};
 /* machinery, by what the engineers of the day could do */
 const MACH_DATA={
   recip:{dens:y=>7,space:0.13,sfc:{coal:1.6,oil:1.15},pps:9},

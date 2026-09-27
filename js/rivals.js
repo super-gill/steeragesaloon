@@ -22,20 +22,24 @@ const RIVAL_P={
     names:['Sherbro','Calabar','Bonny','Accra','Cape Palmas','Opobo','Lokoja','Badagry']},
   pampas:{prestige:1.05,aggr:1.0,cash:600000,col:'#8B3A62',knots:[13,16],grt:[8000,14000],kind:'plate',
     names:['Pampero','Estancia','Rosario','Tucumán','Mendoza','Paraná','Córdoba','Salado','Tandil']},
+  meridian:{prestige:1.0,aggr:0.6,cash:450000,col:'#5C7C8A',knots:[14,16],grt:[8000,14000],kind:'cruise',
+    names:['Arcadia Star','Meridiana','Azure Isle','Southern Cross','Halcyon','Alcina','Belvedere','Solent Star','Caravel','Serenade','Coral Queen','Mirabelle']},
   gulf:{prestige:0.8,aggr:0.8,cash:350000,col:'#6B5B45',knots:[10,13],grt:[5000,8000],kind:'cargo',
     names:['Brazos','Sabine','Atchafalaya','Calcasieu','Trinity','Neches','Pearl','Mobile']}
 };
 const RIVAL_START={hal:[['dominion',3],['imperial',1]],lha:[['dominion',4],['imperial',2]],
   liv:[['imperial',5],['nordmark',3],['columbia',2]],gny:[['imperial',2],['columbia',2]],nap:[['partenope',4],['columbia',1]],
   stl:[['dominion',3],['imperial',1]],exp:[['imperial',3],['aurore',3],['nordmark',1]],ham:[['nordmark',4],['imperial',1]],
-  cot:[['gulf',5]],ban:[['antilles',5]],waf:[['guinea',5]],rpl:[['pampas',4],['nordmark',2]]};
+  cot:[['gulf',5]],ban:[['antilles',5]],waf:[['guinea',5]],rpl:[['pampas',4],['nordmark',2]],
+  cwi:[['meridian',2]],cmd:[['meridian',2]],cfj:[['meridian',1]],cwx:[['meridian',2]],cnw:[['meridian',2]]};
 /* berths and holds by type of ship: liners, cargo steamers, fruit ships, West Africa mixed ships, River Plate refrigerated liners */
 const RIVAL_KIND={
   liner:g=>({berths:{f:g/80,s:g/45,t:g/13},cargo:g/4,reefer:false}),
   cargo:g=>({berths:{f:g/500,s:0,t:0},cargo:g*1.5,reefer:false}),
   fruit:g=>({berths:{f:g/100,s:g/200,t:0},cargo:g*0.6,reefer:true}),
   mixed:g=>({berths:{f:g/110,s:g/150,t:g/90},cargo:g*0.9,reefer:false}),
-  plate:g=>({berths:{f:g/90,s:g/60,t:g/16},cargo:g*0.5,reefer:true})
+  plate:g=>({berths:{f:g/90,s:g/60,t:g/16},cargo:g*0.5,reefer:true}),
+  cruise:g=>({berths:{f:g/40,s:g/70,t:g/35},cargo:0,reefer:false}) // her 'third' is sold as tourist cabins on a cruise
 };
 
 function makeRivalShip(o,rk,built){
@@ -60,23 +64,24 @@ function ensureRivals(){
   for(const rk in RIVAL_START){if(S.mkt[rk]!==undefined)continue;
     for(const [o,n] of RIVAL_START[rk])for(let i=0;i<n;i++)S.rships.push(makeRivalShip(o,rk));
     marketFor(rk);}
-  for(const rk in ROUTES)if(S.cmkt[rk]===undefined){let cc=0;for(const x of S.rships)if(x.route===rk)cc+=x.cargo*sailings(x.knots,rk);const r=ROUTES[rk];S.cmkt[rk]=CARGO_LOAD*cc/Math.max(r.cargo.out.t,r.cargo.home.t);}
+  for(const rk in ROUTES)if(S.cmkt[rk]===undefined){let cc=0;for(const x of S.rships)if(x.route===rk)cc+=x.cargo*sailings(x.knots,rk);const r=ROUTES[rk];S.cmkt[rk]=CARGO_LOAD*cc/Math.max(1,r.cargo.out.t,r.cargo.home.t);}
 }
 /* size a route's passenger market from the rival fleet on it, so they start MKT_LOAD full in the busy direction */
 function marketFor(rk){
   // each class is sized from rival capacity in that class, so rivals start MKT_LOAD full in its busy direction
   const r=ROUTES[rk];S.mkt[rk]={};
-  for(const c of CL){let cap=0;for(const x of S.rships)if(x.route===rk)cap+=(c==='tt'?x.berths.t*0.25:x.berths[c])*sailings(x.knots,rk);
+  for(const c of CL){let cap=0;for(const x of S.rships)if(x.route===rk)cap+=(r.cruise?rivalBerths(x,c):c==='tt'?x.berths.t*0.25:x.berths[c])*sailings(x.knots,rk);
     const dem=r.base[c]*Math.max(dirW(rk,c),1-dirW(rk,c));S.mkt[rk][c]=dem>0?MKT_LOAD*(r.mload||1)*cap/dem:0;}
-  let cc=0;for(const x of S.rships)if(x.route===rk)cc+=x.cargo*sailings(x.knots,rk);S.cmkt[rk]=CARGO_LOAD*cc/Math.max(r.cargo.out.t,r.cargo.home.t);
+  let cc=0;for(const x of S.rships)if(x.route===rk)cc+=x.cargo*sailings(x.knots,rk);S.cmkt[rk]=CARGO_LOAD*cc/Math.max(1,r.cargo.out.t,r.cargo.home.t);
   // the route's normal load, so rivals judge trade against what is usual for that route
   const st=routeStats(rk,6);let p=0,c=0;for(const o in st.owners){p+=st.owners[o].pax;c+=st.owners[o].cap;}S.load0[rk]=c?p/c:0.5;
 }
 
 /* ---------- market maths ---------- */
-const sailings=(knots,rk,sm=1)=>{const r=ROUTES[rk];return 30/(2*r.dist/(knots*sm*24)+2*TURN_DAYS+2*(r.calls.length-2)*CALL_DAYS);}; // round trips per month
-function marketM(rk,c,dir,m){const r=ROUTES[rk];return S.mkt[rk][c]*r.base[c]*(dir===0?dirW(rk,c):1-dirW(rk,c))*SEASON[c][m%12]*histMod(c,rk,m);}
-function rivalBerths(x,c){if(c==='tt')return S.m>=48?Math.round(x.berths.t*0.25):0;if(c==='t'&&S.m>=48)return Math.round(x.berths.t*0.75);return x.berths[c];}
+const turnPair=rk=>{const c=ROUTES[rk].cruise;return c?c.turn+(c.home!==undefined?c.home:TURN_DAYS):2*TURN_DAYS;};
+const sailings=(knots,rk,sm=1)=>{const r=ROUTES[rk];return 30/(2*r.dist/(knots*sm*24)+turnPair(rk)+(r.cruise?1:2)*(r.calls.length-2)*CALL_DAYS);}; // round trips per month
+function marketM(rk,c,dir,m){const r=ROUTES[rk];if(!routeOpen(rk,m))return 0;return S.mkt[rk][c]*r.base[c]*(dir===0?dirW(rk,c):1-dirW(rk,c))*seasonOf(rk,c,m)*histMod(c,rk,m);}
+function rivalBerths(x,c){if(isCruise(x.route)){const st=ROUTES[x.route].cruise.steerage;return c==='tt'?(st?0:x.berths.t):c==='t'?(st?x.berths.t:0):x.berths[c];}if(c==='tt')return S.m>=48?Math.round(x.berths.t*0.25):0;if(c==='t'&&S.m>=48)return Math.round(x.berths.t*0.75);return x.berths[c];}
 /* speed sells cabins, above all on prestige routes: an old 14-knot steamer cannot hold first class against 20-knot giants */
 const speedAppeal=(knots,rk,c)=>{const p=ROUTES[rk].prestige,k=(c==='f'||c==='s')?Math.max(0,(p-0.8)*1.8):Math.max(0,(p-0.8)*0.4);return Math.pow(knots/16,k);};
 /* how fares move demand. Below the line rate a cut wins passengers at the usual rate; above it they walk to the next
@@ -94,7 +99,7 @@ function ourAppeal(sh,rk,c){
   const L=S.lines[rk],r=ROUTES[rk];
   const pf=fareDemand(r.ref[c]/effFare(rk,c),c);
   const mods=shipMods(sh);
-  return pf*repF(c,S.rep,r)*SERV[c][L.service]*SPD_D[c][sh.speed]*ADV_MULT[L.adv]*(S.conf&&c==='t'?1.04:1)*(c==='f'||c==='s'?mods.appealFS:mods.appealT)*shoreMult(rk,c)*speedAppeal(knotsOf(sh)*SPD[sh.speed]*mods.speed,rk,c)*(sh.up&&sh.up.aircon&&TROPIC.includes(rk)&&(c==='f'||c==='s')?1.06:1)*(1-(c==='f'||c==='s'?0.08:0.03)*seaSev(sh,rk,S.m))*facAppeal(sh,c,rk);
+  return pf*repF(c,S.rep,r)*SERV[c][L.service]*SPD_D[c][sh.speed]*ADV_MULT[L.adv]*(S.conf&&c==='t'?1.04:1)*(c==='f'||c==='s'?mods.appealFS:mods.appealT)*shoreMult(rk,c)*speedAppeal(knotsOf(sh)*SPD[sh.speed]*mods.speed,rk,c)*(sh.up&&sh.up.aircon&&TROPIC.includes(rk)&&(c==='f'||c==='s')?1.06:1)*(r.cruise?(sh.cruiser?1.25:1):1)*(1-(c==='f'||c==='s'?0.08:0.03)*seaSev(sh,rk,S.m))*facAppeal(sh,c,rk);
 }
 const TROPIC=['cot','ban','waf','rpl','nap'];
 /* booking agencies in a region the route calls at, and emigrant hostels at its ports */
@@ -159,6 +164,7 @@ function rivalsMonth(){
     const next=cur+(target-cur)*(target<cur?0.25*routeAggr(rk):0.2);
     if(cur>=0.95&&next<0.95&&act&&ratio<0.97)news(`Rival lines on ${ROUTES[rk].name} are cutting their fares to match yours.`,'bad');
     S.rfare[rk]=next;}
+  for(const x of S.rships)if(!routeOpen(x.route,m)){const to=Object.keys(ROUTES).find(k=>isCruise(k)&&routeOpen(k,m)&&k!==x.route&&ROUTES[k].calls[0]===ROUTES[x.route].calls[0])||'cwi';rivalMove(x.owner,x.route,'move',x.name,to);x.route=to;}
   const stats={};for(const rk in ROUTES)stats[rk]=routeStats(rk,m);
   S.lastRivalPax={};for(const rk in ROUTES)S.lastRivalPax[rk]=Math.round(stats[rk].rivalPax);
   for(const o in RIVAL_P){
@@ -200,7 +206,7 @@ function rivalsMonth(){
   }
 }
 /* seasonal demand now, relative to the reference month used for load0 (July 1921) */
-function seasonNorm(rk,m){const r=ROUTES[rk];let a=0,b=0;for(const c of ['f','s','t']){a+=r.base[c]*SEASON[c][m%12];b+=r.base[c]*SEASON[c][6];}return a/b;} // season only: quotas and booms register as real change
+function seasonNorm(rk,m){const r=ROUTES[rk];let a=0,b=0;for(const c of ['f','s','t','tt']){if(c==='tt'&&!r.cruise)continue;a+=r.base[c]*seasonOf(rk,c,m);b+=r.base[c]*seasonOf(rk,c,6);}return a/b;} // season only: quotas and booms register as real change
 /* ---------- where each rival ship physically is (visual only: the market uses sailings, not positions) ---------- */
 const jr=k=>{let h=7;for(const c of String(k))h=(h*31+c.charCodeAt(0))|0;return ((h>>>0)%1000)/1000;};
 function initVis(x){const gk=geoKey(x.route,S.m),d=GEO(gk).dist,out=x.phase<0.5,[A,B]=geoEnds(gk);

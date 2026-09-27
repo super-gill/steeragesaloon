@@ -4,7 +4,7 @@ const W=CHART.W,H=CHART.H;
 const pointAtNm=(gk,nm,rev)=>pointOn(CHART.routes[gk],nm,rev);
 const PORT_XY=c=>CHART.ports[c];
 // label offsets [dx, dy, side]: tuned so the crowded Channel, Irish Sea and Maritimes stay legible
-const PORT_LABEL={GLA:[8,-14,'left'],LIV:[8,-4,'left'],SOU:[8,-10,'left'],CHE:[8,2,'left'],AVO:[-8,-14,'right'],QUE:[-8,0,'right'],MOV:[-8,-14,'right'],
+const PORT_LABEL={VIL:[-8,12,'right'],GLA:[8,-14,'left'],LIV:[8,-4,'left'],SOU:[8,-10,'left'],CHE:[8,2,'left'],AVO:[-8,-14,'right'],QUE:[-8,0,'right'],MOV:[-8,-14,'right'],
   HAM:[8,-8,'left'],NYC:[8,4,'left'],HAL:[8,-2,'left'],SJN:[-8,-14,'right'],QBC:[-8,-14,'right'],MTL:[-8,2,'right'],NAP:[-8,-14,'right'],GEN:[8,-14,'left'],
   GIB:[8,2,'left'],LIS:[-8,-6,'right'],NOL:[8,-14,'left'],GAL:[-8,-14,'right'],KIN:[8,2,'left'],FRE:[-8,-6,'right'],LAG:[8,-6,'left'],RIO:[8,-2,'left'],MVD:[8,2,'left'],BUE:[-8,-14,'right']};
 const PORT_STACK={GLA:[-14,-6,-11,0],LIV:[-14,6,-11,0],HAL:[14,8,11,0],NYC:[14,-4,11,0]};
@@ -15,7 +15,7 @@ document.getElementById('land').setAttribute('d',CHART.land);
 document.getElementById('grat').setAttribute('d',CHART.grat);
 function renderPorts(){
   const used=new Set();for(const rk in S.lines)for(const p of ROUTES[rk].calls)used.add(p);if(S.lines.stl)geoEnds('stlw').forEach(p=>used.add(p));
-  setHTML(document.getElementById('portsO'),Object.keys(PN).map(c=>{const [x,y]=PORT_XY(c),[dx,dy,side]=PORT_LABEL[c]||[8,-6,'left'];
+  setHTML(document.getElementById('portsO'),Object.keys(PN).filter(c=>c!=='OFF').map(c=>{const [x,y]=PORT_XY(c),[dx,dy,side]=PORT_LABEL[c]||[8,-6,'left'];
     return `<div class="port${used.has(c)?'':' dim'}" data-key="p${c}" style="left:${x/W*100}%;top:${y/H*100}%"><i></i><span style="${side}:${side==='left'?dx:-dx}px;top:${dy}px">${PN[c]}</span></div>`;}).join(''));
 }
 
