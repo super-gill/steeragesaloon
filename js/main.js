@@ -3,6 +3,7 @@ document.addEventListener('click',e=>{
   if(UI.suppressClick&&e.target.closest('#map'))return;
   UI.rev=(UI.rev||0)+1;
   const b=e.target.closest('[data-act]');if(!b||b.disabled)return;const prevTab=UI.tab;
+  {const al=b.closest('.alert[data-aid]');if(al)(S.attnSeen=S.attnSeen||{})[al.dataset.aid]=S.t+30;}
   const a=b.dataset.act,sh=S.ships.find(x=>x.id===S.selShip),L=S.lines[S.selLine];
   if(a!=='cancel'&&!a.startsWith('ask')&&!['exit','closeline','leave','new','loadcode'].includes(a))UI.confirm=null;
   switch(a){
@@ -45,7 +46,7 @@ document.addEventListener('click',e=>{
     case 'wread':{const m=(S.wire||[]).find(x=>x.id===+b.dataset.id);if(m&&m.read===false){m.read=true;UI.wa={id:m.id,txt:m.txt,mode:'decode',made:performance.now()};UI._tray=null;}break;}
     case 'wreadall':{for(const m of S.wire||[])if(m.read===false){m.read=true;const e=document.querySelector(`[data-hold="${m.id}"] .tg-an`);if(e)e.textContent=m.txt;}if(UI.wa)UI.wa.done=true;UI._tray=null;break;}
     case 'emmin':UI.emMin=true;break;
-    case 'emshow':UI.emMin=false;break;
+    case 'emshow':{UI.emMin=false;const L=(S.emerg||[]).filter(x=>x.known&&(!x.over||S.t-x.t1<3));if(L.length&&!L.some(x=>x.id===UI.emOpen))UI.emOpen=(L.find(x=>!x.over)||L[0]).id;break;}
     case 'emtab':UI.emOpen=+b.dataset.id;break;
     case 'emreport':emOrder('report',+b.dataset.id);break;
     case 'emorder':emOrder('order',+b.dataset.id,b.dataset.o);break;
@@ -60,16 +61,20 @@ document.addEventListener('click',e=>{
     case 'askexit':UI.confirm=b.dataset.k+sh.id;break;
     case 'exit':if(sh){if(sh.state==='sea'||sh.state==='repo')sh.pendingExit=b.dataset.k;else exitShip(sh,b.dataset.k);}UI.confirm=null;break;
     case 'unexit':if(sh)sh.pendingExit=null;break;
-    case 'openline':{const rk=b.dataset.id;if(S.cash>=2500&&!S.lines[rk]){book('office',-2500,rk);S.lines[rk]={fares:defaultFares(rk),service:1,adv:1,last:[null,null]};news(`The Morven Line opens a ${ROUTES[rk].name} service.`,'good');}break;}
+    case 'openline':{const rk=b.dataset.id,fee=Math.round(2500*PX());if(S.cash>=fee&&!S.lines[rk]){book('office',-fee,rk);S.lines[rk]={fares:defaultFares(rk),service:1,adv:1,last:[null,null]};news(`The Morven Line opens a ${ROUTES[rk].name} service.`,'good');}break;}
     case 'askclose':UI.confirm='close'+b.dataset.id;break;
     case 'closeline':{const rk=b.dataset.id;delete S.lines[rk];delete S.mail[rk];delete S.wars[rk];S.ships.forEach(x=>{if(x.line===rk){x.line=null;}});news(`The ${ROUTES[rk].name} service is closed.`);UI.confirm=null;break;}
     case 'buy':{const s2=S.market.find(x=>x.id===+b.dataset.id);if(s2){const dep=Math.round(s2.price*0.4);if(S.cash>=dep){S.cash-=dep;S.debt+=s2.price-dep;delete s2.price;s2.acq=S.m;S.ships.push(s2);S.market=S.market.filter(x=>x!==s2);S.selShip=s2.id;news(`Bought SS ${s2.name}, lying at ${PN[s2.port]}. Assign her to a line.`,'good');}}break;}
-    case 'borrow':if(headroom()>=10000){S.debt+=10000;S.cash+=10000;}break;
-    case 'repay':{const x=Math.min(10000,S.debt);if(S.cash>=x){S.debt-=x;S.cash-=x;}break;}
-    case 'join':if(S.cash>=3000){S.cash-=3000;S.conf=true;S.wars={};S.tension={};news('The Morven Line has joined the North Atlantic conference.','good');}break;
+    case 'borrow':{const v=+b.dataset.id||10000;if(headroom()>=v&&!(S.noLend>S.m)){S.debt+=v;S.cash+=v;}break;}
+    case 'repay':{const x=Math.min(+b.dataset.id||10000,S.debt);if(S.cash>=x){S.debt-=x;S.cash-=x;}break;}
+    case 'join':if(S.cash>=3000*PX()){S.cash-=3000*PX();S.conf=true;S.wars={};S.tension={};news('The Morven Line has joined the North Atlantic conference.','good');}break;
     case 'leave':if(UI.confirm!=='leave')UI.confirm='leave';else{S.conf=false;UI.confirm=null;news('The Morven Line has left the conference. Expect retaliation if you undercut.','bad');}break;
     case 'accept':if(S.offer){S.mail[S.offer.route]={pay:S.offer.pay,strikes:0,ok:false};news(`Mail contract won on ${ROUTES[S.offer.route].name}: ${fmt(S.offer.pay)} per round trip.`,'good');S.offer=null;}break;
     case 'decline':S.offer=null;break;
+    case 'safety':S.safety=+b.dataset.id;break;
+    case 'union':unionAnswer(b.dataset.id==='yes');break;
+    case 'giltbuy':gilts(true,+b.dataset.id);break;
+    case 'giltsell':gilts(false,b.dataset.id==='all'?S.gilts:+b.dataset.id);break;
     case 'new':if(UI.confirm!=='new')UI.confirm='new';else{UI.confirm=null;newGame();}break;
     case 'newnow':newGame();break;
     case 'cancel':UI.confirm=null;break;
@@ -102,7 +107,7 @@ document.addEventListener('touchstart',e=>{if(e.target.closest('#traybody')){UI.
 document.addEventListener('scroll',e=>{if(e.target&&e.target.id==='traybody'){UI.trayTouch=performance.now()+2500;UI.trayHold=true;setTimeout(()=>{if(!UI.trayHover&&UI.trayTouch<=performance.now()){UI.trayHold=false;UI.dirty=true;}},2600);}},true);
 window.addEventListener('pagehide',()=>save());
 
-S=load();if(!S)newGame();
+S=load();if(!S)newGame();applyPrices();
 if(location.hash.startsWith('#save=')){const code=location.hash.slice(1);history.replaceState(null,'',location.pathname+location.search);
   loadSaveCode(code).then(()=>news('Game loaded from a save link.'),e=>{UI.loadMsg={ok:false,t:'The save link could not be read: '+(e.message||'damaged code')};UI.tab='company';UI.dirty=true;});}
 layoutMode();UI.dirty=true;applyView();requestAnimationFrame(frame);

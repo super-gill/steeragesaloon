@@ -2,6 +2,24 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.8.0 (27 September 2026)
+- Money loses its value. Prices rise over the decades, slowly in the twenties and faster after the war, and fall in a slump. Wages, coal, dues, yard work, ships, shore property and line rates follow them; each January the lines revise their tariffs and your fares follow. Cash in the bank does not: hold ships, property or government stock instead. The Finance tab shows how far prices have moved.
+- Panics. From the mid-1930s the City panics every decade or so. First rumours, then the crash: trade falls away, second-hand ship prices collapse, the bank calls in part of its loans with three months to pay, lending stops for a year and interest rises. Sometimes the Line's own bank fails and most of the cash on deposit goes with it. Unpaid called loans are taken by seizing ships in port. Do nothing and the Line goes under.
+- Government stock: buy and sell consols in the Finance tab. They pay 3½%, survive a bank failure and fall a little in a panic.
+- A big line is exposed. Head office costs grow faster than the fleet. Excess profits duty takes 30% of a year's profit above a threshold. The seamen's union claims more from a big, rich line: agree, or risk a strike in the home ports. When the Morven Line outgrows the biggest rival, the others form a combine: pooled money, new tonnage and fighting rates on your main routes, and expulsion from the conference.
+- The aeroplane takes a slice but never the trade: airships until the Graf Aurelian burns, flying boats after the war, then jets until the Air Conference caps them. It takes express first class and some second, never steerage or cargo, and never more than a quarter of a route's first class. Ships of 26 knots or more hold their first class best. The line panel shows the air's share.
+- Ships wear out. Every crossing uses up some of a hull's life: more at full speed, in a run-down ship, with a hard-driving master, in gales and without maintenance. A well-kept ship lasts thirty-five years or more; a thrashed one a dozen. An ageing ship cannot be brought back to full condition, breaks down and springs leaks far more, fetches less and costs more to insure; at the end she loses her steerage certificate. Re-plating buys years, less each time. The ship panel shows her state, and the Marine Superintendent advises re-plating and the breakers.
+- Courts of inquiry. Every lost or written-off ship is investigated. A well-found ship lost to ice with her people saved costs little. A worn-out, run-down, undermanned or unsuitable ship, one without wireless, or one whose owners gave no orders when asked, brings fines, claims from families and shippers, recovery costs, a clawback of the insurance if she was unseaworthy, and a stain on the Line's name that fades only slowly. The immediate reputation hit of a loss is smaller; the inquiry decides the rest.
+- Safety and training policy for the whole fleet (Company tab): cut corners, Board of Trade rules, or exemplary. It changes how well crews fight emergencies, how many people live, what the courts find, and your standing.
+- Reputation brings better freight: general cargo, manufactures and chilled goods favour a line with a good name.
+- Bigger ships cost far more than their tonnage: a superliner costs about twice what it did. Piers cost two and a half times as much and agencies twice.
+- Emergencies: minor ones are handled by the master without asking you, and no longer slow the clock or open the window. Serious and grave ones stop the clock almost completely while the master waits for orders: about two minutes to decide, three for a grave one.
+- Needs attention: acting on an item, or pressing Noted, clears it for a month.
+- Borrow, repay and buy stock in larger amounts.
+
+## 0.7.1 (27 September 2026)
+- The drawing office power curve is full width with readable axes: horsepower against knots, the wall marked, and the design speed and horsepower labelled on the curve.
+
 ## 0.7.0 (27 September 2026)
 - The drawing office works like one. You set the job (purpose, the line she is for, size, speed, what she carries) and the naval architects work out her length, beam, draught, lines, horsepower, coal or oil per day and bunkers. Speed costs power steeply past what her length allows, shown on a power curve; a longer hull is easier to drive but is limited by the era and by the ports on her line. Leave engines and hull form to the engineers or overrule them.
 - The architects' report says in plain words what she will be: her dimensions, why they chose them, how much of her the engines and bunkers take, whether she fits every port on the line, what kind of sea boat she will be, and whether her bunkers reach the longest leg.

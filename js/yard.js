@@ -110,7 +110,9 @@ function designStats(d){
   const power=e.shp*MACH_DATA[d.mach].pps*M.cost/1.1;
   const interiors=(berths.f*250+berths.s*90+berths.t*20+berths.tt*50)*Q.cost*(d.style==='edw'?1:1.08);
   let extras=0;for(const k in d.extras)if(d.extras[k]&&EXTRAS[k])extras+=EXTRAS[k].cost(g);
-  const base=(hull+power+interiors+extras)*B.price*(d.contract==='fixed'?1.08:1);
+  // the biggest ships cost far more than their tonnage: longer slips, heavier plate, more of everything done once only
+  const sizeK=1+0.6*Math.pow(Math.max(0,(g-20000)/40000),1.3);
+  const base=(hull*sizeK+power+interiors+extras)*B.price*(d.contract==='fixed'?1.08:1)*PX();
   const price=Math.round(base/1000)*1000;
   const months=Math.round((6+g/1600)*Math.pow(Math.max(1,e.shp/15000),0.12)*[0.95,1,1.08,1.15][d.quality]*B.speed*Math.sqrt(P.cx));
   // running character: coal or oil a day at service speed, set by her engines and her lines
@@ -122,7 +124,7 @@ function designStats(d){
   if(!d.name||!d.name.trim())w.push('She needs a name.');
   else if(S.ships.some(x=>x.name.toLowerCase()===d.name.trim().toLowerCase())||(S.orders||[]).some(o=>o.d.name.toLowerCase()===d.name.trim().toLowerCase()))w.push('You already have a ship of that name.');
   return {berths,cargo,price,months,fuelK,crewK,fs,t,gale,risk,safety:SUBDIV[d.subdiv].safety,decay:Q.decay,warn:w,eng:e,
-    parts:{hull:hull*B.price,machinery:power*B.price,interiors:interiors*B.price,extras:extras*B.price}};
+    parts:{hull:hull*sizeK*B.price*PX(),machinery:power*B.price*PX(),interiors:interiors*B.price*PX(),extras:extras*B.price*PX()}};
 }
 /* a stand-in ship for forecasts and drawings */
 function designShip(d,st){
@@ -168,7 +170,7 @@ function placeOrder(d){
   const st=designStats(d);if(st.warn.length)return {ok:false,why:st.warn[0]};
   const dep=Math.round(st.price*0.1);if(S.cash<dep)return {ok:false,why:`The yard wants ${fmt(dep)} with the order.`};
   S.orders=S.orders||[];S.yardNext=S.yardNext||534;
-  const o={id:S.yardNext++,d:Object.assign(JSON.parse(JSON.stringify(d)),{auto:{mach:false,form:false}}),price:st.price,paid:0,due:0,months:st.months,prog:0,stage:'drawing',left:2,ordered:S.m,late:0,unpaid:0,log:[]};
+  const o={id:S.yardNext++,d:Object.assign(JSON.parse(JSON.stringify(d)),{auto:{mach:false,form:false}}),price:st.price,paid:0,due:0,months:st.months,prog:0,stage:'drawing',left:2,ordered:S.m,late:0,unpaid:0,log:[],pi0:PX()};
   o.d.name=o.d.name.trim();
   pay(o,dep,'deposit');S.orders.push(o);
   logOrder(o,`Ordered from ${builderOf(o.d).name} as Yard No. ${o.id}. ${fmt(dep)} paid with the order.`);
@@ -226,7 +228,7 @@ function ordersMonth(){
 }
 const LAUNCH_SPONSORS=['Lady Morven, wife of the chairman','the Duchess of Montrose','the Lord Provost\'s wife','Princess Mary','a shipyard apprentice\'s mother, at the chairman\'s insistence','the Countess of Eglinton','Mrs Stanley Baldwin'];
 function deliver(o,st,kn,B){
-  const d=o.d,sh=makeShip({name:d.name,built:Math.floor(yNow()),grt:d.grt,knots:kn,berths:{...st.berths},cargo:st.cargo,fuel:d.fuel,base:o.price,reefer:!!d.extras.reefer},96,B.port);
+  const d=o.d,sh=makeShip({name:d.name,built:Math.floor(yNow()),grt:d.grt,knots:kn,berths:{...st.berths},cargo:st.cargo,fuel:d.fuel,base:o.price,pi0:o.pi0||1,reefer:!!d.extras.reefer},96,B.port);
   Object.assign(sh,{fuelK:st.fuelK*Math.pow(d.knots/kn,0),crewK:st.crewK,appFS:st.fs,appT:st.t,galeK:st.gale,riskK:st.risk,safety:st.safety,decayK:st.decay,style:d.style,newUntil:S.m+18,foul:0,
     len:st.eng.len,beam:st.eng.beam,draught:st.eng.draught,shp:st.eng.shp,range:st.eng.range,designLine:d.line||null,
     design:{form:d.form,funnels:d.funnels,purpose:d.purpose,mach:d.mach,quality:d.quality,yardNo:o.id,builder:B.name,extras:Object.keys(d.extras).filter(k=>d.extras[k])},fit:100});
@@ -253,6 +255,6 @@ function genMarketShip(){
   d.fuel=built>=1925||d.mach==='motor'?'oil':'coal';d.style=built>=1950?'contemp':built>=1933?'moderne':built>=1925?'deco':'edw';d.quality=Math.random()<0.2?2:1;
   let name=GEN_A[Math.floor(Math.random()*GEN_A.length)]+GEN_B[Math.floor(Math.random()*GEN_B.length)];name=name[0]+name.slice(1);
   const st=designStats(d);
-  return {name,built,grt:d.grt,knots:d.knots,berths:{...st.berths},cargo:st.cargo,fuel:d.fuel,base:Math.round(st.price*0.8),reefer:!!d.extras.reefer,
+  return {name,built,grt:d.grt,knots:d.knots,berths:{...st.berths},cargo:st.cargo,fuel:d.fuel,base:Math.round(st.price*0.8),pi0:PX(),reefer:!!d.extras.reefer,
     note:`A ${PURPOSES[pk].name.toLowerCase()}, ${MACHINES[d.mach].name.toLowerCase()}, ${STYLES[d.style].name} interiors.`,gen:{fuelK:st.fuelK,crewK:st.crewK,appFS:st.fs,style:d.style,design:{form:d.form,funnels:d.funnels,purpose:pk},len:st.eng.len,beam:st.eng.beam,draught:st.eng.draught,shp:st.eng.shp,range:st.eng.range}};
 }

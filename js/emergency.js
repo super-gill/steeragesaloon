@@ -54,7 +54,13 @@ const crewOf=sh=>Math.round(sh.grt/45)+40;
 const R01=()=>Math.random();
 function activeEmergency(){return (S.emerg||[]).find(e=>!e.over&&e.known);}
 /* how fast the clock may run: an hour a second through an emergency, slower still while the master waits for orders */
-function emClock(){const a=(S.emerg||[]).filter(e=>!e.over&&e.known);if(!a.length)return null;return a.some(e=>e.dec&&e.dec.owner)?EM_RATE/5:EM_RATE;}
+const emBig=e=>e.sev>1||e.k==='quar';
+function emClock(){
+  const a=(S.emerg||[]).filter(e=>!e.over&&e.known&&emBig(e));if(!a.length)return null;
+  const d=a.filter(e=>e.dec&&e.dec.owner);if(!d.length)return EM_RATE;
+  // while the master waits for orders on something serious the clock all but stops: two or three minutes to decide
+  return d.some(e=>e.sev>=3&&e.k!=='quar')?EM_RATE/45:d.some(e=>e.k!=='quar')?EM_RATE/30:EM_RATE/15;
+}
 const emShip=e=>S.ships.find(x=>x.id===e.sid);
 function nearestPort(p){let b=null;for(const k in CHART.ports){const [x,y]=CHART.ports[k],d=nmBetween(p,{x,y});if(!b||d<b.d)b={k,d};}return b;}
 
@@ -64,8 +70,8 @@ function rollEmergency(sh,gk,dist,R){
   const mods=shipMods(sh),lenF=dist/3000,old=sh.cond<50?1.6:1;
   const W=[];
   if(north&&[2,3,4,5,6].includes(m))W.push(['ice',0.006*(sh.up&&sh.up.radar?0.4:1)]);
-  W.push(['wreck',0.003],['collision',0.004*(sh.up&&sh.up.radar?0.4:1)*(winter?1.4:1)],['seam',0.004*old*(winter?1.8:1)*(sh.safety||1)*(1+2*seaSev(sh,sh.legRoute,m))]);
-  W.push(['fire',0.003*old*(sh.fuel==='coal'?1.3:1)]);
+  const fr=fatRisk(sh);W.push(['wreck',0.003],['collision',0.004*(sh.up&&sh.up.radar?0.4:1)*(winter?1.4:1)],['seam',0.004*old*fr*(winter?1.8:1)*(sh.safety||1)*(1+2*seaSev(sh,sh.legRoute,m))]);
+  W.push(['fire',0.003*old*Math.sqrt(fr)*(sh.fuel==='coal'?1.3:1)]);
   const steer=sh.load&&sh.load.pax.t?sh.load.pax.t.n:0,hot=TROPIC.includes(sh.legRoute);
   if(steer>80||hot)W.push(['illness',0.012*Math.min(2,steer/500)+(hot?0.008:0)]);
   if((sh.morale||60)<35)W.push(['mutiny',0.02*(35-sh.morale)/35*(has(sh,'martinet')?1.6:1)]);
@@ -83,8 +89,8 @@ function addResponders(e,sh,range,max){
 }
 function startEmergency(sh,k){
   const R=Math.random,D=EMERG[k],where=posText(sh),radio=radioOf(sh),p=shipXY(sh);
-  const cap=clamp(66+(sh.captain?Math.min(20,sh.captain.exp*0.7):5)+(has(sh,'cautious')?5:0)-(has(sh,'drinker')?8:0)+((sh.morale||60)-60)/3+(sh.cond-60)/5,25,90);
-  const g=R(),sev=g<D.grave*(sh.cond<45?1.5:1)?3:g<0.45?2:1;
+  const cap=clamp(safetyOf().cap+66+(sh.captain?Math.min(20,sh.captain.exp*0.7):5)+(has(sh,'cautious')?5:0)-(has(sh,'drinker')?8:0)+((sh.morale||60)-60)/3+(sh.cond-60)/5,25,90);
+  const g=R(),old=fatOf(sh),sev=g<D.grave*(sh.cond<45?1.5:1)*(old>75?1.8:1)*safetyOf().grave?3:g<0.45+(old>75?0.15:0)?2:1;
   const e={id:(S.emNext=(S.emNext||0)+1),sid:sh.id,ship:sh.name,k,t0:S.t,sev,peak:0,ctrl:0,cap,capA:0,rateM:SEV_RATE[sev],saveA:0,
     rate:D.rate[0]+R()*(D.rate[1]-D.rate[0]),resp:[],known:radio,over:null,where,lines:[],later:[],orders:[],dead:0,abandon:false};
   e.threat=D.type==='sick'?4:D.type==='unrest'?10:SEV_T0[sev];
@@ -100,7 +106,7 @@ function startEmergency(sh,k){
   if(!radio&&heard.some(n=>n.radio))e.known=true;
   if(D.type==='unrest'){const nv=NAVY[Math.floor(R()*NAVY.length)];e.resp.push({name:nv,line:'navy',navy:true,radio:true,eta:S.t+(0.8+R()*1.2),arrived:false});}
   if(e.known){emSay(e,null,D.sos?(e.resp.length?`Answering: ${e.resp.filter(r=>!r.arrived).map(r=>`${r.navy?r.name:'SS '+r.name}${r.navy?'':' ('+r.line+')'}, about ${Math.max(1,Math.round((r.eta-S.t)*24))} h away`).join('; ')}.`:'No ship has answered yet.'):'Ship proceeding. Surgeon reports twice daily.',radio?'':'relay',stationFor(sh)+' Radio');
-    if(typeof UI!=='undefined'){UI.emOpen=e.id;UI.emMin=false;UI.emNormal=false;}}
+    if(typeof UI!=='undefined'&&emBig(e)){UI.emOpen=e.id;UI.emMin=false;UI.emNormal=false;}}
   askOrders(e,sh,D.type==='water'?'w1':D.type==='fire'?'f1':D.type==='sick'?'s1':e.k==='piracy'?'p1':'u1');
   return e;
 }
@@ -186,7 +192,7 @@ const decOpts=(e,sh,k)=>Object.entries(DECIDE[k].opts).filter(([id,o])=>o&&(!o.o
 /* the master asks. With a wireless set he waits a few hours for orders; without one he decides at once */
 function askOrders(e,sh,k){
   if(e.dec)emDecide(e,null,'master'); // an earlier question overtaken by events
-  e.canOrder=radioOf(sh)||sh.state==='port';
+  e.canOrder=(radioOf(sh)||sh.state==='port')&&emBig(e); // a minor emergency the master handles himself
   const opts=decOpts(e,sh,k);if(!opts.length)return;
   let d=DECIDE[k].dflt(e,sh);if(!opts.some(o=>o[0]===d))d=opts.find(o=>!o[1].owner)[0];
   if(has(sh,'drinker')&&Math.random()<0.35){const own=opts.filter(o=>!o[1].owner);d=own[Math.floor(Math.random()*own.length)][0];}
@@ -242,7 +248,7 @@ function emergencyStep(e,sh,step){
 const sickNow=(e,sh)=>{const n=Math.max(2,Math.round((e.crew?crewOf(sh):soulsOf(sh))*e.threat/100*0.45));return `${int(n)} ${e.crew?'of the crew':'passengers'}`;};
 /* a ship given up: to the sea, or to the underwriters */
 function writeOff(e,sh,how){
-  sh.lost={t:S.t,where:posText(sh),saved:1,lost:0};
+  sh.lost={t:S.t,where:posText(sh),saved:1,lost:0};queueInquiry(sh,e);
   const v=Math.round(shipValue(sh)*0.85);S.cash+=v;S.rep=clamp(S.rep-3,0,100);payMortgage(sh,v);
   news(`SS ${e.ship} is a constructive total loss ${how}. Everyone aboard was saved. The underwriters pay ${fmt(v)} and take her over.`,'bad',true);
   S.ships=S.ships.filter(x=>x!==sh);if(S.selShip===sh.id)S.selShip=S.ships[0]?S.ships[0].id:null;
@@ -252,7 +258,7 @@ function emEnd(e,sh,how){
   e.over=how;e.t1=S.t;sh.em=null;if(e.dec){e.dec=null;}
   if(how==='lost'&&(D.type==='water'||D.type==='fire')){
     const hrs=e.abandon?(S.t-e.abandon)*24:0;
-    const sv=clamp((help?0.8+0.06*help:0.42)+e.saveA+Math.min(0.2,hrs*0.05),0.1,0.995);
+    const sv=clamp((help?0.8+0.06*help:0.42)+e.saveA+safetyOf().save+Math.min(0.2,hrs*0.05),0.1,0.995);
     const paxLost=e.transfer?0:Math.round(souls*(1-sv)),crewLost=Math.round(crew*(1-sv)*(e.fight?1.4:1)*(e.transfer?0.7:1));
     const lost=Math.min(souls+crew,paxLost+crewLost);e.dead=lost;
     emSay(e,sh,e.abandon?(D.type==='water'?'Last boats away. She is going now. Master and wireless operators leaving her. God speed.':'Last boats away. Fire through the wireless room. Leaving her. God speed.')
@@ -262,6 +268,7 @@ function emEnd(e,sh,how){
       :`${lost?`Boats of SS ${e.ship} found after a long night. ${int(souls+crew-lost)} survivors. ${int(lost)} missing.`:`All the boats of SS ${e.ship} picked up. Everyone saved.`}`,lost?'bad':'good','Coast station');
     if(sh.load)book('fares',-Math.round(sh.load.paxRev*0.5),rk);
     sh.lost={t:S.t,where:posText(sh),saved:1-lost/Math.max(1,souls+crew),lost};
+    queueInquiry(sh,e);sh.inqQ=true;
     if(radioOf(sh)||e.known)loseShip(sh);else{sh.state='lost';sh.stopLeft=0;}
     return;}
   if(how==='beached'){
@@ -323,7 +330,7 @@ function emHourly(e,sh,step){
   if(e.known||e.over)return;
   if(shipsNear(shipXY(sh),20,sh).some(n=>n.radio)&&Math.random()<0.5*step*24){e.known=true;
     emSay(e,null,`Passing steamer reports rockets and distress signals from SS ${e.ship} ${posText(sh)}. Standing by.`,'bad','Relayed by a passing ship');
-    if(typeof UI!=='undefined'){UI.emOpen=e.id;UI.emMin=false;}}
+    if(typeof UI!=='undefined'&&emBig(e)){UI.emOpen=e.id;UI.emMin=false;}}
 }
 
 /* ---------- the emergency window ---------- */
@@ -332,7 +339,7 @@ function emergencyHTML(){
   if(!L.length)return '';
   const e=L.find(x=>x.id===UI.emOpen)||L.find(x=>!x.over)||L[0];
   const asking=L.some(x=>x.dec&&x.dec.owner);
-  if(UI.emMin)return `<button class="empill" data-act="emshow">${asking?'Orders wanted':L.some(x=>!x.over)?'Emergency':'Emergency over'}: SS ${esc(e.ship)}</button>`;
+  if(UI.emMin||!L.some(x=>emBig(x)||x.id===UI.emOpen))return `<button class="empill${L.some(emBig)?'':' minor'}" data-act="emshow">${asking?'Orders wanted':!L.some(emBig)?'Incident':L.some(x=>!x.over)?'Emergency':'Emergency over'}: SS ${esc(e.ship)}</button>`;
   const D=EMERG[e.k],sh=emShip(e),hrs=Math.max(0,((e.t1||S.t)-e.t0)*24);
   const tabs=L.length>1?`<div class="emtabs">${L.map(x=>`<button data-act="emtab" data-id="${x.id}" aria-pressed="${x.id===e.id}">SS ${esc(x.ship)}${x.dec&&x.dec.owner?' ●':''}</button>`).join('')}</div>`:'';
   const log=`<div><span class="lbl">Signals</span><div class="em-log">${e.lines.map(l=>`<div><time>${hhmm(l.t)}</time> <span class="meta">${esc(l.via)}</span><br>${esc(l.txt)}</div>`).join('')}</div></div>`;
@@ -360,7 +367,7 @@ function emergencyHTML(){
       <div><span class="lbl">Answering the call</span><ul class="em-resp">${resp}</ul></div>
       ${log}
       ${!e.over?`<div class="em-orders"><span class="lbl">From the office</span>${radio?`<div class="em-opts">${sh?officeOpts(e,sh).map(([id,o])=>`<button class="em-opt" data-act="emoffice" data-id="${e.id}" data-o="${id}"><b>${esc(o.label)}</b><span>${esc(o.hint(e,sh))}</span></button>`).join(''):''}</div><button class="btn quiet" data-act="emreport" data-id="${e.id}">Ask for a report</button>`:'<p class="note">She has no wireless. The office cannot reach her; the master decides alone.</p>'}</div>`:''}
-      ${!e.over?`<p class="note">${UI.emNormal?'The clock is at normal speed.':e.dec&&e.dec.owner?'The clock is crawling while the master waits for orders.':'The clock runs at one hour a second until this is over.'} <button class="btn quiet" data-act="emspeed">${UI.emNormal?'Slow it down again':'Run at normal speed'}</button></p>`:`<button class="btn" data-act="emclose" data-id="${e.id}">Close</button>`}
+      ${!e.over?`<p class="note">${UI.emNormal?'The clock is at normal speed.':e.dec&&e.dec.owner?'The clock is all but stopped while the master waits for your orders.':'The clock runs at one hour a second until this is over.'} <button class="btn quiet" data-act="emspeed">${UI.emNormal?'Slow it down again':'Run at normal speed'}</button></p>`:`<button class="btn" data-act="emclose" data-id="${e.id}">Close</button>`}
     </div></div>`;
 }
 function decHTML(e,sh){

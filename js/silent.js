@@ -66,8 +66,9 @@ function payMortgage(sh,v){if(!(S.debt>0))return;const fv=S.ships.reduce((a,x)=>
 /* the underwriters pay the insured value; the loss of life is never forgotten */
 function loseShip(sh){
   const L=sh.lost||{lost:0,saved:1},v=Math.round(shipValue(sh));
-  S.cash+=v;S.rep=clamp(S.rep-(L.lost>200?18:L.lost>20?10:4),0,100);payMortgage(sh,v);
-  news(`SS ${sh.name} is lost${L.where?' '+L.where:''}. ${L.lost?`${int(L.lost)} lives lost.`:'Everyone aboard was saved.'} The underwriters pay ${fmt(v)}.`,'bad',true);
+  S.cash+=v;S.rep=clamp(S.rep-(L.lost>200?8:L.lost>20?5:2),0,100);payMortgage(sh,v); // the court of inquiry decides the rest
+  if(!sh.inqQ)queueInquiry(sh,null);
+  news(`SS ${sh.name} is lost${L.where?' '+L.where:''}. ${L.lost?`${int(L.lost)} lives lost.`:'Everyone aboard was saved.'} The underwriters pay ${fmt(v)}. A court of inquiry will sit.`,'bad',true);
   S.ships=S.ships.filter(x=>x!==sh);if(S.selShip===sh.id)S.selShip=S.ships[0]?S.ships[0].id:null;
 }
 /* daily: overdue ships, drifting ships, posted missing */

@@ -1,5 +1,5 @@
 /* ================= DATA ================= */
-const GAME_VERSION='0.7.0',GAME_BUILT='27 September 2026'; // bump on every release; see CHANGELOG.md
+const GAME_VERSION='0.8.0',GAME_BUILT='27 September 2026'; // bump on every release; see CHANGELOG.md
 const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 const CL=['f','s','t','tt'];
 const CL_NAME={f:'First',s:'Second',t:'Third',tt:'Tourist Third'};
@@ -66,8 +66,8 @@ const SPD=[.85,1,1.1], SPD_REP=[-.3,0,.4], SPD_WEAR=[.8,1,1.7];
 const MAINT_COST=[0,700,1800], MAINT_GAIN=[0,1.4,3.2];
 const ADV_COST=[0,300,800,1500], ADV_MULT=[1,1.06,1.12,1.17];
 /* Yard work: maintenance jobs and upgrades. days are before any repair-yard discount. */
-const YARD_DAYS={dock:25,oil:55,tourist:30,repair:45,engine:10,reefer:40,wireless:7,turbines:70,lux:35,refurb:25,gear:15};
-const YARD_NAME={dock:'overhaul',oil:'oil conversion',tourist:'Tourist Third refit',repair:'fire repairs',engine:'engine repairs',
+const YARD_DAYS={replate:60,dock:25,oil:55,tourist:30,repair:45,engine:10,reefer:40,wireless:7,turbines:70,lux:35,refurb:25,gear:15};
+const YARD_NAME={replate:'re-plating and new frames',dock:'overhaul',oil:'oil conversion',tourist:'Tourist Third refit',repair:'fire repairs',engine:'engine repairs',
   reefer:'refrigerated holds',wireless:'wireless telegraphy',turbines:'new turbines',lux:'luxury first-class refit',refurb:'refurbishment',gear:'new cargo gear'};
 /* Upgrades a ship can have fitted once. */
 const UPGRADES={

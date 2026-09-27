@@ -8,7 +8,7 @@ function newGame(){
      shore:{piers:{},agents:{},hostels:{},yards:{},bunker:null},miles:{},capPool:[],capNext:1,depts:{},tut:{},tutSeen:{},orders:[],bslips:{},yardNext:534,wire:[],wireQ:[],wireNext:0,ghosts:[]};
   S.lines.hal={fares:defaultFares('hal'),service:1,adv:1,last:[null,null]};
   const mv=makeShip(TEMPL[0],58,'GLA');mv.line='hal';mv.state='port';mv.portLeft=2;S.ships.push(mv);
-  initRivals();refreshMarket();S.capPool=[0,1,2,3].map(()=>makeCaptain());news(HIST[0].t,'hist');
+  S.pi=1;applyPrices();initRivals();refreshMarket();S.capPool=[0,1,2,3].map(()=>makeCaptain());news(HIST[0].t,'hist');
   UI.speed=0;UI.banner='Paused. Press 1× to start the clock.';UI.confirm=null;
   save();UI.dirty=true;
 }
@@ -21,6 +21,7 @@ function migrate(s){
   if(!s.selShip&&s.ships[0])s.selShip=s.ships[0].id;if(!s.selLine)s.selLine=Object.keys(s.lines)[0]||'hal';
   s.ships.concat(s.market||[]).forEach(sh=>{if(sh.autoDock===undefined)sh.autoDock=50;});
   const prev=S;S=s;
+  s.pi=s.pi||1;s.gilts=s.gilts||0;
   if(!s.rships)initRivals();
   // 0.4: shore establishment, milestones, captains and crew, upgrades, multi-stop voyages, new routes and rival lines
   s.shore=s.shore||{piers:{},agents:{},hostels:{},yards:{},bunker:null};s.miles=s.miles||{};s.depts=s.depts||{};s.wire=s.wire||[];s.orders=s.orders||[];s.bslips=s.bslips||{};s.yardNext=s.yardNext||534;s.wireQ=s.wireQ||[];s.ghosts=s.ghosts||[];
@@ -60,7 +61,7 @@ async function readSaveCode(code){
   return migrate(s);
 }
 async function loadSaveCode(code){
-  const s=await readSaveCode(code);S=s;save();UI.speed=0;UI.banner='Save loaded. Paused.';UI.confirm=null;UI.saveCode=null;UI.dirty=true;
+  const s=await readSaveCode(code);S=s;applyPrices();save();UI.speed=0;UI.banner='Save loaded. Paused.';UI.confirm=null;UI.saveCode=null;UI.dirty=true;
   if(typeof VIEW!=='undefined')VIEW.s=null;
   return s;
 }

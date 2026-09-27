@@ -2,9 +2,9 @@
 const TURN_DAYS=4,CALL_DAYS=1;
 const turnDays=(sh,port)=>Math.max(2,TURN_DAYS-(sh.up&&sh.up.gear?1:0)-(S.shore&&S.shore.piers[port]?1:0));
 const bunkerDiscount=()=>S.shore&&S.shore.bunker&&S.shore.bunker.until>=S.m?0.88:1;
-const fuelPrice=(sh,m)=>(sh.fuel==='coal'?coalPrice(m):oilPrice(m))*bunkerDiscount();
+const fuelPrice=(sh,m)=>(sh.fuel==='coal'?coalPrice(m):oilPrice(m))*bunkerDiscount()*PX();
 const fuelRate=(sh,sm)=>sh.grt/(sh.fuel==='coal'?70:95)*Math.pow(sm,3)*(sh.up&&sh.up.turbines?0.92:1)*(sh.fuelK||1);
-const duesAt=(sh,port,mult)=>sh.grt*mult*(S.shore&&S.shore.piers[port]?0.4:1);
+const duesAt=(sh,port,mult)=>sh.grt*mult*(S.shore&&S.shore.piers[port]?0.4:1)*PX();
 /* the intermediate calls of a geography in sailing order for a direction, as [port, nm from departure] */
 function stopsFor(gk,dir){const g=GEO(gk),c=g.calls.slice(1,-1);return (dir===0?c.map(x=>[x[0],x[1]]):c.reverse().map(x=>[x[0],g.dist-x[1]]));}
 
@@ -16,7 +16,7 @@ function legCalc(sh,rk,dir,R,gk){
   const seaDays=g.dist/(kn*sm*foulF(sh)*24)+(short>range*0.5?1.5:0),calls=g.calls.length-2;
   const pax={};let paxRev=0,prov=0;
   for(const c of CL){
-    const b=(m>=228&&!(sh.up&&sh.up.wireless))?0:sh.berths[c];if(!b)continue;
+    const b=(m>=228&&!(sh.up&&sh.up.wireless))||(c==='t'&&fatOf(sh)>=90)?0:sh.berths[c];if(!b)continue;
     const fare=effFare(rk,c),myA=ourAppeal(sh,rk,c),own=b*sailings(kn,rk,sm)*myA;
     const others=rivalWeight(rk,c)+ourWeight(rk,c,sh);
     // this ship's slice of the route's market for this class and direction, per crossing
@@ -36,7 +36,7 @@ function legCalc(sh,rk,dir,R,gk){
   const fuelT=fuelRate(sh,sm)*seaDays*(1+0.1*(sh.foul||0));
   const endPort=dir===0?geoEnds(gk)[1]:geoEnds(gk)[0];
   let dues=duesAt(sh,endPort,0.08);for(const [p] of stopsFor(gk,dir))dues+=duesAt(sh,p,0.04);
-  return {pax,paxRev,prov,cargoT,comm:cd.c,cargoRev:cargoT*cm.rate*cargoMod(m),fuelT,fuelC:fuelT*fuelPrice(sh,m),
+  return {pax,paxRev,prov,cargoT,comm:cd.c,cargoRev:cargoT*cm.rate*cargoMod(m)*(['grain','cotton','palm'].includes(cd.c)?1:clamp(1+(S.rep-30)/150,0.85,1.3)),fuelT,fuelC:fuelT*fuelPrice(sh,m),
     seaDays:seaDays+calls*CALL_DAYS,geo:gk,mail:S.mail[rk]&&sh.speed>0&&sh.up&&sh.up.wireless?S.mail[rk].pay/2:0,
     agents:0.08*paxRev,port:dues+0.35*cargoT};
 }
@@ -72,7 +72,8 @@ function depart(sh){
   if(R()<0.22)sh.flav={at:dist*(0.1+R()*0.8),k:R()};
   const age=yearNow()-sh.built;
   sh.cond=clamp(sh.cond-0.8*SPD_WEAR[sh.speed]*(1+age/30)*(sh.fuel==='oil'?0.85:1)*mods.wear*lenF,5,95);
-  const pS=sh.cond<35?(35-sh.cond)/100*0.3*mods.risk*lenF:0,pB=sh.cond<75?(75-sh.cond)/100*0.175*mods.risk*lenF:0;
+  fatVoyage(sh,lenF);const fr=fatRisk(sh);
+  const pS=(sh.cond<35?(35-sh.cond)/100*0.3*mods.risk*lenF:0)*fr,pB=(sh.cond<75?(75-sh.cond)/100*0.175*mods.risk*lenF:0)*fr+(fr>1?0.01*(fr-1)*lenF:0);
   sh.event=null;
   sh.emEvent=null;sh.em=null;
   if(R()<pS)sh.emEvent={k:'fire',at:dist*(0.2+R()*0.6)};
@@ -170,11 +171,12 @@ function enterYard(sh,k){
 }
 function finishYard(sh){
   const k=sh.yardKind;sh.up=sh.up||{};sh.foul=0;if(sh.rmk){delete sh.rmk.foul1;delete sh.rmk.foul2;delete sh.rmk.foul3;}
-  if(k==='dock'){sh.cond=Math.min(92,sh.cond+35);news(`SS ${sh.name} is out of drydock, scraped, painted and sound.`,'good');}
+  if(k==='dock'){const cap=Math.min(92,condCap(sh));sh.cond=Math.max(sh.cond,Math.min(cap,sh.cond+35));news(`SS ${sh.name} is out of drydock, scraped and painted${cap<85?`, but the yard could only bring her to ${cap}%: she is getting old`:' and sound'}.`,'good');}
+  if(k==='replate'){const n=sh.replates||0,gain=[25,15,8,4][Math.min(3,n)];sh.replates=n+1;sh.fat=Math.max(0,fatOf(sh)-gain);sh.cond=Math.min(condCap(sh),sh.cond+20);news(`SS ${sh.name} is re-plated and her frames renewed. ${n?'Less of her is original each time; the gain is smaller.':'Good for years yet.'}`,'good');}
   if(k==='oil'){sh.fuel='oil';news(`SS ${sh.name} now burns oil. Half her stokers have been paid off.`,'good');}
   if(k==='tourist'){const cv=Math.round(sh.berths.t*0.5);sh.berths.t-=cv;sh.berths.tt+=Math.round(cv*0.6);news(`SS ${sh.name} returns with Tourist Third Cabin.`,'good');}
-  if(k==='repair'){sh.cond=Math.min(95,sh.cond+15);news(`SS ${sh.name} has been repaired and returns to service.`);}
-  if(k==='engine'){sh.cond=Math.min(95,sh.cond+8);news(`SS ${sh.name}'s engines are repaired.`);}
+  if(k==='repair'){sh.cond=Math.min(condCap(sh),sh.cond+15);news(`SS ${sh.name} has been repaired and returns to service.`);}
+  if(k==='engine'){sh.cond=Math.min(condCap(sh),sh.cond+8);news(`SS ${sh.name}'s engines are repaired.`);}
   if(k==='refurb'){sh.fit=100;const ns=currentStyle();const re=ns!==(sh.style||'edw');sh.style=ns;news(`SS ${sh.name} returns freshly refurbished${re?', her public rooms redone in the '+STYLES[ns].name+' style':', her saloons like new'}.`,'good');}
   if(k==='lux'){sh.up.lux=true;sh.fit=100;news(`SS ${sh.name} returns with luxury first-class suites.`,'good');}
   if(UPGRADES[k]&&k!=='lux'){sh.up[k]=true;news(`SS ${sh.name} returns with ${UPGRADES[k].name.toLowerCase()}.`,'good');}
@@ -199,7 +201,7 @@ function moveAll(step){
       if(sh.callLeft>0){sh.callLeft-=step;continue;}
       sh.pos+=(sh.towed?120:knotsOf(sh)*SPD[sh.speed]*shipMods(sh).speed*24*sh.slow*foulF(sh)*(sh.limp?(sh.limpF||0.4):1))*step;
       if(sh.event&&sh.pos>=sh.event.at)triggerEvent(sh);
-      if(sh.galeAt&&sh.pos>=sh.galeAt){sh.galeAt=null;const gs=sh.galeSev||0;sh.slow=0.75-0.2*gs;sh.cond=clamp(sh.cond-gs*6,5,95);
+      if(sh.galeAt&&sh.pos>=sh.galeAt){sh.galeAt=null;const gs=sh.galeSev||0;sh.slow=0.75-0.2*gs;sh.cond=clamp(sh.cond-gs*6,5,95);addFat(sh,gs*0.5);
         if(gs>0.3){S.rep=clamp(S.rep-1,0,100);remark(sh,'sea',`Master to owners. Worst crossing I have known. She rolled her rails under for three days and the passengers are in a bad way. She is too small for this run in winter.`,`Nearly lost her off the Banks. Rolled her rails under for three days, boats stove in, passengers praying. She is too small for this run in winter. Move me or give me a bigger ship.`,'bad',100);}wire(sh,`Full gale ${posText(sh)}. Heavy seas. Hove to for some hours, now proceeding at reduced speed. Expect a day late.`);}
       if(sh.flav&&sh.pos>=sh.flav.at&&!sh.towed)voyageFlavour(sh);
       const st=sh.stops&&sh.stops[sh.nextCall];
@@ -223,15 +225,15 @@ function dailyTick(){
     const key=act?(sh.state==='sea'?sh.legRoute:sh.line):'_idle';
     book('crew',-(crewCost(sh)*f+(sh.captain?sh.captain.wage:0))/30,key);
     book('upkeep',-(insCost(sh)/30+(act?MAINT_COST[sh.maint]*sh.grt/8000/30:0)),key);
-    if(act)sh.cond=clamp(sh.cond+MAINT_GAIN[sh.maint]/30,5,95);
+    if(act&&sh.cond<condCap(sh))sh.cond=clamp(sh.cond+MAINT_GAIN[sh.maint]/30,5,condCap(sh));
     else if(sh.state==='laid')sh.cond=clamp(sh.cond-0.02,5,95);
     foulDaily(sh);
     if(sh.state!=='yard')sh.fit=Math.max(0,(sh.fit===undefined?80:sh.fit)-0.6/30*(sh.decayK||1));
   }
   for(const rk in S.lines)book('adv',-ADV_COST[S.lines[rk].adv]/30,rk);
-  book('office',-((600+250*S.ships.length)+(S.conf?350:0))/30);
-  const up=shoreUpkeep();if(up)book('shore',-up/30);
-  book('interest',-S.debt*0.065/365);
+  book('office',-officeCost()/30);const sc=safetyCost();if(sc)book('safety',-sc/30);inquiryDaily();
+  const up=shoreUpkeep()*PX();if(up)book('shore',-up/30);
+  book('interest',-S.debt*(0.065+(S.rateUp>S.m?0.02:0))/365);strikeDaily();
   const m=mOf(S.t);if(m!==S.m){const pm=S.m;S.m=m;monthRoll(pm);}
   if(S.cash<0&&!S.odWarn){S.odWarn=true;news(`The account is overdrawn. The bank will foreclose below ${fmt(-odLimit())}.`,'bad');}
   if(S.cash>0)S.odWarn=false;
@@ -241,6 +243,7 @@ function monthRoll(pm){
   const repay=Math.min(S.debt,Math.round(S.debt*0.004));S.debt-=repay;S.cash-=repay;
   const net=Object.values(S.mtd.cat).reduce((a,b)=>a+b,0);
   S.lastMonth={m:pm,cat:S.mtd.cat,lines:S.mtd.lines,net,repay,capex:S.mtd.capex||0};S.mtd=blankLedger();
+  inflate();giltsMonth();taxMonth(net);crashMonth();unionMonth();combineMonth();
   S.lastPax=S.pax;S.pax={};
   for(const id in RIVALS)S.rivalIdx[id]=clamp((S.rivalIdx[id]||1)+(Math.random()-0.5)*0.04,0.93,1.06);
   S.hist.push(Math.round(S.cash));if(S.hist.length>240)S.hist.splice(0,S.hist.length-240);
@@ -256,7 +259,7 @@ function monthRoll(pm){
     const n=shipsOn(rk).filter(x=>ACTIVE.includes(x.state)).length;
     if(S.conf||!S.lines[rk]||!n){S.tension[rk]=(S.tension[rk]||0)*0.6;continue;}
     const pr=pressure(rk,S.lines[rk].fares,S.lastPax[rk]||0,n,S.m);
-    const prev=S.tension[rk]||0,t=prev+(pr.p-prev)*0.35;S.tension[rk]=t;
+    const prev=S.tension[rk]||0,t=prev+(pr.p+(combineOn(rk)?45:0)-prev)*0.35;S.tension[rk]=t;
     if(prev<40&&t>=40)news(`${RIVALS[topRival(rk)].name} is complaining about your fares on ${ROUTES[rk].name}. Tension ${Math.round(t)}.`,'bad');
     if(!S.wars[rk]&&t>=40&&Math.random()<(t-40)/100*0.9){
       S.wars[rk]={left:4+Math.floor(Math.random()*4),mult:0.72};
@@ -274,13 +277,14 @@ function monthRoll(pm){
   const act=S.ships.filter(x=>x.line&&S.lines[x.line]&&ACTIVE.includes(x.state));
   if(act.length){const svc=act.reduce((a,x)=>a+(S.lines[x.line].service-1),0)/act.length,spd=act.reduce((a,x)=>a+(x.speed-1),0)/act.length;
     const pop=act.filter(x=>has(x,'popular')).length/act.length;
-    const target=32+22*svc+8*spd+(Object.keys(S.mail).length?5:0)+4*pop+Math.min(4,2*Object.keys(S.shore.hostels).length);S.rep=clamp(S.rep+(target-S.rep)*0.12,0,100);}
+    S.stain=(S.stain||0)*0.97;
+    const target=32-S.stain+[0,0,3][S.safety===undefined?1:S.safety]+22*svc+8*spd+(Object.keys(S.mail).length?5:0)+4*pop+Math.min(4,2*Object.keys(S.shore.hostels).length);S.rep=clamp(S.rep+(target-S.rep)*0.12,0,100);}
   if(S.shore.bunker&&S.shore.bunker.until===S.m-1)news('Your bunker contract has expired. Coal and oil are back at market prices.','bad');
   if(S.offer&&S.offer.exp<=S.m)S.offer=null;
   if(!S.offer&&S.rep>=40){
     const c=Object.keys(S.lines).filter(rk=>!S.mail[rk]&&shipsOn(rk).length&&ROUTES[rk].group!=='Trades');
     if(c.length&&Math.random()<0.12){const rk=c[Math.floor(Math.random()*c.length)];
-      S.offer={route:rk,pay:Math.round((1200+Math.random()*600)*ROUTES[rk].dist/3100*(S.m>=375?0.8:1)/50)*50,exp:S.m+2};
+      S.offer={route:rk,pay:Math.round((1200+Math.random()*600)*ROUTES[rk].dist/3100*(S.m>=375?0.8:1)*PX()/50)*50,exp:S.m+2};
       news(`The Post Office is inviting tenders for the ${ROUTES[rk].name} mail.`,'good',true);}
   }
   if(S.m%3===0)refreshMarket();

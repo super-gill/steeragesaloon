@@ -82,20 +82,25 @@ function renderTabs(){
 function alerts(){
   const A=[];
   for(const sh of S.ships){
-    if(sh.state==='laid')A.push({k:'warn',t:`SS ${sh.name} is laid up at ${PN[sh.port]}, still drawing wages.`,b:[['Assign a line','selship',sh.id]]});
-    else if(sh.cond<35&&sh.state!=='yard'&&sh.pendingYard!=='dock')A.push({k:'bad',t:`SS ${sh.name} is dangerously run down at ${Math.round(sh.cond)}%.`,b:[['Send to the yard','selship',sh.id]]});
-    else if(!sh.autoDock&&sh.cond<50&&sh.state!=='yard'&&!sh.pendingYard)A.push({k:'warn',t:`SS ${sh.name} is at ${Math.round(sh.cond)}% and has no service threshold.`,b:[['Review','selship',sh.id]]});
-    if(sh.dockWarn&&sh.state!=='yard')A.push({k:'warn',t:`SS ${sh.name} is due a drydock the account cannot cover.`,b:[['Bank','tabgo','finance']]});
+    if(sh.state==='laid')A.push({id:'laid'+sh.id,k:'warn',t:`SS ${sh.name} is laid up at ${PN[sh.port]}, still drawing wages.`,b:[['Assign a line','selship',sh.id]]});
+    else if(sh.cond<35&&sh.state!=='yard'&&sh.pendingYard!=='dock')A.push({id:'rundown'+sh.id,k:'bad',t:`SS ${sh.name} is dangerously run down at ${Math.round(sh.cond)}%.`,b:[['Send to the yard','selship',sh.id]]});
+    else if(!sh.autoDock&&sh.cond<50&&sh.state!=='yard'&&!sh.pendingYard)A.push({id:'nothresh'+sh.id,k:'warn',t:`SS ${sh.name} is at ${Math.round(sh.cond)}% and has no service threshold.`,b:[['Review','selship',sh.id]]});
+    if(sh.dockWarn&&sh.state!=='yard')A.push({id:'dockwarn'+sh.id,k:'warn',t:`SS ${sh.name} is due a drydock the account cannot cover.`,b:[['Bank','tabgo','finance']]});
   }
-  if(S.offer)A.push({k:'good',t:`The Post Office offers ${fmt(S.offer.pay)} per round trip for the ${ROUTES[S.offer.route].name} mail. Miss a month and you are warned; miss two and it goes.`,b:[['Accept','accept'],['Decline','decline']]});
+  if(S.offer)A.push({id:'offer',noNote:true,k:'good',t:`The Post Office offers ${fmt(S.offer.pay)} per round trip for the ${ROUTES[S.offer.route].name} mail. Miss a month and you are warned; miss two and it goes.`,b:[['Accept','accept'],['Decline','decline']]});
   for(const rk of Object.keys(S.lines)){
     const r=ROUTES[rk],t=S.tension[rk]||0;
-    if(S.wars[rk])A.push({k:'bad',t:`Rate war on ${r.name}, ${S.wars[rk].left} more month${S.wars[rk].left>1?'s':''}.`,b:[['View line','selline',rk]]});
-    else if(t>=40&&!S.conf)A.push({k:'warn',t:`Conference tension is ${tensionWord(t).toLowerCase()} on ${r.name} (${Math.round(t)}).`,b:[['Review fares','selline',rk]]});
-    if(!shipsOn(rk).length)A.push({k:'warn',t:`${r.name} is open but has no ships assigned.`,b:[['View line','selline',rk]]});
+    if(S.wars[rk])A.push({id:'war'+rk,k:'bad',t:`Rate war on ${r.name}, ${S.wars[rk].left} more month${S.wars[rk].left>1?'s':''}.`,b:[['View line','selline',rk]]});
+    else if(t>=40&&!S.conf)A.push({id:'tension'+rk,k:'warn',t:`Conference tension is ${tensionWord(t).toLowerCase()} on ${r.name} (${Math.round(t)}).`,b:[['Review fares','selline',rk]]});
+    if(!shipsOn(rk).length)A.push({id:'empty'+rk,k:'warn',t:`${r.name} is open but has no ships assigned.`,b:[['View line','selline',rk]]});
   }
-  if(S.cash<0)A.push({k:'bad',t:`The account is overdrawn. The bank forecloses below ${fmt(-odLimit())}.`,b:[['Bank','tabgo','finance']]});
-  return A;
+  if(S.union)A.push({id:'union',noNote:true,k:'bad',t:`The seamen's union claims ${S.union.pct}% more pay. Refusing risks a strike in the home ports; silence counts as refusal.`,b:[['Agree','union','yes'],['Refuse','union','no']]});
+  if(S.strike)A.push({id:'strike',k:'bad',t:`Seamen on strike in the home ports until about ${dateLong(S.strike.until)}.`,b:[]});
+  if(S.crash&&S.crash.stage==='rumour')A.push({id:'rumour'+S.crash.m0,k:'bad',t:S.crash.bank?`Rumours about ${BANK_NAME}, where the Line keeps its cash.`:'The markets are nervous and the banks are calling in loans.',b:[['Bank and stock','tabgo','finance']]});
+  if(S.call)A.push({id:'call',k:'bad',t:`The bank has called in ${fmt(S.call.amt)}, due by ${monthName(S.call.due)}. Unpaid, it will seize ships.`,b:[['Bank','tabgo','finance']]});
+  for(const sh of S.ships)if(fatOf(sh)>=90&&sh.state!=='yard')A.push({id:'worn'+sh.id,k:'warn',t:`SS ${sh.name} is worn out and should go to the breakers.`,b:[['View','selship',sh.id]]});
+  if(S.cash<0)A.push({id:'od',k:'bad',t:`The account is overdrawn. The bank forecloses below ${fmt(-odLimit())}.`,b:[['Bank','tabgo','finance']]});
+  const seen=S.attnSeen||{};return A.filter(a=>!(seen[a.id]>S.t)); // an item the owner has acted on stays away for a month
 }
 function renderOverview(){
   const A=alerts(),ADV=shownAdvice(),mtd=Object.values(S.mtd.cat).reduce((a,b)=>a+b,0),LM=S.lastMonth;
@@ -106,7 +111,7 @@ function renderOverview(){
     <div class="tile"><span class="lbl">Last month</span><b class="${LM&&LM.net<0?'neg':'pos'}">${LM?fmt(LM.net):'None yet'}</b></div>
     <div class="tile"><span class="lbl">Ships at sea</span><b>${atSea} of ${S.ships.length}</b></div>
     <div class="tile"><span class="lbl">Best line this month</span><b style="font-size:14px;font-family:var(--body)">${best?ROUTES[best].name:'None open'}</b></div></div>`;
-  const al=A.length?A.map(a=>`<div class="alert ${a.k}" data-key="${keyOf(a.t.slice(0,40))}"><span>${a.t}</span><span class="btns">${a.b.map(([l,act,id])=>`<button class="btn" data-act="${act}" ${act==='tabgo'?`data-tab="${id}"`:id!==undefined?`data-id="${id}"`:''}>${l}</button>`).join('')}</span></div>`).join('')
+  const al=A.length?A.map(a=>`<div class="alert ${a.k}" data-key="${keyOf(a.t.slice(0,40))}" data-aid="${a.id}"><span>${a.t}</span><span class="btns">${a.b.map(([l,act,id])=>`<button class="btn" data-act="${act}" ${act==='tabgo'?`data-tab="${id}"`:id!==undefined?`data-id="${id}"`:''}>${l}</button>`).join('')}${a.noNote?'':'<button class="btn quiet" data-act="noted">Noted</button>'}</span></div>`).join('')
     :'';
   const props=(S.props||[]).map(p=>`<div class="alert prop" data-key="pr${keyOf(p.id)}"><span><strong>${DEPTS[p.dept].name} proposes:</strong> ${p.title}.<br><small class="note">${p.why}</small></span>
     <span class="btns"><button class="btn primary" data-act="propyes" data-d='${JSON.stringify([p.id]).replace(/'/g,"&#39;")}'>${p.act==='build'?'Open the drawing office':'Approve'}</button><button class="btn" data-act="propno" data-d='${JSON.stringify([p.id]).replace(/'/g,"&#39;")}'>Decline</button></span></div>`).join('');
@@ -225,7 +230,7 @@ function renderShipDetail(sh){
     <div class="ctl"><div class="row"><span class="lbl">Fittings</span><span class="meta">${Math.round(sh.fit)}%</span></div>${condBar(sh.fit)}
       <span class="note">Cabins, saloons and linen wear out a few points a year. Tired fittings put off first and second class. A refurbishment restores them.</span></div>
     <div class="ctl"><span class="lbl">Shipyard</span><div class="btns">
-      ${yb('dock','Drydock overhaul',true)}${yb('refurb','Refurbish',sh.fit<80)}${yb('oil','Convert to oil',sh.fuel==='coal')}${yb('tourist','Tourist Third refit',S.m>=48&&sh.berths.tt===0&&sh.berths.t>0)}</div>
+      ${yb('dock','Drydock overhaul',true)}${yb('replate','Re-plate and renew frames',fatOf(sh)>35)}${yb('refurb','Refurbish',sh.fit<80)}${yb('oil','Convert to oil',sh.fuel==='coal')}${yb('tourist','Tourist Third refit',S.m>=48&&sh.berths.tt===0&&sh.berths.t>0)}</div>
       ${sh.pendingYard&&sh.pendingYard!=='repair'?`<p class="warnline">Booked into the yard for ${YARD_NAME[sh.pendingYard]} on arrival.</p>`:''}
       ${sh.pendingYard==='repair'?'<p class="badline">Goes straight to the yard for fire repairs on arrival.</p>':''}
       ${atOwnYard(sh)?'<p class="note">She is at your own yard: work here is 30% cheaper and quicker.</p>':''}</div>
@@ -233,7 +238,7 @@ function renderShipDetail(sh){
       return `<div class="uprow" data-key="up${k}"><div><strong>${u.name}</strong>${on?' <span class="chip sea">Fitted</span>':''}<div class="meta">${u.desc}</div></div>${on?'':yb(k,'Fit',true)}</div>`;}).join('')}</div></div>
     <div class="ctl"><span class="lbl">Retire</span><div class="btns">${exitH||'<span class="note">You cannot retire your only ship.</span>'}</div></div>
     ${sh.lastRemark?`<div class="ctl"><span class="lbl">The master's last word</span><blockquote class="remark">${esc(plainTel(telegram(sh.lastRemark.txt)).replace(/^Master to owners\. /,''))}<footer>${esc(sh.lastRemark.who)}, ${dateLong(sh.lastRemark.t)}</footer></blockquote></div>`:''}
-    <div class="ctl"><span class="lbl">Her hull</span><span class="note">${dimsOf(sh).len|0} ft long, drawing ${dimsOf(sh).draught|0} ft${sh.len?'':' (estimated)'}. ${(sh.foul||0)<0.2?'Clean bottom.':(sh.foul||0)<0.45?'Some growth on her bottom.':(sh.foul||0)<0.7?'Her bottom is foul; she has lost speed.':'Badly foul and slow. She needs drydocking.'}</span></div>
+    <div class="ctl"><span class="lbl">Her hull</span><span class="note"><strong>${fatWord(sh)}.</strong> ${Math.floor(yearNow()-sh.built)} years old${condCap(sh)<92?`; the yard can bring her to ${condCap(sh)}% at best`:''}${sh.replates?`, re-plated ${sh.replates===1?'once':sh.replates+' times'}`:''}. Hard driving, full speed, gales and neglect use up her life faster. ${dimsOf(sh).len|0} ft long, drawing ${dimsOf(sh).draught|0} ft${sh.len?'':' (estimated)'}. ${(sh.foul||0)<0.2?'Clean bottom.':(sh.foul||0)<0.45?'Some growth on her bottom.':(sh.foul||0)<0.7?'Her bottom is foul; she has lost speed.':'Badly foul and slow. She needs drydocking.'}</span></div>
     ${(()=>{const L=(S.wire||[]).filter(m=>m.sid===sh.id&&m.k!=='r').slice(0,3);return L.length?`<div class="stack tape" style="gap:6px"><span class="lbl">Latest from her</span>${wireHTML(L,false)}</div>`:'';})()}`);
 }
 
@@ -267,7 +272,7 @@ function renderLines(){
 function renderLineDetail(rk){
   const r=ROUTES[rk],L=S.lines[rk];
   if(!L){
-    setHTML($('lineD'),`<div><h3>${r.name}</h3><div class="meta">${callsText(rk)} · ${int(r.dist)} nautical miles · line rates £${r.ref.f} / £${r.ref.s} / £${r.ref.t}</div></div>
+    setHTML($('lineD'),`<div><h3>${r.name}</h3><div class="meta">${callsText(rk)} · ${int(r.dist)} nautical miles · line rates £${r.ref.f} / £${r.ref.s} / £${r.ref.t}${airShare(rk,'f',S.m)>0.005?` · the air takes about ${Math.round(airShare(rk,'f',S.m)*100)}% of first class${S.ships.some(x=>x.line===rk&&knotsOf(x)>=26)?' (your fast ships hold the rest)':'; a 26-knot ship holds more of it'}`:''}</div></div>
       <p style="margin:0">${r.blurb}</p><p class="note">${cargoText(rk)}${r.winter?' From December to April the St Lawrence is frozen: sailings run to Saint John instead.':''}</p>
       <p class="note">Opening a line means setting up booking agents and a pier office at both ends. You then assign ships to it from the Fleet tab.</p>
       <button class="btn primary" data-act="openline" data-id="${rk}" ${S.cash<2500||S.over?'disabled':''} style="width:fit-content">Open this line · £2,500</button>${marketHTML(rk,null)}`);
@@ -363,12 +368,12 @@ function renderShore(){
   const bk=sh.bunker&&sh.bunker.until>=S.m;
   setHTML($('pane-shore'),`
     <section class="sec"><h2>Head office</h2><p class="note">Each department advises in its own field, and can be told to act on its advice. A department is only as good as its head and staff: a muddled head misses months and misjudges fares, a careful one lets small gains go. Acting departments keep a cash reserve and never open lines, buy, build or sell ships on their own: they bring those to you as proposals.</p><div class="stack">${depts}</div></section>
-    <section class="sec"><h2>Piers</h2><p class="note">Your own pier cuts port dues there by 60% and takes a day off each turnaround. ${fmt(350)} a month each to run.</p><div class="stack" style="gap:6px">${piers}</div></section>
-    <section class="sec"><h2>Booking agencies</h2><p class="note">Agents in a region book passengers for every line calling there: steerage up about 7%, cabin classes 3%. ${fmt(300)} a month each.</p><div class="stack" style="gap:6px">${agents}</div></section>
-    <section class="sec"><h2>Emigrant hostels</h2><p class="note">Clean beds and a medical check before sailing. Steerage up 5% on lines calling there, fewer quarantine scares, and a little reputation. ${fmt(250)} a month each.</p><div class="stack" style="gap:6px">${hostels}</div></section>
-    <section class="sec"><h2>Repair yards</h2><p class="note">Refits, overhauls and upgrades at your own yard cost 30% less and take 30% less time. A yard can take a building slip (${fmt(OWN_SLIP_COST)}, ${fmt(1500)} a month more): your own ships at 80% of a builder's price, slow at first and better with every hull. ${fmt(1200)} a month each.</p><div class="stack" style="gap:6px">${yards}</div></section>
+    <section class="sec"><h2>Piers</h2><p class="note">Your own pier cuts port dues there by 60% and takes a day off each turnaround. ${fmt(350*PX())} a month each to run.</p><div class="stack" style="gap:6px">${piers}</div></section>
+    <section class="sec"><h2>Booking agencies</h2><p class="note">Agents in a region book passengers for every line calling there: steerage up about 7%, cabin classes 3%. ${fmt(300*PX())} a month each.</p><div class="stack" style="gap:6px">${agents}</div></section>
+    <section class="sec"><h2>Emigrant hostels</h2><p class="note">Clean beds and a medical check before sailing. Steerage up 5% on lines calling there, fewer quarantine scares, and a little reputation. ${fmt(250*PX())} a month each.</p><div class="stack" style="gap:6px">${hostels}</div></section>
+    <section class="sec"><h2>Repair yards</h2><p class="note">Refits, overhauls and upgrades at your own yard cost 30% less and take 30% less time. A yard can take a building slip (${fmt(shoreCost('slip'))}, ${fmt(1500*PX())} a month more): your own ships at 80% of a builder's price, slow at first and better with every hull. ${fmt(1200*PX())} a month each.</p><div class="stack" style="gap:6px">${yards}</div></section>
     <section class="sec"><h2>Bunkers</h2><div class="uprow"><div><strong>Bunker contract</strong><div class="meta">${bk?`12% off coal and oil until ${monthName(sh.bunker.until)}`:'Two years at 12% off coal and oil, paid up front'}</div></div>${bk?own:buy('bunker',null,'Sign')}</div></section>
-    <section class="sec"><p class="note">Shore establishment costs ${fmt(shoreUpkeep())} a month in all, and its property is worth about ${fmt(shoreValue())} to the bank.</p></section>`);
+    <section class="sec"><p class="note">Shore establishment costs ${fmt(shoreUpkeep()*PX())} a month in all, and its property is worth about ${fmt(shoreValue())} to the bank.</p></section>`);
 }
 
 /* ---------- Finance ---------- */
@@ -395,11 +400,21 @@ function renderFinance(){
       ${LM?`<p class="note">${monthName(LM.m)} closed at <span class="num ${LM.net<0?'neg':'pos'}">${fmt(LM.net)}</span>, with ${fmt(LM.repay)} repaid to the bank.</p>`:''}
       ${chart()}</section>
     <section class="sec"><h2>Bank</h2>
-      <dl class="kv"><dt>Debt</dt><dd>${fmt(S.debt)}</dd><dt>Interest (6.5%)</dt><dd>${fmt(S.debt*0.065/12)}/mo</dd>
+      ${S.call?`<p class="badline">Called loan: ${fmt(S.call.amt)} due by ${monthName(S.call.due)}. If the account cannot pay it, the bank seizes ships in port and sells them cheaply.</p>`:''}
+      ${S.noLend>S.m?`<p class="warnline">No new lending until ${monthName(S.noLend)}.</p>`:''}
+      <dl class="kv"><dt>Debt</dt><dd>${fmt(S.debt)}</dd><dt>Interest (${S.rateUp>S.m?'8.5':'6.5'}%)</dt><dd>${fmt(S.debt*(S.rateUp>S.m?0.085:0.065)/12)}/mo</dd>
       <dt>Required repayment</dt><dd>${fmt(Math.round(S.debt*0.004))}/mo</dd><dt>Fleet value</dt><dd>${fmt(fleetValue())}</dd><dt>Can still borrow</dt><dd>${fmt(hr)}</dd></dl>
-      <div class="btns"><button class="btn" data-act="borrow" ${hr<10000||S.over?'disabled':''}>Borrow £10,000</button>
-      <button class="btn" data-act="repay" ${S.cash<Math.min(10000,S.debt)||S.debt<=0||S.over?'disabled':''}>Repay £10,000</button></div>
-      <p class="note">The bank lends up to 70% of your fleet's value. Its overdraft runs to ${fmt(odLimit())} (£8,000 plus half your unused borrowing); below that it forecloses.</p></section>`);
+      <div class="btns">${[10000,100000,1000000].filter(v=>v<=Math.max(10000,hr,S.debt)).map(v=>`<button class="btn" data-act="borrow" data-id="${v}" ${hr<v||S.noLend>S.m||S.over?'disabled':''}>Borrow ${fmt(v)}</button>`).join('')}</div>
+      <div class="btns">${[10000,100000,1000000].filter(v=>v<=Math.max(10000,S.debt)).map(v=>`<button class="btn" data-act="repay" data-id="${v}" ${S.cash<Math.min(v,S.debt)||S.debt<=0||S.over?'disabled':''}>Repay ${fmt(v)}</button>`).join('')}</div>
+      <p class="note">The bank lends up to 70% of your fleet's value. Its overdraft runs to ${fmt(odLimit())} (£8,000 plus half your unused borrowing); below that it forecloses.</p></section>
+    <section class="sec"><h2>Government stock</h2>
+      <p class="note">Consols pay 3½% a year and are safe if your bank fails. They fall a little in a panic, and selling costs ½%. Cash in the bank earns nothing${S.m>=180?', and banks do fail':''}.</p>
+      <dl class="kv"><dt>Holding</dt><dd>${fmt(S.gilts||0)}</dd><dt>Interest</dt><dd>${fmt((S.gilts||0)*0.035/12)}/mo</dd></dl>
+      <div class="btns">${[10000,100000,1000000].filter(v=>v<=Math.max(10000,S.cash)).map(v=>`<button class="btn" data-act="giltbuy" data-id="${v}" ${S.cash<v||S.over?'disabled':''}>Buy ${fmt(v)}</button>`).join('')}</div>
+      ${S.gilts>0?`<div class="btns">${[10000,100000,1000000].filter(v=>v<=S.gilts).map(v=>`<button class="btn" data-act="giltsell" data-id="${v}">Sell ${fmt(v)}</button>`).join('')}<button class="btn" data-act="giltsell" data-id="all">Sell all</button></div>`:''}</section>
+    <section class="sec"><h2>Prices</h2>
+      <p class="note">Prices are ${Math.abs(Math.round((PX()-1)*100))}% ${PX()>=1?'higher':'lower'} than in 1921: wages, coal, yard work, ships and fares all follow them, but money in the bank does not. What cost ${fmt(10000)} in 1921 costs ${fmt(10000*PX())} now.${S.wageK>1.001?` Union agreements have put crew pay ${Math.round((S.wageK-1)*100)}% above the going rate.`:''}</p>
+      ${S.crash&&S.crash.stage==='panic'?`<p class="badline">The panic of ${monthName(S.crash.panicAt)} is ${crashF(S.m)>0.7?'at its worst':'easing'}: trade is down and ships sell for little.</p>`:''}</section>`);
 }
 
 /* ---------- Company ---------- */
@@ -411,7 +426,14 @@ function renderCompany(){
     :`<p style="margin:0">You sail as an <strong>independent</strong>. Price as you like, but undercutting the line rate raises conference tension and invites rate wars.</p>
       <p class="note">Joining costs £3,000 plus £350 a month. Members accept a fare floor and a steerage quota in exchange for peace.</p>
       <button class="btn" data-act="join" ${S.cash<3000||S.over?'disabled':''} style="width:fit-content">Join for £3,000</button>`;
+  const sp=S.safety===undefined?1:S.safety;
+  const safety=`<section class="sec"><h2>Safety and training</h2><p class="note">One policy for the whole fleet. It decides how well crews fight a fire or a flood, how many people live when a ship is lost, and what a court of inquiry makes of it.</p>
+    <div class="seg" role="group">${SAFETY.map((x,i)=>`<button data-act="safety" data-id="${i}" aria-pressed="${sp===i}">${x.name}</button>`).join('')}</div>
+    <p class="note">${SAFETY[sp].desc}${SAFETY[sp].cost?` About ${fmt(safetyCost())} a month for the fleet.`:''}</p>
+    ${(S.inqDone||[]).length?`<span class="lbl">Courts of inquiry</span><ul class="note" style="padding-left:18px;margin:0">${S.inqDone.map(q=>`<li><strong>SS ${esc(q.name)}</strong>, ${dateLong(q.t)}: ${q.blame<1?'no fault found':q.findings.slice(0,3).join('; ')}. ${fmt(q.total)}${q.rep?`, reputation −${q.rep}`:''}.</li>`).join('')}</ul>`:''}
+    ${S.stain>1?`<p class="warnline">The newspapers have not forgotten the Line's losses: its standing is held back until the memory fades.</p>`:''}</section>`;
   setHTML($('pane-company'),`
+    ${safety}
     <section class="sec"><h2>Save code</h2><p class="note">The game saves itself in this browser, but clearing site data wipes it. A save code holds the whole game as text: keep it somewhere safe, or paste it into another browser or computer to carry on there.</p>
       <div class="btns"><button class="btn" data-act="mkcode">${UI.saveCode?'Make a fresh code':'Make a save code'}</button>${UI.saveCode?`<button class="btn" data-act="copycode">Copy code</button><button class="btn" data-act="copylink">Copy save link</button>`:''}</div>
       ${UI.saveCode?`<textarea class="code" readonly rows="3" data-key="sc" onclick="this.select()">${UI.saveCode}</textarea><p class="note">Made ${UI.saveCodeAt}. ${int(UI.saveCode.length)} characters.${UI.copied?' <strong>'+UI.copied+'</strong>':''}</p>`:''}

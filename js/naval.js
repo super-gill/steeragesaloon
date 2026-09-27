@@ -97,16 +97,22 @@ function recommend(d){
 /* the speed-power curve, for the drawing office */
 function powerCurveSVG(d,e){
   const H=HULLFORMS[d.form],k0=Math.max(8,d.knots-8),k1=d.knots+5,pts=[];let mx=0;
-  for(let k=k0;k<=k1;k+=0.5){const p=powerFor(e.disp,e.len,k,H.eff,e.Cb)*1.15;pts.push([k,p]);mx=Math.max(mx,p);}
-  const W=300,Hh=90,x=k=>8+(k-k0)/(k1-k0)*(W-16),yv=p=>Hh-8-(p/mx)*(Hh-16);
-  const wk=Math.sqrt(e.len)*0.72;
+  for(let k=k0;k<=k1;k+=0.25){const p=powerFor(e.disp,e.len,k,H.eff,e.Cb)*1.15;pts.push([k,p]);mx=Math.max(mx,p);}
+  const W=360,Hh=220,L=54,R=12,T=12,B=36,x=k=>L+(k-k0)/(k1-k0)*(W-L-R),yv=p=>Hh-B-(p/mx)*(Hh-B-T);
+  const wk=Math.sqrt(e.len)*0.72,cur=powerFor(e.disp,e.len,d.knots,H.eff,e.Cb)*1.15;
   const path=pts.map(([k,p],i)=>`${i?'L':'M'}${x(k).toFixed(1)},${yv(p).toFixed(1)}`).join(' ');
-  const cur=powerFor(e.disp,e.len,d.knots,H.eff,e.Cb)*1.15;
-  return `<svg class="pcurve" viewBox="0 0 ${W} ${Hh}" role="img" aria-label="Power needed against speed">
-    ${wk>k0&&wk<k1?`<rect x="${x(wk)}" y="4" width="${W-8-x(wk)}" height="${Hh-12}" style="fill:var(--bad)" opacity=".07"/><text x="${x(wk)+4}" y="14" font-size="9" style="fill:var(--muted)">wave-making wall</text>`:''}
-    <path d="${path}" style="fill:none;stroke:var(--brass)" stroke-width="2"/>
-    <line x1="${x(d.knots)}" y1="${yv(cur)}" x2="${x(d.knots)}" y2="${Hh-6}" style="stroke:var(--ink)" stroke-dasharray="2 2"/><circle cx="${x(d.knots)}" cy="${yv(cur)}" r="3.5" style="fill:var(--ink)"/>
-    <text x="8" y="${Hh-1}" font-size="9" style="fill:var(--muted)">${k0} kn</text><text x="${W-8}" y="${Hh-1}" font-size="9" text-anchor="end" style="fill:var(--muted)">${k1} kn</text></svg>`;
+  const step=[1000,2000,5000,10000,20000,50000,100000,200000].find(v=>mx/v<=5)||mx/4;
+  let grid='';for(let v=step;v<mx;v+=step)grid+=`<line x1="${L}" x2="${W-R}" y1="${yv(v)}" y2="${yv(v)}" style="stroke:var(--line)"/><text x="${L-8}" y="${yv(v)+4}" font-size="13" text-anchor="end" style="fill:var(--muted)">${v>=1000?int(v/1000)+'k':int(v)}</text>`;
+  let ticks='';for(let k=Math.ceil(k0/2)*2;k<=k1;k+=2)ticks+=`<text x="${x(k)}" y="${Hh-B+17}" font-size="13" text-anchor="middle" style="fill:var(--muted)">${k}</text>`;
+  const lx=x(d.knots),ly=yv(cur),right=lx>W*0.62;
+  return `<svg class="pcurve" viewBox="0 0 ${W} ${Hh}" role="img" aria-label="Power needed against speed: ${int(Math.round(cur/100)*100)} horsepower at ${d.knots} knots">
+    ${wk>k0&&wk<k1?`<rect x="${x(wk)}" y="${T}" width="${W-R-x(wk)}" height="${Hh-B-T}" style="fill:var(--bad)" opacity=".08"/><text x="${x(wk)+6}" y="${T+15}" font-size="13" style="fill:var(--bad)">the wall</text>`:''}
+    ${grid}<line x1="${L}" x2="${W-R}" y1="${Hh-B}" y2="${Hh-B}" style="stroke:var(--muted)"/><line x1="${L}" x2="${L}" y1="${T}" y2="${Hh-B}" style="stroke:var(--muted)"/>
+    ${ticks}<text x="${(L+W-R)/2}" y="${Hh-2}" font-size="13" text-anchor="middle" style="fill:var(--muted)">knots</text>
+    <text x="13" y="${(T+Hh-B)/2}" font-size="13" text-anchor="middle" transform="rotate(-90 13 ${(T+Hh-B)/2})" style="fill:var(--muted)">horsepower</text>
+    <path d="${path}" style="fill:none;stroke:var(--brass)" stroke-width="3.5"/>
+    <line x1="${lx}" y1="${ly}" x2="${lx}" y2="${Hh-B}" style="stroke:var(--ink)" stroke-dasharray="4 3"/><circle cx="${lx}" cy="${ly}" r="5.5" style="fill:var(--ink)"/>
+    <text x="${right?lx-10:lx+10}" y="${Math.max(T+14,ly-10)}" font-size="15" font-weight="700" text-anchor="${right?'end':'start'}" style="fill:var(--ink)">${d.knots} kn · ${int(Math.round(cur/100)*100)} hp</text></svg>`;
 }
 
 /* ---------- in service: fouling, harbours, weather and bunkers, as the master sees them ---------- */

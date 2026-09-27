@@ -83,7 +83,7 @@ function renderDesigner(){
         <div><span class="lbl">Berths · cargo</span><b class="num">${int(st.berths.f+st.berths.s+st.berths.t+st.berths.tt)} · ${int(st.cargo)} t</b></div>
       </div>
       <div class="report"><span class="lbl">The naval architects report</span><ul>${architectReport(d,st)}</ul>
-        <div class="row" style="align-items:center;gap:10px">${powerCurveSVG(d,st.eng)}<p class="note" style="margin:0">Power needed as speed rises. Past the wall, every knot costs far more.</p></div></div>
+        <div class="pcurve-wrap"><span class="lbl">Power needed as speed rises</span>${powerCurveSVG(d,st.eng)}<p class="note" style="margin:0">Past the wall her own bow and stern waves hold her back, and every extra knot costs far more power and fuel.</p></div></div>
       <div class="forecast"><span class="lbl">The traffic manager's view</span><p style="margin:0">${view}</p>
         <p class="note">Trade changes over the ${Math.round((deliv-S.m)/12*10)/10} years before she sails, and one more ship on a route thins everyone's loads.</p></div>
       ${st.warn.length?`<div class="stack" style="gap:4px">${st.warn.map(w=>`<p class="badline">${w}</p>`).join('')}</div>`:''}

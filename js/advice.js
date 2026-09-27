@@ -36,7 +36,7 @@ const idleCost=sh=>0.25*crewCost(sh)+(sh.captain?sh.captain.wage:0)+insCost(sh);
 const DEPT_OF={review:'sec',reserve:'sec',buy:'traffic',build:'traffic','rep-mail':'sec','rep-low':'sec','conf-war':'sec',pier:'sec',agency:'sec',bunker:'sec',dept:'sec',
   fare:'fares',tension:'fares',adv:'fares',service:'fares',match:'fares',
   move:'traffic',unlay:'traffic',layup:'traffic',sell:'traffic',rin:'traffic',
-  speed:'marine',maint:'marine',thresh:'marine',dock:'marine',oil:'marine',refurb:'marine',reefer:'marine',wireless:'marine',
+  speed:'marine',maint:'marine',thresh:'marine',dock:'marine',oil:'marine',refurb:'marine',reefer:'marine',wireless:'marine',replate:'marine',scrap:'marine',
   pay:'crew',captain:'crew'};
 const deptOf=h=>DEPT_OF[h.id.split(/[:0-9]/)[0]]||'sec';
 let ADV_CACHE={key:null,list:[]};
@@ -150,6 +150,11 @@ function advice(){
         why:`${why} It would add about ${money(save)} a month and pay back its ${money(cost)} in about ${Math.ceil(cost/save)} months; she is out of service for ${yardDays(sh,k)} days.`,
         act:[['Book it','setyard',sh.id,k]]});};
     if((sh.foul||0)>0.45)yard('dock',{foul:0,cond:Math.min(92,sh.cond+35)},`Drydock SS ${sh.name}`,`Her master reports her bottom foul: she is slower and burning more.`);
+    { const f=fatOf(sh),n=sh.replates||0;
+      if(f>=62&&f<90&&n<3&&!sh.pendingYard&&canSpend(refitCost(sh,'replate'))&&shipValue(sh)>refitCost(sh,'replate'))add({id:`replate:${sh.id}`,scope:'ship',ref:sh.id,sev:'tip',gain:250+f*4,title:`Re-plate SS ${sh.name}`,
+        why:`The surveyors find her plating wasting and her frames tired. New plate and frames (${money(refitCost(sh,'replate'))}, ${yardDays(sh,'replate')} days) buy her years of safe service${n?', though less than last time':''}. Left alone she gets more dangerous every crossing and loses her steerage certificate.`,act:[['Book it','setyard',sh.id,'replate']]});
+      if(f>=88&&S.ships.length>1)add({id:`scrap:${sh.id}`,scope:'ship',ref:sh.id,sev:'warn',gain:600,title:`Send SS ${sh.name} to the breakers`,
+        why:`She is worn out: ${f>=90?'no steerage certificate, double insurance, and':''} a far higher chance of a serious emergency every crossing. A loss now would go badly at the inquiry.`,act:[['View her','selship',sh.id]]}); }
     if(sh.fuel==='coal'&&yearNow()-sh.built<28)yard('oil',{fuel:'oil'},`Convert SS ${sh.name} to oil`,'Oil firing cuts her stokehold crew and her bunker bill.');
     if((sh.berths.f+sh.berths.s)>0&&(sh.fit||0)<50)yard('refurb',{fit:100},`Refurbish SS ${sh.name}`,`Her saloons are tired (fittings ${Math.round(sh.fit||0)}%), and first and second class notice.`);
     if(!(sh.up&&sh.up.reefer)&&COMM[ROUTES[r0].cargo.home.c].reefer)yard('reefer',{up:{...sh.up,reefer:true}},`Fit refrigerated holds to SS ${sh.name}`,`Her route's homeward cargo, ${COMM[ROUTES[r0].cargo.home.c].name.toLowerCase()}, needs cold holds; without them she takes only a sliver of it.`);
@@ -272,7 +277,7 @@ function doAction(act,d){
   }
   return false;
 }
-function shoreCost(kind,key){return kind==='pier'?PIER_COST[key]:kind==='agency'?AGENCY[key]&&AGENCY[key].cost:kind==='hostel'?25000:kind==='yard'?120000:kind==='bunker'?10000:kind==='slip'?OWN_SLIP_COST:kind==='dept'?DEPTS[key]&&DEPTS[key].cost:0;}
+function shoreCost(kind,key){const p=PX();return kind==='pier'?PIER_COST[key]:kind==='agency'?AGENCY[key]&&AGENCY[key].cost:kind==='hostel'?Math.round(60000*p):kind==='yard'?Math.round(300000*p):kind==='bunker'?Math.round(10000*p):kind==='slip'?Math.round(OWN_SLIP_COST*p):kind==='dept'?DEPTS[key]&&DEPTS[key].cost:0;}
 /* the best line for a ship, preferring lines already open: a new line must earn clearly more to be worth opening */
 function bestLine(sh,exclude){
   let bo=null,ba=null;
@@ -296,7 +301,7 @@ function buildIdea(){
 /* ---------- departments ---------- */
 const HEAD_FIRST=['Walter','Robert','Hugh','Thomas','Alexander','Ian','Gordon','Norman','Stanley','Leonard','Margaret','Agnes'],HEAD_LAST=['Paterson','Galbraith','Rennie','Muir','Hendry','Barr','Lindsay','Crawford','Nisbet','Somerville','Bain','Kerr'];
 function makeHead(k,R=Math.random){const comp=Math.round(35+R()*55),bold=R()<0.5;
-  return {name:`${HEAD_FIRST[Math.floor(R()*HEAD_FIRST.length)]} ${HEAD_LAST[Math.floor(R()*HEAD_LAST.length)]}`,comp,bold,wage:Math.round(30+comp*0.9)};}
+  return {name:`${HEAD_FIRST[Math.floor(R()*HEAD_FIRST.length)]} ${HEAD_LAST[Math.floor(R()*HEAD_LAST.length)]}`,comp,bold,wage:Math.round((30+comp*0.9)*PX())};}
 const compWord=c=>c<45?'muddled':c<60?'plodding':c<72?'capable':c<84?'sharp':'first-rate';
 function deptCost(k){const D=DEPTS[k],o=S.depts[k],[b,perShip,perLine]=D.staff;
   const staff=Math.ceil(b+perShip*S.ships.length+perLine*Object.keys(S.lines).length),head=o&&o.head?o.head.wage:0;
