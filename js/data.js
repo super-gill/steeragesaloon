@@ -1,5 +1,5 @@
 /* ================= DATA ================= */
-const GAME_VERSION='0.4.0',GAME_BUILT='26 September 2026'; // bump on every release; see CHANGELOG.md
+const GAME_VERSION='0.4.1',GAME_BUILT='27 September 2026'; // bump on every release; see CHANGELOG.md
 const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 const CL=['f','s','t','tt'];
 const CL_NAME={f:'First',s:'Second',t:'Third',tt:'Tourist Third'};
@@ -72,7 +72,7 @@ const YARD_NAME={dock:'overhaul',oil:'oil conversion',tourist:'Tourist Third ref
 /* Upgrades a ship can have fitted once. */
 const UPGRADES={
   reefer:{name:'Refrigerated holds',desc:'Carries chilled beef and bananas. Without them she can take only a sliver of those cargoes.'},
-  wireless:{name:'Wireless telegraphy',desc:'Needed to carry the mails. Tugs find her faster when she breaks down.'},
+  wireless:{name:'Wireless telegraphy',desc:'She reports from sea as things happen; without it you hear late, through Lloyd\'s. Needed for the mails, and tugs reach her sooner.'},
   turbines:{name:'New turbines',desc:'About 1.5 knots faster, and a little more economical.'},
   lux:{name:'Luxury first class',desc:'Suites and a grand saloon: first class appeal up a fifth.'},
   gear:{name:'Modern cargo gear',desc:'Electric winches and derricks: a day less in every port.'}
@@ -90,7 +90,7 @@ const RIVALS={
   pampas:{name:'Pampas & Plate Line',flag:'British'},
   gulf:{name:'Mersey & Gulf Line',flag:'British'}
 };
-const SPEEDS=[0,0.75,2.25,5.25]; // game days per real second at Pause, 1×, 3×, 7×
+const SPEEDS=[0,0.6,1.8,4.2]; // game days per real second at Pause, 1×, 3×, 7×
 const TEMPL=[
   {name:'Morven',built:1899,grt:8000,knots:14,berths:{f:60,s:180,t:900,tt:0},cargo:3000,fuel:'coal',base:200000},
   {name:'Tay Castle',built:1895,grt:5500,knots:13,berths:{f:30,s:110,t:700,tt:0},cargo:2400,fuel:'coal',base:140000},

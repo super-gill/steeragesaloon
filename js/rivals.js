@@ -168,7 +168,7 @@ function rivalsMonth(){
     for(const rk of routes){const st=stats[rk].owners[o],ourShare=stats[rk].ours.pax/Math.max(1,stats[rk].total);
       const fight=ourShare>0.3&&co.cash>180000&&R()<0.08*P.aggr; // answer an interloper with tonnage
       if(fight||(st.rel>1.12&&co.cash>260000&&R()<0.16*P.aggr+(ourShare>0.25?0.1:0))){
-        const sh=makeRivalShip(o,rk,1921+Math.floor(m/12));sh.knots=+(P.knots[1]-Math.random()).toFixed(1);S.rships.push(sh);co.cash-=220000;rivalMove(o,rk,'add',sh.name);break;}}
+        const sh=makeRivalShip(o,rk,1921+Math.floor(m/12));sh.knots=+(P.knots[1]-Math.random()).toFixed(1);S.rships.push(sh);newRivalVis(sh);co.cash-=220000;rivalMove(o,rk,'add',sh.name);break;}}
     // retreat from weak routes
     for(const rk of routes){const st=stats[rk].owners[o];
       // incumbents hold their home trades: they only give ground below their starting fleet when the money runs out
@@ -179,14 +179,14 @@ function rivalsMonth(){
         const relOf=k=>{const q=stats[k].owners[o];return q?q.load/Math.max(0.05,S.load0[k]*seasonNorm(k,m)):0;};
         const alt=Object.keys(ROUTES).filter(k=>k!==rk&&stats[k].owners[o]&&relOf(k)>1.0).sort((a,b)=>relOf(b)-relOf(a))[0];
         if(alt&&ships.length>0&&(ships.length>1||R()<0.5)){x.route=alt;rivalMove(o,rk,'move',x.name,alt);}
-        else if(ships.length>1){S.rships=S.rships.filter(y=>y!==x);co.cash+=x.grt*2;rivalMove(o,rk,'retire',x.name);}
+        else if(ships.length>1){dropRival(x);co.cash+=x.grt*2;rivalMove(o,rk,'retire',x.name);}
         break;}}
     // old ships go to the breakers
-    for(const x of S.rships.filter(y=>y.owner===o&&1921+m/12-y.built>32)){if(R()<0.08){S.rships=S.rships.filter(y=>y!==x);rivalMove(o,x.route,'retire',x.name);}}
+    for(const x of S.rships.filter(y=>y.owner===o&&1921+m/12-y.built>32)){if(R()<0.08){dropRival(x);rivalMove(o,x.route,'retire',x.name);}}
     // insolvency: sell a third of the fleet, one of them cheap to the Morven Line's brokers
     if(co.cash<-150000){
       const fleet=S.rships.filter(y=>y.owner===o).sort((a,b)=>a.built-b.built),sell=fleet.slice(0,Math.max(1,Math.floor(fleet.length/3)));
-      S.rships=S.rships.filter(y=>!sell.includes(y));co.cash=100000;
+      sell.forEach(dropRival);co.cash=100000;
       news(`${RIVALS[o].name} is in financial trouble and is selling ${sell.length} ship${sell.length>1?'s':''}.`,'good',true);
       const x=sell[sell.length-1];
       const t={name:x.name,built:x.built,grt:x.grt,knots:x.knots,berths:{f:x.berths.f,s:x.berths.s,t:x.berths.t,tt:0},cargo:x.cargo,fuel:'coal',base:x.grt*26,note:`Ex-${RIVALS[o].name}, sold cheaply by the receivers.`};
@@ -196,4 +196,23 @@ function rivalsMonth(){
 }
 /* seasonal demand now, relative to the reference month used for load0 (July 1921) */
 function seasonNorm(rk,m){const r=ROUTES[rk];let a=0,b=0;for(const c of ['f','s','t']){a+=r.base[c]*SEASON[c][m%12];b+=r.base[c]*SEASON[c][6];}return a/b;} // season only: quotas and booms register as real change
-function moveRivals(step){for(const x of S.rships)x.phase=(x.phase+step*sailings(x.knots,x.route)/30)%1;}
+/* ---------- where each rival ship physically is (visual only: the market uses sailings, not positions) ---------- */
+const jr=k=>{let h=7;for(const c of String(k))h=(h*31+c.charCodeAt(0))|0;return ((h>>>0)%1000)/1000;};
+function initVis(x){const gk=geoKey(x.route,S.m),d=GEO(gk).dist,out=x.phase<0.5,[A,B]=geoEnds(gk);
+  return x.v={gk,dir:out?0:1,pos:(out?x.phase*2:x.phase*2-1)*d,wait:0,port:out?A:B,repo:null};}
+function newRivalVis(x){const gk=geoKey(x.route,S.m),[A]=geoEnds(gk);x.v={gk,dir:0,pos:0,wait:2+jr(x.id)*3,port:A,repo:null};}
+/* a ship that leaves a route's market (sold, scrapped, withdrawn) keeps sailing to the next port before she goes */
+function dropRival(x){S.rships=S.rships.filter(y=>y!==x);const v=x.v;if(v&&!(v.wait>0))(S.ghosts=S.ghosts||[]).push({id:x.id,name:x.name,owner:x.owner,knots:x.knots,v});}
+function startRivalLeg(x,route){const v=x.v,gk=geoKey(route,S.m),[A,B]=geoEnds(gk);
+  if(v.port===A||v.port===B){v.gk=gk;v.dir=v.port===A?0:1;v.pos=0;}
+  else v.repo={to:laneDist(v.port,A)<=laneDist(v.port,B)?A:B,pos:0};}
+function stepVis(x,route,step){
+  const v=x.v||initVis(x);
+  if(v.wait>0){v.wait-=step;if(v.wait>0)return true;if(!route)return false;startRivalLeg(x,route);return true;}
+  const sp=x.knots*24*step;
+  if(v.repo){v.repo.pos+=sp;if(v.repo.pos>=laneDist(v.port,v.repo.to)){v.port=v.repo.to;v.repo=null;v.wait=0.5;if(!route)return false;}return true;}
+  v.pos+=sp;const d=GEO(v.gk).dist;
+  if(v.pos>=d){v.port=geoEnds(v.gk)[v.dir===0?1:0];v.pos=d;v.wait=TURN_DAYS*(0.7+0.6*jr(x.id+Math.floor(S.t)));if(!route)return false;}
+  return true;
+}
+function moveRivals(step){for(const x of S.rships)stepVis(x,x.route,step);if(S.ghosts&&S.ghosts.length)S.ghosts=S.ghosts.filter(g=>stepVis(g,null,step));}

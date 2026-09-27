@@ -11,6 +11,6 @@ function frame(t){
   const dt=Math.min(0.1,(t-lastT)/1000);lastT=t;
   if(S&&!S.over&&UI.speed>0)advance(dt*SPEEDS[UI.speed]);
   if(UI.dirty){render();UI.dirty=false;}
-  drawShips();
+  drawShips();animWire(t);
   requestAnimationFrame(frame);
 }

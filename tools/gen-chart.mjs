@@ -56,6 +56,20 @@ const SEG={
   'RIO-MVD':[[-43.17,-22.91],[-43.2,-23.15],[-45.0,-24.6],[-47.9,-27.2],[-49.2,-29.5],[-50.9,-32.0],[-53.4,-34.8],[-54.7,-35.3],[-55.6,-35.2],[-56.19,-34.95]],
   'MVD-BUE':[[-56.19,-34.91],[-56.7,-34.95],[-57.5,-34.75],[-58.37,-34.60]]
 };
+// Positioning lanes: coastal and connecting passages no service sails, used when a ship moves light between lines.
+const LINKS={
+  'GLA-LIV':[[-4.25,55.86],[-4.9,55.6],[-5.3,55.25],[-5.4,54.9],[-5.05,54.25],[-4.6,53.85],[-3.8,53.55],[-3.6,53.5],[-2.99,53.41]],
+  'LIV-AVO':[[-2.99,53.41],[-3.6,53.5],[-4.9,53.4],[-5.6,52.4],[-5.7,51.7],[-5.0,51.35],[-4.4,51.2],[-3.3,51.35],[-2.70,51.50]],
+  'AVO-SOU':[[-2.70,51.50],[-3.3,51.35],[-4.4,51.2],[-5.6,51.0],[-5.9,50.3],[-5.6,49.9],[-4.2,50.1],[-3.4,50.1],[-2.4,50.4],[-1.3,50.45],[-0.98,50.45],[-0.93,50.70],[-1.10,50.74],[-1.30,50.78],[-1.40,50.90]],
+  'LIS-GIB':[[-9.14,38.72],[-9.4,38.6],[-9.3,37.0],[-8.2,36.7],[-7.2,36.2],[-5.35,36.14]],
+  'LIS-FRE':[[-9.14,38.72],[-9.4,38.6],[-11.2,37.0],[-13.8,30.0],[-16.2,26.5],[-17.9,21.0],[-17.9,14.6],[-17.5,12.2],[-16.9,10.8],[-15.3,9.3],[-13.6,8.55],[-13.23,8.48]],
+  'NYC-HAL':[[-74.0,40.7],[-73.8,40.45],[-72.8,40.2],[-68.5,40.4],[-65.5,42.5],[-63.5,43.9],[-62.5,44.3],[-63.57,44.65]],
+  'HAL-SJN':[[-63.57,44.65],[-62.5,44.3],[-63.5,43.9],[-65.6,43.2],[-66.4,43.55],[-66.55,44.45],[-66.3,44.95],[-66.06,45.27]],
+  'QBC-HAL':[[-71.21,46.81],[-70.6,47.25],[-69.6,47.95],[-68.6,48.55],[-67.6,49.0],[-66.2,49.5],[-64.6,49.3],[-63.0,48.6],[-60.3,47.5],[-59.4,47.0],[-59.3,46.1],[-60.3,45.2],[-62.5,44.3],[-63.57,44.65]],
+  'NYC-KIN':[[-74.0,40.7],[-73.8,40.45],[-72.8,40.2],[-68.5,40.4],'*',[-67.5,25.0],[-70.5,20.6],[-73.8,20.0],[-75.2,19.0],[-76.2,17.75],[-76.79,17.95]],
+  'KIN-NOL':[[-76.79,17.95],[-77.3,17.7],[-81.5,18.9],[-85.8,21.5],[-86.5,23.5],[-88.3,28.3],[-89.2,28.9],[-89.4,29.25],[-89.7,29.5],[-90.07,29.95]],
+  'NOL-NYC':[[-90.07,29.95],[-89.7,29.5],[-89.4,29.25],[-89.2,28.9],[-88.3,28.3],[-84.5,24.6],[-82.5,24.25],[-80.6,24.45],[-79.95,25.3],[-79.8,27.5],[-79.5,30.5],[-74.8,35.0],[-73.7,39.5],[-73.8,40.45],[-74.0,40.7]]
+};
 // Services: calls in outbound order (homeward reverses them). A route may have a winter variant.
 const ROUTES={
   hal:['GLA','HAL'], lha:['LIV','HAL'], liv:['LIV','QUE','NYC'], gny:['GLA','MOV','NYC'], nap:['GEN','NAP','GIB','NYC'],
@@ -75,8 +89,11 @@ for(const [k,calls] of Object.entries(ROUTES)){
   const nm=[0];for(let j=1;j<ll.length;j++)nm.push(nm[j-1]+hv(ll[j-1],ll[j]));
   out[k]={pts:ll.map(p=>proj(p).map(v=>+v.toFixed(1))),nm:nm.map(v=>Math.round(v)),calls:callNm,dist:Math.round(nm[nm.length-1])};
 }
+const links={};
+for(const [k,L] of Object.entries(LINKS)){const ll=expand(L),nm=[0];for(let j=1;j<ll.length;j++)nm.push(nm[j-1]+hv(ll[j-1],ll[j]));
+  links[k]={pts:ll.map(p=>proj(p).map(v=>+v.toFixed(1))),nm:nm.map(v=>Math.round(v)),dist:Math.round(nm[nm.length-1])};}
 const f0=proj([-80,61]),f1=proj([20,33.5]);
 const ports={},lonlat={};for(const [c,[n,lo,la]] of Object.entries(PORTS)){ports[c]=proj([lo,la]).map(v=>+v.toFixed(1));lonlat[c]=[lo,la];}
-const chart={W,H,focus:[f0[0],f0[1],f1[0],f1[1]].map(v=>+v.toFixed(1)),land:landD,grat,ports,portNames:Object.fromEntries(Object.entries(PORTS).map(([c,[n]])=>[c,n])),lonlat,routes:out};
+const chart={W,H,focus:[f0[0],f0[1],f1[0],f1[1]].map(v=>+v.toFixed(1)),land:landD,grat,ports,portNames:Object.fromEntries(Object.entries(PORTS).map(([c,[n]])=>[c,n])),lonlat,routes:out,links};
 fs.writeFileSync(process.env.OUT||'chart.json',JSON.stringify(chart));
 console.log('H',H,'land',landD.length,Object.entries(out).map(([k,v])=>k+':'+v.dist+'nm '+v.calls.map(c=>c[0]+'@'+c[1]).join('>')).join('\n'));

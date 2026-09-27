@@ -1,13 +1,7 @@
 /* ================= MAP ================= */
 const W=CHART.W,H=CHART.H;
 /* position along a route's sea lane by nautical miles from its first call; rev turns the heading for homeward ships */
-function pointAtNm(gk,nm,rev){
-  const R=CHART.routes[gk],n=R.nm;nm=clamp(nm,0,R.dist);
-  let lo=1,hi=n.length-1;while(lo<hi){const mid=(lo+hi)>>1;if(n[mid]<nm)lo=mid+1;else hi=mid;}
-  const i=lo,a=R.pts[i-1],b=R.pts[i],seg=(n[i]-n[i-1])||1,u=clamp((nm-n[i-1])/seg,0,1);
-  let ang=Math.atan2(b[1]-a[1],b[0]-a[0])*180/Math.PI;if(rev)ang+=180;
-  return {x:a[0]+(b[0]-a[0])*u,y:a[1]+(b[1]-a[1])*u,ang};
-}
+const pointAtNm=(gk,nm,rev)=>pointOn(CHART.routes[gk],nm,rev);
 const PORT_XY=c=>CHART.ports[c];
 // label offsets [dx, dy, side]: tuned so the crowded Channel, Irish Sea and Maritimes stay legible
 const PORT_LABEL={GLA:[8,-14,'left'],LIV:[8,-4,'left'],SOU:[8,-10,'left'],CHE:[8,2,'left'],AVO:[-8,-14,'right'],QUE:[-8,0,'right'],MOV:[-8,-14,'right'],
@@ -89,7 +83,7 @@ function drawShips(){
       el.innerHTML='<div class="hit"></div><div class="hull"></div><div class="tag"></div>';O.appendChild(el);MARKS[sh.id]=el;}
     let x,y,ang=0,ox=0,oy=0;
     if(sh.state==='sea'){const g=GEO(sh.geo),p=pointAtNm(sh.geo,sh.dir===0?sh.pos:g.dist-sh.pos,sh.dir===1);x=p.x;y=p.y;ang=p.ang;}
-    else if(sh.state==='repo'){el.hidden=true;continue;}
+    else if(sh.state==='repo'){const T=trackBetween(sh.port,sh.repoTo),p=pointOn(T,(1-sh.repoLeft/Math.max(1e-6,sh.repoTotal))*T.dist);x=p.x;y=p.y;ang=p.ang;}
     else{const c=sh.port,i=stackN[c]=(stackN[c]||0)+1,st=stackOf(c),[px,py]=PORT_XY(c);
       x=px;y=py;ox=st[0]+st[2]*(i-1);oy=st[1]+st[3]*(i-1);ang=st[2]<0?180:st[2]>0?0:90;}
     el.hidden=false;
@@ -104,15 +98,20 @@ function drawShips(){
   drawRivals();
 }
 const RMARKS={};
+function rivalXY(x){const v=x.v||initVis(x);
+  if(v.wait>0){const [px,py]=PORT_XY(v.port),a=jr(x.id)*6.283;return {x:px,y:py,ang:a*57.3,ox:Math.cos(a)*9,oy:Math.sin(a)*9};}
+  if(v.repo){const T=trackBetween(v.port,v.repo.to);return pointOn(T,v.repo.pos);}
+  const d=GEO(v.gk).dist;return pointAtNm(v.gk,v.dir===0?v.pos:d-v.pos,v.dir===1);}
 function drawRivals(){
   const O=document.getElementById('shipsO'),seen=new Set();
-  for(const x of S.rships||[]){
+  for(const x of (S.rships||[]).concat(S.ghosts||[])){
     seen.add(x.id);let el=RMARKS[x.id];
     if(!el){el=document.createElement('div');el.className='shipm rival';el.innerHTML='<div class="hull"></div>';O.prepend(el);RMARKS[x.id]=el;}
-    const gk=geoKey(x.route,S.m),d=GEO(gk).dist,out=x.phase<0.5,p=pointAtNm(gk,(out?x.phase*2:(1-x.phase)*2)*d,!out);
-    el.style.left=(p.x/W*100)+'%';el.style.top=(p.y/H*100)+'%';
+    const p=rivalXY(x);
+    el.style.left=(p.x/W*100)+'%';el.style.top=(p.y/H*100)+'%';el.style.transform=p.ox?`translate(${p.ox.toFixed(1)}px,${p.oy.toFixed(1)}px)`:'';
     const h=el.firstChild;h.style.transform=`rotate(${p.ang}deg)`;h.style.background=RIVAL_P[x.owner].col;
     const t=`SS ${x.name}, ${RIVALS[x.owner].name}`;if(el.title!==t)el.title=t;
   }
   for(const id of Object.keys(RMARKS))if(!seen.has(id)){RMARKS[id].remove();delete RMARKS[id];}
 }
+

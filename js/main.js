@@ -28,7 +28,7 @@ document.addEventListener('click',e=>{
     case 'view':UI.view=b.dataset.v;break;
     case 'shipset':if(sh){if(b.dataset.k==='autoDock')sh.autoDock=DOCK_TH[+b.dataset.v];else sh[b.dataset.k]=+b.dataset.v;}break;
     case 'alldock':if(sh)S.ships.forEach(x=>x.autoDock=sh.autoDock);break;
-    case 'incident':if(sh&&sh.incident)resolveIncident(sh,b.dataset.k);break;
+    case 'wireall':UI.wireAll=!UI.wireAll;break;
     case 'lineset':if(L)L[b.dataset.k]=+b.dataset.v;break;
     case 'yard':if(sh){const k=b.dataset.k;if(sh.state==='sea'||sh.state==='repo')sh.pendingYard=k;else if(S.cash>=refitCost(sh,k))enterYard(sh,k);}break;
     case 'unyard':if(sh&&sh.pendingYard!=='repair')sh.pendingYard=null;break;
@@ -57,6 +57,7 @@ document.addEventListener('change',e=>{
   if(t.dataset.fare&&S.lines[S.selLine]){S.lines[S.selLine].fares[t.dataset.fare]=clamp(Math.round(+t.value||1),1,500);}
   if(t.dataset.shipline){const sh=S.ships.find(x=>x.id===S.selShip);if(sh){sh.line=t.value||null;if(sh.line&&sh.state==='laid'){sh.state='port';sh.portLeft=1;}}}
   if(t.dataset.autop)UI.autoPause=t.checked;
+  if(t.dataset.wirert)UI.wireRoutine=t.checked;
   t.blur();UI.rev=(UI.rev||0)+1;save();UI.dirty=true;
 });
 document.addEventListener('keydown',e=>{

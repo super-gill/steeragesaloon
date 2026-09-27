@@ -2,6 +2,13 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.4.1 (27 September 2026)
+- Ships never vanish: moving light between lines they sail real passages (the Irish Sea, round Land's End, the Gulf of St Lawrence, the Florida Strait and more), and rival ships finish their voyage before changing route or going to the breakers.
+- Breakdowns sort themselves out. The engineers report what they find: fixed within hours, under way slowly on a temporary repair, days of repairs at sea, or no repair possible and a salvage tug on its way.
+- Wireless room: ships report by wireless through coast stations such as Malin Head and Cape Race, printed as Morse and decoded on the tape. Ships without wireless are reported late by passing steamers through Lloyd's. Sailings and arrivals come by cable from the Line's agents.
+- Voyage news by wireless: gales, fog, ice, stowaways, rescues.
+- Clock slowed by a further 20%.
+
 ## 0.4.0 (26 September 2026)
 - Save codes: copy the whole game as text or as a link, and load it in any browser (Company tab).
 - Open-ended: the game no longer stops in 1930. The Depression bites from late 1929, rates and fares fall with it, and recovery starts in 1934.

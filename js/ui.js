@@ -11,6 +11,7 @@ function patchNode(a,b){
   for(const at of [...b.attributes]){if(focused&&at.name==='value')continue;if(a.getAttribute(at.name)!==at.value)a.setAttribute(at.name,at.value);}
   const tag=a.tagName;
   if(tag==='INPUT'){if(!focused){if(a.type==='checkbox'||a.type==='radio'){if(a.checked!==b.checked)a.checked=b.checked;}else if(a.value!==b.value)a.value=b.value;}return;}
+  if(a.hasAttribute('data-hold'))return; // animated in place by its own loop
   if(tag==='TEXTAREA'){if(!focused&&!a.hasAttribute('data-keep')&&a.value!==b.value)a.value=b.value;return;}
   patchChildren(a,b);
   if(tag==='SELECT'&&!focused){const o=b.querySelector('option[selected]');const v=o?o.value:(a.options[0]?a.options[0].value:'');if(a.value!==v)a.value=v;}
@@ -43,11 +44,14 @@ const seg=(act,k,v,labels,extra='')=>`<div class="seg" role="group">${labels.map
 const TABS=[['overview','Overview'],['fleet','Fleet'],['lines','Lines'],['brokers','Brokers'],['shore','Shore'],['finance','Finance'],['company','Company']];
 function shipStatus(sh){
   if(sh.state==='sea'){const g=GEO(sh.geo||geoKey(sh.legRoute,S.m)),to=PN[destOf(sh)],calls=sh.stops?sh.stops.length-sh.nextCall:0;
-    const left=(g.dist-sh.pos)/(knotsOf(sh)*SPD[sh.speed]*24*sh.slow*(sh.limp?0.4:1))+calls*CALL_DAYS,dl=Math.max(1,Math.ceil(left)),days=`${dl} day${dl>1?'s':''}`;
+    const left=(g.dist-sh.pos)/(knotsOf(sh)*SPD[sh.speed]*24*sh.slow*(sh.limp?(sh.limpF||0.4):1))+calls*CALL_DAYS,dl=Math.max(1,Math.ceil(left)),days=`${dl} day${dl>1?'s':''}`;
     const nx=sh.stops&&sh.stops[sh.nextCall]?` Next call ${PN[sh.stops[sh.nextCall][0]]}.`:'';
-    if(sh.incident)return {chip:'<span class="chip bad">Orders needed</span>',short:'Broken down, orders needed',text:`Broken down ${int(sh.incident.nm)} nm from the nearest port, ${to} bound.`};
     if(sh.towed)return {chip:'<span class="chip bad">Under tow</span>',short:`Under tow to ${to}`,text:`Under tow to ${to} at 5 knots, about ${Math.max(1,Math.ceil((g.dist-sh.pos)/120))} days.`};
-    if(sh.stopLeft>0)return {chip:'<span class="chip bad">Broken down</span>',short:`Repairing at sea, ${Math.ceil(sh.stopLeft)} days`,text:`Stopped mid-ocean, ${to} bound. Engineers expect ${Math.ceil(sh.stopLeft)} more days.`};
+    if(sh.stopLeft>0){const B=sh.brk,n=Math.max(1,Math.ceil(sh.stopLeft)),dd=`${n} day${n>1?'s':''}`;
+      if(!B||!B.told)return {chip:'<span class="chip bad">Stopped</span>',short:'Stopped, engineers at work',text:`Stopped at sea, ${to} bound. The engineers are finding out what has gone.`};
+      if(B.o==='fail')return {chip:'<span class="chip bad">Drifting</span>',short:`Drifting, tug in about ${dd}`,text:`Disabled and drifting, ${to} bound. A salvage tug is due in about ${dd}.`};
+      if(B.o==='long')return {chip:'<span class="chip bad">Repairing</span>',short:`Repairing at sea, ${dd}`,text:`Stopped mid-ocean, ${to} bound. The engineers expect about ${dd} more.`};
+      return {chip:'<span class="chip bad">Repairing</span>',short:'Repairs in hand',text:`Stopped briefly, ${to} bound, while the engineers make good.`};}
     if(sh.callLeft>0)return {chip:'<span class="chip inport">Calling</span>',short:`Calling at ${PN[sh.callPort]}`,text:`Calling at ${PN[sh.callPort]} for passengers, mail and cargo, ${to} bound. About ${days} to go.`};
     return {chip:sh.limp?'<span class="chip bad">Limping</span>':'<span class="chip sea">At sea</span>',short:`${to} bound, ${days}`,text:`Bound for ${to}. ${int(sh.pos)} of ${int(g.dist)} nm, about ${days} to go.${nx}`};}
   if(sh.state==='port')return {chip:'<span class="chip inport">In port</span>',short:`Loading at ${PN[sh.port]}`,text:`Loading at ${PN[sh.port]}. Sails in ${Math.max(1,Math.ceil(sh.portLeft))} day${Math.ceil(sh.portLeft)>1?'s':''}.`};
@@ -72,8 +76,7 @@ function renderTabs(){
 function alerts(){
   const A=[];
   for(const sh of S.ships){
-    if(sh.incident)A.push({k:'bad',t:`SS ${sh.name} has broken down and needs orders.`,b:[['Give orders','selship',sh.id]]});
-    else if(sh.state==='laid')A.push({k:'warn',t:`SS ${sh.name} is laid up at ${PN[sh.port]}, still drawing wages.`,b:[['Assign a line','selship',sh.id]]});
+    if(sh.state==='laid')A.push({k:'warn',t:`SS ${sh.name} is laid up at ${PN[sh.port]}, still drawing wages.`,b:[['Assign a line','selship',sh.id]]});
     else if(sh.cond<35&&sh.state!=='yard'&&sh.pendingYard!=='dock')A.push({k:'bad',t:`SS ${sh.name} is dangerously run down at ${Math.round(sh.cond)}%.`,b:[['Send to the yard','selship',sh.id]]});
     else if(!sh.autoDock&&sh.cond<50&&sh.state!=='yard'&&!sh.pendingYard)A.push({k:'warn',t:`SS ${sh.name} is at ${Math.round(sh.cond)}% and has no service threshold.`,b:[['Review','selship',sh.id]]});
     if(sh.dockWarn&&sh.state!=='yard')A.push({k:'warn',t:`SS ${sh.name} is due a drydock the account cannot cover.`,b:[['Bank','tabgo','finance']]});
@@ -105,6 +108,7 @@ function renderOverview(){
   setHTML($('pane-overview'),`
     <section class="sec">${tiles}</section>
     <section class="sec"><h2>Needs attention</h2><div class="ratchet stack" data-key="r-alerts">${al}</div></section>
+    ${wireRoom()}
     <section class="sec"><h2>Advice from head office</h2><div class="ratchet stack" data-key="r-advice">${adviceHTML(UI.allAdvice?ADV:ADV.slice(0,3),'Mr Ferguson has no complaints. The books look sound at current settings.')}
       ${ADV.length>3?`<button class="btn quiet" data-act="alladvice" style="width:fit-content">${UI.allAdvice?'Show fewer':'Show all '+ADV.length+' suggestions'}</button>`:''}</div></section>
     <section class="sec"><h2>Fleet</h2><div class="glist">${fleet}</div></section>
@@ -126,15 +130,33 @@ function renderFleet(){
   setHTML($('fleetL'),`<h2>Fleet · ${S.ships.length} ship${S.ships.length===1?'':'s'}</h2>${items}`);
   const sh=S.ships.find(x=>x.id===S.selShip)||S.ships[0];if(sh){S.selShip=sh.id;renderShipDetail(sh);}
 }
-function decisionHTML(sh){
-  const I=sh.incident;if(!I)return '';
-  const [gA,gB]=geoEnds(sh.geo),rep=Math.round(sh.grt*0.3),port=PN[I.back?(sh.dir===0?gA:gB):(sh.dir===0?gB:gA)];
-  const refund=Math.round(0.7*sh.load.paxRev);
-  return `<div class="card decision"><strong>SS ${sh.name} has broken down, ${int(I.nm)} nm from ${port}</strong>
-    <button class="btn" data-act="incident" data-k="wait">Repair at sea<small>About ${I.wait} days adrift · repairs ${fmt(rep)} · passengers furious, reputation −3</small></button>
-    <button class="btn" data-act="incident" data-k="tug">Call an ocean tug<small>${fmt(I.tug)} plus repairs · towed to ${port} at 5 knots, then 10 days of engine repairs${I.back?' · all fares refunded':''} · reputation −1</small></button>
-    <button class="btn" data-act="incident" data-k="transfer">Hand passengers to a ${RIVALS[I.rival].name} steamer<small>Refund ${fmt(refund)} (70% of fares) · still ${I.wait} days adrift · reputation −1, and a gift to a rival</small></button>
-    <p class="note">With no orders within two days, the engineers start repairing at sea.</p></div>`;
+/* ---------- Wireless ---------- */
+const esc=t=>t.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+function wireHTML(list,anim){
+  if(!list.length)return '<p class="note">No traffic yet.</p>';
+  return list.map(m=>{const hold=anim&&UI.wa&&UI.wa.id===m.id&&!UI.wa.done;
+    return `<div class="tg ${m.k==='bad'?'bad':m.k==='good'?'good':m.k==='r'?'rt':''}" data-key="w${m.id}"><div class="tg-h"><span>SS ${esc(m.ship)}</span><span>${esc(m.via||'')} · ${dateLong(m.t)}</span></div>
+      <div class="tg-b" ${anim?`data-hold="${m.id}"`:''}>${hold?'':esc(m.txt)}</div></div>`;}).join('');
+}
+function wireRoom(){const L=(S.wire||[]).filter(m=>UI.wireRoutine!==false||m.k!=='r').slice(0,UI.wireAll?30:6);
+  return `<section class="sec"><div class="row"><h2>Wireless room</h2><label class="check"><input type="checkbox" data-wirert="1" ${UI.wireRoutine!==false?'checked':''}> Sailings and arrivals</label></div>
+    <div class="ratchet stack tape" data-key="r-wire" style="gap:6px">${wireHTML(L,true)}</div>
+    ${(S.wire||[]).length>6?`<button class="btn quiet" data-act="wireall" style="width:fit-content">${UI.wireAll?'Fewer messages':'More messages'}</button>`:''}</section>`;}
+/* the newest message prints as Morse on the tape, then decodes letter by letter into words */
+function animWire(now){
+  if(UI._waLast&&UI._waLast!==UI.wa&&!UI._waLast.done){const L=UI._waLast,e=document.querySelector(`[data-hold="${L.id}"]`);L.done=true;if(e)e.textContent=L.txt;}
+  UI._waLast=UI.wa;
+  const A=UI.wa;if(!A||A.done)return;
+  const el=document.querySelector(`[data-hold="${A.id}"]`);
+  if(!el){if(now-A.made>15000)A.done=true;return;}
+  if(!A.start)A.start=now;
+  const t=now-A.start,txt=A.txt,M=morseOf(txt),pd=Math.min(1400,M.length*5);
+  let h;
+  if(t<pd)h=`<span class="mo">${M.slice(0,Math.ceil(M.length*t/pd))}</span>`;
+  else{const k=Math.floor((t-pd)/45);
+    if(k>=txt.length){A.done=true;el.textContent=txt;return;}
+    h=esc(txt.slice(0,k))+`<span class="mo">${morseOf(txt.slice(k))}</span>`;}
+  if(el._h!==h){el._h=h;el.innerHTML=h;}
 }
 function renderShipDetail(sh){
   const st=shipStatus(sh),age=Math.floor(yearNow()-sh.built),atSea=sh.state==='sea'||sh.state==='repo';
@@ -158,7 +180,7 @@ function renderShipDetail(sh){
     <div><div class="row"><h3>SS ${sh.name}</h3>${st.chip}</div>
     <div class="meta">Built ${sh.built} (${age} years) · ${int(sh.grt)} grt · ${knotsOf(sh)} knots · ${sh.fuel}-fired · worth about ${fmt(shipValue(sh))}</div></div>
     <p style="margin:0">${st.text}</p>
-    ${decisionHTML(sh)}
+    ${(()=>{const L=(S.wire||[]).filter(m=>m.sid===sh.id&&m.k!=='r').slice(0,3);return L.length?`<div class="stack tape" style="gap:6px"><span class="lbl">Latest from her</span>${wireHTML(L,false)}</div>`:'';})()}
     <div class="ratchet stack" data-key="r-ship">${adviceHTML(advice().filter(h=>h.scope==='ship'&&h.ref===sh.id))}</div>
     <div class="row meta"><span>Condition ${Math.round(sh.cond)}%</span><span>${pB>0?`About 1 crossing in ${Math.max(2,Math.round(1/pB))} breaks down`:'Reliable'}</span></div>${condBar(sh.cond)}
     ${sh.cond<35?'<p class="badline">Dangerously run down. Fire or foundering is a real risk. Send her to the yard.</p>':''}

@@ -1,6 +1,6 @@
 # Steerage & Saloon
 
-A real-time 1920s shipping line management sim. You run the Morven Line from its Glasgow head office from January 1921, with no end date: open passenger lines and cargo trades, buy, refit and retire ships, hire masters, build up a shore establishment and head-office departments, and survive rate wars, breakdowns, the US immigration quotas, the 1926 coal strike and the Depression.
+A real-time 1920s shipping line management sim. You run the Morven Line from its Glasgow head office from January 1921, with no end date (in this world the liner trade never declined, so later decades will be invented): open passenger lines and cargo trades, buy, refit and retire ships, hire masters, build up a shore establishment and head-office departments, and survive rate wars, breakdowns, the US immigration quotas, the 1926 coal strike and the Depression.
 
 It is a static browser game with no build step. Open `index.html`, or serve the folder with GitHub Pages (from the repo root; `.nojekyll` is included).
 
@@ -13,6 +13,8 @@ It is a static browser game with no build step. Open `index.html`, or serve the 
 | `js/chart-data.js` | Generated Atlantic chart (North and South): land, graticule, ports, route polylines with calls, distances. Made by `tools/gen-chart.mjs` |
 | `js/data.js` | Game data: routes and trades, commodities, classes, seasons, ships for sale, upgrades, captains' traits, shore property, departments, rivals, historical events, milestones |
 | `js/helpers.js` | Dates, formatting, demand and slump modifiers, prices, refit costs, captains and per-ship modifiers |
+| `js/lanes.js` | Sea lanes as a network: positions along any lane, and the passage a ship follows between two ports |
+| `js/wireless.js` | Wireless and cable traffic: coast stations, positions, telegraphese, Morse |
 | `js/ledger.js` | Month-to-date accounts by category and by line |
 | `js/sim.js` | The simulation: bookings and cargo per voyage, departures, calls, arrivals, breakdowns, yards and upgrades, crew morale, daily costs, month roll |
 | `js/rivals.js` | Rival lines: fleets, the shared market on each route, price matching, and each rival's monthly decisions |

@@ -126,7 +126,7 @@ html,body{height:100%}
   text-shadow:0 0 3px var(--chart-sea),0 0 3px var(--chart-sea),0 0 2px var(--chart-sea)}
 .chipm{position:absolute;transform:translate(-50%,-50%);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:1px 5px;border-radius:2px;background:var(--surface);border:1px solid currentColor;white-space:nowrap}
 .chipm.war{color:var(--bad)} .chipm.mail{color:var(--good)}
-.shipm{position:absolute;width:0;height:0;pointer-events:auto;cursor:pointer}
+.shipm{position:absolute;width:0;height:0;pointer-events:auto;cursor:pointer;transition:transform .6s ease}
 .shipm .hit{position:absolute;left:-12px;top:-12px;width:24px;height:24px;border-radius:50%}
 .shipm .hull{position:absolute;left:-9px;top:-3.5px;width:18px;height:7px;background:var(--marker);
   clip-path:polygon(0 18%,70% 0,100% 50%,70% 100%,0 82%)}
@@ -228,3 +228,13 @@ svg.chart{width:100%;height:auto;display:block}
 .lgroup{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:8px 2px 2px}
 .lgroup:first-of-type{margin-top:2px}
 textarea.code{width:100%;box-sizing:border-box;font:11px/1.35 ui-monospace,Menlo,Consolas,monospace;background:var(--surface2);color:var(--ink);border:1px solid var(--line);border-radius:3px;padding:6px;resize:vertical;word-break:break-all}
+
+/* wireless tape */
+:root{--tape:#F3EEDF;--tape-ink:#2B2A26;--tape-line:#D9D0B8}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--tape:#26241E;--tape-ink:#E8DFC9;--tape-line:#3C3829}}
+:root[data-theme="dark"]{--tape:#26241E;--tape-ink:#E8DFC9;--tape-line:#3C3829}
+.tg{background:var(--tape);color:var(--tape-ink);border:1px solid var(--tape-line);border-left:3px solid var(--tape-line);border-radius:2px;padding:6px 9px}
+.tg.bad{border-left-color:var(--bad)}.tg.good{border-left-color:var(--good,#3c8a5a)}.tg.rt{opacity:.78}
+.tg-h{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;opacity:.7;margin-bottom:3px}
+.tg-b{font:12px/1.45 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.03em;word-break:break-word;min-height:1.45em}
+.tg-b .mo{opacity:.55;letter-spacing:.08em}

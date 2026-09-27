@@ -46,7 +46,7 @@ function depart(sh){
   if(!L){sh.state='laid';news(`SS ${sh.name} laid up at ${PN[P]}.`);return;}
   const r=ROUTES[rk],m=mOf(S.t),gk=geoKey(rk,m),[A,B]=geoEnds(gk);
   if(P!==A&&P!==B){
-    const to=gcDist(P,A)<=gcDist(P,B)?A:B,d=gcDist(P,to)*1.15;
+    const to=laneDist(P,A)<=laneDist(P,B)?A:B,d=laneDist(P,to);
     sh.state='repo';sh.repoTo=to;sh.repoLeft=sh.repoTotal=d/(knotsOf(sh)*24);
     book('fuel',-fuelRate(sh,1)*sh.repoTotal*fuelPrice(sh,m),rk);
     news(`SS ${sh.name} leaves ${PN[P]} light to join the ${r.name} service at ${PN[to]}.`);return;
@@ -56,14 +56,17 @@ function depart(sh){
     const d=4+Math.round(Math.random()*4);sh.lastStrike=S.m;sh.portLeft=d;
     news(`The crew of SS ${sh.name} have walked off at ${PN[P]} over pay and conditions. She is held for about ${d} days.`,'bad',true);return;}
   const R=Math.random,mods=shipMods(sh);
-  sh.dir=P===A?0:1;sh.geo=gk;sh.pos=0;sh.state='sea';sh.legRoute=rk;sh.broke=false;sh.limp=false;sh.towed=false;sh.incident=null;
+  sh.dir=P===A?0:1;sh.geo=gk;sh.pos=0;sh.state='sea';sh.legRoute=rk;sh.broke=false;sh.limp=false;sh.limpF=0.4;sh.towed=false;sh.incident=null;sh.brk=null;sh.galeAt=null;sh.flav=null;sh.sailedAt=S.t;
   sh.stops=stopsFor(gk,sh.dir);sh.nextCall=0;sh.callLeft=0;
   const lg=legCalc(sh,rk,sh.dir,R,gk);
   book('fares',lg.paxRev,rk);book('port',-lg.agents,rk);book('fuel',-lg.fuelC,rk);book('crew',-lg.prov,rk);
   S.pax[rk]=(S.pax[rk]||0)+CL.reduce((a,c)=>a+(lg.pax[c]?lg.pax[c].n:0),0);
   sh.load=lg;L.last[sh.dir]={name:sh.name,pax:lg.pax,cargoT:lg.cargoT,comm:lg.comm};
   const mo=m%12,winter=[0,1,2,10,11].includes(mo),dist=GEO(gk).dist,lenF=dist/3000;
-  sh.slow=1;if(R()<(winter?0.12:0.04)*mods.gale*Math.min(2,lenF)){sh.slow=0.82;news(`SS ${sh.name} has sailed into a full gale. She will be late.`);}
+  { const pc=CL.filter(c=>lg.pax[c]&&lg.pax[c].n).map(c=>`${lg.pax[c].n} ${CL_NAME[c].toLowerCase()}`).join(' ');
+    wire(sh,`SS ${sh.name} sailed ${PN[P]} for ${PN[dir0end(gk,sh.dir)]}. ${pc||'No passengers'}. ${int(lg.cargoT)} tons ${COMM[lg.comm].name.toLowerCase()}.`,'r',{via:'Cable, '+PN[P]+' agents'}); }
+  sh.slow=1;if(R()<(winter?0.12:0.04)*mods.gale*Math.min(2,lenF))sh.galeAt=dist*(0.15+R()*0.5);
+  if(R()<0.22)sh.flav={at:dist*(0.1+R()*0.8),k:R()};
   const age=yearNow()-sh.built;
   sh.cond=clamp(sh.cond-0.8*SPD_WEAR[sh.speed]*(1+age/30)*(sh.fuel==='oil'?0.85:1)*mods.wear*lenF,5,95);
   const pS=sh.cond<35?(35-sh.cond)/100*0.3*mods.risk*lenF:0,pB=sh.cond<75?(75-sh.cond)/100*0.175*mods.risk*lenF:0;
@@ -71,38 +74,64 @@ function depart(sh){
   if(R()<pS)sh.event={kind:'fire',at:dist*(0.2+R()*0.6)};
   else if(R()<pB)sh.event={kind:'break',at:dist*(0.15+R()*0.7)};
 }
+const dir0end=(gk,dir)=>geoEnds(gk)[dir===0?1:0];
 function triggerEvent(sh){
-  const R=Math.random,rk=sh.legRoute;
+  const R=Math.random,rk=sh.legRoute,where=posText(sh);
   if(sh.event.kind==='break'){
-    const d=GEO(sh.geo).dist,toDest=d-sh.pos,back=sh.pos<toDest,nm=Math.min(sh.pos,toDest);
-    const tug=Math.round((800+nm*3)*(sh.up&&sh.up.wireless?0.7:1)/50)*50;
-    sh.incident={at:S.t,wait:5+Math.round(R()*4),tug,nm:Math.round(nm),back,rival:topRival(rk)};
-    sh.stopLeft=1e9;sh.broke=true;S.selShip=sh.id;UI.tab='fleet';
-    news(`SS ${sh.name} has broken down at sea. She needs orders: see her panel.`,'bad',true);
+    // the engineers go to work at once; what they find decides the rest
+    const mods=shipMods(sh),skill=(has(sh,'veteran')?0.25:0)+(has(sh,'cautious')?0.1:0)+((sh.morale||60)-60)/200+(sh.cond-40)/150;
+    const pF=clamp(0.12-skill*0.1,0.04,0.3),pL=clamp(0.22-skill*0.1,0.08,0.35),pS=0.25,r=R();
+    const o=r<pF?'fail':r<pF+pL?'long':r<pF+pL+pS?'slow':'minor',radio=sh.up&&sh.up.wireless;
+    const assess=0.3+R()*0.4,dur={minor:0.2+R()*0.5,slow:0.3+R()*0.5,long:3+R()*3,fail:radio?1.5+R()*1.5:4+R()*3}[o];
+    sh.brk={o,tell:S.t+assess,told:false,wait:dur};sh.stopLeft=assess+dur;sh.broke=true;
+    wire(sh,`Main engine failure ${where}. Stopped. Engineers at work. Will advise.`,'bad');
   } else {
-    sh.limp=true;sh.broke=true;sh.pendingYard='repair';book('yard',-sh.grt*1.5,rk);book('fares',-0.5*sh.load.paxRev,rk);S.rep=clamp(S.rep-10,0,100);
-    news(`Fire in the bunkers of SS ${sh.name}. She is limping on at a crawl, half the fares refunded, and the press is savage.`,'bad',true);
+    sh.limp=true;sh.limpF=0.4;sh.broke=true;sh.pendingYard='repair';book('yard',-sh.grt*1.5,rk);book('fares',-0.5*sh.load.paxRev,rk);S.rep=clamp(S.rep-10,0,100);
+    wire(sh,`Fire in the bunkers ${where}. Under control after six hours. Stokehold damaged. Proceeding at reduced speed. Passengers shaken.`,'bad',{pause:true});
+    news(`Fire aboard SS ${sh.name}. Half the fares refunded, and the press is savage.`,'bad');
   }
   sh.event=null;
 }
-function resolveIncident(sh,how,auto){
-  const I=sh.incident,rk=sh.legRoute,lg=sh.load,dist=GEO(sh.geo).dist,rep=Math.round(sh.grt*0.3);if(!I)return;
-  if(how==='wait'){sh.stopLeft=I.wait;book('yard',-rep,rk);S.rep=clamp(S.rep-3,0,100);
-    news(auto?`No orders came, so the engineers are repairing SS ${sh.name} at sea. About ${I.wait} days adrift.`:`SS ${sh.name} will repair at sea. About ${I.wait} days adrift.`,'bad');}
-  if(how==='tug'){book('yard',-(I.tug+rep),rk);sh.stopLeft=0;sh.towed=true;S.rep=clamp(S.rep-1,0,100);
-    if(I.back){book('fares',-lg.paxRev,rk);lg.cargoRev=0;lg.mail=0;sh.dir^=1;sh.pos=dist-sh.pos;sh.stops=[];}
-    else sh.stops=sh.stops.slice(sh.nextCall).filter(x=>x[1]>sh.pos),sh.nextCall=0;
-    const to=PN[destOf(sh)];sh.pendingYard=sh.pendingYard||'engine';
-    news(`An ocean tug is towing SS ${sh.name} ${I.back?'back ':''}to ${to}${I.back?'. All fares refunded':''}.`);}
-  if(how==='transfer'){book('fares',-0.7*lg.paxRev,rk);book('yard',-rep,rk);sh.stopLeft=I.wait;S.rep=clamp(S.rep-1,0,100);
-    for(const c in lg.pax)lg.pax[c].n=Math.round(lg.pax[c].n*0.3);
-    news(`Most passengers from SS ${sh.name} have been taken off by a ${RIVALS[I.rival].name} steamer. 70% of fares refunded.`);}
-  sh.incident=null;
+/* the chief engineer's verdict, some hours after a breakdown */
+function breakdownVerdict(sh){
+  const B=sh.brk,rk=sh.legRoute,d=Math.max(1,Math.round(B.wait));B.told=true;
+  if(B.o==='minor'){book('yard',-Math.round(sh.grt*0.05),rk);wire(sh,`Defect found and made good. Expect under way within hours.`);}
+  if(B.o==='slow'){sh.pendingYard=sh.pendingYard||'engine';wire(sh,`Engine damaged. Temporary repair in hand. Will proceed at reduced speed. Yard work needed on arrival.`,'bad');}
+  if(B.o==='long'){book('yard',-Math.round(sh.grt*0.3),rk);S.rep=clamp(S.rep-3,0,100);
+    wire(sh,`Crankshaft bearing gone. Repairing at sea. About ${d} day${d>1?'s':''} stopped. Passengers informed and restless.`,'bad');}
+  if(B.o==='fail'){S.rep=clamp(S.rep-4,0,100);sh.pendingYard=sh.pendingYard||'engine';
+    wire(sh,`Damage beyond repair at sea. Require tow. Drifting ${posText(sh)}.`,'bad');
+    if(sh.up&&sh.up.wireless)wire(sh,`Salvage tug dispatched to SS ${sh.name}. Alongside in about ${d} day${d>1?'s':''}.`,'',{via:stationFor(sh)+' Radio'});}
+}
+/* steam up again, or the tug takes her in tow */
+function breakdownResume(sh){
+  const B=sh.brk,rk=sh.legRoute,lg=sh.load,dist=GEO(sh.geo).dist;sh.brk=null;
+  if(B.o==='slow'){sh.limp=true;sh.limpF=0.6;wire(sh,`Under way on temporary repairs making ${Math.round(knotsOf(sh)*0.6)} knots.`);return;}
+  if(B.o==='fail'){
+    const toDest=dist-sh.pos,back=sh.pos<toDest*0.8,nm=Math.min(sh.pos,toDest);
+    const tug=Math.round((800+nm*3)*(sh.up&&sh.up.wireless?0.7:1)/50)*50;book('yard',-tug,rk);
+    if(back){book('fares',-lg.paxRev,rk);lg.cargoRev=0;lg.mail=0;sh.dir^=1;sh.pos=dist-sh.pos;sh.stops=[];sh.nextCall=0;}
+    else{sh.stops=sh.stops.slice(sh.nextCall).filter(x=>x[1]>sh.pos);sh.nextCall=0;}
+    sh.towed=true;
+    wire(sh,`Tug alongside. Tow connected. Proceeding to ${PN[destOf(sh)]} at five knots.${back?' All fares to be refunded.':''}`,'bad');
+    news(`SS ${sh.name} is under tow to ${PN[destOf(sh)]}: salvage ${fmt(tug)}${back?', all fares refunded':''}.`,'bad');return;}
+  wire(sh,`Repairs complete. Under way again at full speed.`,'good');
+}
+function voyageFlavour(sh){
+  const k=sh.flav.k,R=Math.random,rk=sh.legRoute,w=posText(sh),m=mOf(S.t)%12,north=GEO(sh.geo).calls.some(c=>['HAL','SJN','QBC','NYC','MTL'].includes(c[0]));
+  sh.flav=null;
+  if(north&&[1,2,3,4,5].includes(m)&&k<0.3){wire(sh,`Ice reported ${w}. Field and several bergs. Altering course south. Slight delay.`);sh.slow=Math.min(sh.slow,0.85);return;}
+  if(k<0.45){wire(sh,`Third-class passenger taken ill. Surgeon attending. No cause for alarm.`);return;}
+  if(k<0.6){const n=1+Math.floor(R()*3);wire(sh,`${n} stowaway${n>1?'s':''} found in the forepeak. Put to work in the galley. Will land them to the authorities.`);return;}
+  if(k<0.72){wire(sh,`Answered distress call from a schooner ${w}. Crew of ${5+Math.floor(R()*6)} taken off safely. Resuming passage.`,'good');S.rep=clamp(S.rep+1,0,100);sh.slow=Math.min(sh.slow,0.93);return;}
+  if(k<0.84){wire(sh,`Ship's concert in aid of seamen's charities raised ${fmt(20+Math.floor(R()*60))}. All well aboard.`,'good');return;}
+  wire(sh,`Fog on the banks. Proceeding at half speed with the whistle going.`);sh.slow=Math.min(sh.slow,0.9);
 }
 const destOf=sh=>{const [A,B]=geoEnds(sh.geo);return sh.dir===0?B:A;};
 function arrive(sh){
   const rk=sh.legRoute,lg=sh.load,R=Math.random,mods=shipMods(sh);
   sh.port=destOf(sh);sh.state='port';sh.portLeft=turnDays(sh,sh.port);
+  wire(sh,`SS ${sh.name} arrived ${PN[sh.port]}${sh.towed?' in tow':''}. ${Math.max(1,Math.round(S.t-(sh.sailedAt||S.t)))} days out.${sh.limp?' Needs the yard.':''}`,sh.towed||sh.limp?'bad':'r');
   book('cargo',lg.cargoRev,rk);book('port',-lg.port,rk);
   if(lg.mail&&!sh.broke&&S.mail[rk]){book('mail',lg.mail,rk);S.mail[rk].ok=true;}
   const L=S.lines[rk],spartan=L&&L.service===0,lavish=L&&L.service===2;
@@ -116,7 +145,7 @@ function arrive(sh){
     news(`Firemen and stewards deserted SS ${sh.name} at ${PN[sh.port]}. Replacements cost ${fmt(c)} and a day.`,'bad');}
   const fo=lg.pax.f?lg.pax.f.n/Math.max(1,lg.pax.f.cap):0;
   if(fo>0.5&&R()<(lavish?0.1:0.03)*(has(sh,'popular')?1.5:1)){S.rep=clamp(S.rep+4,0,100);news(`A film star crossed first class on SS ${sh.name} and praised the table to the newspapers.`,'good');}
-  sh.lastLoad=lg;sh.load=null;sh.broke=false;sh.limp=false;sh.slow=1;sh.stopLeft=0;sh.towed=false;sh.stops=[];
+  sh.lastLoad=lg;sh.load=null;sh.broke=false;sh.limp=false;sh.slow=1;sh.stopLeft=0;sh.towed=false;sh.stops=[];sh.brk=null;sh.galeAt=null;sh.flav=null;
   if(sh.autoDock&&sh.cond<sh.autoDock&&!sh.pendingYard&&!sh.pendingExit){const c=refitCost(sh,'dock');
     if(S.cash>=c){sh.pendingYard='dock';sh.dockWarn=false;news(`SS ${sh.name} is below her ${sh.autoDock}% service threshold and goes into drydock at ${PN[sh.port]}.`);}
     else if(!sh.dockWarn){sh.dockWarn=true;news(`SS ${sh.name} is due for drydock but the account cannot cover ${fmt(c)}. She keeps sailing.`,'bad',true);}}
@@ -148,11 +177,13 @@ function moveAll(step){
   moveRivals(step);
   for(const sh of [...S.ships]){
     if(sh.state==='sea'){
-      if(sh.incident&&S.t-sh.incident.at>2)resolveIncident(sh,'wait',true);
-      if(sh.stopLeft>0){sh.stopLeft-=step;if(sh.stopLeft<=0)news(`SS ${sh.name} has steam up again.`);continue;}
+      if(sh.brk&&!sh.brk.told&&S.t>=sh.brk.tell)breakdownVerdict(sh);
+      if(sh.stopLeft>0){sh.stopLeft-=step;if(sh.stopLeft<=0){sh.stopLeft=0;if(sh.brk)breakdownResume(sh);}continue;}
       if(sh.callLeft>0){sh.callLeft-=step;continue;}
-      sh.pos+=(sh.towed?120:knotsOf(sh)*SPD[sh.speed]*shipMods(sh).speed*24*sh.slow*(sh.limp?0.4:1))*step;
+      sh.pos+=(sh.towed?120:knotsOf(sh)*SPD[sh.speed]*shipMods(sh).speed*24*sh.slow*(sh.limp?(sh.limpF||0.4):1))*step;
       if(sh.event&&sh.pos>=sh.event.at)triggerEvent(sh);
+      if(sh.galeAt&&sh.pos>=sh.galeAt){sh.galeAt=null;sh.slow=0.75;wire(sh,`Full gale ${posText(sh)}. Heavy seas. Hove to for some hours, now proceeding at reduced speed. Expect a day late.`);}
+      if(sh.flav&&sh.pos>=sh.flav.at&&!sh.towed)voyageFlavour(sh);
       const st=sh.stops&&sh.stops[sh.nextCall];
       if(st&&sh.pos>=st[1]&&!sh.towed){sh.pos=st[1];sh.callLeft=CALL_DAYS;sh.callPort=st[0];sh.nextCall++;continue;}
       if(sh.pos>=GEO(sh.geo).dist)arrive(sh);
@@ -167,6 +198,7 @@ function moveAll(step){
 }
 const shoreUpkeep=()=>{const s=S.shore;return Object.keys(s.piers).length*350+Object.keys(s.agents).length*300+Object.keys(s.hostels).length*250+Object.keys(s.yards).length*1200+Object.keys(S.depts||{}).reduce((a,k)=>a+DEPTS[k].upkeep,0);};
 function dailyTick(){
+  wireTick();
   for(const sh of S.ships){
     const act=ACTIVE.includes(sh.state),f=act?1:sh.state==='yard'?0.5:0.25;
     const key=act?(sh.state==='sea'?sh.legRoute:sh.line):'_idle';

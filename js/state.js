@@ -5,7 +5,7 @@ const UI={speed:0,tab:'overview',confirm:null,banner:'Paused. Press 1× to start
 function newGame(){
   S={v:2,t:0,m:0,cash:18000,debt:40000,rep:30,conf:false,ships:[],lines:{},wars:{},mail:{},offer:null,market:[],news:[],hist:[18000],
      mtd:blankLedger(),lastMonth:null,nextId:1,over:false,selShip:1,selLine:'hal',odWarn:false,tension:{},pax:{},lastPax:{},rivalIdx:{},dismiss:{},
-     shore:{piers:{},agents:{},hostels:{},yards:{},bunker:null},miles:{},capPool:[],capNext:1,depts:{}};
+     shore:{piers:{},agents:{},hostels:{},yards:{},bunker:null},miles:{},capPool:[],capNext:1,depts:{},wire:[],wireQ:[],wireNext:0,ghosts:[]};
   S.lines.hal={fares:defaultFares('hal'),service:1,adv:1,last:[null,null]};
   const mv=makeShip(TEMPL[0],64,'GLA');mv.line='hal';mv.state='port';mv.portLeft=2;S.ships.push(mv);
   initRivals();refreshMarket();S.capPool=[0,1,2,3].map(()=>makeCaptain());news(HIST[0].t,'hist');
@@ -22,7 +22,9 @@ function migrate(s){
   const prev=S;S=s;
   if(!s.rships)initRivals();
   // 0.4: shore establishment, milestones, captains and crew, upgrades, multi-stop voyages, new routes and rival lines
-  s.shore=s.shore||{piers:{},agents:{},hostels:{},yards:{},bunker:null};s.miles=s.miles||{};s.depts=s.depts||{};s.capNext=s.capNext||1;
+  s.shore=s.shore||{piers:{},agents:{},hostels:{},yards:{},bunker:null};s.miles=s.miles||{};s.depts=s.depts||{};s.wire=s.wire||[];s.wireQ=s.wireQ||[];s.ghosts=s.ghosts||[];
+  // 0.4.1: breakdowns resolve themselves; an old save waiting for orders repairs at sea
+  s.ships.forEach(sh=>{if(sh.incident){sh.incident=null;sh.brk={o:'long',tell:s.t,told:false,wait:4};sh.stopLeft=4;}});s.capNext=s.capNext||1;
   s.ships.concat(s.market||[]).forEach(sh=>{
     if(!sh.up)sh.up={reefer:false,wireless:sh.built>=1905};
     if(sh.fit===undefined)sh.fit=Math.round(clamp(95-(yearNow()-sh.built)*3.5,30,95));
@@ -42,7 +44,7 @@ const b64u=b=>{let s='';for(let i=0;i<b.length;i+=0x8000)s+=String.fromCharCode.
 const unb64u=t=>{t=t.replace(/-/g,'+').replace(/_/g,'/');while(t.length%4)t+='=';const s=atob(t),b=new Uint8Array(s.length);for(let i=0;i<s.length;i++)b[i]=s.charCodeAt(i);return b;};
 async function pipeBytes(bytes,stream){const r=new Response(new Blob([bytes]).stream().pipeThrough(stream));return new Uint8Array(await r.arrayBuffer());}
 async function makeSaveCode(){
-  const snap=JSON.parse(JSON.stringify(S));snap.news=snap.news.slice(0,30);snap.ver=GAME_VERSION;
+  const snap=JSON.parse(JSON.stringify(S));snap.news=snap.news.slice(0,30);snap.wire=(snap.wire||[]).slice(0,20);snap.ver=GAME_VERSION;
   const raw=new TextEncoder().encode(JSON.stringify(snap));
   if(typeof CompressionStream==='undefined')return CODE_TAG+'j'+b64u(raw);
   return CODE_TAG+'z'+b64u(await pipeBytes(raw,new CompressionStream('deflate-raw')));
