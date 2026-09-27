@@ -90,13 +90,14 @@ function ourAppeal(sh,rk,c){
   const L=S.lines[rk],r=ROUTES[rk];
   const pf=clamp(Math.pow(r.ref[c]/effFare(rk,c),E[c]),0.03,1.8);
   const mods=shipMods(sh);
-  return pf*repF(c,S.rep,r)*SERV[c][L.service]*SPD_D[c][sh.speed]*ADV_MULT[L.adv]*(S.conf&&c==='t'?1.04:1)*(c==='f'||c==='s'?mods.appealFS:mods.appealT)*shoreMult(rk,c)*speedAppeal(knotsOf(sh)*SPD[sh.speed]*mods.speed,rk,c);
+  return pf*repF(c,S.rep,r)*SERV[c][L.service]*SPD_D[c][sh.speed]*ADV_MULT[L.adv]*(S.conf&&c==='t'?1.04:1)*(c==='f'||c==='s'?mods.appealFS:mods.appealT)*shoreMult(rk,c)*speedAppeal(knotsOf(sh)*SPD[sh.speed]*mods.speed,rk,c)*(sh.up&&sh.up.aircon&&TROPIC.includes(rk)&&(c==='f'||c==='s')?1.06:1);
 }
+const TROPIC=['cot','ban','waf','rpl','nap'];
 /* booking agencies in a region the route calls at, and emigrant hostels at its ports */
 function shoreMult(rk,c){
   if(!S.shore)return 1;const calls=ROUTES[rk].calls;let x=1;
-  for(const a in S.shore.agents)if(AGENCY[a].ports.some(p=>calls.includes(p)))x*=(c==='t'||c==='tt')?1.12:1.06;
-  if((c==='t'||c==='tt')&&calls.some(p=>S.shore.hostels[p]))x*=1.08;
+  for(const a in S.shore.agents)if(AGENCY[a].ports.some(p=>calls.includes(p)))x*=(c==='t'||c==='tt')?1.07:1.03;
+  if((c==='t'||c==='tt')&&calls.some(p=>S.shore.hostels[p]))x*=1.05;
   return x;
 }
 function rivalWeight(rk,c,owner){let a=0;for(const x of S.rships)if(x.route===rk&&(!owner||x.owner===owner)){const b=rivalBerths(x,c);if(b)a+=b*sailings(x.knots,rk)*rivalAppeal(x.owner,rk,c,x);}return a;}
@@ -150,7 +151,7 @@ function rivalsMonth(){
   // price matching: where the Morven Line undercuts, the route's fare level follows it down over a few months
   S.rfare=S.rfare||{};
   for(const rk in ROUTES){const cur=S.rfare[rk]||1,act=S.lines[rk]&&S.ships.some(x=>x.line===rk&&ACTIVE.includes(x.state));
-    const ratio=act?ourFareRatio(rk):1,sl=1-0.2*slump(m),target=Math.min(sl,act&&ratio<0.97?Math.max(0.68,ratio+0.04):1);
+    const ratio=act?ourFareRatio(rk):1,sl=1-0.12*slump(m),target=Math.min(sl,act&&ratio<0.97?Math.max(0.68,ratio+0.04):1);
     const next=cur+(target-cur)*(target<cur?0.25*routeAggr(rk):0.2);
     if(cur>=0.95&&next<0.95&&act&&ratio<0.97)news(`Rival lines on ${ROUTES[rk].name} are cutting their fares to match yours.`,'bad');
     S.rfare[rk]=next;}
@@ -168,7 +169,7 @@ function rivalsMonth(){
     for(const rk of routes){const st=stats[rk].owners[o],ourShare=stats[rk].ours.pax/Math.max(1,stats[rk].total);
       const fight=ourShare>0.3&&co.cash>180000&&R()<0.08*P.aggr; // answer an interloper with tonnage
       if(fight||(st.rel>1.12&&co.cash>260000&&R()<0.16*P.aggr+(ourShare>0.25?0.1:0))){
-        const sh=makeRivalShip(o,rk,1921+Math.floor(m/12));sh.knots=+(P.knots[1]-Math.random()).toFixed(1);S.rships.push(sh);newRivalVis(sh);co.cash-=220000;rivalMove(o,rk,'add',sh.name);break;}}
+        const sh=makeRivalShip(o,rk,1921+Math.floor(m/12)),era=Math.max(0,(m-108)/12);sh.knots=+(P.knots[1]-Math.random()+Math.min(5,era*0.15)).toFixed(1);if(era>0){sh.grt=Math.round(sh.grt*(1+Math.min(0.5,era*0.02))/100)*100;}S.rships.push(sh);newRivalVis(sh);co.cash-=220000;rivalMove(o,rk,'add',sh.name);break;}}
     // retreat from weak routes
     for(const rk of routes){const st=stats[rk].owners[o];
       // incumbents hold their home trades: they only give ground below their starting fleet when the money runs out
@@ -215,4 +216,8 @@ function stepVis(x,route,step){
   if(v.pos>=d){v.port=geoEnds(v.gk)[v.dir===0?1:0];v.pos=d;v.wait=TURN_DAYS*(0.7+0.6*jr(x.id+Math.floor(S.t)));if(!route)return false;}
   return true;
 }
+function rivalPos(x){const v=x.v||initVis(x);
+  if(v.wait>0){const [px,py]=CHART.ports[v.port];return {x:px,y:py,ang:0,inPort:true};}
+  if(v.repo)return pointOn(trackBetween(v.port,v.repo.to),v.repo.pos);
+  const d=GEO(v.gk).dist;return pointOn(CHART.routes[v.gk],v.dir===0?v.pos:d-v.pos,v.dir===1);}
 function moveRivals(step){for(const x of S.rships)stepVis(x,x.route,step);if(S.ghosts&&S.ghosts.length)S.ghosts=S.ghosts.filter(g=>stepVis(g,null,step));}

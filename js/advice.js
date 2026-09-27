@@ -33,7 +33,7 @@ const WINTER=[10,11,0,1];
 const money=v=>fmt(Math.round(v/10)*10);
 const canSpend=cost=>S.cash-cost>=3*runningCost();
 const idleCost=sh=>0.25*crewCost(sh)+(sh.captain?sh.captain.wage:0)+insCost(sh);
-const DEPT_OF={review:'sec',reserve:'sec',buy:'sec','rep-mail':'sec','rep-low':'sec','conf-war':'sec',pier:'sec',agency:'sec',bunker:'sec',dept:'sec',
+const DEPT_OF={review:'sec',reserve:'sec',buy:'traffic',build:'traffic','rep-mail':'sec','rep-low':'sec','conf-war':'sec',pier:'sec',agency:'sec',bunker:'sec',dept:'sec',
   fare:'fares',tension:'fares',adv:'fares',service:'fares',match:'fares',
   move:'traffic',unlay:'traffic',layup:'traffic',sell:'traffic',rin:'traffic',
   speed:'marine',maint:'marine',thresh:'marine',oil:'marine',refurb:'marine',reefer:'marine',wireless:'marine',
@@ -104,26 +104,27 @@ function advice(){
   }
   // ---- ships: deployment, upkeep, upgrades, crew ----
   for(const sh of S.ships){
+    if(sh.state==='lost')continue;
     const r0=sh.line;
     if(sh.state==='laid'){
-      let best=null;for(const rk of Object.keys(ROUTES)){const q=econYear(sh,rk);if(!best||q.pm>best.pm)best={rk,pm:q.pm};}
+      const best=bestLine(sh,null);
       const idleC=idleCost(sh),val=Math.round(shipValue(sh)*0.9);
-      if(best&&best.pm<0&&S.ships.length>1&&!sh.pendingExit)add({id:`sell:${sh.id}:${S.m}`,scope:'ship',ref:sh.id,sev:'warn',gain:idleC+val*0.065/12,
+      if(best&&best.pm<0&&S.ships.length>1&&!sh.pendingExit&&!(sh.acq>S.m-18))add({id:`sell:${sh.id}:${S.m}`,scope:'ship',ref:sh.id,sev:'warn',gain:idleC+val*0.065/12,
         title:`Sell SS ${sh.name}`,
         why:`Even laid up she costs ${money(idleC)} a month, and no route would pay her way over the coming year. Selling her raises about ${money(val)}${S.debt>0?', which could pay down the mortgage and its interest':''}. Ships are cheap in a slump, so you may be selling low.`,
         act:[['Sell her','sellship',sh.id]]});
-      if(best&&best.pm>0&&!WINTER.slice(0,3).includes(mo))add({id:`unlay:${sh.id}`,scope:'ship',ref:sh.id,sev:'warn',gain:best.pm,title:`Put SS ${sh.name} back to work`,
+      if(best&&best.pm>(S.lines[best.rk]?0:300)&&!WINTER.slice(0,3).includes(mo))add({id:`unlay:${sh.id}`,scope:'ship',ref:sh.id,sev:'warn',gain:best.pm,title:`Put SS ${sh.name} back to work`,
         why:`Laid up she still costs wages and insurance. On ${ROUTES[best.rk].name} she would earn about ${money(best.pm)} a month over the coming year${!S.lines[best.rk]?' (that line is not open yet)':''}.${mo>=1&&mo<=3?' Spring bookings are picking up.':''}`,
-        act:S.lines[best.rk]?[['Assign','moveship',sh.id,best.rk]]:[['View line','selline',best.rk]]});
+        act:S.lines[best.rk]?[['Assign','moveship',sh.id,best.rk]]:[['Open it and assign her','openmove',sh.id,best.rk],['View line','selline',best.rk]]});
       continue;
     }
     if(!r0||sh.state==='yard')continue;
     const cur=econ(sh,r0),curY=econYear(sh,r0);
-    let best=null;for(const rk of Object.keys(ROUTES)){if(rk===r0)continue;const q=econYear(sh,rk);if(!best||q.pm>best.pm)best={rk,pm:q.pm};}
-    if(best&&best.pm-curY.pm>=300)add({id:`move:${sh.id}:${best.rk}`,scope:'ship',ref:sh.id,sev:'tip',gain:best.pm-curY.pm,
+    const best=bestLine(sh,r0);
+    if(best&&best.pm-curY.pm>=300&&(S.lines[best.rk]||best.pm>300))add({id:`move:${sh.id}:${best.rk}`,scope:'ship',ref:sh.id,sev:'tip',gain:best.pm-curY.pm,
       title:`Move SS ${sh.name} to ${ROUTES[best.rk].name}`,
       why:`Averaged over the coming year she would make about ${money(best.pm)} a month there, against ${money(curY.pm)} on ${ROUTES[r0].name}, at current fares.${!S.lines[best.rk]?' You would need to open that line first (£2,500).':''} Check conference tension there before you commit.`,
-      act:S.lines[best.rk]?[['Move her','moveship',sh.id,best.rk]]:[['View line','selline',best.rk]]});
+      act:S.lines[best.rk]?[['Move her','moveship',sh.id,best.rk]]:[['Open it and move her','openmove',sh.id,best.rk],['View line','selline',best.rk]]});
     const idle=idleCost(sh),bestY=best?Math.max(best.pm,curY.pm):curY.pm;
     if(S.ships.length>1&&bestY<-idle-150)add({id:`layup:${sh.id}:${S.m}`,scope:'ship',ref:sh.id,sev:'warn',gain:-idle-curY.pm,
       title:`Lay SS ${sh.name} up until trade recovers`,
@@ -151,9 +152,9 @@ function advice(){
     if(sh.fuel==='coal'&&yearNow()-sh.built<28)yard('oil',{fuel:'oil'},`Convert SS ${sh.name} to oil`,'Oil firing cuts her stokehold crew and her bunker bill.');
     if((sh.berths.f+sh.berths.s)>0&&(sh.fit||0)<50)yard('refurb',{fit:100},`Refurbish SS ${sh.name}`,`Her saloons are tired (fittings ${Math.round(sh.fit||0)}%), and first and second class notice.`);
     if(!(sh.up&&sh.up.reefer)&&COMM[ROUTES[r0].cargo.home.c].reefer)yard('reefer',{up:{...sh.up,reefer:true}},`Fit refrigerated holds to SS ${sh.name}`,`Her route's homeward cargo, ${COMM[ROUTES[r0].cargo.home.c].name.toLowerCase()}, needs cold holds; without them she takes only a sliver of it.`);
-    if(!(sh.up&&sh.up.wireless)&&(S.mail[r0]||S.rep>=35)&&canSpend(refitCost(sh,'wireless'))&&!sh.pendingYard)
+    if(!(sh.up&&sh.up.wireless)&&(S.mail[r0]||S.rep>=35||S.m>=200)&&canSpend(refitCost(sh,'wireless'))&&!sh.pendingYard)
       add({id:`wireless:${sh.id}`,scope:'ship',ref:sh.id,sev:'tip',gain:150,title:`Fit wireless to SS ${sh.name}`,
-        why:`Only ships with wireless can carry the mails${S.mail[r0]?', and this route has a contract':''}. It also brings help faster when she breaks down. ${money(refitCost(sh,'wireless'))} and a week in the yard.`,
+        why:`${S.m>=200?(S.m>=228?'Under the Ocean Aid Convention she may carry no passengers without it. ':'From 1940 the Ocean Aid Convention bars passenger ships without wireless. '):''}Only ships with wireless can carry the mails${S.m<228?' or tell you when she is in trouble':''}${S.mail[r0]?', and this route has a contract':''}. Without it, nothing is heard of her at sea unless a passing ship sees her lamps. ${money(refitCost(sh,'wireless'))} and a week in the yard.`,
         act:[['Book it','setyard',sh.id,'wireless']]});
     if((sh.morale||60)<45&&(sh.pay===undefined?1:sh.pay)<2)
       add({id:`pay:${sh.id}`,scope:'ship',ref:sh.id,sev:'warn',gain:350,title:`Raise pay on SS ${sh.name}`,
@@ -178,17 +179,23 @@ function advice(){
     let best=null;
     for(const m of S.market){const dep=Math.round(m.price*0.4);if(S.cash-reserve<dep)continue;
       for(const rk of Object.keys(ROUTES)){const q=econYear(m,rk);const pay=q.pm-(m.price-dep)*0.065/12;if(!best||pay>best.pay)best={m,rk,pay,dep};}}
-    if(best&&best.pay>300)add({id:`buy:${best.m.name}`,scope:'co',sev:'tip',gain:best.pay,title:'Put idle cash to work',
+    if(best&&best.pay>(slump(S.m)>0.3?1500:500))add({id:`buy:${best.m.name}`,scope:'co',sev:'tip',gain:best.pay,title:'Put idle cash to work',
       why:`SS ${best.m.name} (${money(best.dep)} down) could earn about ${money(best.pay)} a month on ${ROUTES[best.rk].name}, averaged over a year of seasons and after mortgage interest. You would still hold three months of running costs in reserve.`,
-      act:[['See brokers','tabgo','brokers']]});
+      act:[['Buy her','buyship',best.m.name,best.rk],['See brokers','tabgo','brokers']]});
   }
+  // a new ship, when the line can carry the cost
+  const bi=buildIdea();
+  if(bi)add({id:'build'+Math.floor(S.m/12),scope:'co',sev:'tip',gain:bi.pm,title:`Build ${/^[aeiou]/i.test(PURPOSES[bi.d.purpose].name)?'an':'a'} ${PURPOSES[bi.d.purpose].name.toLowerCase()} for ${ROUTES[bi.rk].name}`,
+    why:`The traffic figures suggest a ${int(bi.d.grt)}-ton, ${bi.d.knots}-knot ${PURPOSES[bi.d.purpose].name.toLowerCase()} would clear about ${money(bi.pm)} a month there at today's trade: about ${fmt(bi.price)}, paying for herself in ${Math.round(bi.price/(bi.pm*12))} years. Open the drawing office to work it up.`,
+    act:[['Open the drawing office','build',bi.d]]});
   // piers where your ships call often enough to repay one within four years
   const calls={};for(const sh of S.ships)if(sh.line&&ACTIVE.includes(sh.state)){const r=ROUTES[sh.line],rt=sailings(knotsOf(sh),sh.line);
     r.calls.forEach((p,i)=>{const end=i===0||i===r.calls.length-1;calls[p]=(calls[p]||0)+rt*(end?1:2)*sh.grt*(end?0.08:0.04);});}
-  for(const p in calls){if(S.shore.piers[p]||!PIER_COST[p])continue;const save=calls[p]*0.6-350,cost=PIER_COST[p];
+  const early=S.m<12&&S.ships.length<2;
+  if(!early)for(const p in calls){if(S.shore.piers[p]||!PIER_COST[p])continue;const save=calls[p]*0.6-350,cost=PIER_COST[p];
     if(save>0&&cost/save<=48&&canSpend(cost))add({id:`pier:${p}`,scope:'co',sev:'tip',gain:save,title:`Build a pier at ${PN[p]}`,
       why:`Your ships pay about ${money(calls[p])} a month in dues there. Your own pier cuts that by 60% and takes a day off each turnaround. ${money(cost)}, repaid in about ${Math.ceil(cost/save)} months.`,act:[['Shore','tabgo','shore']]});}
-  for(const a in AGENCY){if(S.shore.agents[a])continue;const cost=AGENCY[a].cost;if(!canSpend(cost))continue;
+  if(!early)for(const a in AGENCY){if(S.shore.agents[a])continue;const cost=AGENCY[a].cost;if(!canSpend(cost))continue;
     const ships=S.ships.filter(x=>x.line&&ACTIVE.includes(x.state)&&AGENCY[a].ports.some(p=>ROUTES[x.line].calls.includes(p)));if(!ships.length)continue;
     let before=0;for(const x of ships)before+=econ(x,x.line).pm;S.shore.agents[a]=true;let after=0;try{for(const x of ships)after+=econ(x,x.line).pm;}finally{delete S.shore.agents[a];}
     const save=after-before-300;if(save>0&&cost/save<=30)add({id:`agency:${a}`,scope:'co',sev:'tip',gain:save,title:`Open ${AGENCY[a].name}`,
@@ -229,25 +236,88 @@ function doAction(act,d){
       else if(kind==='agency'){if(sh.agents[key])return false;sh.agents[key]=S.m;news(`${AGENCY[key].name} now book for the Morven Line.`,'good');}
       else if(kind==='hostel'){if(sh.hostels[key])return false;sh.hostels[key]=S.m;news(`The Morven Line emigrant hostel opens at ${PN[key]}.`,'good');}
       else if(kind==='yard'){if(sh.yards[key])return false;sh.yards[key]=S.m;news(`The Morven Line buys a repair yard on ${YARD_PORTS[key]}.`,'good');}
+      else if(kind==='slip'){if(!sh.yards[key]||sh.slip)return false;sh.slip=key;news(`The Morven Line lays down a building slip at its yard on ${YARD_PORTS[key]}. It can now build its own ships.`,'good',true);}
       else if(kind==='bunker'){if(sh.bunker&&sh.bunker.until>=S.m)return false;sh.bunker={until:S.m+23};book('shore',-c);news('Bunker contract signed: 12% off coal and oil for two years.','good');return true;}
-      else if(kind==='dept'){if(S.depts[key])return false;S.depts[key]={auto:false,since:S.m};book('office',-c);news(`The ${DEPTS[key].name} opens at head office.`,'good');return true;}
+      else if(kind==='dept'){if(S.depts[key])return false;S.depts[key]={auto:false,since:S.m,head:makeHead(key)};book('office',-c);news(`The ${DEPTS[key].name} opens at head office.`,'good');return true;}
       else return false;
       S.cash-=c;return true;}
     case 'deptmode':{const [k,auto]=d;if(!S.depts[k])return false;S.depts[k].auto=!!auto;return true;}
+    case 'openmove':{const [id,rk]=d;const x=ship(id);if(!x)return false;if(!S.lines[rk]){if(S.cash<2500)return false;book('office',-2500,rk);S.lines[rk]={fares:defaultFares(rk),service:1,adv:1,last:[null,null]};news(`The Morven Line opens a ${ROUTES[rk].name} service.`,'good');}
+      return doAction('moveship',[id,rk]);}
+    case 'buyship':{const [name,rk]=d;const m=S.market.find(q=>q.name===name);if(!m)return false;const dep=Math.round(m.price*0.4);if(S.cash<dep)return false;
+      S.cash-=dep;S.debt+=m.price-dep;delete m.price;m.acq=S.m;S.ships.push(m);S.market=S.market.filter(q=>q!==m);news(`Bought SS ${m.name}, lying at ${PN[m.port]}.`,'good');
+      if(rk)doAction('openmove',[m.id,rk]);return true;}
+    case 'newhead':{const [k,i]=d;const o=S.depts[k];if(!o||!o.cands||!o.cands[i])return false;const sev=o.head?o.head.wage*3:0;if(S.cash<sev)return false;
+      if(sev)book('office',-sev);const h=o.cands[i];news(`${o.head?o.head.name+' leaves with three months\' pay. ':''}${h.name} becomes ${DEPTS[k].head}.`);o.head=h;o.cands.splice(i,1);return true;}
+    case 'build':{const [dz]=d;if(typeof openDesigner!=='function')return false;UI.dz=JSON.parse(JSON.stringify(dz));openDesigner();return true;}
+    case 'propyes':{const [pid]=d;const p=(S.props||[]).find(q=>q.id===pid);if(!p)return false;S.props=S.props.filter(q=>q!==p);
+      return doAction(p.act,p.d);}
+    case 'propno':{const [pid]=d;const p=(S.props||[]).find(q=>q.id===pid);if(!p)return false;S.props=S.props.filter(q=>q!==p);S.dismiss[pid]=S.m+12;
+      if(p.act==='openmove'){S.dismiss['nomove:'+p.d[0]+':'+p.d[1]]=S.m+12;}return true;}
   }
   return false;
 }
-function shoreCost(kind,key){return kind==='pier'?PIER_COST[key]:kind==='agency'?AGENCY[key]&&AGENCY[key].cost:kind==='hostel'?25000:kind==='yard'?120000:kind==='bunker'?10000:kind==='dept'?DEPTS[key]&&DEPTS[key].cost:0;}
-/* departments act on their own advice each month, within the cash reserve */
+function shoreCost(kind,key){return kind==='pier'?PIER_COST[key]:kind==='agency'?AGENCY[key]&&AGENCY[key].cost:kind==='hostel'?25000:kind==='yard'?120000:kind==='bunker'?10000:kind==='slip'?OWN_SLIP_COST:kind==='dept'?DEPTS[key]&&DEPTS[key].cost:0;}
+/* the best line for a ship, preferring lines already open: a new line must earn clearly more to be worth opening */
+function bestLine(sh,exclude){
+  let bo=null,ba=null;
+  for(const rk of Object.keys(ROUTES)){if(rk===exclude)continue;
+    if(!S.lines[rk]&&S.dismiss['nomove:'+sh.id+':'+rk]>S.m)continue;
+    const q=econYear(sh,rk);if(S.lines[rk]&&(!bo||q.pm>bo.pm))bo={rk,pm:q.pm};if(!ba||q.pm>ba.pm)ba={rk,pm:q.pm};}
+  if(ba&&bo&&!S.lines[ba.rk]&&(bo.pm>=ba.pm*0.7||ba.pm-bo.pm<600))return bo;
+  return ba;
+}
+/* every six months the traffic figures are run for a new ship; only when the line could pay for one */
+function buildIdea(){
+  if(S.ships.length<3||(S.orders||[]).length||yearNow()<1923)return null;
+  if(S.buildIdea&&S.m-S.buildIdea.m<6)return S.buildIdea.v;
+  let best=null;const reach=S.cash+headroom();
+  for(const pk of ['inter','emig','mixed','cargo','reefer','tourist','express']){if(!techOn(PURPOSES[pk].from,yearNow()))continue;
+    const d=defaultDesign(pk);d.name='';const f=designForecast(d);if(!f.best||f.best.pm<=0)continue;
+    if(reach<f.st.price*0.7)continue;const yrs=f.st.price/(f.best.pm*12);if(yrs>9)continue;
+    if(!best||yrs<best.yrs)best={d,rk:f.best.rk,pm:Math.round(f.best.pm),price:f.st.price,yrs};}
+  S.buildIdea={m:S.m,v:best};return best;
+}
+/* ---------- departments ---------- */
+const HEAD_FIRST=['Walter','Robert','Hugh','Thomas','Alexander','Ian','Gordon','Norman','Stanley','Leonard','Margaret','Agnes'],HEAD_LAST=['Paterson','Galbraith','Rennie','Muir','Hendry','Barr','Lindsay','Crawford','Nisbet','Somerville','Bain','Kerr'];
+function makeHead(k,R=Math.random){const comp=Math.round(35+R()*55),bold=R()<0.5;
+  return {name:`${HEAD_FIRST[Math.floor(R()*HEAD_FIRST.length)]} ${HEAD_LAST[Math.floor(R()*HEAD_LAST.length)]}`,comp,bold,wage:Math.round(30+comp*0.9)};}
+const compWord=c=>c<45?'muddled':c<60?'plodding':c<72?'capable':c<84?'sharp':'first-rate';
+function deptCost(k){const D=DEPTS[k],o=S.depts[k],[b,perShip,perLine]=D.staff;
+  const staff=Math.ceil(b+perShip*S.ships.length+perLine*Object.keys(S.lines).length),head=o&&o.head?o.head.wage:0;
+  const clerks=staff*CLERK_WAGE,rent=D.rent+Math.max(0,staff-4)*6,sundries=Math.round(20+staff*3);
+  return {staff,head,clerks,rent,sundries,total:head+clerks+rent+sundries};}
+/* big decisions a department may propose but never takes on its own */
+const BIG=['openmove','sellship','buyship','build'];
+function propose(k,h,act,d){
+  S.props=S.props||[];const id=h.id.replace(/:\d+$/,'');
+  if(S.props.some(p=>p.id===id)||(S.dismiss[id]&&S.dismiss[id]>S.m))return;
+  S.props.push({id,dept:k,title:h.title,why:h.why,act,d,m:S.m});
+  news(`${DEPTS[k].name} proposes: ${h.title}. See Needs attention.`,'',false);
+}
+/* departments act on their own advice once a month, within the cash reserve. They are only as good as their head and staff. */
 function runDepartments(){
-  const owned=Object.keys(S.depts).filter(k=>S.depts[k].auto);if(!owned.length)return;
+  S.props=(S.props||[]).filter(p=>S.m-p.m<3);
+  const owned=Object.keys(S.depts);if(!owned.length)return;
+  for(const k of owned){const o=S.depts[k];if(!o.head)o.head=makeHead(k);if(S.m%3===0||!o.cands)o.cands=[makeHead(k),makeHead(k)];}
+  const acting=owned.filter(k=>S.depts[k].auto);if(!acting.length)return;
   ADV_CACHE.key=null;const A=advice();
-  for(const k of owned){let done=0;
-    for(const h of A){if(h.dept!==k||done>=3)continue;const a=h.act[0];if(!a)continue;const [,act,...d]=a;
-      if(!['setfare','setfares','setlineopt','setship','moveship','setyard','hire','sellship'].includes(act))continue;
-      if(act==='sellship'&&S.ships.length<3)continue;
+  for(const k of acting){const o=S.depts[k],c=o.head.comp/100,R=Math.random;
+    if(R()<(1-c)*0.45){if(R()<0.3)news(`${DEPTS[k].name}: the ${DEPTS[k].head.toLowerCase()} reports a backlog of paperwork. Nothing done this month.`);continue;}
+    const cap=1+Math.floor(c*2.5);let done=0;
+    const mine=A.filter(h=>h.dept===k&&h.act[0]&&h.gain>=(o.head.bold?120:250));
+    for(let i=0;i<mine.length&&done<cap;i++){
+      // a weaker head sometimes takes the wrong item first
+      let h=mine[i];if(R()<(1-c)*0.35&&mine.length>1)h=mine[Math.floor(R()*mine.length)];
+      const [,act,...d0]=h.act[0],d=d0.slice();
+      if(BIG.includes(act)){propose(k,h,act,d);continue;}
+      if(!['setfare','setfares','setlineopt','setship','moveship','setyard','hire'].includes(act))continue;
       if(act==='setyard'&&!canSpend(refitCost(S.ships.find(q=>q.id===d[0])||{grt:0},d[1])))continue;
-      if(doAction(act,d)){done++;news(`${DEPTS[k].name}: ${h.title}.`);S.dismiss[h.id]=S.m;}}
+      if(act==='moveship'&&d[1]&&!S.lines[d[1]])continue;
+      // fares set by eye, not to the shilling
+      if(act==='setfare'&&R()<(1-c)*0.8)d[2]=Math.max(1,Math.round(d[2]*(0.9+R()*0.2)));
+      if(o.last&&o.last[h.id.split(':').slice(0,2).join(':')]>S.m-2)continue; // no second thoughts inside two months
+      if(doAction(act,d)){done++;(o.last=o.last||{})[h.id.split(':').slice(0,2).join(':')]=S.m;news(`${DEPTS[k].name}: ${h.title}${act==='setfare'&&d[2]!==d0[2]?` (set at £${d[2]})`:''}.`);S.dismiss[h.id]=S.m;}}
   }
   ADV_CACHE.key=null;
 }

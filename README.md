@@ -15,14 +15,18 @@ It is a static browser game with no build step. Open `index.html`, or serve the 
 | `js/helpers.js` | Dates, formatting, demand and slump modifiers, prices, refit costs, captains and per-ship modifiers |
 | `js/lanes.js` | Sea lanes as a network: positions along any lane, and the passage a ship follows between two ports |
 | `js/wireless.js` | Wireless and cable traffic: coast stations, positions, telegraphese, Morse |
+| `js/silent.js` | Ships without wireless: reckoned positions, overdue notices, sightings and relays by passing ships, foundering, posted missing |
 | `js/ledger.js` | Month-to-date accounts by category and by line |
 | `js/sim.js` | The simulation: bookings and cargo per voyage, departures, calls, arrivals, breakdowns, yards and upgrades, crew morale, daily costs, month roll |
 | `js/rivals.js` | Rival lines: fleets, the shared market on each route, price matching, and each rival's monthly decisions |
+| `js/yard.js` | Shipbuilding: purposes, hull forms, machinery, fittings, extras, builders and slips, prices, stage payments, orders and delivery; newer ships for the brokers |
 | `js/state.js` | Game state, new game, save and load (browser localStorage) with migrations, save codes |
 | `js/clock.js` | Real-time clock: pause, 1×, 3×, 7× and the frame loop |
 | `js/map.js` | Chart rendering, pan and zoom, ship markers |
 | `js/profile.js` | Procedural ship drawings: exterior and cutaway |
 | `js/advice.js` | Head-office advice (Mr Ferguson and the departments), the shared action handler, and departments acting on their own advice |
+| `js/design.js` | The drawing office window and the order book |
+| `js/tutorial.js` | The first-year briefing |
 | `js/ui.js` | Panels and tabs, rendered by patching the DOM in place |
 | `js/main.js` | Input handling and start-up |
 
@@ -55,6 +59,7 @@ Run from the repo root with Node (and Python for the bundler).
 Checked with the harness after any economic change:
 
 - A player who changes nothing roughly breaks even in year one and survives the 1920s small; the Depression finishes them.
+- Second-hand ships are cheap but old; a new ship pays for herself in roughly four to ten years in good times, so building is a long bet.
 - Sensible expansion and following head-office advice beat passivity by a wide margin and survive the 1926 strike and the Depression. Blind expansion does not.
 - Undercutting fares works for a while, then rivals match and it ends well behind sensible play.
 - Piling everything onto one route is punished when history turns (the 1924 quota on Liverpool, the 1921 quota on Naples).

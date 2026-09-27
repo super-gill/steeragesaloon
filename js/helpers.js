@@ -18,8 +18,21 @@ function histMod(c,rk,m){
     else if(g==='North Atlantic') x*=m>=42?0.45:(m>=5?0.8:1);
     else if(g==='Canada'&&m>=42) x*=1.2;
     else if(rk==='rpl'&&m>=110) x*=0.6; // Argentina closes its doors in the Depression
-  } else { if(m<12)x*=0.9; if(m>=24)x*=1+0.035*(Math.min(m,105)-24)/12; }
-  x*=depression(c,m);
+  } else { if(m<12)x*=0.85; if(m>=24)x*=1+0.035*(Math.min(m,105)-24)/12; }
+  x*=depression(c,m)*eraMod(c,rk,m);
+  return x;
+}
+/* the invented years after the Depression: recession, airships, a reopened America, the long boom, cruising, jets held at bay */
+function eraMod(c,rk,m){
+  if(m<198)return 1;
+  const y=1921+m/12,g=ROUTES[rk].group;let x=1;
+  if(y>=1937.7&&y<1938.8)x*=0.9;
+  if(c==='f'&&(rk==='exp'||rk==='ham')&&y>=1936.4&&y<1938.35)x*=0.92;
+  if(c==='t'&&(g==='North Atlantic')&&y>=1941.25)x*=1+Math.min(0.7,(y-1941.25)*0.35);
+  if(c==='tt'&&y>=1944.3)x*=1+Math.min(0.4,(y-1944.3)*0.1);
+  if(y>=1946.6)x*=1+Math.min(0.3,(y-1946.6)*0.025);
+  if(y>=1955.8&&[10,11,0,1,2].includes(m%12)&&g==='North Atlantic'&&c!=='t')x*=1.15;
+  if(c==='f'&&y>=1958.7)x*=Math.max(0.85,1-(Math.min(y,1962.3)-1958.7)*0.04);
   return x;
 }
 /* the Depression: sharp fall from late 1929, trough 1932-33, slow recovery from 1934 */
@@ -32,15 +45,15 @@ function depression(c,m){
 }
 /* how deep the slump is, 0 to 1, for rates that fall with it */
 const slump=m=>m<106?0:m<120?(m-105)/14:m<156?1:Math.max(0,1-(m-156)/48);
-const cargoMod=m=>(1-0.3*slump(m))*(m<12?0.75:m<24?0.9:m<106?1:m<120?0.75:m<156?0.62:Math.min(1,0.62+0.38*(m-156)/48));
+const cargoMod=m=>(m>=306?1+Math.min(0.25,(m-306)/12*0.02):1)*(1-0.2*slump(m))*(m<12?0.75:m<24?0.9:m<106?1:m<120?0.75:m<156?0.62:Math.min(1,0.62+0.38*(m-156)/48));
 const cargoSeason=(c,m)=>COMM[c].season?COMM[c].season[m%12]:1;
 const dirW=(rk,c)=>(ROUTES[rk].dirw&&ROUTES[rk].dirw[c])||DIRW[c];
-function coalPrice(m){let b=m<12?2.3:m<24?1.75:1.6;if(m>=64&&m<=70)b*=1.9;return b*(1+0.04*Math.sin(m*1.3));}
-function oilPrice(m){return (m<12?3.6:m<24?3.0:2.7)*(1+0.03*Math.sin(m*0.9));}
+function coalPrice(m){let b=(m<12?2.3:m<24?1.75:1.6)*(m>=258?1+Math.min(0.6,(m-258)/12*0.06):1);if(m>=64&&m<=70)b*=1.9;return b*(1+0.04*Math.sin(m*1.3));}
+function oilPrice(m){return (m<12?3.6:m<24?3.0:2.7)*(m>=354?0.78:1)*(1+0.03*Math.sin(m*0.9));}
 function repF(c,rep,r){const x=rep-30;if(c==='f')return clamp(1+x/(r.prestige>1.2?50:70),0.4,1.8);if(c==='s')return clamp(1+x/150,0.6,1.4);if(c==='t')return clamp(1+x/500,0.85,1.15);return clamp(1+x/100,0.5,1.6);}
 const repWord=r=>r<15?'Disreputable':r<30?'Unknown':r<45?'Respectable':r<60?'Well regarded':r<75?'Fashionable':'Illustrious';
 function shipValue(sh){const age=yearNow()-sh.built;return sh.base*Math.pow(sh.cond/100,0.7)*Math.max(0.25,1-age*0.025);}
-const crewCost=sh=>sh.grt/(sh.fuel==='coal'?32:45)*12*CREW_PAY_MULT[sh.pay===undefined?1:sh.pay];
+const crewCost=sh=>sh.grt/(sh.fuel==='coal'?32:45)*12*CREW_PAY_MULT[sh.pay===undefined?1:sh.pay]*(sh.crewK||1);
 const insCost=sh=>shipValue(sh)*0.05/12*(sh.cond<50?1.4:1);
 const confFloor=(rk,c)=>Math.ceil(ROUTES[rk].ref[c]*0.95);
 function effFare(rk,c){let f=S.lines[rk].fares[c];if(S.conf)f=Math.max(f,confFloor(rk,c));return f;}
@@ -72,11 +85,11 @@ function shipMods(sh){
   return {
     speed:(has(sh,'driver')?1.04:1)*(has(sh,'cautious')?0.97:1),
     wear:(has(sh,'driver')?1.25:1)*(has(sh,'veteran')?0.85:1),
-    risk:(has(sh,'cautious')?0.6:1)*(has(sh,'drinker')?1.5:1)*(has(sh,'martinet')?0.85:1)*(1.2-exp/60)*(mor<40?1.2:1),
-    gale:has(sh,'weather')?0.4:1,
+    risk:(sh.riskK||1)*(has(sh,'cautious')?0.6:1)*(has(sh,'drinker')?1.5:1)*(has(sh,'martinet')?0.85:1)*(1.2-exp/60)*(mor<40?1.2:1),
+    gale:(has(sh,'weather')?0.4:1)*(sh.galeK||1),
     smuggle:(has(sh,'lax')?3:1)*(has(sh,'martinet')?0.3:1),
-    appealFS:(has(sh,'popular')?1.07:1)*(has(sh,'drinker')?0.96:1)*(mor<40?0.97:mor>75?1.02:1)*(0.85+0.15*(sh.fit===undefined?80:sh.fit)/100)*(sh.up&&sh.up.lux?1.2:1),
-    appealT:(mor<40?0.98:1)*(0.95+0.05*(sh.fit===undefined?80:sh.fit)/100),
+    appealFS:(has(sh,'popular')?1.07:1)*(has(sh,'drinker')?0.96:1)*(mor<40?0.97:mor>75?1.02:1)*(0.85+0.15*(sh.fit===undefined?80:sh.fit)/100)*(sh.up&&sh.up.lux&&!sh.appFS?1.2:1)*(sh.appFS||1)*fashion(sh.style||'edw',yearNow())*(sh.newUntil>S.m?1.08:1),
+    appealT:(mor<40?0.98:1)*(0.95+0.05*(sh.fit===undefined?80:sh.fit)/100)*(sh.appT||1)*(sh.newUntil>S.m?1.03:1),
     morale:(has(sh,'lax')?10:0)+(has(sh,'martinet')?-15:0)+(has(sh,'popular')?5:0)+(has(sh,'drinker')?-5:0)
   };
 }
@@ -84,7 +97,7 @@ const knotsOf=sh=>sh.knots+(sh.up&&sh.up.turbines?1.5:0);
 function makeShip(t,cond,port){
   const age=1921+(S.t||0)/365.25-t.built;
   return {id:S.nextId++,name:t.name,built:t.built,grt:t.grt,knots:t.knots,berths:{...t.berths},cargo:t.cargo,fuel:t.fuel,base:t.base,note:t.note||'',
-    up:{reefer:!!t.reefer,wireless:t.built>=1905},fit:Math.round(clamp(95-age*3.5,30,95)),captain:makeCaptain(),pay:1,morale:60,geo:null,nextCall:0,callLeft:0,
+    up:{reefer:!!t.reefer,wireless:t.built>=1905},fit:Math.round(clamp(95-age*2.2,35,95)),captain:makeCaptain(),pay:1,morale:60,geo:null,nextCall:0,callLeft:0,
     cond:Math.round(cond),line:null,speed:1,maint:1,autoDock:50,towed:false,incident:null,state:'laid',port,dir:0,pos:0,portLeft:0,stopLeft:0,slow:1,limp:false,broke:false,
     legRoute:null,load:null,lastLoad:null,event:null,yardKind:null,yardLeft:0,repoTo:null,repoLeft:0,repoTotal:0,pendingYard:null,pendingExit:null};
 }

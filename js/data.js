@@ -1,5 +1,5 @@
 /* ================= DATA ================= */
-const GAME_VERSION='0.4.1',GAME_BUILT='27 September 2026'; // bump on every release; see CHANGELOG.md
+const GAME_VERSION='0.5.0',GAME_BUILT='27 September 2026'; // bump on every release; see CHANGELOG.md
 const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 const CL=['f','s','t','tt'];
 const CL_NAME={f:'First',s:'Second',t:'Third',tt:'Tourist Third'};
@@ -18,22 +18,22 @@ const COMM={
 /* Services. Calls come from the chart in outbound order; homeward reverses them. base = passengers per round trip market unit. */
 const ROUTE_GROUPS=['North Atlantic','Canada','Mediterranean','Trades'];
 const ROUTES={
-  exp:{group:'North Atlantic',prestige:1.7,ref:{f:70,s:28,t:13,tt:21},base:{f:130,s:230,t:450,tt:500},cargo:{out:{c:'general',t:1000},home:{c:'general',t:1000}},war:0.04,
+  exp:{group:'North Atlantic',prestige:1.7,ref:{f:70,s:28,t:13,tt:21},base:{f:130,s:230,t:450,tt:300},cargo:{out:{c:'general',t:1000},home:{c:'general',t:1000}},war:0.04,
        blurb:'The express route to New York via Cherbourg. The richest first class on the ocean, the biggest and fastest rivals, and the Blue Riband.'},
-  liv:{group:'North Atlantic',prestige:1.5,ref:{f:55,s:24,t:12,tt:19},base:{f:70,s:200,t:700,tt:420},cargo:{out:{c:'general',t:1500},home:{c:'general',t:1500}},war:0.03,
+  liv:{group:'North Atlantic',prestige:1.5,ref:{f:55,s:24,t:12,tt:19},base:{f:70,s:200,t:700,tt:250},cargo:{out:{c:'general',t:1500},home:{c:'general',t:1500}},war:0.03,
        blurb:'The traditional Liverpool run, calling at Queenstown for Irish emigrants. Rich first class if your name can win it.'},
-  gny:{group:'North Atlantic',prestige:1.2,ref:{f:50,s:22,t:11,tt:18},base:{f:45,s:170,t:650,tt:300},cargo:{out:{c:'general',t:1400},home:{c:'grain',t:1400}},war:0.01,
+  gny:{group:'North Atlantic',prestige:1.2,ref:{f:50,s:22,t:11,tt:18},base:{f:45,s:170,t:650,tt:180},cargo:{out:{c:'general',t:1400},home:{c:'grain',t:1400}},war:0.01,
        blurb:'Scots and Ulster emigrants via Moville, and a solid cargo trade. Less glamour than Liverpool, fewer giants.'},
-  ham:{group:'North Atlantic',prestige:1.1,ref:{f:50,s:24,t:12,tt:19},base:{f:50,s:180,t:1100,tt:300},cargo:{out:{c:'general',t:1500},home:{c:'general',t:1500}},war:0.03,
+  ham:{group:'North Atlantic',prestige:1.1,ref:{f:50,s:24,t:12,tt:19},base:{f:50,s:180,t:1100,tt:180},cargo:{out:{c:'general',t:1500},home:{c:'general',t:1500}},war:0.03,
        blurb:'Continental emigrants from Hamburg, calling at Southampton and Cherbourg. Nordmark country.'},
-  hal:{group:'Canada',prestige:0.8,ref:{f:40,s:20,t:10,tt:17},base:{f:40,s:150,t:650,tt:220},cargo:{out:{c:'general',t:1300},home:{c:'grain',t:1500}},war:0,
+  hal:{group:'Canada',prestige:0.8,ref:{f:40,s:20,t:10,tt:17},base:{f:40,s:150,t:650,tt:130},cargo:{out:{c:'general',t:1300},home:{c:'grain',t:1500}},war:0,
        blurb:'Canadian emigrant and grain trade. Modest fares, few rivals, steady steerage.'},
-  lha:{group:'Canada',prestige:0.9,ref:{f:42,s:21,t:10,tt:17},base:{f:35,s:140,t:600,tt:200},cargo:{out:{c:'general',t:1400},home:{c:'grain',t:1500}},war:0.02,mload:0.85,
+  lha:{group:'Canada',prestige:0.9,ref:{f:42,s:21,t:10,tt:17},base:{f:35,s:140,t:600,tt:120},cargo:{out:{c:'general',t:1400},home:{c:'grain',t:1500}},war:0.02,mload:0.85,
        blurb:'Emigrants, grain and timber to Canada, fighting the Canadian Pacific for every berth.'},
-  stl:{group:'Canada',prestige:1.0,ref:{f:45,s:21,t:10,tt:17},base:{f:40,s:160,t:750,tt:250},cargo:{out:{c:'general',t:1400},home:{c:'grain',t:2200}},war:0.02,
+  stl:{group:'Canada',prestige:1.0,ref:{f:45,s:21,t:10,tt:17},base:{f:40,s:160,t:750,tt:150},cargo:{out:{c:'general',t:1400},home:{c:'grain',t:2200}},war:0.02,
        winter:{key:'stlw',months:[11,0,1,2,3]},
        blurb:'Up the St Lawrence to Quebec and Montreal, spring to autumn. The river freezes from December to April, when sailings turn for Saint John.'},
-  nap:{group:'Mediterranean',prestige:1.0,ref:{f:58,s:28,t:16,tt:22},base:{f:25,s:90,t:1300,tt:160},cargo:{out:{c:'general',t:1000},home:{c:'general',t:1000}},war:0.01,
+  nap:{group:'Mediterranean',prestige:1.0,ref:{f:58,s:28,t:16,tt:22},base:{f:25,s:90,t:1300,tt:100},cargo:{out:{c:'general',t:1000},home:{c:'general',t:1000}},war:0.01,
        blurb:'Italian emigrants from Genoa and Naples, via Gibraltar. Huge steerage demand, for now. The longest passage to New York.'},
   rpl:{group:'Trades',prestige:1.1,ref:{f:70,s:32,t:16,tt:22},base:{f:50,s:150,t:900,tt:150},dirw:{t:.85},cargo:{out:{c:'general',t:2600},home:{c:'beef',t:3600}},war:0.02,
        blurb:'The River Plate via Lisbon and Rio: Spanish and Portuguese emigrants south, chilled beef home in refrigerated holds. The richest cargo trade of the decade.'},
@@ -129,12 +129,14 @@ const AGENCY={
   americas:{name:'American and Canadian agents',ports:['NYC','HAL','SJN','QBC','MTL','NOL','GAL','KIN','RIO','MVD','BUE'],cost:15000}
 };
 /* head-office departments: each advises on its own business, and can be told to act on it within a cash reserve */
+/* staff grow with the fleet; rent is the office floor in West George Street; heads are hired and can be replaced */
 const DEPTS={
-  fares:{name:'Fares Office',cost:6000,upkeep:250,does:'Watches the conference tariffs and rival sailings. Sets fares, answers rate wars and matches cuts.'},
-  traffic:{name:'Traffic Department',cost:10000,upkeep:400,does:'Studies every trade for loads and returns. Moves ships to better lines, lays up losers, spends on advertising.'},
-  marine:{name:'Marine Superintendent',cost:8000,upkeep:300,does:'Keeps the fleet in class. Sets dock thresholds and speeds, and books refits that pay for themselves.'},
-  crew:{name:'Crewing Office',cost:5000,upkeep:200,does:'Hires and keeps crews. Sets pay to hold morale and replaces bad masters from the pool.'}
+  fares:{name:'Fares Office',head:'Chief Fares Clerk',cost:6000,rent:60,staff:[3,0.3,1],does:'Watches the conference tariffs and rival sailings. Sets fares, answers rate wars and matches cuts.'},
+  traffic:{name:'Traffic Department',head:'Traffic Manager',cost:10000,rent:90,staff:[4,0.5,0.5],does:'Studies every trade for loads and returns. Moves ships between your lines, lays up losers, spends on advertising. Proposes new lines, ships to buy or build, and sales.'},
+  marine:{name:'Marine Superintendent',head:'Marine Superintendent',cost:8000,rent:70,staff:[3,0.6,0],does:'Keeps the fleet in class. Sets dock thresholds and speeds, and books refits that pay for themselves.'},
+  crew:{name:'Crewing Office',head:'Crewing Manager',cost:5000,rent:50,staff:[2,0.4,0],does:'Hires and keeps crews. Sets pay to hold morale and replaces bad masters from the pool.'}
 };
+const CLERK_WAGE=14;
 const HOSTEL_PORTS=['GLA','LIV','SOU','HAM'];
 const YARD_PORTS={GLA:'the Clyde',LIV:'the Mersey'};
 const HIST=[
@@ -151,7 +153,31 @@ const HIST=[
   {m:113,t:'The United States raises its tariffs sharply. Cargo is getting scarce on every route.'},
   {m:128,t:'Britain leaves the gold standard. Freight rates and fares are in turmoil.'},
   {m:132,t:'The depths of the Depression. Across the world, ships are being laid up by the hundred.'},
-  {m:156,t:'Trade is slowly recovering. Bookings are creeping back.'}
+  {m:156,t:'Trade is slowly recovering. Bookings are creeping back.'},
+  {m:170,t:'Imperial Atlantic announces an 80,000-ton express liner for the Southampton run. The race for the Blue Riband is on again.'},
+  {m:180,t:'Radio-telephone service from mid-ocean opens. First-class passengers can now call London from the Grand Banks.'},
+  {m:185,t:'The Zeppelin company opens a weekly airship service from Frankfurt to New Jersey. The newspapers call it the end of the liner, and some first-class passengers agree.'},
+  {m:193,t:'Air conditioning comes to sea: cooled dining saloons for the tropical trades.'},
+  {m:200,t:'A sharp recession in America. Bookings dip for the coming season.'},
+  {m:208,t:'The airship Graf Aurelian burns at her mooring mast in New Jersey. The airship boom ends overnight, and first class comes back to the liners.'},
+  {m:213,t:'The Ocean Aid Convention is signed in London. From January 1940 every passenger ship must keep a continuous wireless watch, and every ship must answer a distress call. Ships without wireless may carry no passengers.'},
+  {m:215,t:"Imperial Atlantic's superliner Britannic Queen enters service: 80,000 tons, 30 knots, and the Blue Riband on her maiden voyage."},
+  {m:222,t:'The war scare of the late thirties passes. The governments of Europe turn to trade, and the shipyards to liners.'},
+  {m:228,t:'The Ocean Aid Convention is in force. Silent ships are barred from carrying passengers.'},
+  {m:243,t:'Washington eases the immigration quotas. With Europe at peace and prospering, the emigrant trade to New York revives.'},
+  {m:258,t:'The coal mines cannot keep up. Bunker coal is dearer every year, and oil is the fuel of the future.'},
+  {m:280,t:'Paid holidays for American workers: the tourist-class boom begins.'},
+  {m:302,t:'Radiolocation sets, developed from naval experiments, are offered for merchant ships. They see through fog and darkness.'},
+  {m:308,t:'The long boom: trade across the Atlantic grows year on year.'},
+  {m:325,t:'Model basins at Clydebank and Hamburg are refining hull lines as never before.'},
+  {m:348,t:'High-pressure steam turbines and a new contemporary style in ship interiors.'},
+  {m:354,t:'Middle-Eastern oil floods the market. Bunker oil is cheaper than it has been for a generation.'},
+  {m:375,t:'Flying boats begin carrying the transatlantic mails. The Post Office cuts its mail payments by a fifth.'},
+  {m:401,t:'Fin stabilisers: retractable fins that all but stop a ship rolling.'},
+  {m:418,t:'Winter cruising from New York to the Caribbean is all the rage. Liners that once lay idle in winter now sail full.'},
+  {m:453,t:'A jet airliner crosses the Atlantic in six hours. Few can afford it, but the shipping men are uneasy.'},
+  {m:496,t:'After a run of accidents, the Atlantic Air Conference caps jet flights and fares. The liner keeps its passengers.'},
+  {m:540,t:'The Atomic Energy Authority offers a nuclear power plant for large ships: no bunkers, ever, at a price.'}
 ];
 const MILESTONES=[
   ['ships2','A second ship',()=>S.ships.length>=2],

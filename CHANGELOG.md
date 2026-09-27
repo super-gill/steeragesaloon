@@ -2,6 +2,16 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.5.0 (27 September 2026)
+- Shipbuilding. A drawing office over the chart: choose her purpose, size, hull form, subdivision, funnels, speed, machinery and fuel, the split between passengers and cargo and between the classes, the quality and style of her fittings, extras such as stabilisers and air conditioning, the builder and the contract, and her name. Builders have slips that other lines keep busy. She is drawn, waits for a slip, is framed, plated, launched, fitted out and tried on the measured mile. Payments come in stages; if you cannot pay, work stops, and six months unpaid loses the contract. A repair yard can take a building slip of your own.
+- Interior styles go in and out of fashion. Old ships date; refurbishment brings them up to the current style.
+- The timeline runs on past 1935, with no war: the superliner race, airships, a recession, the Ocean Aid Convention (wireless compulsory for passenger ships from 1940), a reopened America, the tourist boom, radiolocation, the long boom, cheap oil, winter cruising and jets held at bay. New machinery, hull forms and fittings arrive over the years, rivals build faster and bigger ships, and the brokers offer newer second-hand ships.
+- Ships without wireless are silent. The chart shows where she ought to be. If she is in trouble, only a ship near enough to see her lamps and flares can pass the word on; otherwise you hear when she arrives, overdue, or when she is posted missing. A ship can founder: rescuers depend on who is nearby, the underwriters pay, and lives lost cost reputation.
+- Departments have a head (competence, careful or bold), staff that grow with the fleet, rent and sundries. Weak heads miss months and misjudge fares. They never open lines, buy, sell or build on their own: they bring proposals to you. Lines already open are preferred to opening new ones.
+- First-year briefing from Mr Ferguson for new games.
+- Early game less generous: agents and hostels do less, brokers ask more, the Morven starts more worn, and shore spending is not suggested in the first year.
+- Phones: compact header, a shorter chart that can be hidden, the drawing office as a full-screen page.
+
 ## 0.4.1 (27 September 2026)
 - Ships never vanish: moving light between lines they sail real passages (the Irish Sea, round Land's End, the Gulf of St Lawrence, the Florida Strait and more), and rival ships finish their voyage before changing route or going to the breakers.
 - Breakdowns sort themselves out. The engineers report what they find: fixed within hours, under way slowly on a temporary repair, days of repairs at sea, or no repair possible and a salvage tug on its way.

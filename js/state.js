@@ -5,9 +5,9 @@ const UI={speed:0,tab:'overview',confirm:null,banner:'Paused. Press 1× to start
 function newGame(){
   S={v:2,t:0,m:0,cash:18000,debt:40000,rep:30,conf:false,ships:[],lines:{},wars:{},mail:{},offer:null,market:[],news:[],hist:[18000],
      mtd:blankLedger(),lastMonth:null,nextId:1,over:false,selShip:1,selLine:'hal',odWarn:false,tension:{},pax:{},lastPax:{},rivalIdx:{},dismiss:{},
-     shore:{piers:{},agents:{},hostels:{},yards:{},bunker:null},miles:{},capPool:[],capNext:1,depts:{},wire:[],wireQ:[],wireNext:0,ghosts:[]};
+     shore:{piers:{},agents:{},hostels:{},yards:{},bunker:null},miles:{},capPool:[],capNext:1,depts:{},tut:{},tutSeen:{},orders:[],bslips:{},yardNext:534,wire:[],wireQ:[],wireNext:0,ghosts:[]};
   S.lines.hal={fares:defaultFares('hal'),service:1,adv:1,last:[null,null]};
-  const mv=makeShip(TEMPL[0],64,'GLA');mv.line='hal';mv.state='port';mv.portLeft=2;S.ships.push(mv);
+  const mv=makeShip(TEMPL[0],58,'GLA');mv.line='hal';mv.state='port';mv.portLeft=2;S.ships.push(mv);
   initRivals();refreshMarket();S.capPool=[0,1,2,3].map(()=>makeCaptain());news(HIST[0].t,'hist');
   UI.speed=0;UI.banner='Paused. Press 1× to start the clock.';UI.confirm=null;
   save();UI.dirty=true;
@@ -22,7 +22,7 @@ function migrate(s){
   const prev=S;S=s;
   if(!s.rships)initRivals();
   // 0.4: shore establishment, milestones, captains and crew, upgrades, multi-stop voyages, new routes and rival lines
-  s.shore=s.shore||{piers:{},agents:{},hostels:{},yards:{},bunker:null};s.miles=s.miles||{};s.depts=s.depts||{};s.wire=s.wire||[];s.wireQ=s.wireQ||[];s.ghosts=s.ghosts||[];
+  s.shore=s.shore||{piers:{},agents:{},hostels:{},yards:{},bunker:null};s.miles=s.miles||{};s.depts=s.depts||{};s.wire=s.wire||[];s.orders=s.orders||[];s.bslips=s.bslips||{};s.yardNext=s.yardNext||534;s.wireQ=s.wireQ||[];s.ghosts=s.ghosts||[];
   // 0.4.1: breakdowns resolve themselves; an old save waiting for orders repairs at sea
   s.ships.forEach(sh=>{if(sh.incident){sh.incident=null;sh.brk={o:'long',tell:s.t,told:false,wait:4};sh.stopLeft=4;}});s.capNext=s.capNext||1;
   s.ships.concat(s.market||[]).forEach(sh=>{

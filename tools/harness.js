@@ -7,7 +7,7 @@
    Prints survival, net worth by year, first-year profit, rate wars and profit by route. */
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const ROOT = path.join(__dirname, '..');
-const FILES = ['chart-data', 'data', 'helpers', 'lanes', 'wireless', 'ledger', 'sim', 'rivals', 'state', 'clock', 'advice'].map(f => path.join(ROOT, 'js', f + '.js'));
+const FILES = ['chart-data', 'data', 'helpers', 'lanes', 'wireless', 'silent', 'ledger', 'sim', 'rivals', 'yard', 'state', 'clock', 'advice'].map(f => path.join(ROOT, 'js', f + '.js'));
 const SRC = FILES.map(f => [f, fs.readFileSync(f, 'utf8')]);
 
 const PRELUDE = `
@@ -18,7 +18,8 @@ const H={
   buy(m){const dep=Math.round(m.price*0.4);if(S.cash<dep)return null;S.cash-=dep;S.debt+=m.price-dep;delete m.price;S.ships.push(m);S.market=S.market.filter(x=>x!==m);return m;},
   bestRoute(sh){let b=null;for(const rk of Object.keys(ROUTES)){const q=econ(sh,rk);if(!b||q.pm>b.pm)b={rk,pm:q.pm};}return b;},
   apply(h){const a=h.act[0];if(!a)return;const [l,act,...d]=a;
-    if(['setfare','setfares','setlineopt','setship','moveship','setyard','sellship','hire'].includes(act))doAction(act,d);
+    if(['setfare','setfares','setlineopt','setship','moveship','setyard','sellship','hire','buyship','openmove'].includes(act))doAction(act,d);
+    else if(act==='build'){const dz=JSON.parse(JSON.stringify(d[0]));dz.name='Harness '+(S.yardNext||534);placeOrder(dz);}
     else if(act==='tabgo'&&d[0]==='shore'){const [k,key]=h.id.split(':');
       if(k==='pier'||k==='agency'){if(canSpend(shoreCost(k,key)))doAction('shorebuy',[k,key]);}
       else if(k.startsWith('bunker'))doAction('shorebuy',['bunker']);

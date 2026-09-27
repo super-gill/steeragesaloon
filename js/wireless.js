@@ -28,7 +28,7 @@ function wire(sh,txt,kind,opt){
   const m={id:S.wireNext=(S.wireNext||0)+1,t:S.t,ship:sh.name,sid:sh.id,txt:telegram(txt),k:kind||''};
   if(opt.via)m.via=opt.via;
   else if(radio||sh.state!=='sea')m.via=radio&&sh.state==='sea'?stationFor(sh)+' Radio':'Cable, '+PN[sh.port]+' agents';
-  else{m.via="Lloyd's, reported by a passing steamer";m.at=S.t+1+Math.random()*2;(S.wireQ=S.wireQ||[]).push(m);return m;}
+  else{(sh.held=sh.held||[]).push(m);return m;} // no set aboard: the news waits for port or a passing ship
   deliverWire(m,opt.pause);return m;
 }
 function deliverWire(m,pause){

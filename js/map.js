@@ -82,7 +82,9 @@ function drawShips(){
     if(!el){el=document.createElement('div');el.className='shipm';el.dataset.act='selship';el.dataset.id=sh.id;
       el.innerHTML='<div class="hit"></div><div class="hull"></div><div class="tag"></div>';O.appendChild(el);MARKS[sh.id]=el;}
     let x,y,ang=0,ox=0,oy=0;
-    if(sh.state==='sea'){const g=GEO(sh.geo),p=pointAtNm(sh.geo,sh.dir===0?sh.pos:g.dist-sh.pos,sh.dir===1);x=p.x;y=p.y;ang=p.ang;}
+    const est=isSilent(sh);
+    if(est){const p=estXY(sh);x=p.x;y=p.y;ang=p.ang;}
+    else if(sh.state==='sea'){const g=GEO(sh.geo),p=pointAtNm(sh.geo,sh.dir===0?sh.pos:g.dist-sh.pos,sh.dir===1);x=p.x;y=p.y;ang=p.ang;}
     else if(sh.state==='repo'){const T=trackBetween(sh.port,sh.repoTo),p=pointOn(T,(1-sh.repoLeft/Math.max(1e-6,sh.repoTotal))*T.dist);x=p.x;y=p.y;ang=p.ang;}
     else{const c=sh.port,i=stackN[c]=(stackN[c]||0)+1,st=stackOf(c),[px,py]=PORT_XY(c);
       x=px;y=py;ox=st[0]+st[2]*(i-1);oy=st[1]+st[3]*(i-1);ang=st[2]<0?180:st[2]>0?0:90;}
@@ -91,17 +93,14 @@ function drawShips(){
     el.style.transform=(ox||oy)?`translate(${ox}px,${oy}px)`:'';
     el.querySelector('.hull').style.transform=`rotate(${ang}deg)`;
     const sel=S.selShip===sh.id;
-    el.className='shipm'+(sel?' sel':'')+(sh.state==='sea'&&(sh.stopLeft>0||sh.limp||sh.towed)?' broken':'')+(sh.state==='yard'?' yard':'')+(sh.state==='laid'?' laid':'');
-    const tag=el.querySelector('.tag');const txt=sel||VIEW.z>=1.8?'SS '+sh.name:'';if(tag.textContent!==txt)tag.textContent=txt;
+    el.className='shipm'+(sel?' sel':'')+(est?' est'+(sh.overdue?' overdue':''):'')+(!est&&sh.state==='sea'&&(sh.stopLeft>0||sh.limp||sh.towed)?' broken':'')+(sh.state==='yard'?' yard':'')+(sh.state==='laid'?' laid':'');
+    const tag=el.querySelector('.tag');const txt=sel||VIEW.z>=1.8?'SS '+sh.name+(est?' (reckoned)':''):'';if(tag.textContent!==txt)tag.textContent=txt;
   }
   for(const id of Object.keys(MARKS))if(!seen.has(+id)){MARKS[id].remove();delete MARKS[id];}
   drawRivals();
 }
 const RMARKS={};
-function rivalXY(x){const v=x.v||initVis(x);
-  if(v.wait>0){const [px,py]=PORT_XY(v.port),a=jr(x.id)*6.283;return {x:px,y:py,ang:a*57.3,ox:Math.cos(a)*9,oy:Math.sin(a)*9};}
-  if(v.repo){const T=trackBetween(v.port,v.repo.to);return pointOn(T,v.repo.pos);}
-  const d=GEO(v.gk).dist;return pointAtNm(v.gk,v.dir===0?v.pos:d-v.pos,v.dir===1);}
+function rivalXY(x){const p=rivalPos(x);if(p.inPort){const a=jr(x.id)*6.283;return {x:p.x,y:p.y,ang:a*57.3,ox:Math.cos(a)*9,oy:Math.sin(a)*9};}return p;}
 function drawRivals(){
   const O=document.getElementById('shipsO'),seen=new Set();
   for(const x of (S.rships||[]).concat(S.ghosts||[])){
