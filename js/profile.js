@@ -1,21 +1,22 @@
 /* ================= SHIP PROFILE ================= */
 function profileSVG(sh,mode,build){
-  const VH=200,wl=150,k=clamp((sh.grt-5500)/9500,0,1);
+  const VH=250,wl=195,k=1; // every ship is drawn to the same plan, then scaled as a whole by her size
   const L=400+k*190,VW=L+80,x0=40,hH=30+k*12,dy=wl-hH,X=f=>x0+L*f,bot=wl+16;
   const cid='hc'+sh.id+mode;
   const D=sh.design||{},rake=D.form==='trad'?5:D.form==='maier'?22:D.form==='bulb'||D.form==='tank'?20:16;
   const bulb=D.form==='bulb'||D.form==='tank'?` Q${x0+L-rake+12},${bot-4} ${x0+L-rake+6},${bot+2}`:'';
   const hull=`M${x0},${dy} L${X(.97)},${dy-5} L${x0+L},${dy-7} L${x0+L-rake},${bot-6}${bulb} L${x0+L-rake-4},${bot} L${X(.08)},${bot} Q${x0+4},${wl+10} ${x0+2},${dy+16} Q${x0-2},${dy+6} ${x0},${dy} Z`;
-  const tiers=sh.grt<7000?2:sh.grt<11000?3:4,th=11,s0=X(.24),s1=X(.76);
+  const tiers=sh.grt<7000?2:sh.grt<11000?3:sh.grt<30000?4:5,th=11,s0=X(.24),s1=X(.76);
   const T=[];for(let i=0;i<tiers;i++)T.push({a:s0+i*L*0.035,b:s1-i*L*0.045,y:dy-th*(i+1)});
   const top=T[tiers-1],topY=top.y;
-  const nF=D.funnels||(sh.grt>=12000?3:sh.grt>=8500?2:1),fw=15+sh.grt/1200,fh=40+sh.grt/700;
-  const fx=[];for(let i=0;i<nF;i++)fx.push(top.a+(top.b-top.a)*((i+1)/(nF+1))+6);
+  const nF=D.funnels||(sh.grt>=12000?3:sh.grt>=8500?2:1),fw=L*0.04,fh=L*(nF>=3?0.095:0.105);
+  const fx=[];for(let i=0;i<nF;i++)fx.push(X(.31+.34*(i+0.5)/nF)+6);
   const mastH=topY-fh-26,fm=X(.84),am=X(.15);
   const cut=mode==='cut';
   const B=build||null,onSlip=B&&(B.stage==='framing'||B.stage==='plating'),inYard=sh.state==='yard'||onSlip||(B&&B.stage==='fitting');
   let s=`<svg class="profile" viewBox="0 0 ${VW} ${VH}" role="img" aria-label="${cut?'Cutaway':'Profile'} of SS ${sh.name}"><defs><clipPath id="${cid}"><path d="${hull}"/></clipPath></defs>`;
   s+=`<rect width="${VW}" height="${VH}" style="fill:${cut?'var(--surface2)':'var(--sky)'}"/>`;
+  const f=0.64+0.36*Math.sqrt(clamp((sh.grt-3000)/60000,0,1));s+=`<g transform="translate(${VW/2} ${wl}) scale(${f.toFixed(3)}) translate(${-VW/2} ${-wl})">`;
   if(inYard&&!cut){s+=`<rect x="0" y="${bot}" width="${VW}" height="${VH-bot}" style="fill:var(--line)"/><rect x="${x0-30}" y="${bot-40}" width="8" height="${VH-bot+40}" style="fill:var(--muted)"/><rect x="${x0+L+22}" y="${bot-40}" width="8" height="${VH-bot+40}" style="fill:var(--muted)"/>`;
     for(let x=X(.1);x<X(.92);x+=40)s+=`<rect x="${x}" y="${bot}" width="14" height="8" style="fill:var(--muted)"/>`;}
   // masts and rigging
@@ -26,7 +27,7 @@ function profileSVG(sh,mode,build){
     <line x1="${fm}" y1="${dy-18}" x2="${fm+22}" y2="${dy-4}" stroke-width="1.2"/><line x1="${am}" y1="${dy-18}" x2="${am-22}" y2="${dy-4}" stroke-width="1.2"/></g>`;
   if(B&&!cut&&(B.stage==='drawing'||B.stage==='waiting')){
     s+=`<g style="stroke:var(--muted);fill:none" stroke-dasharray="5 4"><path d="${hull}"/></g>`;
-    s+=`<text x="${VW/2}" y="${VH-14}" text-anchor="middle" font-size="11" style="fill:var(--muted);font-family:var(--body)">${B.stage==='drawing'?'On the drawing board':'Waiting for a slip'}</text></svg>`;return s;}
+    s+=`<text x="${VW/2}" y="${VH-14}" text-anchor="middle" font-size="11" style="fill:var(--muted);font-family:var(--body)">${B.stage==='drawing'?'On the drawing board':'Waiting for a slip'}</text></g></svg>`;return s;}
   if(onSlip&&!cut){
     const pl=B.stage==='plating'?clamp((B.prog-0.3)/0.32,0,1):0;
     s+=`<g clip-path="url(#${cid})">`;for(let x=x0;x<x0+L;x+=7)s+=`<line x1="${x}" y1="${dy-10}" x2="${x}" y2="${bot+4}" style="stroke:#6B6258" stroke-width="1.3"/>`;
@@ -34,7 +35,7 @@ function profileSVG(sh,mode,build){
     s+=`<path d="${hull}" style="fill:none;stroke:#6B6258" stroke-width="1.2"/><line x1="${x0}" y1="${bot}" x2="${x0+L}" y2="${bot}" style="stroke:#6B6258" stroke-width="3"/>`;
     for(let x=x0-10;x<x0+L+20;x+=46)s+=`<line x1="${x}" y1="${bot}" x2="${x+30}" y2="${dy-40}" style="stroke:var(--muted)" stroke-width="1.5" opacity=".5"/>`;
     s+=`<line x1="${x0-24}" y1="${VH}" x2="${x0-24}" y2="12" style="stroke:var(--ink)" stroke-width="3"/><line x1="${x0-24}" y1="14" x2="${x0+L*0.45}" y2="14" style="stroke:var(--ink)" stroke-width="2"/>`;
-    s+=`<text x="${VW/2}" y="${VH-4}" text-anchor="middle" font-size="11" style="fill:var(--muted);font-family:var(--body)">${B.stage==='framing'?'Framing on the slip':'Plating the hull'}, ${Math.round(B.prog*100)}%</text></svg>`;return s;}
+    s+=`<text x="${VW/2}" y="${VH-4}" text-anchor="middle" font-size="11" style="fill:var(--muted);font-family:var(--body)">${B.stage==='framing'?'Framing on the slip':'Plating the hull'}, ${Math.round(B.prog*100)}%</text></g></svg>`;return s;}
   const fitP=B&&B.stage==='fitting'?clamp((B.prog-0.62)/0.38,0,1):1;
   if(!cut){
     // smoke
@@ -66,6 +67,7 @@ function profileSVG(sh,mode,build){
     for(let i=0;i<nr;i++){const x=X(.05+R()*.9),y=dy+1+R()*6,l=5+R()*16;s+=`<line x1="${x}" y1="${y}" x2="${x+0.5}" y2="${y+l}" stroke="#8A4A26" stroke-width="1.4" opacity=".6"/>`;}
     if(sh.cond<50)for(let i=0;i<nr/2;i++){const t=T[Math.floor(R()*tiers)],x=t.a+R()*(t.b-t.a);s+=`<line x1="${x}" y1="${t.y+2}" x2="${x}" y2="${t.y+4+R()*7}" stroke="#8A4A26" stroke-width="1.2" opacity=".5"/>`;}
     s+=`<text x="${X(.93)}" y="${dy+6}" font-size="6" letter-spacing="1" text-anchor="end" style="fill:#D9D2C0;font-family:var(--body)">${sh.name.toUpperCase()}</text>`;
+    s+='</g>';
     if(!inYard){s+=`<rect x="0" y="${wl}" width="${VW}" height="${VH-wl}" style="fill:var(--chart-sea)" opacity=".94"/>`;
       s+=`<path d="M0 ${wl+12} q20 -4 40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0" style="fill:none;stroke:var(--sky)" opacity=".5"/>`;
       if(sh.state==='sea'&&sh.stopLeft<=0)s+=`<path d="M${x0+L-14} ${wl} q-30 6 -70 3" style="fill:none;stroke:var(--sky)" stroke-width="1.5" opacity=".7"/>`;}
@@ -92,7 +94,7 @@ function profileSVG(sh,mode,build){
   s+=`<g clip-path="url(#${cid})" stroke="var(--ink)" stroke-width=".6" opacity=".7"><line x1="${x0}" y1="${B1[1]}" x2="${x0+L}" y2="${B1[1]}"/><line x1="${x0}" y1="${B2[1]}" x2="${x0+L}" y2="${B2[1]}"/></g>`;
   s+=`<line x1="0" y1="${wl}" x2="${VW}" y2="${wl}" style="stroke:var(--muted)" stroke-dasharray="4 4"/>`;
   for(const cx of fx){const b=cx-fw/2,e=cx+fw/2;s+=`<polygon points="${b},${topY} ${e},${topY} ${e-7},${topY-fh} ${b-7},${topY-fh}" style="fill:none;stroke:var(--muted)"/>`;}
-  s+='</svg>';return s;
+  s+='</g></svg>';return s;
 }
 function legendHTML(sh){
   const src=sh.load||sh.lastLoad;

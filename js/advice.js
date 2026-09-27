@@ -121,7 +121,7 @@ function advice(){
     if(!r0||sh.state==='yard')continue;
     const cur=econ(sh,r0),curY=econYear(sh,r0);
     const best=bestLine(sh,r0);
-    if(best&&best.pm-curY.pm>=300&&(S.lines[best.rk]||best.pm>300))add({id:`move:${sh.id}:${best.rk}`,scope:'ship',ref:sh.id,sev:'tip',gain:best.pm-curY.pm,
+    if(best&&best.pm>0&&best.pm-curY.pm>=Math.max(400,Math.abs(curY.pm)*0.15)&&(S.lines[best.rk]||best.pm>300))add({id:`move:${sh.id}:${best.rk}`,scope:'ship',ref:sh.id,sev:'tip',gain:best.pm-curY.pm,
       title:`Move SS ${sh.name} to ${ROUTES[best.rk].name}`,
       why:`Averaged over the coming year she would make about ${money(best.pm)} a month there, against ${money(curY.pm)} on ${ROUTES[r0].name}, at current fares.${!S.lines[best.rk]?' You would need to open that line first (£2,500).':''} Check conference tension there before you commit.`,
       act:S.lines[best.rk]?[['Move her','moveship',sh.id,best.rk]]:[['Open it and move her','openmove',sh.id,best.rk],['View line','selline',best.rk]]});
@@ -295,29 +295,35 @@ function propose(k,h,act,d){
   S.props.push({id,dept:k,title:h.title,why:h.why,act,d,m:S.m});
   news(`${DEPTS[k].name} proposes: ${h.title}. See Needs attention.`,'',false);
 }
-/* departments act on their own advice once a month, within the cash reserve. They are only as good as their head and staff. */
+/* department heads and candidates, monthly; the acting itself happens weekly in deptWeek */
 function runDepartments(){
   S.props=(S.props||[]).filter(p=>S.m-p.m<3);
-  const owned=Object.keys(S.depts);if(!owned.length)return;
-  for(const k of owned){const o=S.depts[k];if(!o.head)o.head=makeHead(k);if(S.m%3===0||!o.cands)o.cands=[makeHead(k),makeHead(k)];}
-  const acting=owned.filter(k=>S.depts[k].auto);if(!acting.length)return;
+  for(const k of Object.keys(S.depts)){const o=S.depts[k];if(!o.head)o.head=makeHead(k);if(S.m%3===0||!o.cands)o.cands=[makeHead(k),makeHead(k)];}
+}
+/* acting departments go through their desks every week, a little at a time */
+function deptWeek(){
+  const acting=Object.keys(S.depts).filter(k=>S.depts[k].auto);if(!acting.length)return;
   ADV_CACHE.key=null;const A=advice();
-  for(const k of acting){const o=S.depts[k],c=o.head.comp/100,R=Math.random;
-    if(R()<(1-c)*0.45){if(R()<0.3)news(`${DEPTS[k].name}: the ${DEPTS[k].head.toLowerCase()} reports a backlog of paperwork. Nothing done this month.`);continue;}
-    const cap=1+Math.floor(c*2.5);let done=0;
-    const mine=A.filter(h=>h.dept===k&&h.act[0]&&h.gain>=(o.head.bold?120:250));
+  for(const k of acting){const o=S.depts[k],c=(o.head?o.head.comp:50)/100,R=Math.random;
+    if(R()<(1-c)*0.3){if(R()<0.15)news(`${DEPTS[k].name}: the ${DEPTS[k].head.toLowerCase()} reports a backlog of paperwork. Nothing done this week.`);continue;}
+    const cap=1+Math.floor(c*1.5);let done=0,movedNow=false;o.last=o.last||{};o.moved=o.moved||{};
+    const mine=A.filter(h=>h.dept===k&&h.act[0]&&h.gain>=(o.head&&o.head.bold?120:250));
     for(let i=0;i<mine.length&&done<cap;i++){
       // a weaker head sometimes takes the wrong item first
       let h=mine[i];if(R()<(1-c)*0.35&&mine.length>1)h=mine[Math.floor(R()*mine.length)];
-      const [,act,...d0]=h.act[0],d=d0.slice();
+      const [,act,...d0]=h.act[0],d=d0.slice(),key=h.id.split(':').slice(0,2).join(':');
       if(BIG.includes(act)){propose(k,h,act,d);continue;}
       if(!['setfare','setfares','setlineopt','setship','moveship','setyard','hire'].includes(act))continue;
       if(act==='setyard'&&!canSpend(refitCost(S.ships.find(q=>q.id===d[0])||{grt:0},d[1])))continue;
       if(act==='moveship'&&d[1]&&!S.lines[d[1]])continue;
+      // one ship moved a week at most; a moved ship is left alone for two months to show what she can do
+      if(act==='moveship'&&(movedNow||o.moved[d[0]]>S.t-60))continue;
+      // no second thoughts on the same item inside three weeks
+      if(o.last[key]>S.t-21)continue;
       // fares set by eye, not to the shilling
       if(act==='setfare'&&R()<(1-c)*0.8)d[2]=Math.max(1,Math.round(d[2]*(0.9+R()*0.2)));
-      if(o.last&&o.last[h.id.split(':').slice(0,2).join(':')]>S.m-2)continue; // no second thoughts inside two months
-      if(doAction(act,d)){done++;(o.last=o.last||{})[h.id.split(':').slice(0,2).join(':')]=S.m;news(`${DEPTS[k].name}: ${h.title}${act==='setfare'&&d[2]!==d0[2]?` (set at £${d[2]})`:''}.`);S.dismiss[h.id]=S.m;}}
+      if(doAction(act,d)){done++;if(act==='moveship'){movedNow=true;o.moved[d[0]]=S.t;}o.last[key]=S.t;
+        news(`${DEPTS[k].name}: ${h.title}${act==='setfare'&&d[2]!==d0[2]?` (set at £${d[2]})`:''}.`);S.dismiss[h.id]=S.m;ADV_CACHE.key=null;}}
   }
   ADV_CACHE.key=null;
 }

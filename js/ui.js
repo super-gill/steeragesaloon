@@ -141,24 +141,23 @@ function renderFleet(){
 const esc=t=>t.replace(/&/g,'&amp;').replace(/</g,'&lt;');
 function wireHTML(list,anim){
   if(!list.length)return '<p class="note">No traffic yet.</p>';
-  return list.map(m=>{const hold=anim&&UI.wa&&UI.wa.id===m.id&&!UI.wa.done;
-    return `<div class="tg ${m.k==='bad'?'bad':m.k==='good'?'good':m.k==='r'?'rt':''}" data-key="w${m.id}"><div class="tg-h"><span>SS ${esc(m.ship)}</span><span>${esc(m.via||'')} · ${dateLong(m.t)}</span></div>
-      ${anim?`<div class="tg-b hold" data-hold="${m.id}"><span class="tg-sz">${esc(m.txt)}</span><span class="tg-an">${hold?'':esc(m.txt)}</span></div>`:`<div class="tg-b">${esc(m.txt)}</div>`}</div>`;}).join('');
+  return list.map(m=>{const unread=anim&&m.read===false;
+    return `<div class="tg ${m.k==='bad'?'bad':m.k==='good'?'good':m.k==='r'?'rt':''}${unread?' unread':''}" data-key="w${m.id}" ${unread?`data-act="wread" data-id="${m.id}" role="button" tabindex="0" title="Decode"`:''}><div class="tg-h"><span>SS ${esc(m.ship)}</span><span>${esc(m.via||'')} · ${dateLong(m.t)}</span></div>
+      ${anim?`<div class="tg-b hold" data-hold="${m.id}"><span class="tg-sz">${esc(m.txt)}</span><span class="tg-an">${unread?`<span class="mo">${morseOf(m.txt)}</span>`:esc(m.txt)}</span></div>${unread?'<div class="tg-tap">Undecoded. Tap to decode.</div>':''}`:`<div class="tg-b">${esc(m.txt)}</div>`}</div>`;}).join('');
 }
 /* ---------- the tray: everything that arrives on its own lives in one fixed-height box, so nothing below it moves ---------- */
 function trayHTML(nAttn,attn,ADV){
   const W=(S.wire||[]).filter(m=>UI.wireRoutine!==false||m.k!=='r');
   if(!UI.trayTab)UI.trayTab=nAttn?'attn':'wire';
-  const lastSeen=UI.wireSeen||0,newW=W.filter(m=>m.id>lastSeen).length;
-  if(UI.trayTab==='wire')UI.wireSeen=W.length?W[0].id:0;
+  const newW=W.filter(m=>m.read===false).length;
   const tab=(k,l,n,cls)=>`<button role="tab" data-act="traytab" data-id="${k}" aria-selected="${UI.trayTab===k}">${l}${n?` <span class="${cls}">${n}</span>`:''}</button>`;
   let body;
-  if(UI.trayHold&&UI._tray&&UI._tray.tab===UI.trayTab)body=UI._tray.body; // the pointer is on it: hold still
+  if(UI.trayHold&&UI._tray&&UI._tray.tab===UI.trayTab&&UI._tray.rev===UI.rev)body=UI._tray.body; // the pointer is on it: hold still, until the player does something
   else{
     body=UI.trayTab==='attn'?attn:UI.trayTab==='advice'?adviceHTML(ADV,'Head office has no complaints. The books look sound at current settings.')
-      :`<div class="row" style="justify-content:flex-end"><label class="check"><input type="checkbox" data-wirert="1" ${UI.wireRoutine!==false?'checked':''}> Sailings and arrivals</label></div><div class="stack tape" style="gap:6px">${wireHTML(W.slice(0,30),true)}</div>`;
-    UI._tray={tab:UI.trayTab,body};}
-  return `<section class="sec tray"><div class="traytabs" role="tablist">${tab('attn','Needs attention',nAttn,'badge')}${tab('advice','Advice',ADV.length,'count')}${tab('wire','Wireless',UI.trayTab==='wire'?0:newW,'badge wb')}</div>
+      :`<div class="row">${newW?`<button class="btn quiet" data-act="wreadall">Decode all ${newW}</button>`:'<span></span>'}<label class="check"><input type="checkbox" data-wirert="1" ${UI.wireRoutine!==false?'checked':''}> Sailings and arrivals</label></div><div class="stack tape" style="gap:6px">${wireHTML(W.slice(0,30),true)}</div>`;
+    UI._tray={tab:UI.trayTab,body,rev:UI.rev};}
+  return `<section class="sec tray"><div class="traytabs" role="tablist">${tab('attn','Needs attention',nAttn,'badge')}${tab('advice','Advice',ADV.length,'count')}${tab('wire','Wireless',newW,'badge wb')}</div>
     <div class="traybody" id="traybody" data-key="tray-${UI.trayTab}">${body}</div></section>`;
 }
 /* advice for one ship or line sits behind a single row of constant height, opened on request */
@@ -169,16 +168,16 @@ function advRow(key,list,who){
 }
 /* the newest message prints as Morse on the tape, then decodes letter by letter into words */
 function animWire(now){
-  if(UI._waLast&&UI._waLast!==UI.wa&&!UI._waLast.done){const L=UI._waLast,e=document.querySelector(`[data-hold="${L.id}"] .tg-an`);L.done=true;if(e)e.textContent=L.txt;}
+  if(UI._waLast&&UI._waLast!==UI.wa&&!UI._waLast.done){const L=UI._waLast,e=document.querySelector(`[data-hold="${L.id}"] .tg-an`);L.done=true;if(e){if(L.mode==='decode')e.textContent=L.txt;else e.innerHTML=`<span class="mo">${morseOf(L.txt)}</span>`;}}
   UI._waLast=UI.wa;
   const A=UI.wa;if(!A||A.done)return;
   const el=document.querySelector(`[data-hold="${A.id}"]`);
   if(!el){if(now-A.made>15000)A.done=true;return;}
   const an=el.querySelector('.tg-an');if(!an)return;
   if(!A.start)A.start=now;
-  const t=now-A.start,txt=A.txt,M=morseOf(txt),pd=Math.min(1400,M.length*5);
+  const t=now-A.start,txt=A.txt,M=morseOf(txt),pd=A.mode==='decode'?0:Math.min(1400,M.length*5);
   let h;
-  if(t<pd)h=`<span class="mo">${M.slice(0,Math.ceil(M.length*t/pd))}</span>`;
+  if(A.mode!=='decode'){if(t>=pd){A.done=true;an.innerHTML=`<span class="mo">${M}</span>`;return;}h=`<span class="mo">${M.slice(0,Math.ceil(M.length*t/pd))}</span>`;}
   else{const k=Math.floor((t-pd)/45);
     if(k>=txt.length){A.done=true;an.textContent=txt;return;}
     h=esc(txt.slice(0,k))+`<span class="mo">${morseOf(txt.slice(k))}</span>`;}
@@ -353,7 +352,7 @@ function renderShore(){
       :`<div class="meta">About ${fmt(dc.total+60)} a month to run at your present size: ${dc.staff} clerks, rent and a head of department. It grows with the fleet.</div>`;
     return `<div class="card" data-key="dp${k}"><div class="row"><strong>${d.name}</strong>${o?own:''}</div><p class="note" style="margin:0">${d.does}</p>${hd}
       ${o?`<div class="row"><div class="seg" role="group"><button data-act="deptmode" data-d='${JSON.stringify([k,0])}' aria-pressed="${!o.auto}">Advise</button><button data-act="deptmode" data-d='${JSON.stringify([k,1])}' aria-pressed="${!!o.auto}">Act</button></div>
-        <span class="meta">${o.auto?'Acts on its own advice once a month. Big decisions come to you as proposals':'Advice only; you decide'}</span></div>`:buy('dept',k,'Open')}</div>`;}).join('');
+        <span class="meta">${o.auto?'Works through its advice every week. Big decisions come to you as proposals':'Advice only; you decide'}</span></div>`:buy('dept',k,'Open')}</div>`;}).join('');
   const myPorts=[...new Set(Object.keys(S.lines).flatMap(rk=>ROUTES[rk].calls).concat(Object.keys(sh.piers)))].filter(p=>PIER_COST[p]);
   const piers=myPorts.map(p=>`<div class="uprow" data-key="pi${p}"><div><strong>${PN[p]}</strong><div class="meta">${S.ships.filter(x=>x.line&&ROUTES[x.line].calls.includes(p)).length} of your ships call here</div></div>${sh.piers[p]?own:buy('pier',p)}</div>`).join('')||'<p class="note">Open a line first. Piers can be built at the ports your lines call at.</p>';
   const agents=Object.keys(AGENCY).map(a=>`<div class="uprow" data-key="ag${a}"><div><strong>${AGENCY[a].name}</strong><div class="meta">${AGENCY[a].ports.map(p=>PN[p]).join(', ')}</div></div>${sh.agents[a]?own:buy('agency',a,'Appoint')}</div>`).join('');
@@ -456,4 +455,4 @@ function ratchet(){
     el.style.minHeight='';const h=el.offsetHeight;if(h>el._min)el._min=h;if(el._min)el.style.minHeight=el._min+'px';
   }
 }
-function render(){renderHeader();renderTabs();renderMap();renderDesigner();if(UI.wide&&UI.tab!=='overview')renderOverview();PANE_RENDER[UI.tab]();renderModal();ratchet();}
+function render(){renderHeader();renderTabs();renderMap();renderDesigner();setHTML($('emergw'),emergencyHTML());if(UI.wide&&UI.tab!=='overview')renderOverview();PANE_RENDER[UI.tab]();renderModal();ratchet();}

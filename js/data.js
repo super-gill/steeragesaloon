@@ -1,5 +1,5 @@
 /* ================= DATA ================= */
-const GAME_VERSION='0.5.1',GAME_BUILT='27 September 2026'; // bump on every release; see CHANGELOG.md
+const GAME_VERSION='0.6.1',GAME_BUILT='27 September 2026'; // bump on every release; see CHANGELOG.md
 const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 const CL=['f','s','t','tt'];
 const CL_NAME={f:'First',s:'Second',t:'Third',tt:'Tourist Third'};

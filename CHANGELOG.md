@@ -2,6 +2,17 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.6.1 (27 September 2026)
+- Ship drawings scale as a whole: every ship is drawn to one plan and shrunk or enlarged by her tonnage, so funnels, decks and hull stay in proportion. Big ships get a fifth deck; funnels are spaced evenly and no longer run off the top of the picture.
+
+## 0.6.0 (27 September 2026)
+- Emergencies: collision, striking ice or wreckage, sprung plates, fire, outbreaks of illness, mutiny and piracy. The crew fight the threat, ships within wireless range answer the call and steam to help, and the master orders the boats away if she cannot be saved. Ships without wireless can only fire rockets.
+- An emergency window follows each one: the situation, water or fire against the crew's control, the ships answering and how far off they are, and every signal. The clock slows to an hour a second while it lasts. Owner's orders are a placeholder for now.
+- Wireless messages from sea arrive in Morse and are decoded when you tap them; the Wireless tab counts the undecoded ones. Agents' cables arrive in plain words.
+- Acting departments now work through their advice every week instead of monthly. Traffic moves one ship a week at most, leaves a moved ship for two months, and never moves a ship onto a losing line.
+- Fixed: advice buttons in the tray appeared to do nothing while the pointer was over it.
+- The overdraft warning no longer pauses the clock.
+
 ## 0.5.1 (27 September 2026)
 - Needs attention, advice and the wireless room share one fixed-height tray with tabs and counts, so arrivals never push the page about.
 - The tray holds still while the pointer is over it, or for a few seconds after touching or scrolling it on a phone.

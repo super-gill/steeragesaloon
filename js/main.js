@@ -40,6 +40,15 @@ document.addEventListener('click',e=>{
     case 'headpick':UI.headPick=UI.headPick===b.dataset.id?null:b.dataset.id;break;
     case 'traytab':UI.trayTab=b.dataset.id;UI.trayHold=false;{const t=$('traybody');if(t)t.scrollTop=0;}break;
     case 'advopen':UI.advOpen=UI.advOpen===b.dataset.id?null:b.dataset.id;break;
+    case 'wread':{const m=(S.wire||[]).find(x=>x.id===+b.dataset.id);if(m&&m.read===false){m.read=true;UI.wa={id:m.id,txt:m.txt,mode:'decode',made:performance.now()};UI._tray=null;}break;}
+    case 'wreadall':{for(const m of S.wire||[])if(m.read===false){m.read=true;const e=document.querySelector(`[data-hold="${m.id}"] .tg-an`);if(e)e.textContent=m.txt;}if(UI.wa)UI.wa.done=true;UI._tray=null;break;}
+    case 'emmin':UI.emMin=true;break;
+    case 'emshow':UI.emMin=false;break;
+    case 'emtab':UI.emOpen=+b.dataset.id;break;
+    case 'emreport':emOrder('report',+b.dataset.id);break;
+    case 'emtrust':emOrder('trust',+b.dataset.id);break;
+    case 'emspeed':UI.emNormal=!UI.emNormal;break;
+    case 'emclose':{const e=(S.emerg||[]).find(x=>x.id===+b.dataset.id);if(e)e.t1=-99;break;}
     case 'maptoggle':UI.noMap=!UI.noMap;requestAnimationFrame(()=>{VIEW.s=null;applyView();});break;
     case 'wireall':UI.wireAll=!UI.wireAll;break;
     case 'lineset':if(L)L[b.dataset.k]=+b.dataset.v;break;
@@ -75,6 +84,7 @@ document.addEventListener('change',e=>{
   t.blur();UI.rev=(UI.rev||0)+1;save();UI.dirty=true;
 });
 document.addEventListener('keydown',e=>{
+  if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('[role=button][data-act]')){e.preventDefault();e.target.click();return;}
   if(e.code==='Space'&&!e.target.closest('input,select,textarea,button')){e.preventDefault();if(S.over)return;
     if(UI.speed>0){UI.last=UI.speed;UI.speed=0;UI.banner='Paused.';}else{UI.speed=UI.last||1;UI.banner=null;}UI.dirty=true;}
 });

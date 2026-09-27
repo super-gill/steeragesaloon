@@ -70,7 +70,7 @@ function loseShip(sh){
 /* daily: overdue ships, drifting ships, posted missing */
 function silentDaily(){
   for(const sh of S.ships.slice()){
-    if(sh.brk&&sh.brk.o==='fail'&&!sh.towed&&sh.state==='sea'&&Math.random()<sinkRisk(sh))founder(sh);
+    if(sh.brk&&sh.brk.o==='fail'&&!sh.towed&&!sh.em&&sh.state==='sea'&&Math.random()<sinkRisk(sh)*3)startEmergency(sh,'seam');
     if(!isSilent(sh))continue;
     const e=estimateOf(sh),to=PN[destOf(sh)];
     if(e.over>=1&&!sh.overdue){sh.overdue=1;news(`SS ${sh.name} is overdue at ${to}. There has been no word of her since she sailed.`,'bad',true);}

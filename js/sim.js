@@ -71,8 +71,10 @@ function depart(sh){
   sh.cond=clamp(sh.cond-0.8*SPD_WEAR[sh.speed]*(1+age/30)*(sh.fuel==='oil'?0.85:1)*mods.wear*lenF,5,95);
   const pS=sh.cond<35?(35-sh.cond)/100*0.3*mods.risk*lenF:0,pB=sh.cond<75?(75-sh.cond)/100*0.175*mods.risk*lenF:0;
   sh.event=null;
-  if(R()<pS)sh.event={kind:'fire',at:dist*(0.2+R()*0.6)};
+  sh.emEvent=null;sh.em=null;
+  if(R()<pS)sh.emEvent={k:'fire',at:dist*(0.2+R()*0.6)};
   else if(R()<pB)sh.event={kind:'break',at:dist*(0.15+R()*0.7)};
+  if(!sh.emEvent)sh.emEvent=rollEmergency(sh,gk,dist,R);
 }
 const dir0end=(gk,dir)=>geoEnds(gk)[dir===0?1:0];
 function triggerEvent(sh){
@@ -132,6 +134,8 @@ const destOf=sh=>{const [A,B]=geoEnds(sh.geo);return sh.dir===0?B:A;};
 function arrive(sh){
   const rk=sh.legRoute,lg=sh.load,R=Math.random,mods=shipMods(sh);
   sh.port=destOf(sh);sh.state='port';sh.portLeft=turnDays(sh,sh.port);
+  if(sh.em){const e=(S.emerg||[]).find(x=>x.id===sh.em);if(e&&!e.over)emEnd(e,sh,'saved');sh.em=null;}
+  if(sh.quarantine){sh.quarantine=false;sh.portLeft+=3;book('port',-Math.round(400+soulsOf(sh)*0.5),rk);news(`SS ${sh.name} is held in quarantine at ${PN[sh.port]} for three days.`,'bad');}
   const late=sh.overdue||(sh.held&&sh.held.some(m=>m.k==='bad'));
   deliverHeld(sh,`Cable, ${PN[sh.port]} agents, master's report`);
   wire(sh,`SS ${sh.name} arrived ${PN[sh.port]}${sh.towed?' in tow':''}. ${Math.max(1,Math.round(S.t-(sh.sailedAt||S.t)))} days out.${sh.limp?' Needs the yard.':''}`,sh.towed||sh.limp||late?'bad':'r');
@@ -183,6 +187,8 @@ function moveAll(step){
   for(const sh of [...S.ships]){
     if(sh.state==='lost')continue;
     if(sh.state==='sea'){
+      if(sh.em){const e=(S.emerg||[]).find(x=>x.id===sh.em);if(e){emergencyStep(e,sh,step);emHourly(e,sh,step);}else sh.em=null;if(!S.ships.includes(sh)||sh.state!=='sea')continue;}
+      if(sh.emEvent&&!sh.em&&!sh.towed&&sh.pos>=sh.emEvent.at){const k=sh.emEvent.k;sh.emEvent=null;startEmergency(sh,k);continue;}
       if(sh.brk&&!sh.brk.found&&!radioOf(sh))spotCheck(sh,step);
       if(sh.brk&&!sh.brk.told&&S.t>=sh.brk.tell)breakdownVerdict(sh);
       if(sh.stopLeft>0){sh.stopLeft-=step;if(sh.stopLeft<=0){sh.stopLeft=0;if(sh.brk)breakdownResume(sh);}continue;}
@@ -205,7 +211,7 @@ function moveAll(step){
 }
 const shoreUpkeep=()=>{const s=S.shore;return Object.keys(s.piers).length*350+Object.keys(s.agents).length*300+Object.keys(s.hostels).length*250+Object.keys(s.yards).length*1200+(s.slip?1500:0)+Object.keys(S.depts||{}).reduce((a,k)=>a+deptCost(k).total,0);};
 function dailyTick(){
-  wireTick();silentDaily();
+  wireTick();silentDaily();if(Math.floor(S.t)%7===0)deptWeek();
   for(const sh of S.ships){
     if(sh.state==='lost')continue;
     const act=ACTIVE.includes(sh.state),f=act?1:sh.state==='yard'?0.5:0.25;
@@ -221,7 +227,7 @@ function dailyTick(){
   const up=shoreUpkeep();if(up)book('shore',-up/30);
   book('interest',-S.debt*0.065/365);
   const m=mOf(S.t);if(m!==S.m){const pm=S.m;S.m=m;monthRoll(pm);}
-  if(S.cash<0&&!S.odWarn){S.odWarn=true;news(`The account is overdrawn. The bank will foreclose below ${fmt(-odLimit())}.`,'bad',true);}
+  if(S.cash<0&&!S.odWarn){S.odWarn=true;news(`The account is overdrawn. The bank will foreclose below ${fmt(-odLimit())}.`,'bad');}
   if(S.cash>0)S.odWarn=false;
   if(S.cash<-odLimit()&&!S.over){S.over='bust';UI.speed=0;save();}
 }

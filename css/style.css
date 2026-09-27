@@ -339,3 +339,37 @@ input[type=range]{width:100%;accent-color:var(--brass)}
 .tut .tutcard{min-height:10.5em}
 .glance .nm,.glance .meta{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .tile b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* emergency window */
+.emergw{position:absolute;left:12px;top:12px;z-index:15;max-width:min(430px,calc(100% - 24px));pointer-events:none}
+.emergw > *{pointer-events:auto}
+.emerg{background:var(--surface);border:1px solid var(--bad);border-radius:4px;box-shadow:0 8px 28px rgba(0,0,0,.28);display:flex;flex-direction:column;max-height:calc(100vh - 220px);min-height:0}
+.emerg.done{border-color:var(--line)}
+.em-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:9px 12px;background:var(--bad);color:#fff;border-radius:3px 3px 0 0}
+.emerg.done .em-head{background:var(--sea)}
+.em-head .eyebrow{color:#fff;opacity:.85}
+.em-head h3{margin:2px 0 0;font-size:16px}
+.em-head .btn{background:transparent;color:#fff;border-color:rgba(255,255,255,.5);padding:4px 8px;font-size:12px}
+.emtabs{display:flex;gap:4px;padding:6px 10px 0;flex-wrap:wrap}
+.emtabs button{font-size:12px;padding:3px 8px;border:1px solid var(--line);background:var(--surface2);border-radius:3px;cursor:pointer}
+.emtabs button[aria-pressed="true"]{border-color:var(--bad)}
+.em-body{padding:10px 12px 12px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;min-height:0;overscroll-behavior:contain}
+.em-state{margin:0;font-size:13px}
+.em-gauges{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.em-resp{list-style:none;margin:4px 0 0;padding:0;display:flex;flex-direction:column;gap:3px;font-size:13px}
+.em-resp li{display:flex;gap:6px;align-items:baseline}.em-resp .num{margin-left:auto;font-size:12px}
+.em-log{background:var(--tape);color:var(--tape-ink);border:1px solid var(--tape-line);padding:6px 8px;height:150px;overflow-y:auto;font:11.5px/1.4 ui-monospace,Menlo,Consolas,monospace;display:flex;flex-direction:column;gap:6px}
+.em-log .meta{font-family:var(--body);font-size:10.5px}
+.em-orders .btn{font-size:12px;padding:5px 9px}
+.empill{background:var(--bad);color:#fff;border:0;border-radius:14px;padding:6px 12px;font-weight:700;font-size:12.5px;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.25);animation:empulse 1.8s ease-in-out infinite}
+@keyframes empulse{50%{opacity:.75}}
+@media (prefers-reduced-motion:reduce){.empill{animation:none}}
+@media (max-width:980px){
+  .emergw{position:fixed;left:8px;right:8px;top:auto;bottom:8px;max-width:none;z-index:55}
+  .emerg{max-height:62vh}
+  .em-log{height:110px}
+}
+.tg.unread{cursor:pointer;border-left-color:var(--brass)}
+.tg.unread:hover{background:var(--tape-line)}
+.tg.unread:focus-visible{outline:2px solid var(--brass)}
+.tg-tap{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;opacity:.6;margin-top:2px}

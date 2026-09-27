@@ -15,6 +15,7 @@ It is a static browser game with no build step. Open `index.html`, or serve the 
 | `js/helpers.js` | Dates, formatting, demand and slump modifiers, prices, refit costs, captains and per-ship modifiers |
 | `js/lanes.js` | Sea lanes as a network: positions along any lane, and the passage a ship follows between two ports |
 | `js/wireless.js` | Wireless and cable traffic: coast stations, positions, telegraphese, Morse |
+| `js/emergency.js` | Emergencies: collision, ice, flooding, fire, illness, mutiny, piracy; responders; the emergency window |
 | `js/silent.js` | Ships without wireless: reckoned positions, overdue notices, sightings and relays by passing ships, foundering, posted missing |
 | `js/ledger.js` | Month-to-date accounts by category and by line |
 | `js/sim.js` | The simulation: bookings and cargo per voyage, departures, calls, arrivals, breakdowns, yards and upgrades, crew morale, daily costs, month roll |
