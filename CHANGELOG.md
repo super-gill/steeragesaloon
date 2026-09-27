@@ -2,6 +2,12 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.6.3 (27 September 2026)
+- The cutaway is laid out from what the ship actually carries: cargo fills the holds from the bottom up, passengers fill from the top down with the best class highest and amidships, and the rest is crew, stores and mail. Cargo ships, fruit ships, tourist liners and emigrant ships now look like what they are.
+
+## 0.6.2 (27 September 2026)
+- Funnels stand on the top deck: they are spaced evenly between its after end and the bridge, and the superstructure steps in only as far as the funnels allow. Lifeboats keep clear of them.
+
 ## 0.6.1 (27 September 2026)
 - Ship drawings scale as a whole: every ship is drawn to one plan and shrunk or enlarged by her tonnage, so funnels, decks and hull stay in proportion. Big ships get a fifth deck; funnels are spaced evenly and no longer run off the top of the picture.
 
