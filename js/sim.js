@@ -50,14 +50,26 @@ function legCalc(sh,rk,dir,R,gk){
     seaDays:seaDays+calls*CALL_DAYS,geo:gk,mail:S.mail[rk]&&sh.speed>0&&sh.up&&sh.up.wireless?S.mail[rk].pay/2:0,
     agents:0.08*paxRev,port:dues+0.35*cargoT*PX()*((sh.up&&sh.up.hatch)?0.75:1)*(S.shore&&S.shore.sheds&&S.shore.sheds[endPort]?0.6:1)};
 }
-/* seasonal cruising: in the cruise's season a ship leaves her line for it, and at its end she goes back from the cruise's home port */
+/* cruise programmes: a ship may have several cruises. In each cruise's months she sails it from its home port, finishing the cruise
+   she is on before she moves; between seasons she goes back to her own line, or lays up if she had none */
 const cruiseInSeason=(rk,m)=>ROUTES[rk].cruise.months.includes(((m%12)+12)%12);
+function cruiseProg(sh){if(sh.wc&&!sh.cp)sh.cp=[sh.wc];delete sh.wc;return (sh.cp||[]).filter(k=>ROUTES[k]&&isCruise(k)&&S.lines[k]&&routeOpen(k,S.m));}
+/* the cruise she should be on in a month: the one she is on while it is still in season, else the first in her programme that is */
+function cruiseFor(sh,m,noStick){const cp=cruiseProg(sh);if(!cp.length||sh.wcHold>S.m)return null;
+  if(!noStick&&cp.includes(sh.line)&&cruiseInSeason(sh.line,m))return sh.line;
+  return cp.find(k=>cruiseInSeason(k,m))||null;}
+const onProgramme=sh=>isCruise(sh.line)&&sh.homeLine!==undefined;
 function cruiseSeason(sh){
-  const wc=sh.wc;if(!wc||!ROUTES[wc]||!S.lines[wc]||sh.wcHold>S.m)return;
-  const inS=cruiseInSeason(wc,mOf(S.t));
-  if(inS&&sh.line!==wc){sh.homeLine=sh.line||null;sh.line=wc;news(`SS ${sh.name} leaves ${sh.homeLine?'the '+ROUTES[sh.homeLine].name+' service':'her lay-up'} for the cruising season: ${ROUTES[wc].cruise.cname}.`);}
-  else if(!inS&&sh.line===wc&&sh.homeLine!==undefined&&sh.port===ROUTES[wc].a){const h=sh.homeLine;sh.line=h&&S.lines[h]?h:null;delete sh.homeLine;
-    news(`SS ${sh.name}'s cruising season is over. ${sh.line?'She goes back to the '+ROUTES[sh.line].name+' service.':'She is laid up until the next one.'}`);}
+  const want=cruiseFor(sh,mOf(S.t)),nm=k=>ROUTES[k].cruise.cname;
+  if(onProgramme(sh)){
+    if(want===sh.line)return;
+    if(sh.port!==ROUTES[sh.line].a)return; // she finishes the cruise she is on and brings her passengers home first
+    const from=sh.line;
+    if(want){sh.line=want;news(`SS ${sh.name}'s ${nm(from).replace(/^the /,'')} season is over: she moves on to ${nm(want)}.`);}
+    else{const h=sh.homeLine;sh.line=h&&S.lines[h]?h:null;delete sh.homeLine;
+      news(`SS ${sh.name}'s cruising season is over. ${sh.line?'She goes back to the '+ROUTES[sh.line].name+' service.':'She is laid up until her next cruise.'}`);}
+  } else if(want&&sh.line!==want){sh.homeLine=sh.line||null;sh.line=want;
+    news(`SS ${sh.name} leaves ${sh.homeLine?'the '+ROUTES[sh.homeLine].name+' service':'her lay-up'} for the cruising season: ${nm(want)}.`);}
 }
 function depart(sh){
   const P=sh.port;
@@ -330,10 +342,10 @@ function monthRoll(pm){
   if(S.shore.bunker&&S.shore.bunker.until===S.m-1)news('Your bunker contract has expired. Coal and oil are back at market prices.','bad');
   if(S.offer&&S.offer.exp<=S.m)S.offer=null;
   // a cruise that has ended (Prohibition's repeal ends the cruises to nowhere): its ships are laid up and the line closes
-  for(const rk of Object.keys(S.lines))if(!routeOpen(rk,S.m)){delete S.lines[rk];for(const x of S.ships){if(x.line===rk){x.line=null;delete x.homeLine;}if(x.wc===rk)delete x.wc;}
+  for(const rk of Object.keys(S.lines))if(!routeOpen(rk,S.m)){delete S.lines[rk];for(const x of S.ships){if(x.line===rk){x.line=null;delete x.homeLine;}if(x.cp)x.cp=x.cp.filter(k=>k!==rk);}
     news(`Prohibition is over, and so are the ${ROUTES[rk].cruise.cname}: nobody need go to sea for a drink. The ${ROUTES[rk].name} service is closed and its ships laid up.`,'bad',true);}
   // seasonal cruising: a laid-up ship with a cruise season comes out for it
-  for(const x of S.ships)if(x.wc&&x.state==='laid'&&S.lines[x.wc]&&cruiseInSeason(x.wc,S.m)&&!(x.wcHold>S.m)){x.state='port';x.portLeft=1;}
+  for(const x of S.ships)if(x.state==='laid'&&cruiseFor(x,S.m)){x.state='port';x.portLeft=1;}
   // the mails: from reputation 40 the Post Office invites tenders, on lines where one of our ships carries wireless
   if(S.rep>=40&&!S.mailOk){S.mailOk=true;news('The Line\'s standing now qualifies it for Post Office mail contracts. Tenders come up every few months for lines where your ships carry wireless.','good',true);}
   if(!S.offer&&S.rep>=40){

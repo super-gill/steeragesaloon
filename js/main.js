@@ -12,8 +12,8 @@ document.addEventListener('click',e=>{
     case 'selline':S.selLine=b.dataset.id;UI.tab='lines';(S.tutSeen=S.tutSeen||{}).lines=true;break;
     case 'tabgo':UI.tab=(UI.wide&&b.dataset.tab==='overview')?UI.tab:b.dataset.tab;(S.tutSeen=S.tutSeen||{})[b.dataset.tab]=true;break;
     case 'tutoff':if(S.tut)S.tut.off=true;break;
-    case 'setfare':case 'setfares':case 'setlineopt':case 'setship':case 'moveship':case 'setyard':case 'sellship':case 'hire':case 'shorebuy':case 'deptmode':case 'openmove':case 'buyship':case 'newhead':case 'propyes':case 'propno':case 'build':case 'scrapship':case 'crewset':case 'appoint':case 'setwc':
-      {const d=JSON.parse(b.dataset.d||'[]');if(a==='moveship'||a==='openmove'||a==='setship'){const x=S.ships.find(q=>q.id===d[0]);if(x)x.ownerSet=S.t;}if(a==='crewset'||a==='appoint'){const x=S.ships.find(q=>q.id===d[0]);if(x)x.crewSet=S.t;}doAction(a,d);}ADV_CACHE.key=null;break;
+    case 'setfare':case 'setfares':case 'setlineopt':case 'setship':case 'moveship':case 'setyard':case 'sellship':case 'hire':case 'shorebuy':case 'deptmode':case 'openmove':case 'buyship':case 'newhead':case 'propyes':case 'propno':case 'build':case 'scrapship':case 'crewset':case 'appoint':case 'setwc':case 'cruiseadd':case 'cruisedrop':
+      {const d=JSON.parse(b.dataset.d||'[]');if(a==='moveship'||a==='openmove'||a==='setship'||a==='setwc'||a==='cruiseadd'||a==='cruisedrop'){const x=S.ships.find(q=>q.id===d[0]);if(x)x.ownerSet=S.t;}if(a==='crewset'||a==='appoint'){const x=S.ships.find(q=>q.id===d[0]);if(x)x.crewSet=S.t;}doAction(a,d);}ADV_CACHE.key=null;break;
     case 'shipgrp':{const o=UI.shipGrp=UI.shipGrp||{earn:true,upkeep:true,crew:false,retire:false};o[b.dataset.id]=!o[b.dataset.id];break;}
     case 'plopen':UI.plOpen=UI.plOpen===+b.dataset.id?null:+b.dataset.id;break;
     case 'plmonth':UI.plMonth=b.dataset.id;break;
@@ -22,6 +22,7 @@ document.addEventListener('click',e=>{
     case 'crewfleet':UI.crewFleet=true;break;
     case 'crewship':UI.crewSid=+b.dataset.id;UI.crewFleet=false;UI.offPool=null;break;
     case 'offpool':UI.offPool=UI.offPool===b.dataset.id?null:b.dataset.id;break;
+    case 'cruisehelp':UI.cruiseHelp=!UI.cruiseHelp;break;
     case 'menu':UI.menu=!UI.menu;break;
     case 'fcship':(UI.fcShip=UI.fcShip||{})[b.dataset.k]=+b.dataset.id;break;
     case 'cappool':UI.capPool=UI.capPool===+b.dataset.id?null:+b.dataset.id;break;

@@ -37,10 +37,27 @@ function econMonths(sh,rk,ms){
 let CRUISE_EST={key:null};
 function cruiseEst(sh){
   const key=S.m+'|'+UI.rev+'|'+sh.id;if(CRUISE_EST.key===key)return CRUISE_EST.v;
-  const home=sh.line&&sh.line===sh.wc?sh.homeLine:sh.line;
+  const home=onProgramme(sh)?sh.homeLine:sh.line;
   const v=Object.keys(ROUTES).filter(k=>isCruise(k)&&routeOpen(k,S.m)).map(k=>{const ms=ROUTES[k].cruise.months;
     return {rk:k,pm:econMonths(sh,k,ms),home:home&&S.lines[home]&&!isCruise(home)?econMonths(sh,home,ms):-idleCost(sh)};});
   CRUISE_EST={key,v};return v;
+}
+/* her year under her cruise programme, month by month, against a year on her own line; with the light passages between ports */
+let YEAR_PLAN={key:null};
+const homeOf=sh=>onProgramme(sh)?sh.homeLine:sh.line&&!isCruise(sh.line)?sh.line:sh.line;
+function yearPlan(sh,cp){
+  cp=cp||cruiseProg(sh);const key=S.m+'|'+UI.rev+'|'+sh.id+'|'+cp.join();if(YEAR_PLAN.key===key)return YEAR_PLAN.v;
+  const home=homeOf(sh),t0=S.t,idle=-idleCost(sh),months=[];
+  try{for(let i=0;i<12;i++){const m=S.m+i,mo=m%12;S.t=(Date.UTC(1921+Math.floor(m/12),mo,15)-T0)/864e5;
+    const c=cp.find(k=>cruiseInSeason(k,m))||null,base=home&&S.lines[home]?econ(sh,home).pm:idle;
+    months.push({m,mo,rk:c||home||null,cruise:!!c,pm:c?econ(sh,c).pm:base,base});}}
+  finally{S.t=t0;}
+  // a light passage whenever she changes home port: coal, and the days she earns nothing
+  let pass=0,days=0;const portOf=rk=>rk?ROUTES[rk].a:null;
+  for(let i=1;i<=12;i++){const a=months[(i-1)%12],b=months[i%12];if(a.rk===b.rk)continue;const pa=portOf(a.rk),pb=portOf(b.rk);if(!pa||!pb||pa===pb)continue;
+    const d=laneDist(pa,pb)/(knotsOf(sh)*24);days+=d;pass+=fuelRate(sh,1)*d*fuelPrice(sh,S.m)+d*(crewCostOf(sh)+insCost(sh))/30;}
+  const avg=months.reduce((a,x)=>a+x.pm,0)/12-pass/12,base=months.reduce((a,x)=>a+x.base,0)/12;
+  const v={months,avg,base,pass,days};YEAR_PLAN={key,v};return v;
 }
 const lineShips=rk=>S.ships.filter(x=>x.line===rk&&x.state!=='laid');
 function lineEcon(rk,patch){let pm=0,pax=0;for(const sh of lineShips(rk)){const q=econ(sh,rk,patch);pm+=q.pm;pax+=q.pax;}return {pm,pax};}
@@ -142,26 +159,26 @@ function advice(){
       continue;
     }
     if(!r0||sh.state==='yard')continue;
-    const cur=econ(sh,r0),curY=econYear(sh,r0);
-    const best=bestLine(sh,r0);
+    const cur=econ(sh,r0),curY=econYear(sh,r0),cruising=onProgramme(sh)||cruiseProg(sh).includes(r0); // away on her cruise season: head office leaves her line alone
+    const best=cruising?null:bestLine(sh,r0);
     if(best&&best.pm>0&&best.pm-curY.pm>=Math.max(400,Math.abs(curY.pm)*0.15)&&(S.lines[best.rk]||best.pm>300))add({id:`move:${sh.id}:${best.rk}`,scope:'ship',ref:sh.id,sev:'tip',gain:best.pm-curY.pm,
       title:`Move SS ${sh.name} to ${ROUTES[best.rk].name}`,
       why:`Averaged over the coming year she would make about ${money(best.pm)} a month there, against ${money(curY.pm)} on ${ROUTES[r0].name}, at current fares.${!S.lines[best.rk]?' You would need to open that line first (£2,500).':''} Check conference tension there before you commit.`,
       act:S.lines[best.rk]?[['Move her','moveship',sh.id,best.rk]]:[['Open it and move her','openmove',sh.id,best.rk],['View line','selline',best.rk]]});
     const idle=idleCost(sh),bestY=best?Math.max(best.pm,curY.pm):curY.pm;
-    if(S.ships.length>1&&bestY<-idle-150)add({id:`layup:${sh.id}`,scope:'ship',ref:sh.id,sev:'warn',gain:-idle-curY.pm,
+    if(!cruising&&S.ships.length>1&&bestY<-idle-150)add({id:`layup:${sh.id}`,scope:'ship',ref:sh.id,sev:'warn',gain:-idle-curY.pm,
       title:`Lay SS ${sh.name} up until trade recovers`,
       why:`Averaged over the coming year she would lose about ${money(-curY.pm)} a month on ${ROUTES[r0].name}, and no other route does better. Laid up on a skeleton crew she would cost only ${money(idle)}.`,
       act:[['Lay up at next port','moveship',sh.id,'']]});
-    else if(WINTER.includes(mo)&&cur.pm<-idle-150&&S.ships.length>1)add({id:`layup:${sh.id}`,scope:'ship',ref:sh.id,sev:'tip',gain:-idle-cur.pm,
+    else if(!cruising&&WINTER.includes(mo)&&cur.pm<-idle-150&&S.ships.length>1)add({id:`layup:${sh.id}`,scope:'ship',ref:sh.id,sev:'tip',gain:-idle-cur.pm,
       title:`Lay SS ${sh.name} up for the winter`,
       why:`She is losing about ${money(-cur.pm)} a month in the winter trade. Laid up on a skeleton crew she would cost only ${money(idle)}. Bring her back in March.`,
       act:[['Lay up at next port','moveship',sh.id,'']]});
-    if(!sh.wc&&!isCruise(r0)&&CL.reduce((q,c)=>q+(sh.berths[c]||0),0)>=100&&[7,8,9,10,2,3,4].includes(mo)){
+    if(!cruiseProg(sh).length&&!(sh.cp||[]).length&&!isCruise(r0)&&CL.reduce((q,c)=>q+(sh.berths[c]||0),0)>=100&&[7,8,9,10,2,3,4].includes(mo)){
       const best=cruiseEst(sh).slice().sort((p,q)=>(q.pm-q.home)-(p.pm-p.home))[0];
       if(best&&best.pm>0&&best.pm-best.home>=800)add({id:`wcr:${sh.id}`,scope:'ship',ref:sh.id,sev:'tip',gain:best.pm-best.home,title:`Send SS ${sh.name} cruising in ${cruiseMonthsText(best.rk)}`,
         why:`In those months she would make about ${money(best.pm)} a month cruising ${ROUTES[best.rk].cruise.cname}, against ${money(best.home)} on ${ROUTES[r0].name}. She goes back to her line when the season ends.${S.lines[best.rk]?'':` It means opening the cruise (${money(2500*PX())}).`}${sh.cruiser?'':' A cruise conversion would make her better at it.'}`,
-        act:[['Send her cruising','setwc',sh.id,best.rk],['View her','selship',sh.id]]});}
+        act:[['Add it to her programme','cruiseadd',sh.id,best.rk],['View her','selship',sh.id]]});}
     let bs={v:sh.speed,pm:curY.pm};for(const v of [0,1,2]){if(v===sh.speed)continue;const q=econYear(sh,r0,null,{speed:v});if(q.pm>bs.pm)bs={v,pm:q.pm};}
     if(bs.v!==sh.speed&&bs.pm-curY.pm>=150&&!(S.mail[r0]&&bs.v===0))add({id:`speed:${sh.id}`,scope:'ship',ref:sh.id,sev:'tip',gain:bs.pm-curY.pm,
       title:`Run SS ${sh.name} at ${['economical','service','full'][bs.v]} speed`,
@@ -276,10 +293,15 @@ function doAction(act,d){
     case 'setfares':{const [rk,f,s2,t]=d;if(S.lines[rk]){Object.assign(S.lines[rk].fares,{f,s:s2,t});return true;}return false;}
     case 'setlineopt':{const [rk,k,v]=d;if(S.lines[rk]){S.lines[rk][k]=v;return true;}return false;}
     case 'setship':{const [id,k,v]=d;const x=ship(id);if(x){x[k]=v;return true;}return false;}
-    case 'setwc':{const [id,rk]=d;const x=ship(id);if(!x)return false;if(!rk){if(x.line===x.wc&&x.homeLine!==undefined){x.line=x.homeLine;delete x.homeLine;}delete x.wc;return true;}
-      if(!ROUTES[rk]||!isCruise(rk)||!routeOpen(rk,S.m))return false;if(!S.lines[rk]){const fee=Math.round(2500*PX());if(S.cash<fee)return false;book('office',-fee,rk);S.lines[rk]={fares:defaultFares(rk),service:1,adv:1,last:[null,null]};news(`The Morven Line opens ${ROUTES[rk].name}.`,'good');}
-      x.wc=rk;delete x.wcHold;if(x.state==='laid'&&cruiseInSeason(rk,S.m)){x.state='port';x.portLeft=1;}return true;}
-    case 'moveship':{const [id,rk]=d;const x=ship(id);if(!x)return false;if(x.wc&&x.line===x.wc&&rk!==x.wc){x.wcHold=S.m+6;delete x.homeLine;} /* the owner's own choice wins this season */x.line=rk||null;if(x.line&&x.state==='laid'){x.state='port';x.portLeft=1;}return true;}
+    case 'setwc':case 'cruiseadd':{const [id,rk]=d;const x=ship(id);if(!x)return false;cruiseProg(x);
+      if(!rk){x.cp=[];return true;} // she finishes the cruise she is on, then goes back to her line
+      if(!ROUTES[rk]||!isCruise(rk)||!routeOpen(rk,S.m))return false;
+      if(!S.lines[rk]){const fee=Math.round(2500*PX());if(S.cash<fee)return false;book('office',-fee,rk);S.lines[rk]={fares:defaultFares(rk),service:1,adv:1,last:[null,null]};news(`The Morven Line opens ${ROUTES[rk].name}.`,'good');}
+      x.cp=x.cp||[];if(!x.cp.includes(rk))x.cp.push(rk);delete x.wcHold;
+      if(cruiseFor(x,S.m)){if(x.state==='laid'){x.state='port';x.portLeft=1;}if(x.state==='port')cruiseSeason(x);} // in season: she switches now if she is in port
+      return true;}
+    case 'cruisedrop':{const [id,rk]=d;const x=ship(id);if(!x)return false;cruiseProg(x);x.cp=(x.cp||[]).filter(k=>k!==rk);return true;}
+    case 'moveship':{const [id,rk]=d;const x=ship(id);if(!x)return false;if(onProgramme(x)&&rk!==x.line&&x.ownerSet===S.t){x.wcHold=S.m+6;delete x.homeLine;} /* the owner's own choice wins this season */x.line=rk||null;if(x.line&&x.state==='laid'){x.state='port';x.portLeft=1;}return true;}
     case 'setyard':{const [id,k]=d;const x=ship(id);if(!x)return false;if(x.pendingYard||x.state==='yard')return addYardJob(x,k);
       if(x.state==='sea'||x.state==='repo'){x.pendingYard=k;return true;}if(S.cash>=refitCost(x,k)){enterYard(x,k);return true;}return false;}
     case 'crewset':{const [id,dp,k,v]=d;const x=ship(id);if(!x||!CDEPT[dp]||!['man','pay','train'].includes(k))return false;cwOf(x)[dp][k]=clamp(v|0,0,2);if(k==='pay')x.pay=cwOf(x).deck.pay;return true;}
@@ -349,7 +371,7 @@ function deptCost(k){const D=DEPTS[k],o=S.depts[k],[b,perShip,perLine]=D.staff;
   const clerks=staff*CLERK_WAGE,rent=D.rent+Math.max(0,staff-4)*6,sundries=Math.round(20+staff*3);
   return {staff,head,clerks,rent,sundries,total:head+clerks+rent+sundries};}
 /* big decisions a department may propose but never takes on its own */
-const BIG=['openmove','sellship','buyship','build','setwc'];
+const BIG=['openmove','sellship','buyship','build','setwc','cruiseadd'];
 function propose(k,h,act,d){
   S.props=(S.props||[]).filter(p=>S.m-(p.m||0)<=2); // a proposal nobody answers lapses after two months
   const id=h.id;
@@ -379,6 +401,7 @@ function deptWeek(){
       if(!['setfare','setfares','setlineopt','setship','moveship','setyard','hire','crewset','appoint'].includes(act))continue;
       if(act==='setyard'&&!canSpend(refitCost(S.ships.find(q=>q.id===d[0])||{grt:0},d[1])))continue;
       if(act==='moveship'&&d[1]&&!S.lines[d[1]])continue;
+      if(act==='moveship'){const x=S.ships.find(q=>q.id===d[0]);if(x&&((x.cp||[]).length||onProgramme(x)))continue;} // her cruising is the owner's choice
       // one ship moved a week at most; a moved ship is left alone for two months to show what she can do
       if(act==='moveship'&&(movedNow||o.moved[d[0]]>S.t-60))continue;
       // a ship the owner has placed or set himself is left alone for three months

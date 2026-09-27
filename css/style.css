@@ -455,3 +455,15 @@ input[type=range]{width:100%;accent-color:var(--brass)}
 .cwfleet{padding:16px;overflow:auto}
 .cwfleet tr[data-act]{cursor:pointer} .cwfleet tr[data-act]:hover{background:var(--surface2)}
 .board.cwft{table-layout:auto} .board.cwft th,.board.cwft td{width:auto!important;padding-inline:8px} .board.cwft th.c{text-align:center;border-bottom:none}
+.goodline{font-size:12.5px;color:var(--good,#3d7a4f);margin:0;font-weight:600}
+
+/* cruise programme: her year */
+.yr{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:2px;margin:6px 0 2px}
+.yrm{display:flex;flex-direction:column;align-items:center;gap:1px;padding:4px 1px;border-radius:3px;font-size:10px;line-height:1.15;color:#fff;min-width:0}
+.yrm b{font-weight:700} .yrm span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;opacity:.9}
+.yrm i{font-style:normal;font-family:var(--mono);font-size:9.5px;white-space:nowrap}
+.yrm.ln{background:var(--surface2);color:var(--ink,inherit)} .yrm.lay{background:repeating-linear-gradient(45deg,var(--surface2),var(--surface2) 3px,transparent 3px,transparent 6px);color:var(--muted)}
+.yrm.cr i.neg{color:#FFD6D0} .yrm.cr i.pos{color:#fff}
+.cdot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.cruisehelp ul{padding-left:18px;margin:4px 0 0}
+.yr-key{font-size:11px;color:var(--muted);margin:0 0 4px}

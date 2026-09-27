@@ -284,16 +284,33 @@ function shipAccHTML(sh){
   ${cruiseCtlHTML(sh)}`;
 }
 /* seasonal cruising: she leaves her line for a cruise's season and goes back after */
+const CRUISE_COL={cwi:'#C98A2B',cmd:'#3F7F93',cfj:'#4F8A5B',cwx:'#B0503C',cnw:'#7A5C99'},CRUISE_SHORT={cwi:'Madeira',cmd:'Med',cfj:'Fjords',cwx:'W Indies',cnw:'Nowhere'};
+const cruiseHelpHTML=()=>`<div class="cruisehelp"><button class="btn quiet" data-act="cruisehelp" aria-expanded="${!!UI.cruiseHelp}">${UI.cruiseHelp?'Hide':'How cruising works'}</button>${UI.cruiseHelp?`<ul class="note">
+  <li>Any passenger ship can cruise. Steerage sells nothing on a cruise (except the cruises to nowhere), so emigrant ships do badly; a cruise conversion in the refit office, or a purpose-built cruise ship, does best.</li>
+  <li>Add cruises to her programme. In each cruise's months she sails it from its home port; in the months between she goes back to her own line, or lays up if she had none.</li>
+  <li>She always finishes the cruise she is on and brings her passengers home before she moves on. Changing home port means a light passage, a few days and some coal.</li>
+  <li>The cruise line must be open (adding a cruise opens it). Departments leave her programme alone; assigning her to a line yourself pauses it for the season.</li></ul>`:''}</div>`;
 function cruiseCtlHTML(sh){
   if(CL.reduce((a,c)=>a+(sh.berths[c]||0),0)<60)return '';
-  const est=cruiseEst(sh),wc=sh.wc,now=wc&&sh.line===wc&&sh.homeLine!==undefined;
-  const rows=est.map(o=>{const on=wc===o.rk,gain=o.pm-o.home;
-    return `<tr${on?' class="cur"':''}><td>${ROUTES[o.rk].cruise.cname[0].toUpperCase()+ROUTES[o.rk].cruise.cname.slice(1)}<div class="meta">${cruiseMonthsText(o.rk)}${S.lines[o.rk]?'':' · not open yet'}</div></td>
+  const est=cruiseEst(sh),cp=cruiseProg(sh),on=onProgramme(sh),now=cruiseFor(sh,S.m),nm=k=>ROUTES[k].cruise.cname;
+  const P=yearPlan(sh);
+  const cell=x=>{const lab=x.cruise?CRUISE_SHORT[x.rk]:x.rk?'Line':'Laid up';
+    return `<div class="yrm ${x.cruise?'cr':x.rk?'ln':'lay'}" ${x.cruise?`style="background:${CRUISE_COL[x.rk]}"`:''} title="${MONTHS[x.mo]}: ${x.cruise?nm(x.rk):x.rk?ROUTES[x.rk].name:'laid up'}, about ${fmt(Math.round(x.pm/10)*10)} a month"><b>${MONTHS[x.mo].slice(0,3)}</b><span>${lab}</span><i class="${x.pm<0?'neg':'pos'}">${(x.pm<0?'−':'')+(Math.abs(x.pm)>=1000?(Math.abs(x.pm)/1000).toFixed(1)+'k':Math.round(Math.abs(x.pm)/10)*10)}</i></div>`;};
+  const status=on?`<p class="goodline">Cruising now: ${nm(sh.line)}. ${(()=>{const nx=P.months.find(x=>x.rk!==sh.line);return nx?(nx.cruise?`Then ${nm(nx.rk)} from ${MONTHS[nx.mo]}.`:`Back to ${sh.homeLine?'the '+ROUTES[sh.homeLine].name+' service':'her lay-up'} in ${MONTHS[nx.mo]}.`):'';})()}</p>`
+    :now?`<p class="warnline">In season now: she joins ${nm(now)} ${sh.state==='sea'||sh.state==='repo'?'when she reaches port':'when she next sails'}.</p>`
+    :cp.length?(()=>{const nx=P.months.find(x=>x.cruise);return nx?`<p class="note" style="margin:0"><strong>Next:</strong> ${nm(nx.rk)} from ${MONTHS[nx.mo]}.</p>`:'';})():'';
+  const rows=est.map(o=>{const inP=cp.includes(o.rk),gain=o.pm-o.home;
+    return `<tr${inP?' class="cur"':''}><td><span class="cdot" style="background:${CRUISE_COL[o.rk]}"></span>${nm(o.rk)[0].toUpperCase()+nm(o.rk).slice(1)}<div class="meta">${cruiseMonthsText(o.rk)}${S.lines[o.rk]?'':' · not open yet'}</div></td>
       <td class="r num ${o.pm<0?'neg':'pos'}">${fmt(Math.round(o.pm/10)*10)}</td><td class="r num ${gain<0?'neg':'pos'}">${gain>=0?'+':'−'}${fmt(Math.abs(Math.round(gain/10)*10))}</td>
-      <td class="r">${on?'<span class="chip sea">Chosen</span>':`<button class="btn" data-act="setwc" data-d='${JSON.stringify([sh.id,o.rk])}' ${S.over||(!S.lines[o.rk]&&S.cash<2500*PX())?'disabled':''}>${S.lines[o.rk]?'Choose':'Open and choose'}</button>`}</td></tr>`;}).join('');
-  return `<div class="ctl"><div class="row"><span class="lbl">Seasonal cruising</span>${wc?`<button class="btn quiet" data-act="setwc" data-d='${JSON.stringify([sh.id,''])}'>Stop cruising</button>`:''}</div>
+      <td class="r">${inP?`<button class="btn quiet" data-act="cruisedrop" data-d='${JSON.stringify([sh.id,o.rk])}'>Remove</button>`:`<button class="btn" data-act="cruiseadd" data-d='${JSON.stringify([sh.id,o.rk])}' ${S.over||(!S.lines[o.rk]&&S.cash<2500*PX())?'disabled':''}>${S.lines[o.rk]?'Add':'Open and add'}</button>`}</td></tr>`;}).join('');
+  return `<div class="ctl"><div class="row"><span class="lbl">Cruise programme</span>${cp.length?`<button class="btn quiet" data-act="cruiseadd" data-d='${JSON.stringify([sh.id,''])}'>Clear it</button>`:''}</div>
+    ${status}
+    <div class="yr" role="img" aria-label="Her year">${P.months.map(cell).join('')}</div>
+    <p class="yr-key">Her next twelve months: where she sails and about what she makes a month there, in thousands of pounds.</p>
+    <p class="note" style="margin:2px 0 6px">${cp.length?`Her year: about <strong class="${P.avg<0?'neg':'pos'}">${fmt(Math.round(P.avg/10)*10)}</strong> a month on average, against ${fmt(Math.round(P.base/10)*10)} on her own line all year${P.days>=1?`, after ${Math.round(P.days)} days a year of light passages between ports`:''}.`:`Her year on her own line: about ${fmt(Math.round(P.base/10)*10)} a month on average. Add a cruise to see the difference.`}</p>
     <div class="tablewrap"><table class="lineopts"><thead><tr><th>Cruise</th><th class="r">In season</th><th class="r">Against her line</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
-    <span class="note">${wc?`In ${cruiseMonthsText(wc)} she leaves her line to cruise ${ROUTES[wc].cruise.cname}, and goes back when the season ends.${now?` She is cruising now, and returns to ${sh.homeLine?'the '+ROUTES[sh.homeLine].name+' service':'her lay-up'} after.`:''}`:'Choose a cruise and she leaves her line for its season, then goes back. A laid-up ship comes out for the season and lays up again after.'} Profit a month in the cruise's season, against her line in the same months.${sh.cruiser?'':' Steerage berths sell nothing on a cruise; a cruise conversion in the refit office makes her a better cruiser.'}</span></div>`;
+    <span class="note">Profit a month in each cruise's season, against her own line in the same months. Where two seasons meet, the one she is on runs its course first.</span>
+    ${cruiseHelpHTML()}</div>`;
 }
 /* the ship panel in headed groups that fold away; which are open is remembered from ship to ship */
 function shipGrp(k,title,sum,body){
@@ -365,17 +382,29 @@ function renderLineDetail(rk){
       <div class="ctl"><span class="lbl">Service and table</span>${seg('lineset','service',L.service,['Spartan','Standard','Lavish'])}</div>
       <div class="ctl"><span class="lbl">Advertising · £/month</span>${seg('lineset','adv',L.adv,['None','300','800','1,500'])}</div>
     </div>
+    ${r.cruise?cruiseFleetHTML(rk)+cruiseHelpHTML():''}
     ${lineShipsHTML(rk,ships)}
     <div class="forecast"><span class="lbl">Next sailing forecast${ships.length>1?'':' · SS '+rep.name}</span>
       ${ships.length>1?`<div class="seg" role="group" style="margin:4px 0 6px;flex-wrap:wrap">${ships.map(x=>`<button data-act="fcship" data-id="${x.id}" data-k="${rk}" aria-pressed="${x===rep}">SS ${x.name}</button>`).join('')}</div>`:''}
       <dl class="kv"><dt>Outward</dt><dd>${fmt(w.paxRev+w.cargoRev)}</dd><dt>Homeward</dt><dd>${fmt(e.paxRev+e.cargoRev)}</dd>
       <dt>Round trip</dt><dd>${Math.round(rt)} days</dd><dt><strong>Profit per ship per month</strong></dt><dd class="${perMonth<0?'neg':'pos'}"><strong>${fmt(perMonth)}</strong></dd></dl>
-      <p class="note">Out: ${fp(w)||'no passengers'}, ${int(w.cargoT)} t ${COMM[w.comm].name.toLowerCase()}. Home: ${fp(e)||'no passengers'}, ${int(e.cargoT)} t ${COMM[e.comm].name.toLowerCase()}. Before head office costs and bad luck.</p></div>
+      <p class="note">${r.cruise?`Booked: ${fp(w)||'no passengers'}, for the whole cruise; homeward she carries the same people and earns only what they spend aboard.`:`Out: ${fp(w)||'no passengers'}, ${int(w.cargoT)} t ${COMM[w.comm].name.toLowerCase()}. Home: ${fp(e)||'no passengers'}, ${int(e.cargoT)} t ${COMM[e.comm].name.toLowerCase()}.`} Before head office costs and bad luck.</p></div>
     ${marketHTML(rk,estPax,Math.max(1,nAct))}
     <div class="btns">${UI.confirm==='close'+rk?`<button class="btn danger" data-act="closeline" data-id="${rk}">Confirm: close line</button><button class="btn" data-act="cancel">Keep it</button>`:`<button class="btn danger" data-act="askclose" data-id="${rk}">Close this line</button>`}</div>`);
 }
+/* on a cruise's panel: every passenger ship, what she would make on this cruise in its season, and the buttons to send her */
+function cruiseFleetHTML(rk){
+  const ms=ROUTES[rk].cruise.months,list=S.ships.filter(x=>x.state!=='lost'&&CL.reduce((a,c)=>a+(x.berths[c]||0),0)>=60);
+  if(!list.length)return `<div class="ctl"><span class="lbl">Send a ship</span><span class="note">You have no passenger ships to send cruising.</span></div>`;
+  const rows=list.map(x=>{const est=cruiseEst(x).find(o=>o.rk===rk)||{pm:econMonths(x,rk,ms),home:-idleCost(x)},on=cruiseProg(x).includes(rk),all=x.line===rk&&!onProgramme(x),gain=est.pm-est.home;
+    return `<tr data-key="cf${x.id}"><td><div class="nm">${x.name}${x.cruiser?' <span class="chip sea">Cruiser</span>':''}</div><div class="meta">${on?(x.line===rk?'cruising here now':'in her programme'):all?'cruises here all year':x.line&&x.state!=='laid'?ROUTES[x.line].name:'laid up'}</div></td>
+      <td class="r num ${est.pm<0?'neg':'pos'}">${fmt(Math.round(est.pm/10)*10)}</td><td class="r num ${gain<0?'neg':'pos'}">${gain>=0?'+':'−'}${fmt(Math.abs(Math.round(gain/10)*10))}</td>
+      <td class="r"><div class="btns" style="justify-content:flex-end">${on?`<button class="btn quiet" data-act="cruisedrop" data-d='${JSON.stringify([x.id,rk])}'>Remove</button>`:`<button class="btn" data-act="cruiseadd" data-d='${JSON.stringify([x.id,rk])}' ${S.over?'disabled':''}>Add in season</button>`}${all?'':`<button class="btn quiet" data-act="moveship" data-d='${JSON.stringify([x.id,rk])}' ${S.over||!S.lines[rk]?'disabled':''}>All year</button>`}</div></td></tr>`;}).join('');
+  return `<div class="ctl"><span class="lbl">Send a ship</span><div class="tablewrap"><table class="board cwft"><thead><tr><th>Ship</th><th class="r">In season</th><th class="r">Against her line</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+    <span class="note"><strong>Add in season</strong> puts this cruise in her programme: she sails it in ${cruiseMonthsText(rk)} and goes back to her line after. She can have several cruises; see her panel for her whole year. <strong>All year</strong> makes this her line. Profit a month in the season, against her own line in the same months. Steerage sells nothing on a cruise${ROUTES[rk].cruise.steerage?' (except here, as cheap bunks)':''}: converted and purpose-built cruisers do best.</span></div>`;
+}
 function lineShipsHTML(rk,ships){
-  if(!ships.length)return `<div class="ctl"><span class="lbl">Her ships</span><span class="note">No ships on this line. Assign one from her panel in the Fleet tab.</span></div>`;
+  if(!ships.length)return `<div class="ctl"><span class="lbl">Ships on this line</span><span class="note">None at present.${ROUTES[rk].cruise?' Send one from the table above.':' Assign one from her panel in the Fleet tab, where her line table shows what she would make here.'}</span></div>`;
   const n=v=>v===undefined||v===null?'<td class="r meta">–</td>':`<td class="r num ${v<0?'neg':'pos'}">${fmt(Math.round(v))}</td>`;
   const rows=ships.map(sh=>{const pl=sh.pl||[],avg=pl.length?pl.reduce((a,b)=>a+b,0)/pl.length:null;
     return `<tr class="bship" data-act="selship" data-id="${sh.id}" data-key="ls${sh.id}"><td><div class="nm">${sh.name}</div><div class="meta">${shipStatus(sh).short}</div></td>${n(pl.slice(-1)[0])}${n(avg)}${n(econYear(sh,rk).pm)}</tr>`;}).join('');

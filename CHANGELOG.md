@@ -2,6 +2,20 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.15.0 (27 September 2026)
+- Cruise programmes: a ship can have several cruises, not just one. In each cruise's months she sails it from its home port; where two seasons meet she finishes the one she is on first; in the months between she goes back to her own line, or lays up if she had none. A converted ship can cruise most of the year: Madeira in winter, the Mediterranean in spring and autumn, the fjords in summer.
+- Her year, on her panel: a strip of the next twelve months showing where she will sail and about what she makes each month, and her average month with the programme against her own line all year, after the light passages between home ports.
+- The cruise table on her panel adds and removes cruises one by one, with what each makes in its season against her line. Each cruise's panel on the Lines tab adds a ship to its programme, or makes it her line all year.
+- Her panel says plainly what happens next: cruising now and where she goes after, joining when she next sails, or her next cruise and when.
+- "How cruising works", on her panel and on each cruise's panel: what sells on a cruise, how the programme runs, and what changing home port costs.
+- A ship's single cruise from 0.14 becomes her programme.
+
+## 0.14.1 (27 September 2026)
+- Fixed: an acting Traffic Department took ships off their cruise in the middle of the season and cancelled their cruising, and head office kept advising moving or laying up a ship away cruising. Departments now leave a ship with seasonal cruising alone, and only your own choice of line ends her season early.
+- Choosing a cruise in its season takes effect at once if she is in port, and her panel says plainly what happens next: cruising now, joining when she next sails, or going in which months.
+- Each cruise's panel on the Lines tab has a Send a ship table: every passenger ship, what she would make on the cruise in its season against her own line, and buttons to send her for the season or all year.
+- The Villefranche label no longer runs into Naples on the chart.
+
 ## 0.14.0 (27 September 2026)
 Cruises.
 - Five cruises, a new group on the Lines tab and new routes on the chart: Madeira and the Canaries (winter sun, from Southampton), the Mediterranean (spring and autumn), Norway and the fjords (summer, from Glasgow), the West Indies (winter, from New York), and the cruises to nowhere (two nights from New York to beyond the limit, where the bar can open, until Prohibition ends in December 1933).
