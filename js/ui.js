@@ -195,12 +195,6 @@ function renderShipDetail(sh){
     ${UI.view==='cut'?legendHTML(sh):''}</div>`);
   const pB=sh.cond<75?(75-sh.cond)/100*0.175:0;
   const lines=Object.keys(S.lines);
-  const yb=(k,label,show)=>{if(!show)return '';const c=refitCost(sh,k);
-    if(sh.pendingYard===k)return `<button class="btn" data-act="unyard">Cancel ${label.toLowerCase()} order</button>`;
-    if((sh.yardAdd||[]).includes(k))return sh.state==='yard'?`<button class="btn" disabled>${label==='Fit'?'In hand':label+': in hand'}</button>`:`<button class="btn" data-act="unyardx" data-k="${k}">${label==='Fit'?'Take off the visit':'Take '+label.toLowerCase()+' off the visit'}</button>`;
-    if(sh.state==='yard'&&sh.yardKind===k)return `<button class="btn" disabled>${label==='Fit'?'In hand':label+': in hand'}</button>`;
-    if(yardAdd(sh,k)){const cb=bundleCost(sh,k);return `<button class="btn" data-act="yardadd" data-k="${k}" ${S.cash<(sh.state==='yard'?cb:0)||S.over?'disabled':''}>${label==='Fit'?'Add':'Add '+label.toLowerCase()+' to the visit'} · ${fmt(cb)}${label==='Fit'?'':' (15% off)'} · +${Math.round(0.3*Math.min(YARD_DAYS[k],sh.state==='yard'?sh.yardLeft:YARD_DAYS[sh.pendingYard]||0)+Math.max(0,YARD_DAYS[k]-(sh.state==='yard'?sh.yardLeft:YARD_DAYS[sh.pendingYard]||0)))} days</button>`;}
-    return `<button class="btn" data-act="yard" data-k="${k}" ${sh.state==='yard'||sh.pendingYard||S.cash<c||S.over?'disabled':''}>${label} · ${fmt(c)} · ${YARD_DAYS[k]} days${atSea?' (on arrival)':''}</button>`;};
   const sellV=Math.round(shipValue(sh)*0.9),scrapV=sh.grt*2;
   let exitH='';
   if(sh.pendingExit)exitH=`<p class="warnline">To be ${sh.pendingExit==='scrap'?'scrapped':'sold'} when she next reaches port.</p><button class="btn" data-act="unexit">Cancel</button>`;
@@ -232,14 +226,13 @@ function renderShipDetail(sh){
       <span class="note">Wages ${fmt(crewCost(sh))} a month. Low pay saves money but a sullen crew breaks more, serves worse and deserts in port. Morale settles toward what pay and the master earn.</span></div>
     <div class="ctl"><div class="row"><span class="lbl">Fittings</span><span class="meta">${Math.round(sh.fit)}%</span></div>${condBar(sh.fit)}
       <span class="note">Cabins, saloons and linen wear out a few points a year. Tired fittings put off first and second class. A refurbishment restores them.</span></div>
-    <div class="ctl"><span class="lbl">Shipyard</span><div class="btns">
-      ${yb('dock','Drydock overhaul',true)}${yb('replate','Re-plate and renew frames',fatOf(sh)>35)}${yb('refurb','Refurbish',sh.fit<80)}${yb('oil','Convert to oil',sh.fuel==='coal')}${yb('tourist','Tourist Third refit',S.m>=48&&sh.berths.tt===0&&sh.berths.t>0)}</div>
-      ${sh.pendingYard&&sh.pendingYard!=='repair'?`<p class="warnline">Booked into the yard for ${YARD_NAME[sh.pendingYard]} on arrival.</p>`:''}
-      ${sh.pendingYard==='repair'?'<p class="badline">Goes straight to the yard for fire repairs on arrival.</p>':''}
-      ${atOwnYard(sh)?'<p class="note">She is at your own yard: work here is 30% cheaper and quicker.</p>':''}
-      <p class="note">${sh.pendingYard||sh.state==='yard'?'While she is booked in or in the yard, more work can go on the same visit: 15% off each extra job, and most of it runs alongside.':'Book one job and more can be added to the same visit, 15% cheaper each and mostly done alongside.'}</p></div>
-    <div class="ctl"><span class="lbl">Upgrades</span><div class="stack" style="gap:6px">${Object.keys(UPGRADES).map(k=>{const u=UPGRADES[k],on=sh.up&&sh.up[k];
-      return `<div class="uprow" data-key="up${k}"><div><strong>${u.name}</strong>${on?' <span class="chip sea">Fitted</span>':''}<div class="meta">${u.desc}</div></div>${on?'':yb(k,'Fit',true)}</div>`;}).join('')}</div></div>
+    <div class="ctl"><span class="lbl">Refits and facilities</span>
+      ${sh.state==='yard'?`<p class="warnline">In the yard for ${[sh.yardKind,...(sh.yardAdd||[])].map(k=>YARD_NAME[k]).join(', ')}: about ${Math.ceil(sh.yardLeft)} days to go.</p>`:''}
+      ${sh.pendingYard?`<p class="${sh.pendingYard==='repair'?'badline':'warnline'}">Booked into the yard on arrival for ${[sh.pendingYard,...(sh.yardAdd||[])].map(k=>YARD_NAME[k]).join(', ')}.</p>`:''}
+      <div class="meta">${[...Object.keys(UPGRADES).filter(k=>sh.up&&sh.up[k]).map(k=>UPGRADES[k].name),...Object.keys(EQUIP).filter(k=>sh.up&&sh.up[k]).map(k=>EQUIP[k].name)].join(' · ')||'No upgrades fitted.'}</div>
+      <div class="meta">${FAC_KEYS.filter(k=>facLv(sh,k)).map(k=>FAC[k].levels[facLv(sh,k)].n).join(' · ')||'Plain public rooms.'} ${slotsUsed(sh.fac)} of ${slotsOf(sh)} venues used.</div>
+      <div class="btns"><button class="btn primary" data-act="refit" data-id="${sh.id}" ${S.over?'disabled':''}>Open the refit office</button>${sh.pendingYard&&sh.pendingYard!=='repair'?'<button class="btn" data-act="unyardall">Cancel the booking</button>':''}</div>
+      <span class="note">Every yard job, upgrade and facility for her in one window, booked as one visit.${atOwnYard(sh)?' She is at your own yard: work here is 30% cheaper and quicker.':''}</span></div>
     <div class="ctl"><span class="lbl">Retire</span><div class="btns">${exitH||'<span class="note">You cannot retire your only ship.</span>'}</div></div>
     ${sh.lastRemark?`<div class="ctl"><span class="lbl">The master's last word</span><blockquote class="remark">${esc(plainTel(telegram(sh.lastRemark.txt)).replace(/^Master to owners\. /,''))}<footer>${esc(sh.lastRemark.who)}, ${dateLong(sh.lastRemark.t)}</footer></blockquote></div>`:''}
     <div class="ctl"><span class="lbl">Her hull</span><span class="note"><strong>${fatWord(sh)}.</strong> ${Math.floor(yearNow()-sh.built)} years old${condCap(sh)<92?`; the yard can bring her to ${condCap(sh)}% at best`:''}${sh.replates?`, re-plated ${sh.replates===1?'once':sh.replates+' times'}`:''}. Hard driving, full speed, gales and neglect use up her life faster. ${dimsOf(sh).len|0} ft long, drawing ${dimsOf(sh).draught|0} ft${sh.len?'':' (estimated)'}. ${(sh.foul||0)<0.2?'Clean bottom.':(sh.foul||0)<0.45?'Some growth on her bottom.':(sh.foul||0)<0.7?'Her bottom is foul; she has lost speed.':'Badly foul and slow. She needs drydocking.'}</span></div>
@@ -371,7 +364,7 @@ function renderShore(){
   const yards=Object.keys(YARD_PORTS).map(p=>`<div class="uprow" data-key="yd${p}"><div><strong>A repair yard on ${YARD_PORTS[p]}</strong><div class="meta">At ${PN[p]}${sh.slip===p?' · with a building slip, '+(sh.slipBuilt||0)+' ships built':''}</div></div>${!sh.yards[p]?buy('yard',p):!sh.slip?buy('slip',p,'Add a building slip'):own}</div>`).join('');
   const bk=sh.bunker&&sh.bunker.until>=S.m;
   setHTML($('pane-shore'),`
-    <section class="sec"><h2>Head office</h2><p class="note">Each department advises in its own field, and can be told to act on its advice. A department is only as good as its head and staff: a muddled head misses months and misjudges fares, a careful one lets small gains go. Acting departments keep a cash reserve and never open lines, buy, build or sell ships on their own: they bring those to you as proposals.</p><div class="stack">${depts}</div></section>
+    <section class="sec"><h2>Head office</h2>${S.ships.length<4?`<p class="warnline">With ${S.ships.length===1?'one ship':S.ships.length+' ships'} a department costs more than it can save: they start to pay their way at about four ships. Each costs its opening fee plus wages and rent every month.</p>`:''}<p class="note">Each department advises in its own field, and can be told to act on its advice. A department is only as good as its head and staff: a muddled head misses months and misjudges fares, a careful one lets small gains go. Acting departments keep a cash reserve and never open lines, buy, build or sell ships on their own: they bring those to you as proposals.</p><div class="stack">${depts}</div></section>
     <section class="sec"><h2>Piers</h2><p class="note">Your own pier cuts port dues there by 60% and takes a day off each turnaround. ${fmt(350*PX())} a month each to run.</p><div class="stack" style="gap:6px">${piers}</div></section>
     <section class="sec"><h2>Booking agencies</h2><p class="note">Agents in a region book passengers for every line calling there: steerage up about 7%, cabin classes 3%. ${fmt(300*PX())} a month each.</p><div class="stack" style="gap:6px">${agents}</div></section>
     <section class="sec"><h2>Emigrant hostels</h2><p class="note">Clean beds and a medical check before sailing. Steerage up 5% on lines calling there, fewer quarantine scares, and a little reputation. ${fmt(250*PX())} a month each.</p><div class="stack" style="gap:6px">${hostels}</div></section>

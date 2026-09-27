@@ -58,6 +58,7 @@ document.addEventListener('click',e=>{
     case 'lineset':if(L)L[b.dataset.k]=+b.dataset.v;break;
     case 'yard':if(sh){const k=b.dataset.k;if(sh.state==='sea'||sh.state==='repo')sh.pendingYard=k;else if(S.cash>=refitCost(sh,k))enterYard(sh,k);}break;
     case 'unyard':if(sh&&sh.pendingYard!=='repair'){sh.pendingYard=(sh.yardAdd||[]).shift()||null;}break;
+    case 'unyardall':if(sh&&sh.pendingYard!=='repair'){sh.pendingYard=null;sh.yardAdd=[];sh.facPlan=null;}break;
     case 'yardadd':if(sh)addYardJob(sh,b.dataset.k);break;
     case 'unyardx':if(sh&&sh.state!=='yard')sh.yardAdd=(sh.yardAdd||[]).filter(x=>x!==b.dataset.k);break;
     case 'askexit':UI.confirm=b.dataset.k+sh.id;break;
@@ -74,6 +75,9 @@ document.addEventListener('click',e=>{
     case 'accept':if(S.offer){S.mail[S.offer.route]={pay:S.offer.pay,strikes:0,ok:false};news(`Mail contract won on ${ROUTES[S.offer.route].name}: ${fmt(S.offer.pay)} per round trip.`,'good');S.offer=null;}break;
     case 'decline':S.offer=null;break;
     case 'safety':S.safety=+b.dataset.id;break;
+    case 'refit':{const d=b.dataset.d?JSON.parse(b.dataset.d):[+b.dataset.id];openRefit(+d[0],d[1]);break;}
+    case 'rfclose':closeRefit();break;
+    case 'rflevel':case 'rfpicks':case 'rfbook':rfAct(a,b);break;
     case 'union':unionAnswer(b.dataset.id==='yes');break;
     case 'giltbuy':gilts(true,+b.dataset.id);break;
     case 'giltsell':gilts(false,b.dataset.id==='all'?S.gilts:+b.dataset.id);break;
@@ -92,6 +96,7 @@ document.addEventListener('change',e=>{
   if(t.dataset.wirert)UI.wireRoutine=t.checked;
   if(t.dataset.dzx&&UI.dz){UI.dz.extras[t.dataset.dzx]=t.checked;}
   if(t.dataset.dzline&&UI.dz){UI.dz.line=t.value;}
+  if(t.dataset.rfjob&&UI.rf){UI.rf.jobs[t.dataset.rfjob]=t.checked;}
   t.blur();UI.rev=(UI.rev||0)+1;save();UI.dirty=true;
 });
 document.addEventListener('keydown',e=>{

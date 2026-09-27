@@ -2,6 +2,17 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.9.0 (27 September 2026)
+- The refit office: every yard job, upgrade and facility for a ship in one window, like the drawing office, with the clock stopped while it is open. Tick what you want, see the cost, the days out of service, the berths it takes and what it would add a month on her line, and book it all as one yard visit. The Marine Superintendent marks the options that would pay for themselves within about three years; one button takes his picks. It replaces the yard and upgrade buttons on the ship panel, and head office advice about yard work now has a button to open it.
+- Public rooms and facilities, at build and at refit: first, second and third-class dining, theatre and music, a cinema, shops and duty free, swimming pools, a gymnasium and spa, a winter garden, and family rooms, each with levels from the modest to the grand. Each level takes a venue (a ship has two plus one per 8,000 tons), takes room from the cabins of the classes it serves, costs money to fit and to staff, and draws passengers. Shops, bars and shows earn money aboard, which shows in the ledger. Indoor rooms (pools, winter gardens, enclosed promenades) bring more passengers in the winter months. The grandest rooms need big ships and later years.
+- New equipment can be fitted at refit, not only at build: gyro and fin stabilisers, a radio-telephone, air conditioning and a radiolocation set.
+- The drawing office lays out public rooms for each kind of ship, and you can change them. The old pool and cinema extras are now facilities.
+
+## 0.8.4 (27 September 2026)
+- Salvage after a breakdown beyond repair is mostly paid by the underwriters: the Line pays an excess and a quarter of the rest.
+- A tow is explained in full: the salvage bill, who pays it, and the passengers' refunded fares when she is towed back. The ledger shows salvage and refunds on their own lines instead of hiding them in yard costs and fares.
+- The Shore tab warns that departments cost more than they save until the fleet reaches about four ships.
+
 ## 0.8.3 (27 September 2026)
 - Fixed: head office kept advising big first-class rises. Demand above the line rate now falls away much faster than below it, because passengers simply book with the line next door; the most profitable fare is now close to the line rate unless the ship is faster or finer than her rivals.
 - Fixed: head office advised fare cuts that the rivals would match within months, then advised raising them back. Fare advice now judges a fare where it settles, after the rivals respond.

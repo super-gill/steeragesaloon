@@ -23,6 +23,7 @@ It is a static browser game with no build step. Open `index.html`, or serve the 
 | `js/rivals.js` | Rival lines: fleets, the shared market on each route, price matching, and each rival's monthly decisions |
 | `js/naval.js` | Naval architecture: port limits, route weather, displacement, length, form and power, bunkers and range; the engineers' recommendation and report; fouling, port fit, seakeeping and masters' remarks in service |
 | `js/yard.js` | Shipbuilding: purposes, hull forms, machinery, fittings, extras, builders and slips, prices, stage payments, orders and delivery; newer ships for the brokers |
+| `js/facilities.js` | Public rooms and facilities (dining, shows, cinema, shops, pools, spa, winter garden, family rooms) with levels, venues, room, staff, appeal, winter draw and money spent aboard; refit equipment; the refit office window and the Marine Superintendent's picks |
 | `js/state.js` | Game state, new game, save and load (browser localStorage) with migrations, save codes |
 | `js/clock.js` | Real-time clock: pause, 1×, 3×, 7× and the frame loop |
 | `js/map.js` | Chart rendering, pan and zoom, ship markers |

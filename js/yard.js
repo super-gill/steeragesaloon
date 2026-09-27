@@ -63,8 +63,6 @@ function fashion(style,y){
 const EXTRAS={
   wireless:{name:'Wireless telegraphy',cost:()=>2500,blurb:'A set and two operators keeping watch.'},
   reefer:{name:'Refrigerated holds',cost:g=>g*2+4000,blurb:'Insulated holds for fruit and meat.'},
-  pool:{name:'Swimming pool and gymnasium',min:12000,cost:()=>25000,fs:1.04,blurb:'Tiled pool, Turkish bath, electric horse.'},
-  cinema:{name:'Cinema',from:1930,cost:()=>9000,fs:1.02,t:1.02,blurb:'Talking pictures in mid-ocean.'},
   stab:{name:'Gyro stabilisers',from:1932,cost:g=>g*1.6,fs:1.03,gale:0.6,blurb:'Great spinning wheels that damp the roll.'},
   rphone:{name:'Radio-telephone',from:1936,cost:()=>7000,fs:1.02,blurb:'Passengers can telephone ashore from mid-ocean.'},
   aircon:{name:'Air conditioning',from:1937,cost:g=>g*1.3,fs:1.03,tropic:1.06,blurb:'Cooled public rooms: a boon in the tropics.'},
@@ -82,13 +80,21 @@ const OWN_SLIP_COST=250000;
 const techOn=(from,y)=>!from||y>=from;
 const yNow=()=>yearNow();
 
+/* the public rooms the architects pencil in for each kind of ship, within what her size allows */
+function defaultFac(pk,g,y){
+  const want={express:{dineF:2,dineS:1,shows:2,pool:1,garden:1,shops:1},inter:{dineF:1,dineS:1,shows:1,garden:1},emig:{dineT:1,family:1},
+    tourist:{dineS:1,shows:1,cinema:1},mixed:{dineF:1},cargo:{},reefer:{}}[pk]||{};
+  const f={};let n=0;const cap=2+Math.floor(g/8000);
+  for(const k in want){let l=want[k];while(l>0&&!levelOk(k,l,g,y))l--;if(l>0&&n+l<=cap){f[k]=l;n+=l;}}
+  return f;
+}
 /* ---------- the design: everything the drawing office works out from the owner's choices ---------- */
 function defaultDesign(pk){
   const P=PURPOSES[pk||'inter'],y=yNow();
   const g=Math.round((P.size[0]*0.65+P.size[1]*0.35)/500)*500,kn=Math.round(P.speed[0]+(P.speed[1]-P.speed[0])*0.35);
   return {purpose:pk||'inter',grt:g,knots:kn,form:y>=1929?'bulb':'cruiser',subdiv:'std',mach:kn>18?'geared':'quad',fuel:'oil',
     mix:{...P.mix},pax:P.pax,quality:1,style:y>=1933?'moderne':y>=1925?'deco':'edw',extras:{wireless:true,reefer:!!P.reefer},
-    funnels:g>=30000?3:g>=12000?2:1,builder:'clyde',contract:'fixed',name:'',line:'',auto:{mach:true,form:true}};
+    fac:defaultFac(pk||'inter',g,y),funnels:g>=30000?3:g>=12000?2:1,builder:'clyde',contract:'fixed',name:'',line:'',auto:{mach:true,form:true}};
 }
 function builderOf(d){return d.builder==='own'?ownBuilder():BUILDERS[d.builder];}
 function ownBuilder(){const p=S.shore&&S.shore.slip;if(!p)return null;
@@ -100,7 +106,10 @@ function designStats(d){
   if(g>B.max)w.push(`${B.name} has no slip long enough for ${int(g)} tons (their limit is ${int(B.max)}).`);
   if(!M.fuels.includes(d.fuel))w.push(`${M.name} burn oil only.`);
   // what is left once engines and bunkers are in is shared between passengers and cargo
-  const room=Math.max(0,e.usable),paxSpace=room*d.pax,per={f:14*Q.space,s:8*Q.space,t:3.2,tt:5.5*Q.space},berths={};
+  const fc=facChange({fac:{},grt:g,facPlan:null},d.fac||{}),facRoom=FAC_KEYS.reduce((a,k)=>a+((FAC[k].levels[(d.fac||{})[k]||0]||{}).room||0),0);
+  if(slotsUsed(d.fac)>slotsOf({grt:g}))w.push(`A ship of ${int(g)} tons has room for ${slotsOf({grt:g})} venues; the plan has ${slotsUsed(d.fac)}.`);
+  for(const k of FAC_KEYS){const l=(d.fac||{})[k]||0;if(l&&!levelOk(k,l,g,y))w.push(`${FAC[k].levels[l].n} needs a bigger ship${FAC[k].levels[l].from>y?' or a later year':''}.`);}
+  const room=Math.max(0,e.usable),paxSpace=Math.max(0,room*d.pax-facRoom),per={f:14*Q.space,s:8*Q.space,t:3.2,tt:5.5*Q.space},berths={};
   const tot=Math.max(1,d.mix.f+d.mix.s+d.mix.t+d.mix.tt);
   for(const c of ['f','s','t','tt'])berths[c]=Math.round(paxSpace*d.mix[c]/tot/per[c]);
   if(berths.tt&&y<1925)w.push('Tourist class does not exist yet.');
@@ -109,7 +118,7 @@ function designStats(d){
   const hull=g*22*H.cost*SUBDIV[d.subdiv].cost*P.cx*Math.pow(e.len/lenForSize(g),0.7);
   const power=e.shp*MACH_DATA[d.mach].pps*M.cost/1.1;
   const interiors=(berths.f*250+berths.s*90+berths.t*20+berths.tt*50)*Q.cost*(d.style==='edw'?1:1.08);
-  let extras=0;for(const k in d.extras)if(d.extras[k]&&EXTRAS[k])extras+=EXTRAS[k].cost(g);
+  let extras=fc.cost/PX();for(const k in d.extras)if(d.extras[k]&&EXTRAS[k])extras+=EXTRAS[k].cost(g);
   // the biggest ships cost far more than their tonnage: longer slips, heavier plate, more of everything done once only
   const sizeK=1+0.6*Math.pow(Math.max(0,(g-20000)/40000),1.3);
   const base=(hull*sizeK+power+interiors+extras)*B.price*(d.contract==='fixed'?1.08:1)*PX();
@@ -120,7 +129,6 @@ function designStats(d){
   const crewK=M.crew*(d.fuel==='oil'?0.9:1)*clamp(0.8+e.shp/g*0.25,0.8,1.6);
   let fs=Q.appeal*(typeof M.appeal==='function'?M.appeal(y):(M.appeal||1)),t=1,gale=1,risk=1/(B.quality*M.rel*1.02);
   for(const k in d.extras)if(d.extras[k]&&EXTRAS[k]){const x=EXTRAS[k];if(x.fs)fs*=x.fs;if(x.t)t*=x.t;if(x.gale)gale*=x.gale;if(x.risk)risk*=x.risk;}
-  if(d.extras.pool&&g<EXTRAS.pool.min)w.push('A pool needs a ship of 12,000 tons or more.');
   if(!d.name||!d.name.trim())w.push('She needs a name.');
   else if(S.ships.some(x=>x.name.toLowerCase()===d.name.trim().toLowerCase())||(S.orders||[]).some(o=>o.d.name.toLowerCase()===d.name.trim().toLowerCase()))w.push('You already have a ship of that name.');
   return {berths,cargo,price,months,fuelK,crewK,fs,t,gale,risk,safety:SUBDIV[d.subdiv].safety,decay:Q.decay,warn:w,eng:e,
@@ -131,7 +139,7 @@ function designShip(d,st){
   st=st||designStats(d);
   return {id:-1,name:(d.name||'Yard No. '+(S.yardNext||534)).trim(),built:Math.floor(yNow()),grt:d.grt,knots:d.knots,berths:st.berths,cargo:st.cargo,fuel:d.fuel,base:st.price,
     up:{reefer:!!d.extras.reefer,wireless:!!d.extras.wireless},fit:100,captain:null,pay:1,morale:65,cond:95,line:null,speed:1,maint:1,autoDock:50,state:'port',port:'GLA',
-    fuelK:st.fuelK,crewK:st.crewK,appFS:st.fs,appT:st.t,galeK:st.gale,riskK:st.risk,safety:st.safety,decayK:st.decay,style:d.style,novelty:true,design:{form:d.form,funnels:d.funnels,purpose:d.purpose},
+    fac:{...(d.fac||{})},fuelK:st.fuelK,crewK:st.crewK,appFS:st.fs,appT:st.t,galeK:st.gale,riskK:st.risk,safety:st.safety,decayK:st.decay,style:d.style,novelty:true,design:{form:d.form,funnels:d.funnels,purpose:d.purpose},
     len:st.eng.len,beam:st.eng.beam,draught:st.eng.draught,shp:st.eng.shp,range:st.eng.range};
 }
 /* the best of the lines you run, or of all routes, for a forecast */
@@ -232,7 +240,7 @@ function deliver(o,st,kn,B){
   Object.assign(sh,{fuelK:st.fuelK*Math.pow(d.knots/kn,0),crewK:st.crewK,appFS:st.fs,appT:st.t,galeK:st.gale,riskK:st.risk,safety:st.safety,decayK:st.decay,style:d.style,newUntil:S.m+18,foul:0,
     len:st.eng.len,beam:st.eng.beam,draught:st.eng.draught,shp:st.eng.shp,range:st.eng.range,designLine:d.line||null,
     design:{form:d.form,funnels:d.funnels,purpose:d.purpose,mach:d.mach,quality:d.quality,yardNo:o.id,builder:B.name,extras:Object.keys(d.extras).filter(k=>d.extras[k])},fit:100});
-  sh.up.wireless=!!d.extras.wireless;sh.up.lux=d.quality>=2;
+  sh.up.wireless=!!d.extras.wireless;sh.up.lux=d.quality>=2;sh.fac={...(d.fac||{})};
   for(const k of ['stab','fins','aircon','pool','cinema','rphone','radar'])if(d.extras[k])sh.up[k]=true;
   const pool=(S.capPool||[]).slice().sort((a,b)=>b.exp-a.exp);if(pool.length){sh.captain=pool[0];S.capPool=S.capPool.filter(q=>q!==pool[0]);}
   sh.acq=S.m;S.ships.push(sh);S.orders=S.orders.filter(x=>x!==o);

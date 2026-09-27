@@ -12,9 +12,9 @@ function withTemp(sh,rk,patch,shPatch,fn){
 function econ(sh,rk,patch,shPatch){
   return withTemp(sh,rk,patch,shPatch,()=>{
     const L=S.lines[rk],w=legCalc(sh,rk,0,null),e=legCalc(sh,rk,1,null),rt=w.seaDays+e.seaDays+2*TURN_DAYS;
-    const legNet=l=>l.paxRev+l.cargoRev+l.mail-l.fuelC-l.prov-l.agents-l.port;
+    const legNet=l=>l.paxRev+(l.onboard||0)+l.cargoRev+l.mail-l.fuelC-l.prov-l.agents-l.port;
     const n=Math.max(1,shipsOn(rk).length);
-    const fixed=(crewCost(sh)+(sh.captain?sh.captain.wage:0)+insCost(sh)+MAINT_COST[sh.maint]*sh.grt/8000)*rt/30;
+    const fixed=(crewCost(sh)+(sh.captain?sh.captain.wage:0)+insCost(sh)+MAINT_COST[sh.maint]*sh.grt/8000+(sh.fac?facMods(sh).staff*PX():0))*rt/30;
     const pax=CL.reduce((a,c)=>a+(w.pax[c]?w.pax[c].n:0)+(e.pax[c]?e.pax[c].n:0),0)*30/rt;
     return {pm:(legNet(w)+legNet(e)-fixed)*30/rt-ADV_COST[L.adv]/n,rev:(w.paxRev+e.paxRev+w.cargoRev+e.cargoRev+w.mail+e.mail)*30/rt,
       fuel:(w.fuelC+e.fuelC)*30/rt,rt,w,e,pax};
@@ -153,7 +153,7 @@ function advice(){
     const yard=(k,shPatch,label,why)=>{if(sh.pendingYard)return;const cost=refitCost(sh,k);if(!canSpend(cost))return;
       const save=econYear(sh,r0,null,shPatch).pm-curY.pm;if(save>0&&cost/save<=30)add({id:`${k==='oil'?'oil':k}:${sh.id}`,scope:'ship',ref:sh.id,sev:'tip',gain:save,title:label,
         why:`${why} It would add about ${money(save)} a month and pay back its ${money(cost)} in about ${Math.ceil(cost/save)} months; she is out of service for ${yardDays(sh,k)} days.`,
-        act:[['Book it','setyard',sh.id,k]]});};
+        act:[['Book it','setyard',sh.id,k],['Refit office','refit',sh.id,k]]});};
     if((sh.foul||0)>0.45)yard('dock',{foul:0,cond:Math.min(92,sh.cond+35)},`Drydock SS ${sh.name}`,`Her master reports her bottom foul: she is slower and burning more.`);
     { const f=fatOf(sh),n=sh.replates||0;
       if(f>=62&&f<90&&n<3&&!sh.pendingYard&&canSpend(refitCost(sh,'replate'))&&shipValue(sh)>refitCost(sh,'replate'))add({id:`replate:${sh.id}`,scope:'ship',ref:sh.id,sev:'tip',gain:250+f*4,title:`Re-plate SS ${sh.name}`,

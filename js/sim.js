@@ -21,6 +21,7 @@ function legCalc(sh,rk,dir,R,gk){
     const others=rivalWeight(rk,c)+ourWeight(rk,c,sh);
     // this ship's slice of the route's market for this class and direction, per crossing
     let d=marketM(rk,c,dir,m)*b*myA/Math.max(1e-9,others+own);
+    d*=facWinter(sh,c,m%12); // indoor rooms keep people travelling in winter
     if(R)d*=0.85+R()*0.3;
     const q=S.conf&&c==='t';let cap=q?Math.floor(b*0.8):b;
     const nn=Math.round(Math.min(d,cap));
@@ -36,7 +37,8 @@ function legCalc(sh,rk,dir,R,gk){
   const fuelT=fuelRate(sh,sm)*seaDays*(1+0.1*(sh.foul||0));
   const endPort=dir===0?geoEnds(gk)[1]:geoEnds(gk)[0];
   let dues=duesAt(sh,endPort,0.08);for(const [p] of stopsFor(gk,dir))dues+=duesAt(sh,p,0.04);
-  return {pax,paxRev,prov,cargoT,comm:cd.c,cargoRev:cargoT*cm.rate*cargoMod(m)*(['grain','cotton','palm'].includes(cd.c)?1:clamp(1+(S.rep-30)/150,0.85,1.3)),fuelT,fuelC:fuelT*fuelPrice(sh,m),
+  const fm=facMods(sh);let onboard=0;for(const c in pax)onboard+=pax[c].n*(seaDays+calls*CALL_DAYS)*(fm.spend[c]||0)*PX();
+  return {onboard,pax,paxRev,prov,cargoT,comm:cd.c,cargoRev:cargoT*cm.rate*cargoMod(m)*(['grain','cotton','palm'].includes(cd.c)?1:clamp(1+(S.rep-30)/150,0.85,1.3)),fuelT,fuelC:fuelT*fuelPrice(sh,m),
     seaDays:seaDays+calls*CALL_DAYS,geo:gk,mail:S.mail[rk]&&sh.speed>0&&sh.up&&sh.up.wireless?S.mail[rk].pay/2:0,
     agents:0.08*paxRev,port:dues+0.35*cargoT};
 }
@@ -61,7 +63,7 @@ function depart(sh){
   sh.dir=P===A?0:1;sh.geo=gk;sh.pos=0;sh.state='sea';sh.legRoute=rk;sh.broke=false;sh.limp=false;sh.limpF=0.4;sh.towed=false;sh.incident=null;sh.brk=null;sh.galeAt=null;sh.flav=null;sh.sailedAt=S.t;
   sh.stops=stopsFor(gk,sh.dir);sh.nextCall=0;sh.callLeft=0;
   const lg=legCalc(sh,rk,sh.dir,R,gk);
-  book('fares',lg.paxRev,rk);book('port',-lg.agents,rk);book('fuel',-lg.fuelC,rk);book('crew',-lg.prov,rk);
+  book('fares',lg.paxRev,rk);if(lg.onboard)book('onboard',lg.onboard,rk);book('port',-lg.agents,rk);book('fuel',-lg.fuelC,rk);book('crew',-lg.prov,rk);
   S.pax[rk]=(S.pax[rk]||0)+CL.reduce((a,c)=>a+(lg.pax[c]?lg.pax[c].n:0),0);
   sh.load=lg;L.last[sh.dir]={name:sh.name,pax:lg.pax,cargoT:lg.cargoT,comm:lg.comm};
   const mo=m%12,winter=[0,1,2,10,11].includes(mo),dist=GEO(gk).dist,lenF=dist/3000;
@@ -116,12 +118,14 @@ function breakdownResume(sh){
   if(B.o==='slow'){sh.limp=true;sh.limpF=0.6;wire(sh,`Under way on temporary repairs making ${Math.round(knotsOf(sh)*0.6)} knots.`);return;}
   if(B.o==='fail'){
     const toDest=dist-sh.pos,back=sh.pos<toDest*0.8,nm=Math.min(sh.pos,toDest);
-    const tug=Math.round((800+nm*3)*(sh.up&&sh.up.wireless?0.7:1)/50)*50;book('yard',-tug,rk);
-    if(back){book('fares',-lg.paxRev,rk);lg.cargoRev=0;lg.mail=0;sh.dir^=1;sh.pos=dist-sh.pos;sh.stops=[];sh.nextCall=0;}
+    // the underwriters meet salvage above the owner's excess; passengers sent home get their money back
+    const tug=Math.round((800+nm*3)*(sh.up&&sh.up.wireless?0.7:1)*PX()/50)*50,own=Math.min(tug,Math.round((600*PX()+Math.max(0,tug-600*PX())*0.25)/50)*50);book('salvage',-own,rk);
+    const refund=back?Math.round(lg.paxRev):0;
+    if(back){book('refund',-refund,rk);lg.cargoRev=0;lg.mail=0;sh.dir^=1;sh.pos=dist-sh.pos;sh.stops=[];sh.nextCall=0;}
     else{sh.stops=sh.stops.slice(sh.nextCall).filter(x=>x[1]>sh.pos);sh.nextCall=0;}
     sh.towed=true;const tt=`Tug alongside SS ${sh.name}. Tow connected. Proceeding to ${PN[destOf(sh)]} at five knots.${back?' All fares to be refunded.':''}`;
     if(radioOf(sh))wire(sh,tt,'bad');else{relay(sh,tt,"Salvage tug's wireless",0,'bad');sh.seen={t:S.t,pos:sh.pos,stopped:false,v:120};}
-    news(`SS ${sh.name} is under tow to ${PN[destOf(sh)]}: salvage ${fmt(tug)}${back?', all fares refunded':''}.`,'bad');return;}
+    news(`SS ${sh.name} broke down beyond repair at sea and is under tow to ${PN[destOf(sh)]}. Salvage ${fmt(tug)}, of which the underwriters pay ${fmt(tug-own)} and the Line ${fmt(own)}.${back?` She is going back, so her passengers are sent on by other lines and their fares refunded: ${fmt(refund)}.`:''}`,'bad');return;}
   wire(sh,`Repairs complete. Under way again at full speed.`,'good');
 }
 function voyageFlavour(sh){
@@ -196,6 +200,8 @@ function yardJobDone(sh,k){
   if(k==='engine'){sh.cond=Math.min(condCap(sh),sh.cond+8);news(`SS ${sh.name}'s engines are repaired.`);}
   if(k==='refurb'){sh.fit=100;const ns=currentStyle();const re=ns!==(sh.style||'edw');sh.style=ns;news(`SS ${sh.name} returns freshly refurbished${re?', her public rooms redone in the '+STYLES[ns].name+' style':', her saloons like new'}.`,'good');}
   if(k==='lux'){sh.up.lux=true;sh.fit=100;news(`SS ${sh.name} returns with luxury first-class suites.`,'good');}
+  if(k==='fac')applyFacPlan(sh);
+  if(EQUIP[k]){sh.up[k]=true;(sh.upR=sh.upR||{})[k]=true;news(`SS ${sh.name} returns with ${EQUIP[k].name.toLowerCase()}.`,'good');}
   if(UPGRADES[k]&&k!=='lux'){sh.up[k]=true;news(`SS ${sh.name} returns with ${UPGRADES[k].name.toLowerCase()}.`,'good');}
 }
 function exitShip(sh,how){
@@ -240,6 +246,7 @@ function dailyTick(){
     const act=ACTIVE.includes(sh.state),f=act?1:sh.state==='yard'?0.5:0.25;
     const key=act?(sh.state==='sea'?sh.legRoute:sh.line):'_idle';
     book('crew',-(crewCost(sh)*f+(sh.captain?sh.captain.wage:0))/30,key);
+    if(act&&sh.fac)book('crew',-facMods(sh).staff*PX()/30,key);
     book('upkeep',-(insCost(sh)/30+(act?MAINT_COST[sh.maint]*sh.grt/8000/30:0)),key);
     if(act&&sh.cond<condCap(sh))sh.cond=clamp(sh.cond+MAINT_GAIN[sh.maint]/30,5,condCap(sh));
     else if(sh.state==='laid')sh.cond=clamp(sh.cond-0.02,5,95);

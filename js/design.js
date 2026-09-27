@@ -21,6 +21,7 @@ function dzSet(k,v){
   d.auto=d.auto||{mach:false,form:false};
   if(k==='mach'||k==='fuel')d.auto.mach=false;
   if(k==='form')d.auto.form=false;
+  if(k.startsWith('fac.')){(d.fac=d.fac||{})[k.slice(4)]=+v;return;}
   if(k.startsWith('mix.'))d.mix[k.slice(4)]=+v;
   else if(k.startsWith('x.'))d.extras[k.slice(2)]=!d.extras[k.slice(2)];
   else if(['grt','knots','pax','quality','funnels'].includes(k))d[k]=+v;
@@ -47,6 +48,7 @@ function architectReport(d,st){
   return out.map(t=>`<li>${t}</li>`).join('');
 }
 function renderDesigner(){
+  if(UI.refitOpen&&renderRefit())return;
   const el=$('designer');if(!UI.designOpen){if(!el.hidden){el.hidden=true;el.innerHTML='';el._h=null;}return;}
   el.hidden=false;
   const d=UI.dz;d.auto=d.auto||{mach:false,form:false};d.line=d.line||'';
@@ -106,7 +108,10 @@ function renderDesigner(){
       <section><h3>4 · Fittings</h3>
         <div class="ctl"><span class="lbl">Quality</span><div class="seg">${QUALITY.map((q,i)=>`<button data-act="dz" data-k="quality" data-v="${i}" aria-pressed="${d.quality===i}">${q.name}</button>`).join('')}</div><span class="note">${QUALITY[d.quality].blurb} Better fittings take more room per cabin, cost more and wear more slowly.</span></div>
         <div class="picks">${styles}</div>
-        <div class="stack" style="gap:6px">${extras}</div></section>
+        <div class="stack" style="gap:6px">${extras}</div>
+        <div class="ctl"><div class="row"><span class="lbl">Public rooms</span><span class="num">${slotsUsed(d.fac)} of ${slotsOf({grt:d.grt})} venues</span></div>
+          <span class="note">Each level takes a venue and room from the cabins of the classes it serves, costs money to staff, and draws passengers; indoor rooms hold them through the winter. Bigger ships have room for more.</span>
+          ${FAC_KEYS.map(k=>{const F=FAC[k],cur=(d.fac||{})[k]||0;return `<div class="rffac"><b>${F.name}</b><div class="rflv">${F.levels.map((L,i)=>{const ok=!i||levelOk(k,i,d.grt,y),L2=FAC[k].levels[i];return `<button data-act="dz" data-k="fac.${k}" data-v="${i}" aria-pressed="${cur===i}" ${ok?'':'disabled'}>${esc(L.n)}${ok?'':` <small>${L2.min&&d.grt<L2.min?'needs '+int(L2.min)+' tons':'from '+L2.from}</small>`}</button>`;}).join('')}</div>${F.levels[cur].staff?`<small class="note">staff ${fmt(F.levels[cur].staff*facSize(d.grt,0.7)*PX())} a month</small>`:''}</div>`;}).join('')}</div></section>
       <section><h3>5 · Engineering</h3>
         <p class="note">${d.auto.mach&&d.auto.form?'The engineers are choosing her engines and lines.':'You have overruled the engineers.'} ${!(d.auto.mach&&d.auto.form)?'<button class="btn quiet" data-act="dzauto">Leave it to the engineers</button>':''}</p>
         <div class="picks">${machs}</div>

@@ -61,11 +61,11 @@ function gcDist(p,q){const a=CHART.lonlat[p],b=CHART.lonlat[q],rad=Math.PI/180;
   const h=Math.sin(dp/2)**2+Math.cos(la1)*Math.cos(la2)*Math.sin(dl/2)**2;return 2*6371*Math.asin(Math.sqrt(h))/1.852;}
 const ACTIVE=['sea','port','repo'];
 const shipsOn=rk=>S.ships.filter(x=>x.line===rk);
-const REFIT_BASE={replate:g=>g*3,dock:g=>g*1.1,oil:g=>g*3.5,reefer:g=>g*3+5000,wireless:()=>2500,turbines:g=>g*5,lux:g=>g*2,refurb:g=>g*1.2,gear:g=>g*0.8};
+const REFIT_BASE={stab:g=>g*1.6,rphone:()=>7000,aircon:g=>g*1.3,radar:()=>32000,fins:g=>g*2,replate:g=>g*3,dock:g=>g*1.1,oil:g=>g*3.5,reefer:g=>g*3+5000,wireless:()=>2500,turbines:g=>g*5,lux:g=>g*2,refurb:g=>g*1.2,gear:g=>g*0.8};
 const atOwnYard=sh=>S.shore&&S.shore.yards[sh.port]&&sh.state!=='sea'&&sh.state!=='repo';
-function refitCost(sh,k){let c=k==='tourist'?8000+Math.round(sh.berths.t*0.5)*12:REFIT_BASE[k]?REFIT_BASE[k](sh.grt):0;
+function refitCost(sh,k){if(k==='fac')return sh.facPlan?Math.round(facChange(sh,sh.facPlan).cost*(atOwnYard(sh)?0.7:1)):0;let c=k==='tourist'?8000+Math.round(sh.berths.t*0.5)*12:REFIT_BASE[k]?REFIT_BASE[k](sh.grt):0;
   c*=PX();if(c&&atOwnYard(sh))c*=0.7;return Math.round(c);}
-const yardDays=(sh,k)=>Math.round(YARD_DAYS[k]*(atOwnYard(sh)?0.7:1));
+const yardDays=(sh,k)=>Math.round((k==='fac'&&sh.facPlan?Math.max(7,facChange(sh,sh.facPlan).days):YARD_DAYS[k])*(atOwnYard(sh)?0.7:1));
 /* captains */
 function makeCaptain(R=Math.random){
   const exp=Math.floor(2+R()*26),age=Math.min(64,30+exp+Math.floor(R()*8));
@@ -83,8 +83,8 @@ function shipMods(sh){
   return {
     speed:(has(sh,'driver')?1.04:1)*(has(sh,'cautious')?0.97:1),
     wear:(has(sh,'driver')?1.25:1)*(has(sh,'veteran')?0.85:1),
-    risk:(sh.riskK||1)*(has(sh,'cautious')?0.6:1)*(has(sh,'drinker')?1.5:1)*(has(sh,'martinet')?0.85:1)*(1.2-exp/60)*(mor<40?1.2:1),
-    gale:(has(sh,'weather')?0.4:1)*(sh.galeK||1),
+    risk:(sh.riskK||1)*facMods(sh).risk*(has(sh,'cautious')?0.6:1)*(has(sh,'drinker')?1.5:1)*(has(sh,'martinet')?0.85:1)*(1.2-exp/60)*(mor<40?1.2:1),
+    gale:(has(sh,'weather')?0.4:1)*(sh.galeK||1)*facMods(sh).gale,
     smuggle:(has(sh,'lax')?3:1)*(has(sh,'martinet')?0.3:1),
     appealFS:(has(sh,'popular')?1.07:1)*(has(sh,'drinker')?0.96:1)*(mor<40?0.97:mor>75?1.02:1)*(0.85+0.15*(sh.fit===undefined?80:sh.fit)/100)*(sh.up&&sh.up.lux&&!sh.appFS?1.2:1)*(sh.appFS||1)*fashion(sh.style||'edw',yearNow())*(sh.newUntil>S.m?1.08:1),
     appealT:(mor<40?0.98:1)*(0.95+0.05*(sh.fit===undefined?80:sh.fit)/100)*(sh.appT||1)*(sh.newUntil>S.m?1.03:1),
