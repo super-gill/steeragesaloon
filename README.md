@@ -15,11 +15,12 @@ It is a static browser game with no build step. Open `index.html`, or serve the 
 | `js/helpers.js` | Dates, formatting, demand and slump modifiers, prices, refit costs, captains and per-ship modifiers |
 | `js/lanes.js` | Sea lanes as a network: positions along any lane, and the passage a ship follows between two ports |
 | `js/wireless.js` | Wireless and cable traffic: coast stations, positions, telegraphese, Morse |
-| `js/emergency.js` | Emergencies: collision, ice, flooding, fire, illness, mutiny, piracy; responders; the emergency window |
+| `js/emergency.js` | Emergencies: collision, ice, flooding, fire, illness, mutiny, piracy; severity; responders and salvage tugs; the master's questions and the owner's orders; diseases and port quarantine; the emergency window |
 | `js/silent.js` | Ships without wireless: reckoned positions, overdue notices, sightings and relays by passing ships, foundering, posted missing |
 | `js/ledger.js` | Month-to-date accounts by category and by line |
 | `js/sim.js` | The simulation: bookings and cargo per voyage, departures, calls, arrivals, breakdowns, yards and upgrades, crew morale, daily costs, month roll |
 | `js/rivals.js` | Rival lines: fleets, the shared market on each route, price matching, and each rival's monthly decisions |
+| `js/naval.js` | Naval architecture: port limits, route weather, displacement, length, form and power, bunkers and range; the engineers' recommendation and report; fouling, port fit, seakeeping and masters' remarks in service |
 | `js/yard.js` | Shipbuilding: purposes, hull forms, machinery, fittings, extras, builders and slips, prices, stage payments, orders and delivery; newer ships for the brokers |
 | `js/state.js` | Game state, new game, save and load (browser localStorage) with migrations, save codes |
 | `js/clock.js` | Real-time clock: pause, 1×, 3×, 7× and the frame loop |
@@ -31,7 +32,7 @@ It is a static browser game with no build step. Open `index.html`, or serve the 
 | `js/ui.js` | Panels and tabs, rendered by patching the DOM in place |
 | `js/main.js` | Input handling and start-up |
 
-Scripts are plain (non-module) files loaded in the order above and share one global scope, so the game also runs straight from disk.
+Scripts are plain (non-module) files loaded in the order in `index.html` and share one global scope, so the game also runs straight from disk.
 
 ## Releasing
 

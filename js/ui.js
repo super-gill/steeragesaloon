@@ -98,7 +98,7 @@ function alerts(){
   return A;
 }
 function renderOverview(){
-  const A=alerts(),ADV=advice(),mtd=Object.values(S.mtd.cat).reduce((a,b)=>a+b,0),LM=S.lastMonth;
+  const A=alerts(),ADV=shownAdvice(),mtd=Object.values(S.mtd.cat).reduce((a,b)=>a+b,0),LM=S.lastMonth;
   const atSea=S.ships.filter(s=>s.state==='sea').length;
   const best=Object.keys(S.lines).sort((a,b)=>(S.mtd.lines[b]||0)-(S.mtd.lines[a]||0))[0];
   const tiles=`<div class="tiles">
@@ -205,7 +205,7 @@ function renderShipDetail(sh){
     <div><div class="row"><h3>SS ${sh.name}</h3>${st.chip}</div>
     <div class="meta">Built ${sh.built} (${age} years) · ${int(sh.grt)} grt · ${knotsOf(sh)} knots · ${sh.fuel}-fired · worth about ${fmt(shipValue(sh))}</div></div>
     <p class="stline">${st.text}</p>
-    ${advRow('ship'+sh.id,advice().filter(h=>h.scope==='ship'&&h.ref===sh.id),'her')}
+    ${advRow('ship'+sh.id,shownAdvice().filter(h=>h.scope==='ship'&&h.ref===sh.id),'her')}
     <div class="row meta"><span>Condition ${Math.round(sh.cond)}%</span><span>${pB>0?`About 1 crossing in ${Math.max(2,Math.round(1/pB))} breaks down`:'Reliable'}</span></div>${condBar(sh.cond)}
     ${sh.cond<35?'<p class="badline">Dangerously run down. Fire or foundering is a real risk. Send her to the yard.</p>':''}
     <div class="ctl"><label class="lbl" for="lineSel">Line</label>
@@ -232,6 +232,8 @@ function renderShipDetail(sh){
     <div class="ctl"><span class="lbl">Upgrades</span><div class="stack" style="gap:6px">${Object.keys(UPGRADES).map(k=>{const u=UPGRADES[k],on=sh.up&&sh.up[k];
       return `<div class="uprow" data-key="up${k}"><div><strong>${u.name}</strong>${on?' <span class="chip sea">Fitted</span>':''}<div class="meta">${u.desc}</div></div>${on?'':yb(k,'Fit',true)}</div>`;}).join('')}</div></div>
     <div class="ctl"><span class="lbl">Retire</span><div class="btns">${exitH||'<span class="note">You cannot retire your only ship.</span>'}</div></div>
+    ${sh.lastRemark?`<div class="ctl"><span class="lbl">The master's last word</span><blockquote class="remark">${esc(plainTel(telegram(sh.lastRemark.txt)).replace(/^Master to owners\. /,''))}<footer>${esc(sh.lastRemark.who)}, ${dateLong(sh.lastRemark.t)}</footer></blockquote></div>`:''}
+    <div class="ctl"><span class="lbl">Her hull</span><span class="note">${dimsOf(sh).len|0} ft long, drawing ${dimsOf(sh).draught|0} ft${sh.len?'':' (estimated)'}. ${(sh.foul||0)<0.2?'Clean bottom.':(sh.foul||0)<0.45?'Some growth on her bottom.':(sh.foul||0)<0.7?'Her bottom is foul; she has lost speed.':'Badly foul and slow. She needs drydocking.'}</span></div>
     ${(()=>{const L=(S.wire||[]).filter(m=>m.sid===sh.id&&m.k!=='r').slice(0,3);return L.length?`<div class="stack tape" style="gap:6px"><span class="lbl">Latest from her</span>${wireHTML(L,false)}</div>`:'';})()}`);
 }
 
@@ -286,7 +288,7 @@ function renderLineDetail(rk){
   setHTML($('lineD'),`
     <div><div class="row"><h3>${r.name}</h3>${war?'<span class="chip bad">Rate war</span>':''}</div><div class="meta">${callsText(rk)} · ${int(r.dist)} nm · ${ships.length} ship${ships.length===1?'':'s'} · month to date ${fmt(S.mtd.lines[rk]||0)}</div></div>
     <p class="note">${r.blurb} ${cargoText(rk)}${r.winter?(r.winter.months.includes(S.m%12)?' The St Lawrence is frozen: sailings run to Saint John until May.':' From December to April the St Lawrence freezes and sailings run to Saint John.'):''}</p>
-    ${advRow('line'+rk,advice().filter(h=>h.scope==='line'&&h.ref===rk),'this line')}
+    ${advRow('line'+rk,shownAdvice().filter(h=>h.scope==='line'&&h.ref===rk),'this line')}
     ${war?`<p class="badline">The conference lines have cut fares to ${Math.round(war.mult*100)}% of the line rate for ${war.left} more month${war.left>1?'s':''}.</p>`:''}
     ${S.mail[rk]?`<p class="note">Mail contract: ${fmt(S.mail[rk].pay)} per round trip. Ships at economical speed or broken down do not earn it.</p>`:''}
     <div class="tablewrap"><table><thead><tr><th>Class</th><th>Fare £</th><th class="r">Line rate</th><th class="r">Last out</th><th class="r">Last home</th></tr></thead><tbody>${rows}</tbody></table></div>

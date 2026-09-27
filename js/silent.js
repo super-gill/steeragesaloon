@@ -60,10 +60,13 @@ function founder(sh){
     loseShip(sh);
   } else {sh.state='lost';sh.stopLeft=0;}
 }
+/* the mortgagees are paid first out of the insurance: her share of the line's debt */
+function payMortgage(sh,v){if(!(S.debt>0))return;const fv=S.ships.reduce((a,x)=>a+shipValue(x),0)||1,p=Math.min(S.debt,v,S.debt*shipValue(sh)/fv);S.debt-=p;S.cash-=p;
+  if(p>100)news(`${fmt(Math.round(p))} of the insurance goes straight to the mortgagees.`);}
 /* the underwriters pay the insured value; the loss of life is never forgotten */
 function loseShip(sh){
   const L=sh.lost||{lost:0,saved:1},v=Math.round(shipValue(sh));
-  S.cash+=v;S.rep=clamp(S.rep-(L.lost>200?18:L.lost>20?10:4),0,100);
+  S.cash+=v;S.rep=clamp(S.rep-(L.lost>200?18:L.lost>20?10:4),0,100);payMortgage(sh,v);
   news(`SS ${sh.name} is lost${L.where?' '+L.where:''}. ${L.lost?`${int(L.lost)} lives lost.`:'Everyone aboard was saved.'} The underwriters pay ${fmt(v)}.`,'bad',true);
   S.ships=S.ships.filter(x=>x!==sh);if(S.selShip===sh.id)S.selShip=S.ships[0]?S.ships[0].id:null;
 }

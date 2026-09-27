@@ -40,8 +40,8 @@ function deliverWire(m,pause){
 function wireTick(){if(!S.wireQ||!S.wireQ.length)return;const due=S.wireQ.filter(m=>m.at<=S.t);if(!due.length)return;
   S.wireQ=S.wireQ.filter(m=>m.at>S.t);due.forEach(m=>{delete m.at;deliverWire(m);});}
 /* telegraphese: capitals, full stops become STOP, no other punctuation */
-const telegram=t=>t.toUpperCase().replace(/\.\s*/g,' STOP ').replace(/[,;:]/g,'').replace(/\s+/g,' ').replace(/ STOP\s*$/,'').trim();
-const plainTel=t=>t.replace(/ STOP ?/g,'. ').toLowerCase().replace(/(^|\. )([a-z])/g,(a,b,c)=>b+c.toUpperCase()).replace(/\bss\b/gi,'SS');
+const telegram=t=>t.toUpperCase().replace(/\?\s*/g,' QUERY ').replace(/\.\s*/g,' STOP ').replace(/[,;:]/g,'').replace(/\s+/g,' ').replace(/ STOP\s*$/,'').trim();
+const plainTel=t=>t.replace(/ QUERY ?/g,'? ').replace(/ STOP ?/g,'. ').toLowerCase().replace(/(^|\. )([a-z])/g,(a,b,c)=>b+c.toUpperCase()).replace(/\bss\b/gi,'SS');
 const MORSE={A:'.-',B:'-...',C:'-.-.',D:'-..',E:'.',F:'..-.',G:'--.',H:'....',I:'..',J:'.---',K:'-.-',L:'.-..',M:'--',N:'-.',O:'---',P:'.--.',Q:'--.-',R:'.-.',
   S:'...',T:'-',U:'..-',V:'...-',W:'.--',X:'-..-',Y:'-.--',Z:'--..',0:'-----',1:'.----',2:'..---',3:'...--',4:'....-',5:'.....',6:'-....',7:'--...',8:'---..',9:'----.',
   "'":'.----.','-':'-....-','/':'-..-.','(':'-.--.',')':'-.--.-','£':'.-..'};

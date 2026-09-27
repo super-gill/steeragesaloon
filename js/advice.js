@@ -36,7 +36,7 @@ const idleCost=sh=>0.25*crewCost(sh)+(sh.captain?sh.captain.wage:0)+insCost(sh);
 const DEPT_OF={review:'sec',reserve:'sec',buy:'traffic',build:'traffic','rep-mail':'sec','rep-low':'sec','conf-war':'sec',pier:'sec',agency:'sec',bunker:'sec',dept:'sec',
   fare:'fares',tension:'fares',adv:'fares',service:'fares',match:'fares',
   move:'traffic',unlay:'traffic',layup:'traffic',sell:'traffic',rin:'traffic',
-  speed:'marine',maint:'marine',thresh:'marine',oil:'marine',refurb:'marine',reefer:'marine',wireless:'marine',
+  speed:'marine',maint:'marine',thresh:'marine',dock:'marine',oil:'marine',refurb:'marine',reefer:'marine',wireless:'marine',
   pay:'crew',captain:'crew'};
 const deptOf=h=>DEPT_OF[h.id.split(/[:0-9]/)[0]]||'sec';
 let ADV_CACHE={key:null,list:[]};
@@ -149,6 +149,7 @@ function advice(){
       const save=econYear(sh,r0,null,shPatch).pm-curY.pm;if(save>0&&cost/save<=30)add({id:`${k==='oil'?'oil':k}:${sh.id}`,scope:'ship',ref:sh.id,sev:'tip',gain:save,title:label,
         why:`${why} It would add about ${money(save)} a month and pay back its ${money(cost)} in about ${Math.ceil(cost/save)} months; she is out of service for ${yardDays(sh,k)} days.`,
         act:[['Book it','setyard',sh.id,k]]});};
+    if((sh.foul||0)>0.45)yard('dock',{foul:0,cond:Math.min(92,sh.cond+35)},`Drydock SS ${sh.name}`,`Her master reports her bottom foul: she is slower and burning more.`);
     if(sh.fuel==='coal'&&yearNow()-sh.built<28)yard('oil',{fuel:'oil'},`Convert SS ${sh.name} to oil`,'Oil firing cuts her stokehold crew and her bunker bill.');
     if((sh.berths.f+sh.berths.s)>0&&(sh.fit||0)<50)yard('refurb',{fit:100},`Refurbish SS ${sh.name}`,`Her saloons are tired (fittings ${Math.round(sh.fit||0)}%), and first and second class notice.`);
     if(!(sh.up&&sh.up.reefer)&&COMM[ROUTES[r0].cargo.home.c].reefer)yard('reefer',{up:{...sh.up,reefer:true}},`Fit refrigerated holds to SS ${sh.name}`,`Her route's homeward cargo, ${COMM[ROUTES[r0].cargo.home.c].name.toLowerCase()}, needs cold holds; without them she takes only a sliver of it.`);
@@ -175,9 +176,10 @@ function advice(){
   if(S.cash<1.5*rc&&S.ships.length>1)add({id:'reserve'+S.m,scope:'co',sev:'warn',gain:6e5,title:'Your cash reserve is thin',
     why:`You hold ${money(S.cash)} against running costs of about ${money(rc)} a month, before coal and port bills. One bad month could put you in the bank's hands. Borrow while you can, lay up a loss-making ship, or hold off on buying.`,act:[['Bank','tabgo','finance']]});
   const deps=S.market.map(m=>Math.round(m.price*0.4));
-  if(S.market.length&&S.cash-reserve>Math.min(...deps)){
+  const fleetV=S.ships.reduce((a,x)=>a+shipValue(x),0);
+  if(S.market.length&&S.cash-reserve>Math.min(...deps)&&(!S.ships.length||S.debt<0.6*fleetV)){
     let best=null;
-    for(const m of S.market){const dep=Math.round(m.price*0.4);if(S.cash-reserve<dep)continue;
+    for(const m of S.market){const dep=Math.round(m.price*0.4);if(S.cash-reserve<dep||S.debt+m.price-dep>0.62*(fleetV+m.price))continue;
       for(const rk of Object.keys(ROUTES)){const q=econYear(m,rk);const pay=q.pm-(m.price-dep)*0.065/12;if(!best||pay>best.pay)best={m,rk,pay,dep};}}
     if(best&&best.pay>(slump(S.m)>0.3?1500:500))add({id:`buy:${best.m.name}`,scope:'co',sev:'tip',gain:best.pay,title:'Put idle cash to work',
       why:`SS ${best.m.name} (${money(best.dep)} down) could earn about ${money(best.pay)} a month on ${ROUTES[best.rk].name}, averaged over a year of seasons and after mortgage interest. You would still hold three months of running costs in reserve.`,
@@ -214,6 +216,19 @@ function advice(){
   A.sort((a,b)=>b.gain-a.gain);
   ADV_CACHE={key,list:A};
   return A;
+}
+/* advice on the desk goes stale: a tip left alone for a month is withdrawn for four months, a warning after six weeks
+   for two. Advice is grouped by kind, so the same suggestion about a different ship on the market does not restart it */
+const advFam=id=>id.startsWith('buy:')?'buy':id.replace(/:?\d+$/,'');
+function shownAdvice(){
+  const A=advice(),seen=S.advSeen=S.advSeen||{},out=[];
+  for(const h of A){const f=advFam(h.id),q=seen[f],life=h.sev==='tip'?30:45,rest=h.sev==='tip'?120:60;
+    if(q&&q.until){if(q.until>S.t)continue;delete seen[f];}
+    if(!seen[f])seen[f]={from:S.t};
+    else if(S.t-seen[f].from>life){seen[f]={until:S.t+rest};continue;}
+    out.push(h);}
+  for(const f in seen)if(seen[f].from!==undefined&&!A.some(h=>advFam(h.id)===f))delete seen[f]; // gone of its own accord
+  return out;
 }
 const capScore=c=>Math.min(c.exp,25)/5+c.traits.reduce((a,t)=>a+(CAPT_TRAITS[t].good?2:-3),0);
 

@@ -7,8 +7,8 @@
    Prints survival, net worth by year, first-year profit, rate wars and profit by route. */
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const ROOT = path.join(__dirname, '..');
-const FILES = ['chart-data', 'data', 'helpers', 'lanes', 'wireless', 'silent', 'emergency', 'ledger', 'sim', 'rivals', 'yard', 'state', 'clock', 'advice'].map(f => path.join(ROOT, 'js', f + '.js'));
-const SRC = FILES.map(f => [f, fs.readFileSync(f, 'utf8')]);
+const FILES = ['chart-data', 'data', 'helpers', 'lanes', 'wireless', 'silent', 'emergency', 'ledger', 'sim', 'rivals', 'yard', 'naval', 'state', 'clock', 'advice'].map(f => path.join(ROOT, 'js', f + '.js'));
+const SRC = FILES.map(f => [f, fs.readFileSync(f, 'utf8')]).map(([f, s]) => [f, process.env.PATCH ? s.replace(/^const /gm, 'var ') : s]);
 
 const PRELUDE = `
 Math.random=(function(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};})(SEED);
@@ -49,12 +49,13 @@ function runGame(strategy, seed) {
   vm.createContext(ctx);
   vm.runInContext(PRELUDE.replace('SEED', String(seed * 7919 + 13)).split('const H=')[0], ctx);
   for (const [f, s] of SRC) vm.runInContext(s, ctx, { filename: f });
+  if (process.env.PATCH) vm.runInContext(process.env.PATCH, ctx); // e.g. PATCH='rollEmergency=()=>null' to switch a system off
   vm.runInContext(PRELUDE.slice(PRELUDE.indexOf('const H=')), ctx);
   return vm.runInContext(`(function(){
     newGame();UI.autoPause=false;UI.speed=1;UI.rev=0;
     const strat=STRATS['${strategy}'];
-    const byYear={},routes={},first=[];let wars=0,lastM=-1;
-    const origNews=news;news=function(t,k,p){if(/leads a rate war/.test(t))wars++;return origNews(t,k,p);};
+    const byYear={},routes={},first=[];let wars=0,lastM=-1,lost=0,emerg=0;
+    const origNews=news;news=function(t,k,p){if(/leads a rate war/.test(t))wars++;if(/ is lost|constructive total loss/.test(t))lost++;return origNews(t,k,p);};
     while(!S.over&&S.t<5480){
       if(S.m!==lastM){lastM=S.m;
         if(S.lastMonth){for(const k in S.lastMonth.lines)if(ROUTES[k])routes[k]=(routes[k]||0)+S.lastMonth.lines[k];if(S.lastMonth.m<12)first.push(S.lastMonth.net);}
@@ -62,7 +63,7 @@ function runGame(strategy, seed) {
         strat();}
       advance(1);
     }
-    return {bust:S.over==='bust'?S.m:null,final:Math.round(netWorth()),ships:S.ships.length,wars,byYear,routes,firstYear:Math.round(first.reduce((a,b)=>a+b,0)),rep:Math.round(S.rep)};
+    return {bust:S.over==='bust'?S.m:null,final:Math.round(netWorth()),ships:S.ships.length,wars,byYear,routes,firstYear:Math.round(first.reduce((a,b)=>a+b,0)),rep:Math.round(S.rep),lost,emerg:(S.emerg||[]).filter(e=>e.k!=='quar').length};
   })()`, ctx);
 }
 
@@ -79,7 +80,7 @@ function report(strategy, n) {
   console.log(`  first-year profit: median ${k(pct(R.map(r => r.firstYear), 0.5))}, range ${k(pct(R.map(r => r.firstYear), 0))} to ${k(pct(R.map(r => r.firstYear), 1))}`);
   console.log(`  median net worth: ` + yrs.map(y => `${y} ${med(y)}`).join(' · '));
   console.log(`  final net worth: p10 ${k(pct(R.map(r => r.final), 0.1))} · median ${k(pct(R.map(r => r.final), 0.5))} · p90 ${k(pct(R.map(r => r.final), 0.9))}`);
-  console.log(`  fleet at end (median): ${pct(R.map(r => r.ships), 0.5)} · rate wars per game: ${(R.reduce((a, r) => a + r.wars, 0) / n).toFixed(1)} · reputation ${pct(R.map(r => r.rep), 0.5)}`);
+  console.log(`  fleet at end (median): ${pct(R.map(r => r.ships), 0.5)} · rate wars per game: ${(R.reduce((a, r) => a + r.wars, 0) / n).toFixed(1)} · reputation ${pct(R.map(r => r.rep), 0.5)} · emergencies per game ${(R.reduce((a, r) => a + r.emerg, 0) / n).toFixed(1)}, ships lost ${(R.reduce((a, r) => a + r.lost, 0) / n).toFixed(2)}`);
   console.log(`  avg profit by route over game: ` + Object.entries(routes).sort((a, b) => b[1] - a[1]).map(([q, v]) => `${q} ${k(v)}`).join(' · '));
 }
 const [, , only, nArg] = process.argv;

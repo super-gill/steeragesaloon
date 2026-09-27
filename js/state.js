@@ -15,6 +15,7 @@ function newGame(){
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
 function load(){try{const t=localStorage.getItem(KEY);if(t){const s=JSON.parse(t);if(s&&s.v===2)return migrate(s);}}catch(e){}return null;}
 function migrate(s){
+  (s.emerg||[]).forEach(e=>{e.rateM=e.rateM||1;e.capA=e.capA||0;e.saveA=e.saveA||0;e.later=e.later||[];e.orders=e.orders||[];e.sev=e.sev||2;if(e.k==='illness'&&!e.dis)e.dis='flu';});
   s.tension=s.tension||{};s.dismiss=s.dismiss||{};s.pax=s.pax||{};s.lastPax=s.lastPax||{};s.rivalIdx=s.rivalIdx||{};
   if(s.sel){if(s.sel.k==='ship')s.selShip=s.sel.id;else s.selLine=s.sel.id;delete s.sel;}
   if(!s.selShip&&s.ships[0])s.selShip=s.ships[0].id;if(!s.selLine)s.selLine=Object.keys(s.lines)[0]||'hal';

@@ -32,6 +32,7 @@ document.addEventListener('click',e=>{
     case 'dzopen':openDesigner();break;
     case 'dzclose':closeDesigner();break;
     case 'dzview':UI.dzView=b.dataset.v;break;
+    case 'dzauto':if(UI.dz)UI.dz.auto={mach:true,form:true};break;
     case 'dz':dzSet(b.dataset.k,b.dataset.v);UI.dzMsg=null;break;
     case 'dzname':{const L=SHIP_NAMES[UI.dz.purpose]||SHIP_NAMES.inter,used=new Set(S.ships.map(x=>x.name).concat((S.orders||[]).map(o=>o.d.name)));
       const c=L.filter(n=>!used.has(n));UI.dz.name=c.length?c[Math.floor(Math.random()*c.length)]:L[0]+' II';const i=$('dzName');if(i)i.value=UI.dz.name;break;}
@@ -47,7 +48,8 @@ document.addEventListener('click',e=>{
     case 'emshow':UI.emMin=false;break;
     case 'emtab':UI.emOpen=+b.dataset.id;break;
     case 'emreport':emOrder('report',+b.dataset.id);break;
-    case 'emtrust':emOrder('trust',+b.dataset.id);break;
+    case 'emorder':emOrder('order',+b.dataset.id,b.dataset.o);break;
+    case 'emoffice':emOrder('office',+b.dataset.id,b.dataset.o);break;
     case 'emspeed':UI.emNormal=!UI.emNormal;break;
     case 'emclose':{const e=(S.emerg||[]).find(x=>x.id===+b.dataset.id);if(e)e.t1=-99;break;}
     case 'maptoggle':UI.noMap=!UI.noMap;requestAnimationFrame(()=>{VIEW.s=null;applyView();});break;
@@ -82,6 +84,7 @@ document.addEventListener('change',e=>{
   if(t.dataset.autop)UI.autoPause=t.checked;
   if(t.dataset.wirert)UI.wireRoutine=t.checked;
   if(t.dataset.dzx&&UI.dz){UI.dz.extras[t.dataset.dzx]=t.checked;}
+  if(t.dataset.dzline&&UI.dz){UI.dz.line=t.value;}
   t.blur();UI.rev=(UI.rev||0)+1;save();UI.dirty=true;
 });
 document.addEventListener('keydown',e=>{

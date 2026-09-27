@@ -2,6 +2,20 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.7.0 (27 September 2026)
+- The drawing office works like one. You set the job (purpose, the line she is for, size, speed, what she carries) and the naval architects work out her length, beam, draught, lines, horsepower, coal or oil per day and bunkers. Speed costs power steeply past what her length allows, shown on a power curve; a longer hull is easier to drive but is limited by the era and by the ports on her line. Leave engines and hull form to the engineers or overrule them.
+- The architects' report says in plain words what she will be: her dimensions, why they chose them, how much of her the engines and bunkers take, whether she fits every port on the line, what kind of sea boat she will be, and whether her bunkers reach the longest leg.
+- Ships in service live with their design. Bottoms foul over months at sea (faster in the tropics) and cost speed and coal until the next drydock. Ships too big for a port lighter their cargo at anchor, or ground. Small ships on rough routes lose passengers, time and condition to the weather. Short-legged ships give up cargo space to bunkers.
+- Masters report in their own words when something is wrong with the ship or the job: a foul bottom, a hard passage, a port she does not fit. Some masters are blunter than others. The ship panel shows the master's last word and the state of her hull.
+- Emergencies have a severity: most are minor, some serious, a few grave. Grave ones can end with the ship lost, the last signals going out in the log, or with a ship saved but not worth repairing and given up to the underwriters.
+- The master asks the owners for orders at each turn: how to fight the water or the fire, what to do with the passengers, whether to abandon her; how to handle a mutiny, pirates or an outbreak. The clock nearly stops while he waits. Each answer is explained, and the right one depends on the situation. If no order comes in time he does what he thinks best, and some masters think better than others. A ship without wireless cannot be ordered at all.
+- The office can act on its own during an emergency: call every ship within 500 miles, or send ocean salvage tugs on no cure, no pay terms.
+- Outbreaks are named diseases (influenza, measles, typhoid, typhus, cholera, smallpox, yellow fever), depend on the route and the season, and are more common. Isolate the sick, land them at the nearest port, or say nothing and hope the port doctor misses it. On arrival the agents ask whether to accept the quarantine, land steerage at the quarantine station at your expense, or protest to the health officer.
+- When a ship is lost or given up, her share of the mortgage is paid first out of the insurance.
+- Advice goes stale: a tip nobody acts on is withdrawn after a month (for four months) and a warning after six weeks (for two). Buying advice is no longer given when the line is already heavily mortgaged.
+- Telegrams use QUERY for a question mark. The owners' own orders arrive in the wireless room already decoded.
+- The game has an icon.
+
 ## 0.6.4 (27 September 2026)
 - The drawing office has an Exterior and Cutaway switch: the cutaway shows the new ship's spaces as you change her class split and cargo, with berths and tonnage in the legend.
 

@@ -90,7 +90,7 @@ function ourAppeal(sh,rk,c){
   const L=S.lines[rk],r=ROUTES[rk];
   const pf=clamp(Math.pow(r.ref[c]/effFare(rk,c),E[c]),0.03,1.8);
   const mods=shipMods(sh);
-  return pf*repF(c,S.rep,r)*SERV[c][L.service]*SPD_D[c][sh.speed]*ADV_MULT[L.adv]*(S.conf&&c==='t'?1.04:1)*(c==='f'||c==='s'?mods.appealFS:mods.appealT)*shoreMult(rk,c)*speedAppeal(knotsOf(sh)*SPD[sh.speed]*mods.speed,rk,c)*(sh.up&&sh.up.aircon&&TROPIC.includes(rk)&&(c==='f'||c==='s')?1.06:1);
+  return pf*repF(c,S.rep,r)*SERV[c][L.service]*SPD_D[c][sh.speed]*ADV_MULT[L.adv]*(S.conf&&c==='t'?1.04:1)*(c==='f'||c==='s'?mods.appealFS:mods.appealT)*shoreMult(rk,c)*speedAppeal(knotsOf(sh)*SPD[sh.speed]*mods.speed,rk,c)*(sh.up&&sh.up.aircon&&TROPIC.includes(rk)&&(c==='f'||c==='s')?1.06:1)*(1-(c==='f'||c==='s'?0.08:0.03)*seaSev(sh,rk,S.m));
 }
 const TROPIC=['cot','ban','waf','rpl','nap'];
 /* booking agencies in a region the route calls at, and emigrant hostels at its ports */
