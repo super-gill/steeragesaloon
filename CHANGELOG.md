@@ -2,6 +2,13 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.5.1 (27 September 2026)
+- Needs attention, advice and the wireless room share one fixed-height tray with tabs and counts, so arrivals never push the page about.
+- The tray holds still while the pointer is over it, or for a few seconds after touching or scrolling it on a phone.
+- A wireless message keeps its final size while it prints and decodes.
+- Advice for a ship or a line sits behind one row that opens on request; the ship's wireless log moves to the foot of her panel.
+- Long names and statuses in the overview no longer wrap and shift the rows below.
+
 ## 0.5.0 (27 September 2026)
 - Shipbuilding. A drawing office over the chart: choose her purpose, size, hull form, subdivision, funnels, speed, machinery and fuel, the split between passengers and cargo and between the classes, the quality and style of her fittings, extras such as stabilisers and air conditioning, the builder and the contract, and her name. Builders have slips that other lines keep busy. She is drawn, waits for a slip, is framed, plated, launched, fitted out and tried on the measured mile. Payments come in stages; if you cannot pay, work stops, and six months unpaid loses the contract. A repair yard can take a building slip of your own.
 - Interior styles go in and out of fashion. Old ships date; refurbishment brings them up to the current style.

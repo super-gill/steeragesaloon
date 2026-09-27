@@ -117,10 +117,7 @@ function renderOverview(){
   setHTML($('pane-overview'),`
     ${tutorialHTML()}
     <section class="sec">${tiles}</section>
-    <section class="sec"><h2>Needs attention</h2><div class="ratchet stack" data-key="r-alerts">${attn}</div></section>
-    ${wireRoom()}
-    <section class="sec"><h2>Advice from head office</h2><div class="ratchet stack" data-key="r-advice">${adviceHTML(UI.allAdvice?ADV:ADV.slice(0,3),'Mr Ferguson has no complaints. The books look sound at current settings.')}
-      ${ADV.length>3?`<button class="btn quiet" data-act="alladvice" style="width:fit-content">${UI.allAdvice?'Show fewer':'Show all '+ADV.length+' suggestions'}</button>`:''}</div></section>
+    ${trayHTML(A.length+(S.props||[]).length,attn,ADV)}
     <section class="sec"><h2>Fleet</h2><div class="glist">${fleet}</div></section>
     <section class="sec"><h2>Lines · month to date</h2><div class="glist">${lines||'<p class="note">No lines open.</p>'}</div></section>
     <section class="sec"><h2>Shortcuts</h2><div class="btns">
@@ -146,27 +143,46 @@ function wireHTML(list,anim){
   if(!list.length)return '<p class="note">No traffic yet.</p>';
   return list.map(m=>{const hold=anim&&UI.wa&&UI.wa.id===m.id&&!UI.wa.done;
     return `<div class="tg ${m.k==='bad'?'bad':m.k==='good'?'good':m.k==='r'?'rt':''}" data-key="w${m.id}"><div class="tg-h"><span>SS ${esc(m.ship)}</span><span>${esc(m.via||'')} · ${dateLong(m.t)}</span></div>
-      <div class="tg-b" ${anim?`data-hold="${m.id}"`:''}>${hold?'':esc(m.txt)}</div></div>`;}).join('');
+      ${anim?`<div class="tg-b hold" data-hold="${m.id}"><span class="tg-sz">${esc(m.txt)}</span><span class="tg-an">${hold?'':esc(m.txt)}</span></div>`:`<div class="tg-b">${esc(m.txt)}</div>`}</div>`;}).join('');
 }
-function wireRoom(){const L=(S.wire||[]).filter(m=>UI.wireRoutine!==false||m.k!=='r').slice(0,UI.wireAll?30:6);
-  return `<section class="sec"><div class="row"><h2>Wireless room</h2><label class="check"><input type="checkbox" data-wirert="1" ${UI.wireRoutine!==false?'checked':''}> Sailings and arrivals</label></div>
-    <div class="ratchet stack tape" data-key="r-wire" style="gap:6px">${wireHTML(L,true)}</div>
-    ${(S.wire||[]).length>6?`<button class="btn quiet" data-act="wireall" style="width:fit-content">${UI.wireAll?'Fewer messages':'More messages'}</button>`:''}</section>`;}
+/* ---------- the tray: everything that arrives on its own lives in one fixed-height box, so nothing below it moves ---------- */
+function trayHTML(nAttn,attn,ADV){
+  const W=(S.wire||[]).filter(m=>UI.wireRoutine!==false||m.k!=='r');
+  if(!UI.trayTab)UI.trayTab=nAttn?'attn':'wire';
+  const lastSeen=UI.wireSeen||0,newW=W.filter(m=>m.id>lastSeen).length;
+  if(UI.trayTab==='wire')UI.wireSeen=W.length?W[0].id:0;
+  const tab=(k,l,n,cls)=>`<button role="tab" data-act="traytab" data-id="${k}" aria-selected="${UI.trayTab===k}">${l}${n?` <span class="${cls}">${n}</span>`:''}</button>`;
+  let body;
+  if(UI.trayHold&&UI._tray&&UI._tray.tab===UI.trayTab)body=UI._tray.body; // the pointer is on it: hold still
+  else{
+    body=UI.trayTab==='attn'?attn:UI.trayTab==='advice'?adviceHTML(ADV,'Head office has no complaints. The books look sound at current settings.')
+      :`<div class="row" style="justify-content:flex-end"><label class="check"><input type="checkbox" data-wirert="1" ${UI.wireRoutine!==false?'checked':''}> Sailings and arrivals</label></div><div class="stack tape" style="gap:6px">${wireHTML(W.slice(0,30),true)}</div>`;
+    UI._tray={tab:UI.trayTab,body};}
+  return `<section class="sec tray"><div class="traytabs" role="tablist">${tab('attn','Needs attention',nAttn,'badge')}${tab('advice','Advice',ADV.length,'count')}${tab('wire','Wireless',UI.trayTab==='wire'?0:newW,'badge wb')}</div>
+    <div class="traybody" id="traybody" data-key="tray-${UI.trayTab}">${body}</div></section>`;
+}
+/* advice for one ship or line sits behind a single row of constant height, opened on request */
+function advRow(key,list,who){
+  const open=UI.advOpen===key;
+  if(!list.length)return `<div class="advrow none">No suggestions from head office for ${who}.</div>`;
+  return `<button class="advrow" data-act="advopen" data-id="${key}" aria-expanded="${open}">Head office has ${list.length} suggestion${list.length>1?'s':''} for ${who} <span>${open?'Hide':'Show'}</span></button>${open?`<div class="stack">${adviceHTML(list)}</div>`:''}`;
+}
 /* the newest message prints as Morse on the tape, then decodes letter by letter into words */
 function animWire(now){
-  if(UI._waLast&&UI._waLast!==UI.wa&&!UI._waLast.done){const L=UI._waLast,e=document.querySelector(`[data-hold="${L.id}"]`);L.done=true;if(e)e.textContent=L.txt;}
+  if(UI._waLast&&UI._waLast!==UI.wa&&!UI._waLast.done){const L=UI._waLast,e=document.querySelector(`[data-hold="${L.id}"] .tg-an`);L.done=true;if(e)e.textContent=L.txt;}
   UI._waLast=UI.wa;
   const A=UI.wa;if(!A||A.done)return;
   const el=document.querySelector(`[data-hold="${A.id}"]`);
   if(!el){if(now-A.made>15000)A.done=true;return;}
+  const an=el.querySelector('.tg-an');if(!an)return;
   if(!A.start)A.start=now;
   const t=now-A.start,txt=A.txt,M=morseOf(txt),pd=Math.min(1400,M.length*5);
   let h;
   if(t<pd)h=`<span class="mo">${M.slice(0,Math.ceil(M.length*t/pd))}</span>`;
   else{const k=Math.floor((t-pd)/45);
-    if(k>=txt.length){A.done=true;el.textContent=txt;return;}
+    if(k>=txt.length){A.done=true;an.textContent=txt;return;}
     h=esc(txt.slice(0,k))+`<span class="mo">${morseOf(txt.slice(k))}</span>`;}
-  if(el._h!==h){el._h=h;el.innerHTML=h;}
+  if(an._h!==h){an._h=h;an.innerHTML=h;}
 }
 function renderShipDetail(sh){
   const st=shipStatus(sh),age=Math.floor(yearNow()-sh.built),atSea=sh.state==='sea'||sh.state==='repo';
@@ -189,9 +205,8 @@ function renderShipDetail(sh){
   setHTML($('detailD'),`
     <div><div class="row"><h3>SS ${sh.name}</h3>${st.chip}</div>
     <div class="meta">Built ${sh.built} (${age} years) · ${int(sh.grt)} grt · ${knotsOf(sh)} knots · ${sh.fuel}-fired · worth about ${fmt(shipValue(sh))}</div></div>
-    <p style="margin:0">${st.text}</p>
-    ${(()=>{const L=(S.wire||[]).filter(m=>m.sid===sh.id&&m.k!=='r').slice(0,3);return L.length?`<div class="stack tape" style="gap:6px"><span class="lbl">Latest from her</span>${wireHTML(L,false)}</div>`:'';})()}
-    <div class="ratchet stack" data-key="r-ship">${adviceHTML(advice().filter(h=>h.scope==='ship'&&h.ref===sh.id))}</div>
+    <p class="stline">${st.text}</p>
+    ${advRow('ship'+sh.id,advice().filter(h=>h.scope==='ship'&&h.ref===sh.id),'her')}
     <div class="row meta"><span>Condition ${Math.round(sh.cond)}%</span><span>${pB>0?`About 1 crossing in ${Math.max(2,Math.round(1/pB))} breaks down`:'Reliable'}</span></div>${condBar(sh.cond)}
     ${sh.cond<35?'<p class="badline">Dangerously run down. Fire or foundering is a real risk. Send her to the yard.</p>':''}
     <div class="ctl"><label class="lbl" for="lineSel">Line</label>
@@ -217,7 +232,8 @@ function renderShipDetail(sh){
       ${atOwnYard(sh)?'<p class="note">She is at your own yard: work here is 30% cheaper and quicker.</p>':''}</div>
     <div class="ctl"><span class="lbl">Upgrades</span><div class="stack" style="gap:6px">${Object.keys(UPGRADES).map(k=>{const u=UPGRADES[k],on=sh.up&&sh.up[k];
       return `<div class="uprow" data-key="up${k}"><div><strong>${u.name}</strong>${on?' <span class="chip sea">Fitted</span>':''}<div class="meta">${u.desc}</div></div>${on?'':yb(k,'Fit',true)}</div>`;}).join('')}</div></div>
-    <div class="ctl"><span class="lbl">Retire</span><div class="btns">${exitH||'<span class="note">You cannot retire your only ship.</span>'}</div></div>`);
+    <div class="ctl"><span class="lbl">Retire</span><div class="btns">${exitH||'<span class="note">You cannot retire your only ship.</span>'}</div></div>
+    ${(()=>{const L=(S.wire||[]).filter(m=>m.sid===sh.id&&m.k!=='r').slice(0,3);return L.length?`<div class="stack tape" style="gap:6px"><span class="lbl">Latest from her</span>${wireHTML(L,false)}</div>`:'';})()}`);
 }
 
 function captainHTML(sh){
@@ -271,7 +287,7 @@ function renderLineDetail(rk){
   setHTML($('lineD'),`
     <div><div class="row"><h3>${r.name}</h3>${war?'<span class="chip bad">Rate war</span>':''}</div><div class="meta">${callsText(rk)} · ${int(r.dist)} nm · ${ships.length} ship${ships.length===1?'':'s'} · month to date ${fmt(S.mtd.lines[rk]||0)}</div></div>
     <p class="note">${r.blurb} ${cargoText(rk)}${r.winter?(r.winter.months.includes(S.m%12)?' The St Lawrence is frozen: sailings run to Saint John until May.':' From December to April the St Lawrence freezes and sailings run to Saint John.'):''}</p>
-    <div class="ratchet stack" data-key="r-line">${adviceHTML(advice().filter(h=>h.scope==='line'&&h.ref===rk))}</div>
+    ${advRow('line'+rk,advice().filter(h=>h.scope==='line'&&h.ref===rk),'this line')}
     ${war?`<p class="badline">The conference lines have cut fares to ${Math.round(war.mult*100)}% of the line rate for ${war.left} more month${war.left>1?'s':''}.</p>`:''}
     ${S.mail[rk]?`<p class="note">Mail contract: ${fmt(S.mail[rk].pay)} per round trip. Ships at economical speed or broken down do not earn it.</p>`:''}
     <div class="tablewrap"><table><thead><tr><th>Class</th><th>Fare £</th><th class="r">Line rate</th><th class="r">Last out</th><th class="r">Last home</th></tr></thead><tbody>${rows}</tbody></table></div>

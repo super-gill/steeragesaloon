@@ -316,3 +316,26 @@ input[type=range]{width:100%;accent-color:var(--brass)}
 .tutdots{display:flex;gap:5px}
 .tutdots i{width:18px;height:4px;border-radius:2px;background:var(--line)}
 .tutdots i.on{background:var(--brass)} .tutdots i.now{background:var(--brass);opacity:.5}
+
+/* the tray: fixed height, so arrivals never push the page about */
+.tray{gap:0!important}
+.traytabs{display:flex;border-bottom:1px solid var(--line);gap:2px;overflow-x:auto}
+.traytabs button{background:none;border:0;border-bottom:2px solid transparent;padding:7px 9px 6px;cursor:pointer;color:var(--muted);font-weight:600;font-size:12.5px;white-space:nowrap;display:flex;gap:5px;align-items:center}
+.traytabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--brass)}
+.traytabs .badge{background:var(--bad);color:#fff;border-radius:9px;font-size:10.5px;padding:0 6px;line-height:17px;font-weight:700}
+.traytabs .badge.wb{background:var(--brass)}
+.traytabs .count{color:var(--muted);font-family:var(--mono);font-size:11px;font-weight:400}
+.traybody{height:340px;overflow-y:auto;overscroll-behavior:contain;padding:10px 2px 10px 0;display:flex;flex-direction:column;gap:8px;scrollbar-gutter:stable}
+.traybody > .advice,.traybody > .alert{flex:none}
+@media (max-width:640px){.traybody{height:min(300px,42vh)}}
+.tg-b.hold{position:relative}
+.tg-b.hold .tg-sz{visibility:hidden}
+.tg-b.hold .tg-an{position:absolute;inset:0;overflow:hidden}
+.advrow{all:unset;cursor:pointer;display:flex;justify-content:space-between;gap:8px;padding:7px 10px;background:var(--surface2);border-left:3px solid var(--brass);font-size:13px;font-weight:600}
+.advrow span{color:var(--muted);font-weight:500}
+.advrow.none{cursor:default;border-left-color:var(--line);color:var(--muted);font-weight:500}
+.advrow:focus-visible{outline:2px solid var(--brass)}
+.stline{margin:0;min-height:3em}
+.tut .tutcard{min-height:10.5em}
+.glance .nm,.glance .meta{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.tile b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

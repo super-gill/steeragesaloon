@@ -38,6 +38,8 @@ document.addEventListener('click',e=>{
     case 'askcxl':UI.confirm='cxl'+b.dataset.id;break;
     case 'cxlorder':{const o=(S.orders||[]).find(x=>x.id===+b.dataset.id);if(o){if(o.slip){o.slip.who=null;o.slip.until=S.m;}S.orders=S.orders.filter(x=>x!==o);news(`The contract for SS ${o.d.name} is cancelled. The ${fmt(o.paid)} already paid is lost.`,'bad');}UI.confirm=null;break;}
     case 'headpick':UI.headPick=UI.headPick===b.dataset.id?null:b.dataset.id;break;
+    case 'traytab':UI.trayTab=b.dataset.id;UI.trayHold=false;{const t=$('traybody');if(t)t.scrollTop=0;}break;
+    case 'advopen':UI.advOpen=UI.advOpen===b.dataset.id?null:b.dataset.id;break;
     case 'maptoggle':UI.noMap=!UI.noMap;requestAnimationFrame(()=>{VIEW.s=null;applyView();});break;
     case 'wireall':UI.wireAll=!UI.wireAll;break;
     case 'lineset':if(L)L[b.dataset.k]=+b.dataset.v;break;
@@ -80,6 +82,10 @@ document.addEventListener('input',e=>{const t=e.target;
   if(t.dataset.dz&&UI.dz){dzSet(t.dataset.dz,t.value);UI.dzMsg=null;UI.dirty=true;}
   if(t.dataset.dzname&&UI.dz){UI.dz.name=t.value;UI.dirty=true;}
 });
+// hold the tray still while the pointer or a finger is on it
+document.addEventListener('pointerover',e=>{const on=!!e.target.closest('#traybody');if(on!==!!UI.trayHover){UI.trayHover=on;UI.trayHold=on||UI.trayTouch>performance.now();if(!UI.trayHold)UI.dirty=true;}});
+document.addEventListener('touchstart',e=>{if(e.target.closest('#traybody')){UI.trayTouch=performance.now()+3000;UI.trayHold=true;setTimeout(()=>{if(!UI.trayHover&&UI.trayTouch<=performance.now()){UI.trayHold=false;UI.dirty=true;}},3100);}},{passive:true});
+document.addEventListener('scroll',e=>{if(e.target&&e.target.id==='traybody'){UI.trayTouch=performance.now()+2500;UI.trayHold=true;setTimeout(()=>{if(!UI.trayHover&&UI.trayTouch<=performance.now()){UI.trayHold=false;UI.dirty=true;}},2600);}},true);
 window.addEventListener('pagehide',()=>save());
 
 S=load();if(!S)newGame();
