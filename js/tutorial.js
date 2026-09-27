@@ -19,8 +19,8 @@ const TUT=[
   {id:'books',title:'Read your first month\'s accounts',tab:'finance',
     text:'The Finance tab shows where the money went, by account and by line, and what you owe the bank. If the account goes too far overdrawn, the bank forecloses.',
     done:()=>!!S.lastMonth&&S.tutSeen&&S.tutSeen.finance},
-  {id:'save',title:'Make a save code',tab:'company',
-    text:'The game saves itself in this browser. A save code keeps a copy you can carry to another browser or computer. Make one now and then.',
+  {id:'save',title:'Make a save code',tab:'menu',
+    text:'The game saves itself in this browser. The Menu button beside the date holds the save code: a save code keeps a copy you can carry to another browser or computer. Make one now and then.',
     done:()=>!!(S.tutSeen&&S.tutSeen.code)},
   {id:'second',title:'Buy a second ship',tab:'brokers',
     text:'When you can put down 40% of a price and still hold three months of running costs, look at the brokers\' list. A second ship on a second trade spreads the risk. Pick one with wireless if you can.',
@@ -29,7 +29,7 @@ const TUT=[
     text:'Open a new service from the Lines tab and assign a ship to it. Some lines carry emigrants and mail, some carry cotton, bananas or beef. Each has its own seasons.',
     done:()=>Object.keys(S.lines).length>=2},
   {id:'shore',title:'Look ashore',tab:'shore',
-    text:'Piers, agents, hostels, yards and head-office departments all cost money every month. They pay only once you have enough ships to use them. When you do, the departments can take routine work off your hands.',
+    text:'Piers, agents, hostels and yards all cost money every month; so do the departments on the Company tab. They pay only once you have enough ships to use them. When you do, the departments can take routine work off your hands.',
     done:()=>S.tutSeen&&S.tutSeen.shore&&S.ships.length>=2}
 ];
 function tutorialHTML(){
@@ -40,6 +40,6 @@ function tutorialHTML(){
   const s=TUT[i];
   return `<section class="sec tut" data-key="tut"><div class="row"><h2>First-year briefing · ${i+1} of ${TUT.length}</h2><button class="btn quiet" data-act="tutoff">Skip the briefing</button></div>
     <div class="tutcard"><strong>${s.title}</strong><p class="note" style="margin:0">${s.text}</p>
-    ${s.tab&&!(UI.wide&&s.tab==='overview')?`<button class="btn" data-act="tabgo" data-tab="${s.tab}" style="width:fit-content">Go there</button>`:''}</div>
+    ${s.tab==='menu'?'<button class="btn" data-act="menu" style="width:fit-content">Open the menu</button>':s.tab&&!(UI.wide&&s.tab==='overview')?`<button class="btn" data-act="tabgo" data-tab="${s.tab}" style="width:fit-content">Go there</button>`:''}</div>
     <div class="tutdots">${TUT.map((t,j)=>`<i class="${j<i?'on':j===i?'now':''}" title="${t.title}"></i>`).join('')}</div></section>`;
 }

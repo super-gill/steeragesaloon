@@ -3,7 +3,7 @@ document.addEventListener('click',e=>{
   if(UI.suppressClick&&e.target.closest('#map'))return;
   UI.rev=(UI.rev||0)+1;
   const b=e.target.closest('[data-act]');if(!b||b.disabled)return;const prevTab=UI.tab;
-  {const al=b.closest('.alert[data-aid]');if(al)(S.attnSeen=S.attnSeen||{})[al.dataset.aid]=S.t+30;}
+  {const al=b.closest('.alert[data-aid]:not([data-sticky])');if(al)(S.attnSeen=S.attnSeen||{})[al.dataset.aid]=true;}
   const a=b.dataset.act,sh=S.ships.find(x=>x.id===S.selShip),L=S.lines[S.selLine];
   if(a!=='cancel'&&!a.startsWith('ask')&&!['exit','closeline','leave','new','loadcode'].includes(a))UI.confirm=null;
   switch(a){
@@ -12,8 +12,11 @@ document.addEventListener('click',e=>{
     case 'selline':S.selLine=b.dataset.id;UI.tab='lines';(S.tutSeen=S.tutSeen||{}).lines=true;break;
     case 'tabgo':UI.tab=(UI.wide&&b.dataset.tab==='overview')?UI.tab:b.dataset.tab;(S.tutSeen=S.tutSeen||{})[b.dataset.tab]=true;break;
     case 'tutoff':if(S.tut)S.tut.off=true;break;
-    case 'setfare':case 'setfares':case 'setlineopt':case 'setship':case 'moveship':case 'setyard':case 'sellship':case 'hire':case 'shorebuy':case 'deptmode':case 'openmove':case 'buyship':case 'newhead':case 'propyes':case 'propno':case 'build':
+    case 'setfare':case 'setfares':case 'setlineopt':case 'setship':case 'moveship':case 'setyard':case 'sellship':case 'hire':case 'shorebuy':case 'deptmode':case 'openmove':case 'buyship':case 'newhead':case 'propyes':case 'propno':case 'build':case 'scrapship':
       {const d=JSON.parse(b.dataset.d||'[]');if(a==='moveship'||a==='openmove'||a==='setship'){const x=S.ships.find(q=>q.id===d[0]);if(x)x.ownerSet=S.t;}doAction(a,d);}ADV_CACHE.key=null;break;
+    case 'shipgrp':{const o=UI.shipGrp=UI.shipGrp||{earn:true,upkeep:true,crew:false,retire:false};o[b.dataset.id]=!o[b.dataset.id];break;}
+    case 'menu':UI.menu=!UI.menu;break;
+    case 'fcship':(UI.fcShip=UI.fcShip||{})[b.dataset.k]=+b.dataset.id;break;
     case 'cappool':UI.capPool=UI.capPool===+b.dataset.id?null:+b.dataset.id;break;
     case 'mkcode':UI.copied=null;(S.tutSeen=S.tutSeen||{}).code=true;makeSaveCode().then(c=>{UI.saveCode=c;UI.saveCodeAt=dateLong(S.t)+' (game date)';UI.dirty=true;});break;
     case 'copycode':case 'copylink':{const txt=a==='copylink'?location.href.split('#')[0]+'#save='+UI.saveCode:UI.saveCode;
@@ -22,7 +25,7 @@ document.addEventListener('click',e=>{
     case 'askload':if(($('loadCode').value||'').trim())UI.confirm='load';else UI.loadMsg={ok:false,t:'Paste a code into the box first.'};break;
     case 'loadcode':{const el=$(b.dataset.src||'loadCode'),code=el?el.value:'';UI.confirm=null;
       loadSaveCode(code).then(s2=>{UI.loadMsg={ok:true,t:`Loaded: ${dateLong(s2.t)}, ${s2.ships.length} ship${s2.ships.length===1?'':'s'}.`};layoutMode();applyView();},e2=>{UI.loadMsg={ok:false,t:e2.message||'That code could not be read.'};UI.dirty=true;});break;}
-    case 'dismiss':S.dismiss[b.dataset.id]=S.m+1;break;
+    case 'dismiss':putAside(b.dataset.id);break;
     case 'alladvice':UI.allAdvice=!UI.allAdvice;break;
     case 'newline':{const rk=Object.keys(ROUTES).find(k=>!S.lines[k]);if(rk)S.selLine=rk;UI.tab='lines';break;}
     case 'zoom':{const m=$('map');zoomAt(+b.dataset.v>0?1.3:1/1.3,m.clientWidth/2,m.clientHeight/2);break;}
@@ -116,5 +119,5 @@ window.addEventListener('pagehide',()=>save());
 
 S=load();if(!S)newGame();applyPrices();
 if(location.hash.startsWith('#save=')){const code=location.hash.slice(1);history.replaceState(null,'',location.pathname+location.search);
-  loadSaveCode(code).then(()=>news('Game loaded from a save link.'),e=>{UI.loadMsg={ok:false,t:'The save link could not be read: '+(e.message||'damaged code')};UI.tab='company';UI.dirty=true;});}
+  loadSaveCode(code).then(()=>news('Game loaded from a save link.'),e=>{UI.loadMsg={ok:false,t:'The save link could not be read: '+(e.message||'damaged code')};UI.menu=true;UI.dirty=true;});}
 layoutMode();UI.dirty=true;applyView();requestAnimationFrame(frame);

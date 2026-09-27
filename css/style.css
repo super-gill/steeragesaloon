@@ -407,3 +407,33 @@ input[type=range]{width:100%;accent-color:var(--brass)}
 .rflv button:disabled{opacity:.45;cursor:default}
 .rflv button small{opacity:.75;font-size:10.5px}
 .rffac .rftag{margin-left:0}
+
+/* fleet by line board */
+.board{width:100%;border-collapse:collapse;font-size:13px}
+.board th{font-weight:600;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:4px 6px;border-bottom:1px solid var(--line)}
+.board td{padding:5px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+.board tr[data-act]{cursor:pointer} .board tr[data-act]:hover{background:var(--surface2)}
+.board .bline td{background:var(--surface2);padding-top:7px}
+.board .bship td:first-child{padding-left:18px}
+.board .bship .nm{font-weight:600}
+.board .btot td{border-top:2px solid var(--line);background:none}
+.fgrp{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);padding:8px 10px 2px;font-weight:600}
+.lineopts{width:100%;font-size:13px} .lineopts tr.cur td{background:var(--surface2)} .lineopts td{padding:4px 6px;vertical-align:middle}
+.board{table-layout:fixed} .board th:first-child,.board td:first-child{width:auto} .board th:not(:first-child),.board td:not(:first-child){width:62px;white-space:nowrap}
+.board .bship .nm,.board .bship .meta,.board .bline td:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.board td.num{font-size:12px}
+
+/* ship panel groups */
+.grp{border-top:1px solid var(--line)}
+.grph{all:unset;cursor:pointer;display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:baseline;width:100%;box-sizing:border-box;padding:10px 2px;font-weight:600;font-size:14px}
+.grph .meta{font-weight:400;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.grph .grpx{font-size:12px;color:var(--brass);font-weight:600}
+.grph:hover{background:var(--surface2)} .grph:focus-visible{outline:2px solid var(--brass)}
+.grpb{padding:2px 0 14px}
+
+.menubtn{all:unset;cursor:pointer;font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;color:var(--sea-muted);border:1px solid currentColor;border-radius:4px;padding:3px 8px;align-self:center}
+.menubtn:hover,.menubtn[aria-expanded="true"]{color:#fff}
+.modal .panel.menu{max-width:560px;max-height:calc(100vh - 32px);overflow:auto}
+.modal .panel.menu h3{font-size:26px}
+.ledger tr[data-act]{cursor:pointer} .ledger tr[data-act]:hover{background:var(--surface2)}
+.ledger td:first-child{white-space:normal}

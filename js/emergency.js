@@ -127,18 +127,18 @@ const DECIDE={
     doors:{label:'Close the watertight doors and pump',hint:(e,sh)=>(sh.safety||1)<1?'She has enhanced subdivision. The doors will hold most of it.':'The standard answer. Slows the water, does not stop it.',
       fx:(e,sh)=>{e.rateM*=(sh.safety||1)<1?0.55:0.8;return 'Watertight doors closed. All pumps on it.';}},
     jettison:{label:'Jettison cargo to lift the bow',hint:()=>'Takes weight off the damaged end. The cargo is lost and the shippers will claim.',ok:(e,sh)=>sh.load&&sh.load.cargoRev>200,
-      fx:(e,sh)=>{const c=Math.round(sh.load.cargoRev*0.7);sh.load.cargoRev-=c;book('cargo',-Math.round(c*0.4),sh.legRoute);e.rateM*=0.62;return 'Cargo going over the side from the forward holds. She is lifting.';}}
+      fx:(e,sh)=>{const c=Math.round(sh.load.cargoRev*0.7);sh.load.cargoRev-=c;book('cargo',-Math.round(c*0.4),sh.legRoute,sh);e.rateM*=0.62;return 'Cargo going over the side from the forward holds. She is lifting.';}}
   },dflt:(e,sh)=>'doors'},
   f1:{q:'The fire has a hold in the bunkers. How is it to be fought?',opts:{
     hoses:{label:'Fight it with the hoses',hint:()=>'Keeps her whole. Slow against a coal fire.',fx:e=>{e.rateM*=0.9;return 'Fighting it with every hose.';}},
     flood:{label:'Flood the hold',hint:()=>'Drowns the fire quickly. The cargo is ruined and the repair bill larger.',ok:(e,sh)=>!!sh.load,
-      fx:(e,sh)=>{e.rateM*=0.42;e.flooded=true;const c=Math.round(sh.load.cargoRev*0.6);sh.load.cargoRev-=c;book('cargo',-Math.round(c*0.4),sh.legRoute);return 'Flooding the hold. Steam rising through the hatches.';}},
+      fx:(e,sh)=>{e.rateM*=0.42;e.flooded=true;const c=Math.round(sh.load.cargoRev*0.6);sh.load.cargoRev-=c;book('cargo',-Math.round(c*0.4),sh.legRoute,sh);return 'Flooding the hold. Steam rising through the hatches.';}},
     wind:{label:'Put her stern to the wind and slow down',hint:()=>'Stops the wind fanning the fire forward. Costs a day.',
       fx:e=>{e.rateM*=0.7;e.delay=(e.delay||0)+1;return 'Stern to the wind. Smoke going clear of the ship.';}},
   },dflt:(e,sh)=>has(sh,'cautious')?'wind':'hoses'},
   w2:{q:'She is settling. What of the passengers?',opts:{
     transfer:{label:'Transfer the passengers to the ships standing by',hint:e=>'Takes them out of danger while it is calm enough. Costs passage money and goodwill with the other lines.',
-      ok:e=>e.resp.some(r=>r.arrived&&!r.navy&&!r.tug),fx:(e,sh)=>{e.transfer=true;e.capA+=6;book('fares',-Math.round((sh.load?sh.load.paxRev:0)*0.3),sh.legRoute);return 'Passengers going across in the boats. Women and children first.';}},
+      ok:e=>e.resp.some(r=>r.arrived&&!r.navy&&!r.tug),fx:(e,sh)=>{e.transfer=true;e.capA+=6;book('fares',-Math.round((sh.load?sh.load.paxRev:0)*0.3),sh.legRoute,sh);return 'Passengers going across in the boats. Women and children first.';}},
     boats:{label:'Swing out the boats and keep pumping',hint:()=>'Everyone at boat stations. If she goes, she goes with the boats ready.',fx:e=>{e.saveA+=0.2;return 'Boats swung out. Passengers at their stations in lifebelts.';}},
     press:{label:'Keep them below and make for port',hint:()=>'Saves the passage if she holds. If she does not, the boats go late.',fx:(e,sh)=>{e.rateM*=1.12;e.saveA-=0.15;e.press=true;sh.stopLeft=0;return 'Making for port at slow speed. Passengers told to keep to their cabins.';}},
     beach:{label:'Run her for the shore',ok:(e,sh)=>nearestPort(shipXY(sh)).d<160,hint:(e,sh)=>{const n=nearestPort(shipXY(sh));return `Beach her near ${PN[n.k]}, about ${Math.max(1,Math.round(n.d/7))} h away. Everyone lives. She may never float again.`;},
@@ -151,7 +151,7 @@ const DECIDE={
       fx:e=>{e.fight=true;e.saveA+=0.1;e.capA+=10;return 'Passengers in the boats. Engineers and volunteers staying aboard to pump.';}}
   },dflt:(e,sh)=>has(sh,'driver')||has(sh,'martinet')?'fight':'abandon'},
   u1:{q:'The stokehold crowd hold the engine room. What are the master\'s orders?',opts:{
-    meet:{label:'Meet their demands',hint:()=>'Ends it within hours. Costs money now and a softer crew later.',fx:(e,sh)=>{e.settle=true;book('crew',-Math.round(600+sh.grt*0.04),sh.legRoute);sh.morale=Math.min(100,(sh.morale||50)+15);return 'Demands met. Men returning to the stokehold.';}},
+    meet:{label:'Meet their demands',hint:()=>'Ends it within hours. Costs money now and a softer crew later.',fx:(e,sh)=>{e.settle=true;book('crew',-Math.round(600+sh.grt*0.04),sh.legRoute,sh);sh.morale=Math.min(100,(sh.morale||50)+15);return 'Demands met. Men returning to the stokehold.';}},
     firm:{label:'Hold firm and wait for the navy',hint:()=>'Safe for the officers, slow for the passengers.',fx:e=>{e.rateM*=0.8;return 'Holding the bridge. Waiting for the navy.';}},
     arm:{label:'Arm the officers and retake the engine room',hint:(e,sh)=>`Quick if it works. If it fails, men will die.${has(sh,'martinet')?' He has the discipline for it.':''}`,
       fx:(e,sh)=>{const p=0.55+(has(sh,'martinet')?0.12:0)+(sh.captain?Math.min(0.15,sh.captain.exp/100):0);
@@ -159,22 +159,22 @@ const DECIDE={
         const d=2+Math.floor(Math.random()*9);e.dead+=d;e.threat=Math.min(99,e.threat+30);S.rep=clamp(S.rep-3,0,100);return `Rush failed. ${d} killed. Mutineers hold the after deck.`;}}
   },dflt:(e,sh)=>has(sh,'martinet')?'arm':'firm'},
   p1:{q:'Armed men are trying for the bridge. What are the master\'s orders?',opts:{
-    pay:{label:'Hand over the specie and the mail',hint:()=>'Ends it without blood. Costs money, and the newspapers will call it cowardice.',fx:(e,sh)=>{e.settle=true;book('fares',-Math.round(2000+Math.random()*3000),sh.legRoute);S.rep=clamp(S.rep-2,0,100);return 'Strongroom opened. The men are leaving in a launch.';}},
+    pay:{label:'Hand over the specie and the mail',hint:()=>'Ends it without blood. Costs money, and the newspapers will call it cowardice.',fx:(e,sh)=>{e.settle=true;book('fares',-Math.round(2000+Math.random()*3000),sh.legRoute,sh);S.rep=clamp(S.rep-2,0,100);return 'Strongroom opened. The men are leaving in a launch.';}},
     hold:{label:'Hold the bridge and wait for the navy',hint:()=>'Safe while the wheelhouse holds.',fx:e=>{e.rateM*=0.8;return 'Holding the wheelhouse. Waiting for the navy.';}},
     rush:{label:'Rush them',hint:()=>'Over quickly if it works. Passengers may be hurt if not.',
       fx:(e,sh)=>{if(Math.random()<0.5+(sh.captain?Math.min(0.15,sh.captain.exp/100):0)){e.threat=Math.max(0,e.threat-60);e.ctrl=100;return 'Rushed them on the boat deck. Ringleaders taken.';}
         const d=3+Math.floor(Math.random()*12);e.dead+=d;e.threat=Math.min(99,e.threat+30);S.rep=clamp(S.rep-4,0,100);return `Rush failed. ${d} killed including passengers. They hold the bridge.`;}}
   },dflt:(e,sh)=>has(sh,'driver')||has(sh,'martinet')?'rush':'hold'},
   s1:{q:'How is the outbreak to be handled?',opts:{
-    isolate:{label:'Isolate the sick and fumigate',hint:()=>'Slows the spread and shortens any quarantine. Costs a little.',fx:(e,sh)=>{e.rateM*=0.55;e.iso=true;book('port',-Math.round(150+soulsOf(sh)*0.2),sh.legRoute);return 'Sick bay extended into the after well deck. Fumigating the steerage.';}},
+    isolate:{label:'Isolate the sick and fumigate',hint:()=>'Slows the spread and shortens any quarantine. Costs a little.',fx:(e,sh)=>{e.rateM*=0.55;e.iso=true;book('port',-Math.round(150+soulsOf(sh)*0.2),sh.legRoute,sh);return 'Sick bay extended into the after well deck. Fumigating the steerage.';}},
     land:{label:'Put in and land the sick at the nearest port',owner:true,ok:(e,sh)=>nearestPort(shipXY(sh)).d<700,hint:(e,sh)=>{const n=nearestPort(shipXY(sh));return `${PN[n.k]}, about ${Math.round(n.d/(knotsOf(sh)*24)*10)/10} days off her track. Ends it and avoids quarantine. Costs time and the hospital bill.`;},
-      fx:(e,sh)=>{const n=nearestPort(shipXY(sh));e.landed=true;e.rateM*=0.3;sh.stopLeft=Math.max(sh.stopLeft||0,0.5+n.d/(knotsOf(sh)*24));book('port',-Math.round(300+soulsOf(sh)*0.6),sh.legRoute);S.rep=clamp(S.rep+1,0,100);return `Diverting to ${PN[n.k]} to land the sick.`;}},
+      fx:(e,sh)=>{const n=nearestPort(shipXY(sh));e.landed=true;e.rateM*=0.3;sh.stopLeft=Math.max(sh.stopLeft||0,0.5+n.d/(knotsOf(sh)*24));book('port',-Math.round(300+soulsOf(sh)*0.6),sh.legRoute,sh);S.rep=clamp(S.rep+1,0,100);return `Diverting to ${PN[n.k]} to land the sick.`;}},
     quiet:{label:'Say nothing and carry on',hint:()=>'No delay if the port doctor misses it. If he does not, the papers will have it.',fx:e=>{e.quiet=true;e.rateM*=1.2;return 'Understood. Proceeding. Log kept private.';}}
   },dflt:(e,sh)=>has(sh,'driver')||has(sh,'lax')||has(sh,'drinker')?'quiet':'isolate'},
   q1:{who:'The agents ask',q:'The port health officer has ordered her into quarantine.',opts:{
     accept:{label:'Accept the quarantine',hint:e=>`${e.days} days at anchor off the quarantine station, and the fees.`,fx:()=> 'Quarantine accepted. Ship at the quarantine anchorage.'},
     station:{label:'Land steerage at the quarantine station and pay their keep',ok:e=>e.steer>0,hint:e=>`The ship is released in a day. You pay for ${int(e.steer)} people ashore for ${e.days} days, about ${fmt(Math.round(e.steer*e.days*0.8+300))}.`,
-      fx:(e,sh)=>{if(sh.state==='port')sh.portLeft=Math.max(1,sh.portLeft-(e.days-1));book('port',-Math.round(e.steer*e.days*0.8+300),sh.legRoute||sh.line);return 'Steerage landed to the quarantine station. Ship released tomorrow.';}},
+      fx:(e,sh)=>{if(sh.state==='port')sh.portLeft=Math.max(1,sh.portLeft-(e.days-1));book('port',-Math.round(e.steer*e.days*0.8+300),sh.legRoute||sh.line,sh);return 'Steerage landed to the quarantine station. Ship released tomorrow.';}},
     protest:{label:'Protest to the health officer',hint:()=>`Your name carries weight with the port${S.rep>60?'':', though perhaps not enough'}. If he will not budge, he adds a day for the trouble.`,
       fx:(e,sh)=>{if(Math.random()<0.2+S.rep/220){if(sh.state==='port')sh.portLeft=Math.max(1,sh.portLeft-Math.floor(e.days/2));return 'Health officer relents. Quarantine halved.';}
         if(sh.state==='port')sh.portLeft+=1;S.rep=clamp(S.rep-1,0,100);return 'Health officer will not move. A day added for the trouble.';}}
@@ -266,16 +266,16 @@ function emEnd(e,sh,how){
     emSay(e,null,`Signals from SS ${e.ship} ceased ${hhmm(S.t)}. ${e.resp.some(r=>!r.arrived)?'Ships still steaming for the position.':'Nothing further heard.'}`,'bad','Coast station');
     emLater(e,help?3:9,help?`${e.resp.filter(r=>r.arrived).map(r=>r.navy?r.name:(r.tug?'Tug ':'SS ')+r.name).join(' and ')} picked up ${int(souls+crew-lost)} survivors from SS ${e.ship}.${lost?` ${int(lost)} missing.`:' All saved.'}`
       :`${lost?`Boats of SS ${e.ship} found after a long night. ${int(souls+crew-lost)} survivors. ${int(lost)} missing.`:`All the boats of SS ${e.ship} picked up. Everyone saved.`}`,lost?'bad':'good','Coast station');
-    if(sh.load)book('fares',-Math.round(sh.load.paxRev*0.5),rk);
+    if(sh.load)book('fares',-Math.round(sh.load.paxRev*0.5),rk,sh);
     sh.lost={t:S.t,where:posText(sh),saved:1-lost/Math.max(1,souls+crew),lost};
     queueInquiry(sh,e);sh.inqQ=true;
     if(radioOf(sh)||e.known)loseShip(sh);else{sh.state='lost';sh.stopLeft=0;}
     return;}
   if(how==='beached'){
     emSay(e,sh,`Beached near ${PN[e.beach.port]}. Everyone ashore safe. ${e.peak>65||e.sev===3?'Back broken on the rocks.':'Holding on the sand.'}`,'good');
-    if(sh.load)book('fares',-Math.round(sh.load.paxRev*0.25),rk);
-    if(e.peak>65||e.sev===3){if(sh.load)book('cargo',-Math.round(sh.load.cargoRev*0.5),rk);writeOff(e,sh,`on the beach near ${PN[e.beach.port]}`);return;}
-    sh.brk=null;sh.stopLeft=5;sh.towed=true;book('yard',-Math.round(sh.grt*0.9),rk);sh.cond=clamp(sh.cond-20,5,95);sh.pendingYard='repair';S.rep=clamp(S.rep-2,0,100);
+    if(sh.load)book('fares',-Math.round(sh.load.paxRev*0.25),rk,sh);
+    if(e.peak>65||e.sev===3){if(sh.load)book('cargo',-Math.round(sh.load.cargoRev*0.5),rk,sh);writeOff(e,sh,`on the beach near ${PN[e.beach.port]}`);return;}
+    sh.brk=null;sh.stopLeft=5;sh.towed=true;book('yard',-Math.round(sh.grt*0.9),rk,sh);sh.cond=clamp(sh.cond-20,5,95);sh.pendingYard='repair';S.rep=clamp(S.rep-2,0,100);
     news(`SS ${e.ship} was beached near ${PN[e.beach.port]}. Everyone was saved. Salvors will refloat her in about five days.`,'bad');return;}
   if(how==='lost'&&D.type==='unrest'){
     // the ship is taken until the navy arrives, then released; a costly delay
@@ -285,18 +285,18 @@ function emEnd(e,sh,how){
     sh.em=e.id;return;}
   // saved
   if(D.type==='water'||D.type==='fire'){const sev=e.peak/100;
-    if(e.salvage){const aw=Math.round(shipValue(sh)*0.06);book('yard',-aw,rk);emLater(e,2,`Salvage award to the tug owners agreed at ${fmt(aw)}.`,'','Lloyd\'s');}
+    if(e.salvage){const aw=Math.round(shipValue(sh)*0.06);book('yard',-aw,rk,sh);emLater(e,2,`Salvage award to the tug owners agreed at ${fmt(aw)}.`,'','Lloyd\'s');}
     if((e.peak>=85&&R()<(e.peak-80)/25)||(e.sev===3&&e.peak>=70&&R()<0.3)){
       emSay(e,sh,`${D.type==='water'?'Leak held':'Fire out'}. Surveyor's report: frames buckled and the hull strained through. Not worth repairing.`,'bad');
-      if(sh.load){book('fares',-Math.round(sh.load.paxRev*0.3),rk);}writeOff(e,sh,'after her '+D.name.toLowerCase());return;}
-    sh.brk=null;book('yard',-Math.round(sh.grt*(0.2+sev*0.8)*(e.flooded?1.3:1)),rk);sh.cond=clamp(sh.cond-sev*15,5,95);sh.pendingYard=sev>0.5?'repair':'engine';sh.limp=sev>0.3;sh.limpF=0.6;
+      if(sh.load){book('fares',-Math.round(sh.load.paxRev*0.3),rk,sh);}writeOff(e,sh,'after her '+D.name.toLowerCase());return;}
+    sh.brk=null;book('yard',-Math.round(sh.grt*(0.2+sev*0.8)*(e.flooded?1.3:1)),rk,sh);sh.cond=clamp(sh.cond-sev*15,5,95);sh.pendingYard=sev>0.5?'repair':'engine';sh.limp=sev>0.3;sh.limpF=0.6;
     S.rep=clamp(S.rep-Math.round(sev*4),0,100);sh.stopLeft=e.delay||0;
     emSay(e,sh,`${D.type==='water'?'Leak under control':'Fire out'}. Proceeding at reduced speed${help?', escorted':''}. ${sev>0.5?'Damage heavy. Will need the yard.':'Damage moderate.'}`,'good');}
   if(D.type==='sick'){const dd=DISEASE[e.dis]||DISEASE.flu,pool=e.crew?crewOf(sh):souls,ill=Math.round(pool*e.peak/100*0.45),dead=Math.round(ill*dd.mort*(e.iso?0.7:1));
     e.dead=dead;S.rep=clamp(S.rep-(dead>10?dd.rep+2:dead?dd.rep:1),0,100);
     if(!e.landed)sh.quarantine={dis:e.dis,iso:!!e.iso,quiet:!!e.quiet,peak:e.peak};
     emSay(e,sh,`Outbreak over. ${ill} were ill. ${dead?dead+' died.':'No deaths.'}${e.landed?' Sick landed ashore.':e.quiet?'':' Expect quarantine on arrival.'}`,dead?'bad':'good');}
-  if(D.type==='unrest'){sh.stopLeft=0;if(!e.settle){const c=Math.round(800+R()*2000);book('crew',-c,rk);S.rep=clamp(S.rep-3,0,100);}
+  if(D.type==='unrest'){sh.stopLeft=0;if(!e.settle){const c=Math.round(800+R()*2000);book('crew',-c,rk,sh);S.rep=clamp(S.rep-3,0,100);}
     emSay(e,sh,e.settle?'Order restored. Proceeding.':e.k==='piracy'?`Order restored. Ringleaders in irons. ${e.seized?'Mail and valuables taken.':'Nothing lost.'} Proceeding.`:`Order restored. Ringleaders in irons for the courts. Proceeding with a scratch stokehold.`,'good');
     if(e.k==='mutiny')sh.morale=Math.max(sh.morale,45);}
   news(`SS ${e.ship}: ${D.type==='sick'?DISEASE[e.dis].name+' aboard':D.name.toLowerCase()} ${how==='saved'?'survived':'ended'}.${e.dead?' '+e.dead+' dead.':''}`,how==='saved'&&!e.dead?'':'bad');
@@ -309,7 +309,7 @@ function startQuarantine(sh,rk){
     if(!found){news(`SS ${sh.name} passed the port doctor at ${PN[sh.port]}.`);return;}
     S.rep=clamp(S.rep-dd.rep*2,0,100);news(`The health officer at ${PN[sh.port]} found ${dd.name} aboard SS ${sh.name} that her master had not reported. The newspapers have it.`,'bad',false);}
   const days=Math.max(2,Math.round(dd.qd*(q.iso?0.6:1)*(q.quiet?1.5:1)));
-  sh.portLeft+=days;book('port',-Math.round(400+soulsOf(sh)*0.5),rk);
+  sh.portLeft+=days;book('port',-Math.round(400+soulsOf(sh)*0.5),rk,sh);
   const steer=sh.load&&sh.load.pax.t?sh.load.pax.t.n:0;
   const e={id:(S.emNext=(S.emNext||0)+1),sid:sh.id,ship:sh.name,k:'quar',t0:S.t,sev:1,peak:0,ctrl:0,cap:0,capA:0,rateM:1,saveA:0,rate:0,resp:[],known:true,over:null,
     where:PN[sh.port],lines:[],later:[],orders:[],dead:0,threat:0,days,steer,dis:q.dis};

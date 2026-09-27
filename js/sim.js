@@ -54,7 +54,7 @@ function depart(sh){
   if(P!==A&&P!==B){
     const to=laneDist(P,A)<=laneDist(P,B)?A:B,d=laneDist(P,to);
     sh.state='repo';sh.repoTo=to;sh.repoLeft=sh.repoTotal=d/(knotsOf(sh)*24);
-    book('fuel',-fuelRate(sh,1)*sh.repoTotal*fuelPrice(sh,m),rk);
+    book('fuel',-fuelRate(sh,1)*sh.repoTotal*fuelPrice(sh,m),rk,sh);
     news(`SS ${sh.name} leaves ${PN[P]} light to join the ${r.name} service at ${PN[to]}.`);return;
   }
   // an unhappy crew may walk off before sailing
@@ -65,7 +65,7 @@ function depart(sh){
   sh.dir=P===A?0:1;sh.geo=gk;sh.pos=0;sh.state='sea';sh.legRoute=rk;sh.broke=false;sh.limp=false;sh.limpF=0.4;sh.towed=false;sh.incident=null;sh.brk=null;sh.galeAt=null;sh.flav=null;sh.sailedAt=S.t;
   sh.stops=stopsFor(gk,sh.dir);sh.nextCall=0;sh.callLeft=0;
   const lg=legCalc(sh,rk,sh.dir,R,gk);
-  book('fares',lg.paxRev,rk);if(lg.onboard)book('onboard',lg.onboard,rk);book('port',-lg.agents,rk);book('fuel',-lg.fuelC,rk);book('crew',-lg.prov,rk);
+  book('fares',lg.paxRev,rk,sh);if(lg.onboard)book('onboard',lg.onboard,rk,sh);book('port',-lg.agents,rk,sh);book('fuel',-lg.fuelC,rk,sh);book('crew',-lg.prov,rk,sh);
   S.pax[rk]=(S.pax[rk]||0)+CL.reduce((a,c)=>a+(lg.pax[c]?lg.pax[c].n:0),0);
   sh.load=lg;L.last[sh.dir]={name:sh.name,pax:lg.pax,cargoT:lg.cargoT,comm:lg.comm};
   const mo=m%12,winter=[0,1,2,10,11].includes(mo),dist=GEO(gk).dist,lenF=dist/3000;
@@ -96,8 +96,8 @@ function triggerEvent(sh){
     sh.brk={o,tell:S.t+assess,told:false,wait:dur,drift:o==='fail'&&!radio};sh.stopLeft=assess+dur;sh.broke=true;
     wire(sh,`Main engine failure ${where}. Stopped. Engineers at work. Will advise.`,'bad');
   } else {
-    if(sh.cond<25&&R()<0.15*(sh.safety||1)){book('fares',-sh.load.paxRev,rk);founder(sh);sh.event=null;return;}
-    sh.limp=true;sh.limpF=0.4;sh.broke=true;sh.pendingYard='repair';book('yard',-sh.grt*1.5,rk);book('fares',-0.5*sh.load.paxRev,rk);S.rep=clamp(S.rep-10,0,100);
+    if(sh.cond<25&&R()<0.15*(sh.safety||1)){book('fares',-sh.load.paxRev,rk,sh);founder(sh);sh.event=null;return;}
+    sh.limp=true;sh.limpF=0.4;sh.broke=true;sh.pendingYard='repair';book('yard',-sh.grt*1.5,rk,sh);book('fares',-0.5*sh.load.paxRev,rk,sh);S.rep=clamp(S.rep-10,0,100);
     wire(sh,`Fire in the bunkers ${where}. Under control after six hours. Stokehold damaged. Proceeding at reduced speed. Passengers shaken.`,'bad',{pause:true});
     news(`Fire aboard SS ${sh.name}. Half the fares refunded, and the press is savage.`,'bad');
   }
@@ -106,9 +106,9 @@ function triggerEvent(sh){
 /* the chief engineer's verdict, some hours after a breakdown */
 function breakdownVerdict(sh){
   const B=sh.brk,rk=sh.legRoute,d=Math.max(1,Math.round(B.wait));B.told=true;
-  if(B.o==='minor'){book('yard',-Math.round(sh.grt*0.05),rk);wire(sh,`Defect found and made good. Expect under way within hours.`);}
+  if(B.o==='minor'){book('yard',-Math.round(sh.grt*0.05),rk,sh);wire(sh,`Defect found and made good. Expect under way within hours.`);}
   if(B.o==='slow'){sh.pendingYard=sh.pendingYard||'engine';wire(sh,`Engine damaged. Temporary repair in hand. Will proceed at reduced speed. Yard work needed on arrival.`,'bad');}
-  if(B.o==='long'){book('yard',-Math.round(sh.grt*0.3),rk);S.rep=clamp(S.rep-3,0,100);
+  if(B.o==='long'){book('yard',-Math.round(sh.grt*0.3),rk,sh);S.rep=clamp(S.rep-3,0,100);
     wire(sh,`Crankshaft bearing gone. Repairing at sea. About ${d} day${d>1?'s':''} stopped. Passengers informed and restless.`,'bad');}
   if(B.o==='fail'){S.rep=clamp(S.rep-4,0,100);sh.pendingYard=sh.pendingYard||'engine';
     wire(sh,radioOf(sh)?`Damage beyond repair at sea. Require tow. Drifting ${posText(sh)}.`:`Damage beyond repair at sea. Drifting ${posText(sh)}. Burning flares at night and showing not-under-command lights.`,'bad');
@@ -121,9 +121,9 @@ function breakdownResume(sh){
   if(B.o==='fail'){
     const toDest=dist-sh.pos,back=sh.pos<toDest*0.8,nm=Math.min(sh.pos,toDest);
     // the underwriters meet salvage above the owner's excess; passengers sent home get their money back
-    const tug=Math.round((800+nm*3)*(sh.up&&sh.up.wireless?0.7:1)*PX()/50)*50,own=Math.min(tug,Math.round((600*PX()+Math.max(0,tug-600*PX())*0.25)/50)*50);book('salvage',-own,rk);
+    const tug=Math.round((800+nm*3)*(sh.up&&sh.up.wireless?0.7:1)*PX()/50)*50,own=Math.min(tug,Math.round((600*PX()+Math.max(0,tug-600*PX())*0.25)/50)*50);book('salvage',-own,rk,sh);
     const refund=back?Math.round(lg.paxRev):0;
-    if(back){book('refund',-refund,rk);lg.cargoRev=0;lg.mail=0;sh.dir^=1;sh.pos=dist-sh.pos;sh.stops=[];sh.nextCall=0;}
+    if(back){book('refund',-refund,rk,sh);lg.cargoRev=0;lg.mail=0;sh.dir^=1;sh.pos=dist-sh.pos;sh.stops=[];sh.nextCall=0;}
     else{sh.stops=sh.stops.slice(sh.nextCall).filter(x=>x[1]>sh.pos);sh.nextCall=0;}
     sh.towed=true;const tt=`Tug alongside SS ${sh.name}. Tow connected. Proceeding to ${PN[destOf(sh)]} at five knots.${back?' All fares to be refunded.':''}`;
     if(radioOf(sh))wire(sh,tt,'bad');else{relay(sh,tt,"Salvage tug's wireless",0,'bad');sh.seen={t:S.t,pos:sh.pos,stopped:false,v:120};}
@@ -152,16 +152,16 @@ function arrive(sh){
   wire(sh,`SS ${sh.name} arrived ${PN[sh.port]}${sh.towed?' in tow':''}. ${Math.max(1,Math.round(S.t-(sh.sailedAt||S.t)))} days out.${sh.limp?' Needs the yard.':''}`,sh.towed||sh.limp||late?'bad':'r');
   if(sh.overdue)news(`SS ${sh.name} has reached ${PN[sh.port]}, overdue but safe.`,'good');
   sh.seen=null;sh.overdue=0;
-  book('cargo',lg.cargoRev,rk);book('port',-lg.port,rk);
-  if(lg.mail&&!sh.broke&&S.mail[rk]){book('mail',lg.mail,rk);S.mail[rk].ok=true;}
+  book('cargo',lg.cargoRev,rk,sh);book('port',-lg.port,rk,sh);
+  if(lg.mail&&!sh.broke&&S.mail[rk]){book('mail',lg.mail,rk,sh);S.mail[rk].ok=true;}
   const L=S.lines[rk],spartan=L&&L.service===0,lavish=L&&L.service===2;
   if(sh.port==='NYC'){
-    if(R()<(0.03+(spartan?0.03:0))*mods.smuggle){book('yard',-1200,rk);S.rep=clamp(S.rep-2,0,100);news(`Prohibition agents found crew smuggling liquor aboard SS ${sh.name} in New York. £1,200 fine.`,'bad');}
+    if(R()<(0.03+(spartan?0.03:0))*mods.smuggle){book('yard',-1200,rk,sh);S.rep=clamp(S.rep-2,0,100);news(`Prohibition agents found crew smuggling liquor aboard SS ${sh.name} in New York. £1,200 fine.`,'bad');}
     const hostelled=ROUTES[rk].calls.some(p=>S.shore.hostels[p]);
-    if(lg.pax.t&&lg.pax.t.n>150&&R()<(0.02+(spartan?0.04:0))*(hostelled?0.5:1)){book('yard',-1500,rk);S.rep=clamp(S.rep-3,0,100);news(`Typhus scare in steerage. SS ${sh.name} held in quarantine off New York.`,'bad');}
+    if(lg.pax.t&&lg.pax.t.n>150&&R()<(0.02+(spartan?0.04:0))*(hostelled?0.5:1)){book('yard',-1500,rk,sh);S.rep=clamp(S.rep-3,0,100);news(`Typhus scare in steerage. SS ${sh.name} held in quarantine off New York.`,'bad');}
   }
   if((sh.morale||60)<40&&!['GLA','LIV','SOU','HAM','AVO'].includes(sh.port)&&R()<0.25*(40-sh.morale)/40){
-    const c=Math.round(300+R()*600);book('crew',-c,rk);sh.portLeft+=1;
+    const c=Math.round(300+R()*600);book('crew',-c,rk,sh);sh.portLeft+=1;
     news(`Firemen and stewards deserted SS ${sh.name} at ${PN[sh.port]}. Replacements cost ${fmt(c)} and a day.`,'bad');}
   const fo=lg.pax.f?lg.pax.f.n/Math.max(1,lg.pax.f.cap):0;
   if(fo>0.5&&R()<(lavish?0.1:0.03)*(has(sh,'popular')?1.5:1)){S.rep=clamp(S.rep+4,0,100);news(`A film star crossed first class on SS ${sh.name} and praised the table to the newspapers.`,'good');}
@@ -174,8 +174,8 @@ function arrive(sh){
 const YARD_BUNDLE=0.85,bundleCost=(sh,k)=>Math.round(refitCost(sh,k)*YARD_BUNDLE);
 const bundleDays=days=>{const d=days.slice().sort((a,b)=>b-a);return Math.round(d[0]+0.3*d.slice(1).reduce((a,b)=>a+b,0));};
 function enterYard(sh,k){
-  const c=refitCost(sh,k);if(c)book('yard',-c,'_idle');
-  const add=[];for(const x of sh.yardAdd||[]){if(x===k)continue;const cx=bundleCost(sh,x);if(S.cash>=cx){if(cx)book('yard',-cx,'_idle');add.push(x);}
+  const c=refitCost(sh,k);if(c)book('yard',-c,'_idle',sh);
+  const add=[];for(const x of sh.yardAdd||[]){if(x===k)continue;const cx=bundleCost(sh,x);if(S.cash>=cx){if(cx)book('yard',-cx,'_idle',sh);add.push(x);}
     else news(`The account cannot cover ${YARD_NAME[x]} for SS ${sh.name} (${fmt(cx)}); the yard leaves it out.`,'bad');}
   sh.yardAdd=add;sh.state='yard';sh.yardKind=k;sh.yardLeft=bundleDays([k,...add].map(x=>yardDays(sh,x)));
   news(`SS ${sh.name} enters the yard at ${PN[sh.port]} for ${[k,...add].map(x=>YARD_NAME[x]).join(', ')}${c?' ('+fmt(c+add.reduce((a,x)=>a+bundleCost(sh,x),0))+')':''}${atOwnYard(sh)?', at your own yard':''}.`);
@@ -183,7 +183,7 @@ function enterYard(sh,k){
 /* add a job to a ship already booked into the yard, or already there */
 function addYardJob(sh,k){
   if(!yardAdd(sh,k))return false;const c=bundleCost(sh,k);
-  if(sh.state==='yard'){if(S.cash<c)return false;if(c)book('yard',-c,'_idle');const d=yardDays(sh,k);sh.yardLeft=Math.round(Math.max(sh.yardLeft,d)+0.3*Math.min(sh.yardLeft,d));}
+  if(sh.state==='yard'){if(S.cash<c)return false;if(c)book('yard',-c,'_idle',sh);const d=yardDays(sh,k);sh.yardLeft=Math.round(Math.max(sh.yardLeft,d)+0.3*Math.min(sh.yardLeft,d));}
   (sh.yardAdd=sh.yardAdd||[]).push(k);return true;
 }
 const yardAdd=(sh,k)=>(sh.pendingYard||sh.state==='yard')&&sh.pendingYard!==k&&sh.yardKind!==k&&!(sh.yardAdd||[]).includes(k);
@@ -248,9 +248,9 @@ function dailyTick(){
     if(sh.state==='lost')continue;
     const act=ACTIVE.includes(sh.state),f=act?1:sh.state==='yard'?0.5:0.25;
     const key=act?(sh.state==='sea'?sh.legRoute:sh.line):'_idle';
-    book('crew',-(crewCost(sh)*f+(sh.captain?sh.captain.wage:0))/30,key);
-    if(act&&sh.fac)book('crew',-facMods(sh).staff*PX()/30,key);
-    book('upkeep',-(insCost(sh)/30+(act?MAINT_COST[sh.maint]*sh.grt/8000/30:0)),key);
+    book('crew',-(crewCost(sh)*f+(sh.captain?sh.captain.wage:0))/30,key,sh);
+    if(act&&sh.fac)book('crew',-facMods(sh).staff*PX()/30,key,sh);
+    book('upkeep',-(insCost(sh)/30+(act?MAINT_COST[sh.maint]*sh.grt/8000/30:0)),key,sh);
     if(act&&sh.cond<condCap(sh))sh.cond=clamp(sh.cond+MAINT_GAIN[sh.maint]/30,5,condCap(sh));
     else if(sh.state==='laid')sh.cond=clamp(sh.cond-0.02,5,95);
     foulDaily(sh);
@@ -268,7 +268,8 @@ function dailyTick(){
 function monthRoll(pm){
   const repay=Math.min(S.debt,Math.round(S.debt*0.004));S.debt-=repay;S.cash-=repay;
   const net=Object.values(S.mtd.cat).reduce((a,b)=>a+b,0);
-  S.lastMonth={m:pm,cat:S.mtd.cat,lines:S.mtd.lines,net,repay,capex:S.mtd.capex||0};S.mtd=blankLedger();
+  const shipAcc=S.mtd.ships||{};for(const sh of S.ships){if(sh.state==='lost')continue;const v=Object.values(shipAcc[sh.id]||{}).reduce((x,y)=>x+y,0);(sh.pl=sh.pl||[]).push(Math.round(v));if(sh.pl.length>12)sh.pl.shift();}
+  S.lastMonth={m:pm,cat:S.mtd.cat,lines:S.mtd.lines,ships:shipAcc,net,repay,capex:S.mtd.capex||0};S.mtd=blankLedger();
   inflate();giltsMonth();taxMonth(net);crashMonth();unionMonth();combineMonth();
   S.lastPax=S.pax;S.pax={};
   for(const id in RIVALS)S.rivalIdx[id]=clamp((S.rivalIdx[id]||1)+(Math.random()-0.5)*0.04,0.93,1.06);

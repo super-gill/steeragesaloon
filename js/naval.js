@@ -139,10 +139,10 @@ function foulDaily(sh){
 function portCall(sh,p,terminal){
   const f=portFit(sh,p);if(f.ok||f.tender)return 0;
   const lg=sh.load||sh.lastLoad,rk=sh.legRoute,souls=lg?CL.reduce((a,c)=>a+(lg.pax[c]?lg.pax[c].n:0),0):0;
-  book('port',-Math.round(250+(lg?lg.cargoT:0)*0.4+souls*0.3),rk);
+  book('port',-Math.round(250+(lg?lg.cargoT:0)*0.4+souls*0.3),rk,sh);
   let extra=terminal?2:1;
   if(f.drOver>1.5&&Math.random()<Math.min(0.5,0.12*f.drOver/2)){
-    const c=Math.round(sh.grt*0.4);book('yard',-c,rk);sh.cond=clamp(sh.cond-8,5,95);extra+=2;
+    const c=Math.round(sh.grt*0.4);book('yard',-c,rk,sh);sh.cond=clamp(sh.cond-8,5,95);extra+=2;
     remark(sh,'aground'+p,`Master to owners. Touched bottom going in to ${PN[p]}. She draws too much for ${f.note||'the harbour'}. Divers are down. She should not be on this run.`,
       `Put her on the bottom at ${PN[p]}. She draws ${Math.round(f.drOver)} feet more than ${f.note||'the harbour'} will take. I nearly lost her. Move me or change the ship.`,'bad',90);
   } else remark(sh,'lighter'+p,`Master to owners. Could not get alongside at ${PN[p]}: she is too ${f.drOver?'deep':'long'} for ${f.note||'the berths'}. Working passengers and cargo by lighter. Expect delay.`,

@@ -2,6 +2,36 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.12.0 (27 September 2026)
+Every view regrouped so each question has one place to look.
+- Overview: Needs attention, Advice and Wireless, Fleet by line, and the news. The summary boxes, shortcuts and cash chart are gone (the chart is on Finance).
+- Lines: everything about a route in one panel: fares, table and advertising; the ships on it with last month, their average and what each should make there; the forecast; the market report; conference tension with a button to join or leave; and the rivals' recent moves on that route.
+- Fleet: the ship panel is in four groups that fold away: Earnings and line, Upkeep (condition, maintenance, threshold, fittings, refits and the hull), Master and crew, and Sell or scrap. A folded group shows a one-line summary, and the open ones stay open from ship to ship.
+- Finance: one ledger with this month and last month side by side, by account, by line and by ship. Click a line or ship to open it.
+- Company: the departments (moved from Shore), safety and inquiries, the conference, a short summary of each rival line, and milestones.
+- Shore: property only: piers, agencies, hostels, yards, freight and bunkers.
+- Save code, the pause setting and new game move to a Menu button beside the date.
+
+## 0.11.0 (27 September 2026)
+- Fleet by line on the Overview: one table with every line and the ships on it, what each line and each ship has made this month and last month, each ship's average over the last twelve months, the laid-up ships, head office costs and the Line's total. Click a line or a ship to open it. It replaces the separate Fleet and Lines lists.
+- Every ship now keeps her own account: her takings and running costs (fares, cargo, mail, coal, crew, ports, upkeep, yard bills). Lines already kept theirs; head office, advertising, shore property and interest stay with the company.
+- The ship panel shows her account (this month, last month, her average and where last month's money went) and a table of her lines: what she would make a month on each open line, laid up, or on a better line not yet open, with a button to assign her. It replaces the line drop-down.
+- The Fleet list is grouped by line, with each line's result last month, and every ship shows her own last month.
+- Ships on a line's panel show their last month beside their names.
+
+## 0.10.4 (27 September 2026)
+- Fixed: a line's fare table only showed the classes carried by the first ship on it, so buying an emigrant ship for a line whose first ship was a cargo liner hid third class altogether. The table now shows every class any ship on the line carries.
+- The sailing forecast has a button for each ship on the line, starting with the biggest, instead of always showing the first.
+- The line panel says which ship made the last outward and homeward sailings, since the Last out and Last home figures are hers.
+
+## 0.10.3 (27 September 2026)
+- Head office advice no longer withdraws itself after a few weeks. It stays until you act on it or put it aside.
+- Advice with something to do (set a fare, book the yard, buy a pier) has a Not now button: a tip stays away for six months, a warning for three, a ship purchase for a year and a half, and it comes back only if it still stands.
+- Advice that is only news (last month's losses, a rival adding a ship, rivals matching your fares, a thin cash reserve, the conference) has an Understood button instead, and stays away until the situation passes.
+- Putting aside advice about a ship now sticks: lay-up, sell and similar suggestions no longer come back with the new month.
+- Needs attention items you note or act on stay away until the situation passes, instead of for a month. The mail offer, the union claim, a called loan and an overdraft stay until dealt with.
+- "Send SS ... to the breakers" advice now has a button that does it.
+
 ## 0.10.2 (27 September 2026)
 - Removed the "Reputation 40 unlocks mail contracts" tip: the Post Office tells you itself when you qualify.
 - "Put idle cash to work" only appears when cash is really piling up (more than a year of running costs beyond the deposit), and once withdrawn stays away for a year and a half.
