@@ -2,6 +2,10 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.8.3 (27 September 2026)
+- Fixed: head office kept advising big first-class rises. Demand above the line rate now falls away much faster than below it, because passengers simply book with the line next door; the most profitable fare is now close to the line rate unless the ship is faster or finer than her rivals.
+- Fixed: head office advised fare cuts that the rivals would match within months, then advised raising them back. Fare advice now judges a fare where it settles, after the rivals respond.
+
 ## 0.8.2 (27 September 2026)
 - Yard visits can be combined. Once a ship is booked into the yard or is there, any other job or upgrade can be added to the same visit for 15% off, and most of the extra work runs alongside the first, so the visit grows by far less than the job's own time. Jobs added while she is at sea are paid when she goes in. Head office advice for yard work adds to a visit already booked.
 - Upgrade rows no longer squeeze their descriptions on narrow panels.

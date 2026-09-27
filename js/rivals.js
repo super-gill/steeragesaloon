@@ -79,16 +79,20 @@ function marketM(rk,c,dir,m){const r=ROUTES[rk];return S.mkt[rk][c]*r.base[c]*(d
 function rivalBerths(x,c){if(c==='tt')return S.m>=48?Math.round(x.berths.t*0.25):0;if(c==='t'&&S.m>=48)return Math.round(x.berths.t*0.75);return x.berths[c];}
 /* speed sells cabins, above all on prestige routes: an old 14-knot steamer cannot hold first class against 20-knot giants */
 const speedAppeal=(knots,rk,c)=>{const p=ROUTES[rk].prestige,k=(c==='f'||c==='s')?Math.max(0,(p-0.8)*1.8):Math.max(0,(p-0.8)*0.4);return Math.pow(knots/16,k);};
+/* how fares move demand. Below the line rate a cut wins passengers at the usual rate; above it they walk to the next
+   line's office far more readily, since the same crossing is on sale for less a few doors down. The kink is what
+   holds everyone near the conference rate. */
+const fareDemand=(ratio,c)=>clamp(Math.pow(ratio,ratio>=1?E[c]:E[c]*2.6),0.03,1.8);
 function rivalAppeal(o,rk,c,x){
   const f=rivalFare(o,rk);
-  return clamp(Math.pow(1/f,E[c]),0.03,1.8)*RIVAL_P[o].prestige*(x?speedAppeal(x.knots,rk,c):1);
+  return fareDemand(1/f,c)*RIVAL_P[o].prestige*(x?speedAppeal(x.knots,rk,c):1);
 }
 /* rivals' fare level on a route, as a multiple of the line rate: their own pricing, price matching, and any rate war */
 function rivalFare(o,rk){const war=S.wars[rk];return (S.rivalIdx[o]||1)*((S.rfare&&S.rfare[rk])||1)*(war?war.mult:1);}
 function ourFareRatio(rk){const r=ROUTES[rk];let a=0,b=0;for(const c of ['f','s','t']){a+=r.base[c]*effFare(rk,c)/r.ref[c];b+=r.base[c];}return a/b;}
 function ourAppeal(sh,rk,c){
   const L=S.lines[rk],r=ROUTES[rk];
-  const pf=clamp(Math.pow(r.ref[c]/effFare(rk,c),E[c]),0.03,1.8);
+  const pf=fareDemand(r.ref[c]/effFare(rk,c),c);
   const mods=shipMods(sh);
   return pf*repF(c,S.rep,r)*SERV[c][L.service]*SPD_D[c][sh.speed]*ADV_MULT[L.adv]*(S.conf&&c==='t'?1.04:1)*(c==='f'||c==='s'?mods.appealFS:mods.appealT)*shoreMult(rk,c)*speedAppeal(knotsOf(sh)*SPD[sh.speed]*mods.speed,rk,c)*(sh.up&&sh.up.aircon&&TROPIC.includes(rk)&&(c==='f'||c==='s')?1.06:1)*(1-(c==='f'||c==='s'?0.08:0.03)*seaSev(sh,rk,S.m));
 }

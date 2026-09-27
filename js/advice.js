@@ -58,15 +58,20 @@ function advice(){
   // ---- lines: fares, tension, advertising and service ----
   for(const rk of Object.keys(S.lines)){
     const r=ROUTES[rk],L=S.lines[rk],ships=lineShips(rk);if(!ships.length)continue;
-    const base=lineEcon(rk),t=S.tension[rk]||0,n=ships.filter(x=>ACTIVE.includes(x.state)).length||1;
+    // judge a fare where it ends up: rival lines match a cut below the line rate within a few months, and drift back up
+    // once you stop undercutting, so compare fares at the rivals' settled response, not this month's
+    const settled=(rk,f)=>{S.rfare=S.rfare||{};const had=S.rfare[rk];const L2=S.lines[rk],save=L2.fares;L2.fares={...save,...f};
+      const ratio=ourFareRatio(rk);L2.fares=save;S.rfare[rk]=Math.min(1-0.12*slump(S.m),ratio<0.97?Math.max(0.68,ratio+0.04):1);
+      try{return lineEcon(rk,{fares:f});}finally{if(had===undefined)delete S.rfare[rk];else S.rfare[rk]=had;}};
+    const base=settled(rk,{}),t=S.tension[rk]||0,n=ships.filter(x=>ACTIVE.includes(x.state)).length||1;
     const nextT=f=>{const q=lineEcon(rk,{fares:f});return t+(pressure(rk,{...L.fares,...f},q.pax,n,S.m).p-t)*0.35;};
     const curNext=S.conf?0:nextT({});
     for(const c of CL){
       if(!ships.some(s=>s.berths[c]))continue;
       const ref=r.ref[c],lo=S.conf?confFloor(rk,c):Math.round(ref*0.6),hi=Math.round(ref*1.6),step=Math.max(1,Math.round(ref*0.05));
-      let best={f:L.fares[c],pm:base.pm,tn:curNext};
+      let best={f:L.fares[c],pm:settled(rk,{}).pm,tn:curNext};
       for(let f=lo;f<=hi;f+=step){if(f===L.fares[c])continue;
-        const q=lineEcon(rk,{fares:{[c]:f}});if(q.pm<=best.pm+1)continue;
+        const q=settled(rk,{[c]:f});if(q.pm<=best.pm+1)continue;
         const tn=S.conf||c==='tt'?0:nextT({[c]:f});
         if(!S.conf&&tn>=40&&f<L.fares[c])continue; // never advise a cut that risks a rate war
         best={f,pm:q.pm,tn};}
