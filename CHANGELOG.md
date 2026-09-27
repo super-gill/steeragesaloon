@@ -2,6 +2,9 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.6.4 (27 September 2026)
+- The drawing office has an Exterior and Cutaway switch: the cutaway shows the new ship's spaces as you change her class split and cargo, with berths and tonnage in the legend.
+
 ## 0.6.3 (27 September 2026)
 - The cutaway is laid out from what the ship actually carries: cargo fills the holds from the bottom up, passengers fill from the top down with the best class highest and amidships, and the rest is crew, stores and mail. Cargo ships, fruit ships, tourist liners and emigrant ships now look like what they are.
 

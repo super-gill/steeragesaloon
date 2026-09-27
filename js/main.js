@@ -31,6 +31,7 @@ document.addEventListener('click',e=>{
     case 'alldock':if(sh)S.ships.forEach(x=>x.autoDock=sh.autoDock);break;
     case 'dzopen':openDesigner();break;
     case 'dzclose':closeDesigner();break;
+    case 'dzview':UI.dzView=b.dataset.v;break;
     case 'dz':dzSet(b.dataset.k,b.dataset.v);UI.dzMsg=null;break;
     case 'dzname':{const L=SHIP_NAMES[UI.dz.purpose]||SHIP_NAMES.inter,used=new Set(S.ships.map(x=>x.name).concat((S.orders||[]).map(o=>o.d.name)));
       const c=L.filter(n=>!used.has(n));UI.dz.name=c.length?c[Math.floor(Math.random()*c.length)]:L[0]+' II';const i=$('dzName');if(i)i.value=UI.dz.name;break;}

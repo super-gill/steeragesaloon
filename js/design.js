@@ -52,7 +52,9 @@ function renderDesigner(){
   setHTML(el,`<div class="dz-head"><div><span class="eyebrow">Drawing office · Yard No. ${S.yardNext||534}</span><h2>${esc(d.name||'Unnamed')} <small>${P.name}</small></h2></div><button class="btn" data-act="dzclose">Close</button></div>
   <div class="dz-body">
     <div class="dz-view"><div class="dz-top stack">
-      ${profileSVG(sh,'ext')}
+      ${profileSVG(sh,UI.dzView==='cut'?'cut':'ext')}
+      <div class="row" style="gap:10px;align-items:center"><div class="seg" role="group"><button data-act="dzview" data-v="ext" aria-pressed="${UI.dzView!=='cut'}">Exterior</button><button data-act="dzview" data-v="cut" aria-pressed="${UI.dzView==='cut'}">Cutaway</button></div>
+        ${UI.dzView==='cut'?`<div class="legend" style="flex:1">${CL.filter(c=>st.berths[c]).map(c=>`<span><i style="background:${CL_COL[c]}"></i>${CL_NAME[c]} ${int(st.berths[c])}</span>`).join('')}<span><i style="background:#8A6A45"></i>Cargo ${int(st.cargo)} t</span><span><i style="background:var(--muted)"></i>Engines</span><span><i style="background:var(--line)"></i>Crew, stores, mail</span></div>`:''}</div>
       <div class="dz-figs">
         <div><span class="lbl">Contract price</span><b class="num">${fmt(st.price)}</b></div>
         <div><span class="lbl">Building time</span><b class="num">${st.months} months</b></div>

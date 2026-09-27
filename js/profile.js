@@ -103,7 +103,7 @@ function profileSVG(sh,mode,build){
   for(const c of ['f','s','tt','t'])if(sh.berths[c])carve(pOrder,avail*(sh.berths[c]*PER[c])/Math.max(1,paxSpace+cargoSpace),CL_COL[c],occ(c));
   const box=(r,col,o,hull)=>`<g ${hull?`clip-path="url(#${cid})"`:''}><rect x="${r.x1}" y="${r.y1}" width="${Math.max(0,r.x2-r.x1)}" height="${r.y2-r.y1}" style="fill:${col};stroke:var(--muted)" stroke-width=".4" opacity=".6"/></g>`;
   for(const r of all)s+=box(r,'var(--line)',0,r.hull);
-  for(const g of segs)s+=`<g ${g.hull?`clip-path="url(#${cid})"`:''}><rect x="${g.x1}" y="${g.y1}" width="${Math.max(0,g.x2-g.x1)}" height="${g.y2-g.y1}" style="fill:${g.col}" opacity=".28"/><rect x="${g.x1}" y="${g.y1}" width="${Math.max(0,(g.x2-g.x1)*clamp(g.o,0,1))}" height="${g.y2-g.y1}" style="fill:${g.col}" opacity=".85"/></g>`;
+  for(const g of segs)s+=`<g ${g.hull?`clip-path="url(#${cid})"`:''}><rect x="${g.x1}" y="${g.y1}" width="${Math.max(0,g.x2-g.x1)}" height="${g.y2-g.y1}" style="fill:${g.col}" opacity="${src?'.28':'.7'}"/><rect x="${g.x1}" y="${g.y1}" width="${Math.max(0,(g.x2-g.x1)*clamp(g.o,0,1))}" height="${g.y2-g.y1}" style="fill:${g.col}" opacity=".85"/></g>`;
   s+=`<g clip-path="url(#${cid})"><rect x="${X(.36)}" y="${B2[0]}" width="${L*.24}" height="${bot-B2[0]}" style="fill:var(--muted)" opacity=".45"/>
     <rect x="${X(.33)}" y="${B2[0]}" width="${L*.03}" height="${bot-B2[0]}" style="fill:${sh.fuel==='coal'?'#2A2A2A':'#A8742A'}" opacity=".8"/>
     <rect x="${X(.60)}" y="${B2[0]}" width="${L*.03}" height="${bot-B2[0]}" style="fill:${sh.fuel==='coal'?'#2A2A2A':'#A8742A'}" opacity=".8"/></g>`;
