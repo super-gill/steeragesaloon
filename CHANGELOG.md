@@ -2,6 +2,24 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.13.1 (27 September 2026)
+- A ship's crew is always yours to set, ship by ship, from her Master and crew section ("Manage her crew"). An acting Crewing Office manages crews for you, but anything you set on a ship yourself (manning, pay, training or an officer) it leaves alone for three months, the same rule as the other departments.
+- The crew window is now called "Her crew", so it is not confused with the Crewing Office department, and says whether the office is managing her and until when your own settings stand.
+
+## 0.13.0 (27 September 2026)
+- The crew office: a window for each ship's company, opened from her Master and crew section, with the clock stopped while it is open. Left alone, every ship runs on standard terms as before; the office is there when you want it.
+- Officers you appoint: a chief officer and chief engineer on every ship, and a purser, chief steward and surgeon on ships with 60 or more passengers. Each has a skill and a wage, ages, and retires at 65. Candidates change every quarter.
+  - The chief engineer means fewer breakdowns and less coal burned.
+  - The chief officer means fewer fires, and emergencies fought better.
+  - The purser brings more spending aboard and less smuggling.
+  - The chief steward means better-liked service.
+  - The surgeon means sickness spreads slower and kills fewer.
+- Three departments, deck, engine room and catering, each with its own manning (short-handed, standard or full), pay (low, union rates or good) and training (none, drills or thorough). Morale follows pay, manning, training and the officers; skill follows training and the officers, slowly. Short-handed saves wages but adds half a day in port and more risk; full manning costs more and does better.
+- The seamen's union's claims cover deck and engine-room hands only; stewards are paid their own rates.
+- With a Crewing Office, the window also shows the whole fleet's crews in one table, the officers on offer are more and better, and when set to Act the office raises pay where morale is low, starts drills where skill is poor, and appoints better officers.
+- Head office advice for crews is now by department: pay, drills and officers.
+- Fixed: advice to change a line's advertising or table flipped back and forth when you accepted it. The options were judged against a figure that assumed rivals had already matched your fares, so every other setting looked better than the current one.
+
 ## 0.12.1 (27 September 2026)
 - Profit and loss by ship, at the top of Finance: one row a ship with her takings, running costs, yard bills and mishaps, and profit, then advertising and head office, adding up to the Line's result.
 - It shows a month on average over the last twelve months by default, since single months swing: a ship is paid when she arrives, so one month catches two arrivals and the next none, and yard bills land all at once. Last month and this month are a click away.

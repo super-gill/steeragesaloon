@@ -1,11 +1,11 @@
 /* ================= SIMULATION ================= */
 const TURN_DAYS=4,CALL_DAYS=1;
-const turnDays=(sh,port)=>Math.max(2,TURN_DAYS-(sh.up&&sh.up.gear?1:0)-(S.shore&&S.shore.piers[port]?1:0)-((sh.up&&sh.up.hatch)||(S.shore&&S.shore.sheds&&S.shore.sheds[port])?0.5:0));
+const turnDays=(sh,port)=>Math.max(2,TURN_DAYS-(sh.up&&sh.up.gear?1:0)-(S.shore&&S.shore.piers[port]?1:0)-((sh.up&&sh.up.hatch)||(S.shore&&S.shore.sheds&&S.shore.sheds[port])?0.5:0)+crewMods(sh).turn);
 /* freight canvassers in a region the route calls at, and cold stores at its ports, win this line more cargo */
 const cargoPull=(rk,reefer)=>{const sh=S.shore||{},calls=ROUTES[rk].calls;let f=1;for(const a in sh.fagents||{})if(FAGENCY[a]&&FAGENCY[a].ports.some(p=>calls.includes(p)))f+=0.15;if(reefer&&Object.keys(sh.cold||{}).some(p=>calls.includes(p)))f+=0.2;return f;};
 const bunkerDiscount=()=>S.shore&&S.shore.bunker&&S.shore.bunker.until>=S.m?0.88:1;
 const fuelPrice=(sh,m)=>(sh.fuel==='coal'?coalPrice(m):oilPrice(m))*bunkerDiscount()*PX();
-const fuelRate=(sh,sm)=>sh.grt/(sh.fuel==='coal'?70:95)*Math.pow(sm,3)*(sh.up&&sh.up.turbines?0.92:1)*(sh.fuelK||1);
+const fuelRate=(sh,sm)=>sh.grt/(sh.fuel==='coal'?70:95)*Math.pow(sm,3)*(sh.up&&sh.up.turbines?0.92:1)*(sh.fuelK||1)*crewMods(sh).fuel;
 const duesAt=(sh,port,mult)=>sh.grt*mult*(S.shore&&S.shore.piers[port]?0.4:1)*PX();
 /* the intermediate calls of a geography in sailing order for a direction, as [port, nm from departure] */
 function stopsFor(gk,dir){const g=GEO(gk),c=g.calls.slice(1,-1);return (dir===0?c.map(x=>[x[0],x[1]]):c.reverse().map(x=>[x[0],g.dist-x[1]]));}
@@ -39,7 +39,7 @@ function legCalc(sh,rk,dir,R,gk){
   const fuelT=fuelRate(sh,sm)*seaDays*(1+0.1*(sh.foul||0));
   const endPort=dir===0?geoEnds(gk)[1]:geoEnds(gk)[0];
   let dues=duesAt(sh,endPort,0.08);for(const [p] of stopsFor(gk,dir))dues+=duesAt(sh,p,0.04);
-  const fm=facMods(sh);let onboard=0;for(const c in pax)onboard+=pax[c].n*(seaDays+calls*CALL_DAYS)*(fm.spend[c]||0)*PX();
+  const fm=facMods(sh);let onboard=0;for(const c in pax)onboard+=pax[c].n*(seaDays+calls*CALL_DAYS)*(fm.spend[c]||0)*PX();onboard*=crewMods(sh).spend;
   return {onboard,pax,paxRev,prov,cargoT,comm:cd.c,cargoRev:cargoT*cm.rate*cargoMod(m)*(sh.up&&sh.up.heavy&&(cd.c==='general'||cd.c==='manuf')?1.12:1)*(sh.up&&sh.up.deep&&cd.c==='palm'?1.3:1)*(['grain','cotton','palm'].includes(cd.c)?1:clamp(1+(S.rep-30)/150,0.85,1.3)),fuelT,fuelC:fuelT*fuelPrice(sh,m),
     seaDays:seaDays+calls*CALL_DAYS,geo:gk,mail:S.mail[rk]&&sh.speed>0&&sh.up&&sh.up.wireless?S.mail[rk].pay/2:0,
     agents:0.08*paxRev,port:dues+0.35*cargoT*PX()*((sh.up&&sh.up.hatch)?0.75:1)*(S.shore&&S.shore.sheds&&S.shore.sheds[endPort]?0.6:1)};
@@ -77,7 +77,7 @@ function depart(sh){
   const age=yearNow()-sh.built;
   sh.cond=clamp(sh.cond-0.8*SPD_WEAR[sh.speed]*(1+age/30)*(sh.fuel==='oil'?0.85:1)*mods.wear*lenF,5,95);
   fatVoyage(sh,lenF);const fr=fatRisk(sh);
-  const pS=(sh.cond<35?(35-sh.cond)/100*0.3*mods.risk*lenF:0)*fr,pB=(sh.cond<75?(75-sh.cond)/100*0.175*mods.risk*lenF:0)*fr+(fr>1?0.01*(fr-1)*lenF:0);
+  const cm=crewMods(sh),pS=(sh.cond<35?(35-sh.cond)/100*0.3*mods.risk*lenF:0)*fr*cm.fire,pB=((sh.cond<75?(75-sh.cond)/100*0.175*mods.risk*lenF:0)*fr+(fr>1?0.01*(fr-1)*lenF:0))*cm.brk;
   sh.event=null;
   sh.emEvent=null;sh.em=null;
   if(R()<pS)sh.emEvent={k:'fire',at:dist*(0.2+R()*0.6)};
@@ -296,7 +296,7 @@ function monthRoll(pm){
   }
   rivalsMonth();
   // crew morale drifts toward what pay and captain earn
-  for(const sh of S.ships){const tgt=MORALE_TARGET[sh.pay===undefined?1:sh.pay]+shipMods(sh).morale;sh.morale=clamp((sh.morale===undefined?60:sh.morale)+(tgt-(sh.morale===undefined?60:sh.morale))*0.15,0,100);}
+  crewMonth(); // morale and skill by department, officers ageing: crew.js
   // captains age; old masters retire
   if(S.m%12===0){for(const sh of S.ships)if(sh.captain){sh.captain.age++;sh.captain.exp++;
     if(sh.captain.age>=65){const old=sh.captain.name;sh.captain=makeCaptain();sh.captain.traits=[];sh.captain.exp=Math.min(sh.captain.exp,8);sh.captain.wage=Math.round(38+sh.captain.exp*1.3);

@@ -89,12 +89,12 @@ function addResponders(e,sh,range,max){
 }
 function startEmergency(sh,k){
   const R=Math.random,D=EMERG[k],where=posText(sh),radio=radioOf(sh),p=shipXY(sh);
-  const cap=clamp(safetyOf().cap+66+(sh.captain?Math.min(20,sh.captain.exp*0.7):5)+(has(sh,'cautious')?5:0)-(has(sh,'drinker')?8:0)+((sh.morale||60)-60)/3+(sh.cond-60)/5,25,90);
+  const cap=clamp(safetyOf().cap+66+(sh.captain?Math.min(20,sh.captain.exp*0.7):5)+(has(sh,'cautious')?5:0)-(has(sh,'drinker')?8:0)+((sh.morale||60)-60)/3+(sh.cond-60)/5+crewMods(sh).cap,25,90);
   const g=R(),old=fatOf(sh),sev=g<D.grave*(sh.cond<45?1.5:1)*(old>75?1.8:1)*safetyOf().grave?3:g<0.45+(old>75?0.15:0)?2:1;
   const e={id:(S.emNext=(S.emNext||0)+1),sid:sh.id,ship:sh.name,k,t0:S.t,sev,peak:0,ctrl:0,cap,capA:0,rateM:SEV_RATE[sev],saveA:0,
     rate:D.rate[0]+R()*(D.rate[1]-D.rate[0]),resp:[],known:radio,over:null,where,lines:[],later:[],orders:[],dead:0,abandon:false};
   e.threat=D.type==='sick'?4:D.type==='unrest'?10:SEV_T0[sev];
-  if(D.type==='sick'){e.dis=pickDisease(sh.legRoute,mOf(S.t)%12,R);const dd=DISEASE[e.dis];e.rate*=dd.spread;e.crew=!!dd.crew||soulsOf(sh)<60;}
+  if(D.type==='sick'){e.dis=pickDisease(sh.legRoute,mOf(S.t)%12,R);const dd=DISEASE[e.dis];e.rate*=dd.spread*crewMods(sh).sick;e.crew=!!dd.crew||soulsOf(sh)<60;}
   let oth=null;if(D.other){oth=shipsNear(p,400,sh).find(x=>!x.own);e.other=oth?`SS ${oth.name} (${oth.line})`:'an unknown steamer';
     if(oth)e.resp.push({name:oth.name,line:oth.line,radio:oth.radio,eta:S.t,arrived:true});}
   S.emerg=S.emerg||[];S.emerg.push(e);if(S.emerg.length>40)S.emerg=S.emerg.filter(x=>!x.over||S.t-x.t1<30);sh.em=e.id;
@@ -292,7 +292,7 @@ function emEnd(e,sh,how){
     sh.brk=null;book('yard',-Math.round(sh.grt*(0.2+sev*0.8)*(e.flooded?1.3:1)),rk,sh);sh.cond=clamp(sh.cond-sev*15,5,95);sh.pendingYard=sev>0.5?'repair':'engine';sh.limp=sev>0.3;sh.limpF=0.6;
     S.rep=clamp(S.rep-Math.round(sev*4),0,100);sh.stopLeft=e.delay||0;
     emSay(e,sh,`${D.type==='water'?'Leak under control':'Fire out'}. Proceeding at reduced speed${help?', escorted':''}. ${sev>0.5?'Damage heavy. Will need the yard.':'Damage moderate.'}`,'good');}
-  if(D.type==='sick'){const dd=DISEASE[e.dis]||DISEASE.flu,pool=e.crew?crewOf(sh):souls,ill=Math.round(pool*e.peak/100*0.45),dead=Math.round(ill*dd.mort*(e.iso?0.7:1));
+  if(D.type==='sick'){const dd=DISEASE[e.dis]||DISEASE.flu,pool=e.crew?crewOf(sh):souls,ill=Math.round(pool*e.peak/100*0.45),dead=Math.round(ill*dd.mort*(e.iso?0.7:1)*crewMods(sh).sick);
     e.dead=dead;S.rep=clamp(S.rep-(dead>10?dd.rep+2:dead?dd.rep:1),0,100);
     if(!e.landed)sh.quarantine={dis:e.dis,iso:!!e.iso,quiet:!!e.quiet,peak:e.peak};
     emSay(e,sh,`Outbreak over. ${ill} were ill. ${dead?dead+' died.':'No deaths.'}${e.landed?' Sick landed ashore.':e.quiet?'':' Expect quarantine on arrival.'}`,dead?'bad':'good');}

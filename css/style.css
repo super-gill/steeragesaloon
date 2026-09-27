@@ -443,3 +443,15 @@ input[type=range]{width:100%;accent-color:var(--brass)}
 .board.pltab .plrow[aria-expanded="true"] td{background:var(--surface2)}
 .board.pltab .pldet td{padding:6px 10px 10px 18px;background:var(--surface2)}
 .board.pltab td[colspan]{white-space:normal}
+
+/* crew office */
+.cwbar{display:inline-block;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;width:100%;min-width:60px}
+.cwbar i{display:block;height:100%;background:var(--sea,#2d6a78)} .cwbar.warn i{background:var(--warn)} .cwbar.bad i{background:var(--bad)}
+.cwstat{display:grid;grid-template-columns:auto 1fr auto;gap:4px 10px;align-items:center;font-size:13px}
+.cwset{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;align-items:center}
+.cwset .seg{flex-wrap:wrap}
+.cwoff{border:1px solid var(--line);border-radius:6px;padding:8px 10px;display:flex;flex-direction:column;gap:3px}
+.cwsum{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;font-size:13px}
+.cwfleet{padding:16px;overflow:auto}
+.cwfleet tr[data-act]{cursor:pointer} .cwfleet tr[data-act]:hover{background:var(--surface2)}
+.board.cwft{table-layout:auto} .board.cwft th,.board.cwft td{width:auto!important;padding-inline:8px} .board.cwft th.c{text-align:center;border-bottom:none}

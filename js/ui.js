@@ -239,11 +239,13 @@ function renderShipDetail(sh){
       <span class="note">Every yard job, upgrade and facility for her in one window, booked as one visit.${atOwnYard(sh)?' She is at your own yard: work here is 30% cheaper and quicker.':''}</span></div>
     <div class="ctl"><span class="lbl">Her hull</span><span class="note"><strong>${fatWord(sh)}.</strong> ${Math.floor(yearNow()-sh.built)} years old${condCap(sh)<92?`; the yard can bring her to ${condCap(sh)}% at best`:''}${sh.replates?`, re-plated ${sh.replates===1?'once':sh.replates+' times'}`:''}. Hard driving, full speed, gales and neglect use up her life faster. ${dimsOf(sh).len|0} ft long, drawing ${dimsOf(sh).draught|0} ft${sh.len?'':' (estimated)'}. ${(sh.foul||0)<0.2?'Clean bottom.':(sh.foul||0)<0.45?'Some growth on her bottom.':(sh.foul||0)<0.7?'Her bottom is foul; she has lost speed.':'Badly foul and slow. She needs drydocking.'}</span></div>
     `)}
-    ${shipGrp('crew','Master and crew',`${sh.captain?sh.captain.name+' · ':''}morale ${Math.round(sh.morale)}`,`
+    ${shipGrp('crew','Master and crew',`${sh.captain?sh.captain.name+' · ':''}morale ${Math.round(sh.morale)} · ${Math.round(crewHands(sh))} hands`,`
     ${captainHTML(sh)}
-    <div class="ctl"><div class="row"><span class="lbl">Crew</span><span class="meta">Morale ${Math.round(sh.morale)} · ${sh.morale<40?'sullen':sh.morale<60?'grumbling':sh.morale<75?'content':'a happy ship'}</span></div>${condBar(sh.morale)}
-      ${seg('shipset','pay',sh.pay,['Low pay','Union rates','Good pay'])}
-      <span class="note">Wages ${fmt(crewCost(sh))} a month. Low pay saves money but a sullen crew breaks more, serves worse and deserts in port. Morale settles toward what pay and the master earn.</span></div>
+    <div class="ctl"><div class="row"><span class="lbl">Crew</span><span class="meta">${Math.round(crewHands(sh))} hands · ${fmt(crewCost(sh))} a month</span></div>
+      <div class="cwsum">${CD_KEYS.filter(d=>deptCount(sh,d)>=1).map(d=>{const q=cwOf(sh)[d];return `<span>${CDEPT[d].name}</span><span class="meta">morale ${Math.round(q.mor)} · ${skWord(cwSk(sh,d))}</span>`;}).join('')}</div>
+      <div class="meta">${OFF_KEYS.filter(r=>offOf(sh)[r]).map(r=>`${OFFICER[r].name}: ${offOf(sh)[r].name} (${skWord(offOf(sh)[r].skill)})`).join(' · ')}</div>
+      <button class="btn primary" data-act="crew" data-id="${sh.id}" style="width:fit-content">Manage her crew</button>
+      <span class="note">Her officers, and manning, pay and training by department. ${S.depts.crew&&S.depts.crew.auto?'The Crewing Office manages them; anything you set yourself it leaves alone for three months.':'Left alone she runs on standard terms.'}</span></div>
     ${sh.lastRemark?`<div class="ctl"><span class="lbl">The master's last word</span><blockquote class="remark">${esc(plainTel(telegram(sh.lastRemark.txt)).replace(/^Master to owners\. /,''))}<footer>${esc(sh.lastRemark.who)}, ${dateLong(sh.lastRemark.t)}</footer></blockquote></div>`:''}
     `)}
     ${shipGrp('retire','Sell or scrap',`worth about ${fmt(shipValue(sh))}`,`

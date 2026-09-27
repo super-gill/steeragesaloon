@@ -49,6 +49,7 @@ function architectReport(d,st){
   return out.map(t=>`<li>${t}</li>`).join('');
 }
 function renderDesigner(){
+  if(UI.crewOpen&&renderCrew())return;
   if(UI.refitOpen&&renderRefit())return;
   const el=$('designer');if(!UI.designOpen){if(!el.hidden){el.hidden=true;el.innerHTML='';el._h=null;}return;}
   el.hidden=false;

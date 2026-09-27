@@ -1,5 +1,5 @@
 /* ================= DATA ================= */
-const GAME_VERSION='0.12.1',GAME_BUILT='27 September 2026'; // bump on every release; see CHANGELOG.md
+const GAME_VERSION='0.13.1',GAME_BUILT='27 September 2026'; // bump on every release; see CHANGELOG.md
 const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 const CL=['f','s','t','tt'];
 const CL_NAME={f:'First',s:'Second',t:'Third',tt:'Tourist Third'};
@@ -134,7 +134,7 @@ const DEPTS={
   fares:{name:'Fares Office',head:'Chief Fares Clerk',cost:6000,rent:60,staff:[3,0.3,1],does:'Watches the conference tariffs and rival sailings. Sets fares, answers rate wars and matches cuts.'},
   traffic:{name:'Traffic Department',head:'Traffic Manager',cost:10000,rent:90,staff:[4,0.5,0.5],does:'Studies every trade for loads and returns. Moves ships between your lines, lays up losers, spends on advertising. Proposes new lines, ships to buy or build, and sales.'},
   marine:{name:'Marine Superintendent',head:'Marine Superintendent',cost:8000,rent:70,staff:[3,0.6,0],does:'Keeps the fleet in class. Sets dock thresholds and speeds, and books refits that pay for themselves.'},
-  crew:{name:'Crewing Office',head:'Crewing Manager',cost:5000,rent:50,staff:[2,0.4,0],does:'Hires and keeps crews. Sets pay to hold morale and replaces bad masters from the pool.'}
+  crew:{name:'Crewing Office',head:'Crewing Manager',cost:5000,rent:50,staff:[2,0.4,0],does:'Hires and keeps crews. Acting, it sets pay to hold morale, starts drills where skill is poor, and appoints better officers and masters; it finds more and better candidates, and shows every ship\'s crew in one table. Your own changes to a crew stand for three months.'}
 };
 const CLERK_WAGE=14;
 const HOSTEL_PORTS=['GLA','LIV','SOU','HAM'];

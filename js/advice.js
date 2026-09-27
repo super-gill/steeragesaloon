@@ -33,7 +33,7 @@ const WINTER=[10,11,0,1];
 const money=v=>fmt(Math.round(v/10)*10);
 const canSpend=cost=>S.cash-cost>=3*runningCost();
 const idleCost=sh=>0.25*crewCost(sh)+(sh.captain?sh.captain.wage:0)+insCost(sh);
-const DEPT_OF={review:'sec',reserve:'sec',buy:'traffic',build:'traffic','rep-mail':'sec','rep-low':'sec','conf-war':'sec',pier:'sec',agency:'sec',bunker:'sec',dept:'sec',
+const DEPT_OF={cpay:'crew',ctrain:'crew',off:'crew',review:'sec',reserve:'sec',buy:'traffic',build:'traffic','rep-mail':'sec','rep-low':'sec','conf-war':'sec',pier:'sec',agency:'sec',bunker:'sec',dept:'sec',
   fare:'fares',tension:'fares',adv:'fares',service:'fares',match:'fares',
   move:'traffic',unlay:'traffic',layup:'traffic',sell:'traffic',rin:'traffic',
   speed:'marine',maint:'marine',thresh:'marine',dock:'marine',oil:'marine',refurb:'marine',reefer:'marine',wireless:'marine',replate:'marine',scrap:'marine',
@@ -91,10 +91,13 @@ function advice(){
         why:`Tension will be about ${Math.round(curNext)} next month, and above 40 a rate war can break out, cutting rival fares by a quarter for months. Your fares below the line rate${ships.length>1?' and your extra ships':''} are what provoke them.${fix?` Fares of £${fix.f} / £${fix.s} / £${fix.t} would bring it back under 40.`:' Consider joining the conference, or accept the risk.'}`,
         act:fix?[['Set those fares','setfares',rk,fix.f,fix.s,fix.t]]:[['Conference','tabgo','company']]});
     }
+    // advertising and the table are judged against the line as it stands now, the same way as each option;
+    // comparing against the settled-fare figure made every other setting look better, so the advice flipped back and forth
+    const now=lineEcon(rk,{});
     for(const k of ['adv','service']){
-      let best={v:L[k],pm:base.pm};
+      let best={v:L[k],pm:now.pm};
       for(const v of k==='adv'?[0,1,2,3]:[0,1,2]){if(v===L[k])continue;const q=lineEcon(rk,{[k]:v});if(q.pm>best.pm)best={v,pm:q.pm};}
-      const gain=best.pm-base.pm;
+      const gain=best.pm-now.pm;
       if(best.v!==L[k]&&gain>=150){
         const nm=k==='adv'?['no advertising','£300 advertising','£800 advertising','£1,500 advertising'][best.v]:['a Spartan table','a Standard table','a Lavish table'][best.v];
         add({id:`${k}:${rk}`,scope:'line',ref:rk,sev:'tip',gain,title:`Try ${nm} on ${r.name}`,
@@ -167,10 +170,19 @@ function advice(){
       add({id:`wireless:${sh.id}`,scope:'ship',ref:sh.id,sev:'tip',gain:150,title:`Fit wireless to SS ${sh.name}`,
         why:`${S.m>=200?(S.m>=228?'Under the Ocean Aid Convention she may carry no passengers without it. ':'From 1940 the Ocean Aid Convention bars passenger ships without wireless. '):''}Only ships with wireless can carry the mails${S.m<228?' or tell you when she is in trouble':''}${S.mail[r0]?', and this route has a contract':''}. Without it, nothing is heard of her at sea unless a passing ship sees her lamps. ${money(refitCost(sh,'wireless'))} and a week in the yard.`,
         act:[['Book it','setyard',sh.id,'wireless']]});
-    if((sh.morale||60)<45&&(sh.pay===undefined?1:sh.pay)<2)
-      add({id:`pay:${sh.id}`,scope:'ship',ref:sh.id,sev:'warn',gain:350,title:`Raise pay on SS ${sh.name}`,
-        why:`Her crew's morale is ${Math.round(sh.morale)}. Unhappy crews desert in foreign ports, walk off at home and give poor service. Better pay costs about ${money(crewCost(sh)*0.15)} a month.`,
-        act:[['Raise pay','setship',sh.id,'pay',(sh.pay===undefined?1:sh.pay)+1]]});
+    // crew by department: pay where morale is low, drills where skill is poor, better officers when the pool has them
+    {const cw=cwOf(sh),off=offOf(sh);
+      for(const d of CD_KEYS){const q=cw[d];if(deptCount(sh,d)<1)continue;
+        if(q.mor<45&&q.pay<2)add({id:`cpay:${sh.id}:${d}`,scope:'ship',ref:sh.id,sev:'warn',gain:350,title:`Raise ${CDEPT[d].name.toLowerCase()} pay on SS ${sh.name}`,
+          why:`Morale in her ${CDEPT[d].name.toLowerCase()} is ${Math.round(q.mor)}. Unhappy hands desert in foreign ports, walk off at home and ${d==='cat'?'serve the passengers badly':d==='eng'?'let the engines go':'work the ship badly'}. Better pay costs about ${money(cdCost(sh,d)*0.15)} a month.`,
+          act:[['Raise pay','crewset',sh.id,d,'pay',q.pay+1],['Her crew','crew',sh.id]]});
+        else if(q.train===0&&cwSk(sh,d)<45&&canSpend(cdCost(sh,d)*6))add({id:`ctrain:${sh.id}:${d}`,scope:'ship',ref:sh.id,sev:'tip',gain:200,title:`Start ${CDEPT[d].name.toLowerCase()} drills on SS ${sh.name}`,
+          why:`Her ${CDEPT[d].name.toLowerCase()} is ${skWord(cwSk(sh,d))} (${Math.round(cwSk(sh,d))}). ${d==='eng'?'Poor engine-room hands mean more breakdowns and more coal.':d==='deck'?'A poor deck crew fights a fire or a flooding badly.':'Poor stewards put passengers off.'} Drills cost about ${money(deptCount(sh,d)*MAN[q.man][1]*TRAIN[1][1]*PX())} a month and raise skill over a year or two.`,
+          act:[['Start drills','crewset',sh.id,d,'train',1],['Her crew','crew',sh.id]]});}
+      for(const r of OFF_KEYS){const o=off[r];if(!o)continue;const best=((S.offPool||{})[r]||[]).slice().sort((a,b)=>b.skill-a.skill)[0];
+        if(best&&o.skill<40&&best.skill>=o.skill+25)add({id:`off:${sh.id}:${r}`,scope:'ship',ref:sh.id,sev:'tip',gain:180+best.skill-o.skill,title:`Appoint ${best.name} ${OFFICER[r].name.toLowerCase()} of SS ${sh.name}`,
+          why:`${o.name} is ${skWord(o.skill)} (${o.skill}). ${best.name} (${skWord(best.skill)}, ${best.skill}) is looking for a berth at ${money(offWage(best))} a month. ${OFFICER[r].does}`,
+          act:[['Appoint him','appoint',sh.id,r,best.id],['Her crew','crew',sh.id]]});}}
     const bad=sh.captain&&(has(sh,'drinker')||has(sh,'lax')||sh.captain.exp<4);
     if(bad&&S.capPool&&S.capPool.length){const pick=S.capPool.slice().sort((a,b)=>capScore(b)-capScore(a))[0];
       if(capScore(pick)>capScore(sh.captain)+1)add({id:`captain:${sh.id}`,scope:'ship',ref:sh.id,sev:'tip',gain:300,title:`Replace ${sh.captain.name} on SS ${sh.name}`,
@@ -229,7 +241,7 @@ function advice(){
 }
 /* advice stays on the desk until it is acted on or put aside. A note with nothing to do stays away once read, until the
    situation passes and comes round again; a suggestion put aside comes back after a while if it still stands */
-const UNTIL_CLEAR=1e9,DOING=['setfare','setfares','setlineopt','setship','moveship','setyard','sellship','scrapship','hire','shorebuy','openmove','buyship','build','refit'];
+const UNTIL_CLEAR=1e9,DOING=['crewset','appoint','crew','setfare','setfares','setlineopt','setship','moveship','setyard','sellship','scrapship','hire','shorebuy','openmove','buyship','build','refit'];
 const restFor=h=>h.id.startsWith('buy:')?18:h.sev==='tip'?6:3;
 function putAside(id){const h=advice().find(q=>q.id===id);if(!h)return;S.dismiss[id]=h.info?UNTIL_CLEAR:S.m+restFor(h);ADV_CACHE.key=null;}
 function shownAdvice(){if(S.advSeen)delete S.advSeen;return advice();}
@@ -246,6 +258,8 @@ function doAction(act,d){
     case 'moveship':{const [id,rk]=d;const x=ship(id);if(!x)return false;x.line=rk||null;if(x.line&&x.state==='laid'){x.state='port';x.portLeft=1;}return true;}
     case 'setyard':{const [id,k]=d;const x=ship(id);if(!x)return false;if(x.pendingYard||x.state==='yard')return addYardJob(x,k);
       if(x.state==='sea'||x.state==='repo'){x.pendingYard=k;return true;}if(S.cash>=refitCost(x,k)){enterYard(x,k);return true;}return false;}
+    case 'crewset':{const [id,dp,k,v]=d;const x=ship(id);if(!x||!CDEPT[dp]||!['man','pay','train'].includes(k))return false;cwOf(x)[dp][k]=clamp(v|0,0,2);if(k==='pay')x.pay=cwOf(x).deck.pay;return true;}
+    case 'appoint':{const [id,r,cid]=d;const x=ship(id);if(!x)return false;return appointOfficer(x,r,cid);}
     case 'scrapship':{const [id]=d;const x=ship(id);if(!x||S.ships.length<2)return false;if(x.state==='sea'||x.state==='repo')x.pendingExit='scrap';else exitShip(x,'scrap');return true;}
     case 'sellship':{const [id]=d;const x=ship(id);if(!x||S.ships.length<2)return false;if(x.state==='sea'||x.state==='repo')x.pendingExit='sell';else exitShip(x,'sell');return true;}
     case 'hire':{const [id,cid]=d;const x=ship(id),c=(S.capPool||[]).find(q=>q.id===cid);if(!x||!c)return false;
@@ -337,13 +351,15 @@ function deptWeek(){
       const [,act,...d0]=h.act[0],d=d0.slice(),key=h.id.split(':').slice(0,2).join(':');
       // laying a ship up is the owner's call: the department proposes it rather than doing it
       if(BIG.includes(act)||(act==='moveship'&&!d[1])){propose(k,h,act,d);continue;}
-      if(!['setfare','setfares','setlineopt','setship','moveship','setyard','hire'].includes(act))continue;
+      if(!['setfare','setfares','setlineopt','setship','moveship','setyard','hire','crewset','appoint'].includes(act))continue;
       if(act==='setyard'&&!canSpend(refitCost(S.ships.find(q=>q.id===d[0])||{grt:0},d[1])))continue;
       if(act==='moveship'&&d[1]&&!S.lines[d[1]])continue;
       // one ship moved a week at most; a moved ship is left alone for two months to show what she can do
       if(act==='moveship'&&(movedNow||o.moved[d[0]]>S.t-60))continue;
       // a ship the owner has placed or set himself is left alone for three months
       if((act==='moveship'||act==='setship')&&((S.ships.find(q=>q.id===d[0])||{}).ownerSet>S.t-90))continue;
+      // a crew the owner has set himself is left alone for three months
+      if((act==='crewset'||act==='appoint')&&((S.ships.find(q=>q.id===d[0])||{}).crewSet>S.t-90))continue;
       // no second thoughts on the same item inside three weeks
       if(o.last[key]>S.t-21)continue;
       // fares set by eye, not to the shilling

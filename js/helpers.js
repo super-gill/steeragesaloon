@@ -53,8 +53,8 @@ const repWord=r=>r<15?'Disreputable':r<30?'Unknown':r<45?'Respectable':r<60?'Wel
 function shipValue(sh){return sh.base*PX()/(sh.pi0||1)*Math.pow(sh.cond/100,0.7)*Math.max(0.15,1-fatOf(sh)*0.0085)*shipMkt();}
 /* the ship's company: deck and engine-room hands by size and fuel (stokers for coal), and stewards by the passengers carried.
    A freighter needs no stewards, so she is cheap to crew; a liner's hotel staff can outnumber her sailors */
-const crewCount=sh=>{const b=sh.berths||{};return (sh.fuel==='coal'?20+sh.grt/250:16+sh.grt/350)*(sh.crewK||1)+(b.f||0)*0.6+(b.s||0)*0.25+(b.tt||0)*0.12+(b.t||0)*0.05;};
-const crewCost=sh=>crewCount(sh)*16.8*CREW_PAY_MULT[sh.pay===undefined?1:sh.pay]*(S.wageK||1)*safetyOf().crew*PX();
+const crewCount=sh=>crewHands(sh); // by department: see crew.js
+const crewCost=sh=>crewCostOf(sh);
 const insCost=sh=>shipValue(sh)*0.05/12*(sh.cond<50?1.4:1)*(fatOf(sh)>=90?2:1+Math.max(0,fatOf(sh)-60)/40);
 const confFloor=(rk,c)=>Math.ceil(ROUTES[rk].ref[c]*0.95);
 function effFare(rk,c){let f=S.lines[rk].fares[c];if(S.conf)f=Math.max(f,confFloor(rk,c));return f;}
@@ -82,15 +82,15 @@ function makeCaptain(R=Math.random){
 const has=(sh,t)=>!!(sh.captain&&sh.captain.traits.includes(t));
 /* per-ship modifiers from captain, crew morale, upgrades and fittings */
 function shipMods(sh){
-  const exp=sh.captain?Math.min(sh.captain.exp,30):5,mor=sh.morale===undefined?60:sh.morale;
+  const exp=sh.captain?Math.min(sh.captain.exp,30):5,mor=sh.morale===undefined?60:sh.morale,cm=crewMods(sh);
   return {
     speed:(has(sh,'driver')?1.04:1)*(has(sh,'cautious')?0.97:1),
     wear:(has(sh,'driver')?1.25:1)*(has(sh,'veteran')?0.85:1),
     risk:(sh.riskK||1)*facMods(sh).risk*(has(sh,'cautious')?0.6:1)*(has(sh,'drinker')?1.5:1)*(has(sh,'martinet')?0.85:1)*(1.2-exp/60)*(mor<40?1.2:1),
     gale:(has(sh,'weather')?0.4:1)*(sh.galeK||1)*facMods(sh).gale,
-    smuggle:(has(sh,'lax')?3:1)*(has(sh,'martinet')?0.3:1),
-    appealFS:(has(sh,'popular')?1.07:1)*(has(sh,'drinker')?0.96:1)*(mor<40?0.97:mor>75?1.02:1)*(0.85+0.15*(sh.fit===undefined?80:sh.fit)/100)*(sh.up&&sh.up.lux&&!sh.appFS?1.2:1)*(sh.appFS||1)*fashion(sh.style||'edw',yearNow())*(sh.newUntil>S.m?1.08:1),
-    appealT:(mor<40?0.98:1)*(0.95+0.05*(sh.fit===undefined?80:sh.fit)/100)*(sh.appT||1)*(sh.newUntil>S.m?1.03:1),
+    smuggle:(has(sh,'lax')?3:1)*(has(sh,'martinet')?0.3:1)*cm.smuggle,
+    appealFS:(has(sh,'popular')?1.07:1)*(has(sh,'drinker')?0.96:1)*(mor<40?0.97:mor>75?1.02:1)*(0.85+0.15*(sh.fit===undefined?80:sh.fit)/100)*(sh.up&&sh.up.lux&&!sh.appFS?1.2:1)*(sh.appFS||1)*fashion(sh.style||'edw',yearNow())*(sh.newUntil>S.m?1.08:1)*cm.appFS,
+    appealT:(mor<40?0.98:1)*(0.95+0.05*(sh.fit===undefined?80:sh.fit)/100)*(sh.appT||1)*(sh.newUntil>S.m?1.03:1)*cm.appT,
     morale:(has(sh,'lax')?10:0)+(has(sh,'martinet')?-15:0)+(has(sh,'popular')?5:0)+(has(sh,'drinker')?-5:0)
   };
 }
