@@ -1,6 +1,8 @@
 /* ================= SIMULATION ================= */
 const TURN_DAYS=4,CALL_DAYS=1;
-const turnDays=(sh,port)=>Math.max(2,TURN_DAYS-(sh.up&&sh.up.gear?1:0)-(S.shore&&S.shore.piers[port]?1:0));
+const turnDays=(sh,port)=>Math.max(2,TURN_DAYS-(sh.up&&sh.up.gear?1:0)-(S.shore&&S.shore.piers[port]?1:0)-((sh.up&&sh.up.hatch)||(S.shore&&S.shore.sheds&&S.shore.sheds[port])?0.5:0));
+/* freight canvassers in a region the route calls at, and cold stores at its ports, win this line more cargo */
+const cargoPull=(rk,reefer)=>{const sh=S.shore||{},calls=ROUTES[rk].calls;let f=1;for(const a in sh.fagents||{})if(FAGENCY[a]&&FAGENCY[a].ports.some(p=>calls.includes(p)))f+=0.15;if(reefer&&Object.keys(sh.cold||{}).some(p=>calls.includes(p)))f+=0.2;return f;};
 const bunkerDiscount=()=>S.shore&&S.shore.bunker&&S.shore.bunker.until>=S.m?0.88:1;
 const fuelPrice=(sh,m)=>(sh.fuel==='coal'?coalPrice(m):oilPrice(m))*bunkerDiscount()*PX();
 const fuelRate=(sh,sm)=>sh.grt/(sh.fuel==='coal'?70:95)*Math.pow(sm,3)*(sh.up&&sh.up.turbines?0.92:1)*(sh.fuelK||1);
@@ -33,14 +35,14 @@ function legCalc(sh,rk,dir,R,gk){
   const myCap=Math.max(0,sh.cargo*(cm.reefer&&!(sh.up&&sh.up.reefer)?0.15:1)-(short?fuelRate(sh,sm)*Math.min(short,range*0.5)/(kn*24)*1.2:0));
   const cw=cargoWeight(rk,sh,cm.reefer)+myCap*sailings(kn,rk,sm);
   const offer=S.cmkt[rk]*cd.t*cargoSeason(cd.c,m);
-  const cargoT=Math.round(Math.min(myCap,offer*myCap/Math.max(1,cw)*(R?0.8+R()*0.4:1)));
+  const cargoT=Math.round(Math.min(myCap,offer*myCap*cargoPull(rk,cm.reefer)/Math.max(1,cw)*(R?0.8+R()*0.4:1)));
   const fuelT=fuelRate(sh,sm)*seaDays*(1+0.1*(sh.foul||0));
   const endPort=dir===0?geoEnds(gk)[1]:geoEnds(gk)[0];
   let dues=duesAt(sh,endPort,0.08);for(const [p] of stopsFor(gk,dir))dues+=duesAt(sh,p,0.04);
   const fm=facMods(sh);let onboard=0;for(const c in pax)onboard+=pax[c].n*(seaDays+calls*CALL_DAYS)*(fm.spend[c]||0)*PX();
-  return {onboard,pax,paxRev,prov,cargoT,comm:cd.c,cargoRev:cargoT*cm.rate*cargoMod(m)*(['grain','cotton','palm'].includes(cd.c)?1:clamp(1+(S.rep-30)/150,0.85,1.3)),fuelT,fuelC:fuelT*fuelPrice(sh,m),
+  return {onboard,pax,paxRev,prov,cargoT,comm:cd.c,cargoRev:cargoT*cm.rate*cargoMod(m)*(sh.up&&sh.up.heavy&&(cd.c==='general'||cd.c==='manuf')?1.12:1)*(sh.up&&sh.up.deep&&cd.c==='palm'?1.3:1)*(['grain','cotton','palm'].includes(cd.c)?1:clamp(1+(S.rep-30)/150,0.85,1.3)),fuelT,fuelC:fuelT*fuelPrice(sh,m),
     seaDays:seaDays+calls*CALL_DAYS,geo:gk,mail:S.mail[rk]&&sh.speed>0&&sh.up&&sh.up.wireless?S.mail[rk].pay/2:0,
-    agents:0.08*paxRev,port:dues+0.35*cargoT};
+    agents:0.08*paxRev,port:dues+0.35*cargoT*PX()*((sh.up&&sh.up.hatch)?0.75:1)*(S.shore&&S.shore.sheds&&S.shore.sheds[endPort]?0.6:1)};
 }
 function depart(sh){
   const P=sh.port;
@@ -201,6 +203,7 @@ function yardJobDone(sh,k){
   if(k==='refurb'){sh.fit=100;const ns=currentStyle();const re=ns!==(sh.style||'edw');sh.style=ns;news(`SS ${sh.name} returns freshly refurbished${re?', her public rooms redone in the '+STYLES[ns].name+' style':', her saloons like new'}.`,'good');}
   if(k==='lux'){sh.up.lux=true;sh.fit=100;news(`SS ${sh.name} returns with luxury first-class suites.`,'good');}
   if(k==='fac')applyFacPlan(sh);
+  if(k==='hatch'||k==='heavy'||k==='deep'){sh.up[k]=true;news(`SS ${sh.name} returns with ${YARD_NAME[k]}.`,'good');}
   if(EQUIP[k]){sh.up[k]=true;(sh.upR=sh.upR||{})[k]=true;news(`SS ${sh.name} returns with ${EQUIP[k].name.toLowerCase()}.`,'good');}
   if(UPGRADES[k]&&k!=='lux'){sh.up[k]=true;news(`SS ${sh.name} returns with ${UPGRADES[k].name.toLowerCase()}.`,'good');}
 }
@@ -238,7 +241,7 @@ function moveAll(step){
     }
   }
 }
-const shoreUpkeep=()=>{const s=S.shore;return Object.keys(s.piers).length*350+Object.keys(s.agents).length*300+Object.keys(s.hostels).length*250+Object.keys(s.yards).length*1200+(s.slip?1500:0)+Object.keys(S.depts||{}).reduce((a,k)=>a+deptCost(k).total,0);};
+const shoreUpkeep=()=>{const s=S.shore;return Object.keys(s.fagents||{}).length*250+Object.keys(s.sheds||{}).length*200+Object.keys(s.cold||{}).length*400+Object.keys(s.piers).length*350+Object.keys(s.agents).length*300+Object.keys(s.hostels).length*250+Object.keys(s.yards).length*1200+(s.slip?1500:0)+Object.keys(S.depts||{}).reduce((a,k)=>a+deptCost(k).total,0);};
 function dailyTick(){
   wireTick();silentDaily();if(Math.floor(S.t)%7===0)deptWeek();
   for(const sh of S.ships){
@@ -329,7 +332,7 @@ function refreshMarket(){
 /* the monthly bill for keeping the fleet and office going, before fuel and port costs */
 const runningCost=()=>S.ships.reduce((a,x)=>a+crewCost(x)+(x.captain?x.captain.wage:0)+insCost(x)+MAINT_COST[x.maint]*x.grt/8000,0)+600+250*S.ships.length+shoreUpkeep();
 const fleetValue=()=>S.ships.reduce((a,s)=>a+shipValue(s),0);
-const shoreValue=()=>{const s=S.shore;let v=0;for(const p in s.piers)v+=PIER_COST[p]*0.6;for(const y in s.yards)v+=120000*0.6;if(s.slip)v+=OWN_SLIP_COST*0.5;for(const h in s.hostels)v+=25000*0.5;return v;};
+const shoreValue=()=>{const s=S.shore;let v=0;for(const p in s.piers)v+=PIER_COST[p]*0.6;for(const y in s.yards)v+=120000*0.6;if(s.slip)v+=OWN_SLIP_COST*0.5;for(const h in s.hostels)v+=25000*0.5;for(const p in s.sheds||{})v+=SHED_COST*0.5;for(const p in s.cold||{})v+=COLD_COST*0.5;return v;};
 const netWorth=()=>S.cash+fleetValue()+shoreValue()-S.debt;
 const headroom=()=>Math.max(0,0.7*(fleetValue()+shoreValue())-S.debt);
 const odLimit=()=>8000+0.5*headroom(); // the bank forecloses when cash falls below minus this

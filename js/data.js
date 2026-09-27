@@ -1,5 +1,5 @@
 /* ================= DATA ================= */
-const GAME_VERSION='0.9.0',GAME_BUILT='27 September 2026'; // bump on every release; see CHANGELOG.md
+const GAME_VERSION='0.9.2',GAME_BUILT='27 September 2026'; // bump on every release; see CHANGELOG.md
 const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 const CL=['f','s','t','tt'];
 const CL_NAME={f:'First',s:'Second',t:'Third',tt:'Tourist Third'};
@@ -66,8 +66,8 @@ const SPD=[.85,1,1.1], SPD_REP=[-.3,0,.4], SPD_WEAR=[.8,1,1.7];
 const MAINT_COST=[0,700,1800], MAINT_GAIN=[0,1.4,3.2];
 const ADV_COST=[0,300,800,1500], ADV_MULT=[1,1.06,1.12,1.17];
 /* Yard work: maintenance jobs and upgrades. days are before any repair-yard discount. */
-const YARD_DAYS={fac:20,stab:30,rphone:7,aircon:35,radar:10,fins:30,replate:60,dock:25,oil:55,tourist:30,repair:45,engine:10,reefer:40,wireless:7,turbines:70,lux:35,refurb:25,gear:15};
-const YARD_NAME={fac:'new public rooms',stab:'gyro stabilisers',rphone:'a radio-telephone',aircon:'air conditioning',radar:'a radiolocation set',fins:'fin stabilisers',replate:'re-plating and new frames',dock:'overhaul',oil:'oil conversion',tourist:'Tourist Third refit',repair:'fire repairs',engine:'engine repairs',
+const YARD_DAYS={hatch:25,heavy:15,deep:30,fac:20,stab:30,rphone:7,aircon:35,radar:10,fins:30,replate:60,dock:25,oil:55,tourist:30,repair:45,engine:10,reefer:40,wireless:7,turbines:70,lux:35,refurb:25,gear:15};
+const YARD_NAME={hatch:'more hatches and tween decks',heavy:'heavy-lift derricks',deep:'deep tanks',fac:'new public rooms',stab:'gyro stabilisers',rphone:'a radio-telephone',aircon:'air conditioning',radar:'a radiolocation set',fins:'fin stabilisers',replate:'re-plating and new frames',dock:'overhaul',oil:'oil conversion',tourist:'Tourist Third refit',repair:'fire repairs',engine:'engine repairs',
   reefer:'refrigerated holds',wireless:'wireless telegraphy',turbines:'new turbines',lux:'luxury first-class refit',refurb:'refurbishment',gear:'new cargo gear'};
 /* Upgrades a ship can have fitted once. */
 const UPGRADES={
@@ -138,6 +138,16 @@ const DEPTS={
 };
 const CLERK_WAGE=14;
 const HOSTEL_PORTS=['GLA','LIV','SOU','HAM'];
+/* freight: canvassing agents win cargo for every line calling in their region; transit sheds speed handling at a port;
+   cold stores hold chilled meat and fruit for the ships that can carry it */
+const FAGENCY={
+  british:{name:'British freight canvassers',ports:['GLA','LIV','MOV','QUE','AVO','SOU'],cost:10000},
+  continent:{name:'Continental forwarding agents',ports:['HAM','CHE'],cost:10000},
+  med:{name:'Mediterranean forwarding agents',ports:['GEN','NAP','GIB','LIS'],cost:8000},
+  americas:{name:'American shipping brokers',ports:['NYC','HAL','SJN','QBC','MTL','NOL','GAL','KIN','RIO','MVD','BUE'],cost:14000},
+  africa:{name:'West African produce buyers',ports:['FRE','LAG'],cost:8000}
+};
+const SHED_COST=18000,COLD_COST=30000,COLD_PORTS=['BUE','MVD','KIN','LIV','SOU','GLA','NYC'];
 const YARD_PORTS={GLA:'the Clyde',LIV:'the Mersey'};
 const HIST=[
   {m:0,t:'The Morven Line opens its Glasgow office with one elderly ship, the SS Morven, and a £40,000 mortgage. The post-war freight boom has collapsed and coal is dear.'},

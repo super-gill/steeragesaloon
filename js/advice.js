@@ -114,7 +114,7 @@ function advice(){
     if(sh.state==='laid'){
       const best=bestLine(sh,null);
       const idleC=idleCost(sh),val=Math.round(shipValue(sh)*0.9);
-      if(best&&best.pm<0&&S.ships.length>1&&!sh.pendingExit&&!(sh.acq>S.m-18))add({id:`sell:${sh.id}:${S.m}`,scope:'ship',ref:sh.id,sev:'warn',gain:idleC+val*0.065/12,
+      if(best&&best.pm<0&&S.ships.length>1&&!sh.pendingExit&&!(sh.acq>S.m-18)&&!WINTER.includes(mo))add({id:`sell:${sh.id}:${S.m}`,scope:'ship',ref:sh.id,sev:'warn',gain:idleC+val*0.065/12,
         title:`Sell SS ${sh.name}`,
         why:`Even laid up she costs ${money(idleC)} a month, and no route would pay her way over the coming year. Selling her raises about ${money(val)}${S.debt>0?', which could pay down the mortgage and its interest':''}. Ships are cheap in a slump, so you may be selling low.`,
         act:[['Sell her','sellship',sh.id]]});
@@ -259,6 +259,9 @@ function doAction(act,d){
     case 'shorebuy':{const [kind,key]=d,c=shoreCost(kind,key),sh=S.shore;if(!c||S.cash<c)return false;
       if(kind==='pier'){if(sh.piers[key])return false;sh.piers[key]=S.m;news(`The Morven Line opens its own pier at ${PN[key]}.`,'good');}
       else if(kind==='agency'){if(sh.agents[key])return false;sh.agents[key]=S.m;news(`${AGENCY[key].name} now book for the Morven Line.`,'good');}
+      else if(kind==='fagent'){(sh.fagents=sh.fagents||{});if(sh.fagents[key])return false;sh.fagents[key]=S.m;news(`${FAGENCY[key].name} now canvass cargo for the Morven Line.`,'good');}
+      else if(kind==='shed'){(sh.sheds=sh.sheds||{});if(sh.sheds[key])return false;sh.sheds[key]=S.m;news(`The Morven Line's transit sheds open at ${PN[key]}.`,'good');}
+      else if(kind==='cold'){(sh.cold=sh.cold||{});if(sh.cold[key])return false;sh.cold[key]=S.m;news(`The Morven Line's cold store opens at ${PN[key]}.`,'good');}
       else if(kind==='hostel'){if(sh.hostels[key])return false;sh.hostels[key]=S.m;news(`The Morven Line emigrant hostel opens at ${PN[key]}.`,'good');}
       else if(kind==='yard'){if(sh.yards[key])return false;sh.yards[key]=S.m;news(`The Morven Line buys a repair yard on ${YARD_PORTS[key]}.`,'good');}
       else if(kind==='slip'){if(!sh.yards[key]||sh.slip)return false;sh.slip=key;news(`The Morven Line lays down a building slip at its yard on ${YARD_PORTS[key]}. It can now build its own ships.`,'good',true);}
@@ -277,12 +280,12 @@ function doAction(act,d){
     case 'build':{const [dz]=d;if(typeof openDesigner!=='function')return false;UI.dz=JSON.parse(JSON.stringify(dz));openDesigner();return true;}
     case 'propyes':{const [pid]=d;const p=(S.props||[]).find(q=>q.id===pid);if(!p)return false;S.props=S.props.filter(q=>q!==p);
       return doAction(p.act,p.d);}
-    case 'propno':{const [pid]=d;const p=(S.props||[]).find(q=>q.id===pid);if(!p)return false;S.props=S.props.filter(q=>q!==p);S.dismiss[pid]=S.m+12;
+    case 'propno':{const [pid]=d;const p=(S.props||[]).find(q=>q.id===pid);if(!p)return false;S.props=S.props.filter(q=>q!==p);S.dismiss[pid]=S.m+(p.act==='moveship'?3:12);
       if(p.act==='openmove'){S.dismiss['nomove:'+p.d[0]+':'+p.d[1]]=S.m+12;}return true;}
   }
   return false;
 }
-function shoreCost(kind,key){const p=PX();return kind==='pier'?PIER_COST[key]:kind==='agency'?AGENCY[key]&&AGENCY[key].cost:kind==='hostel'?Math.round(60000*p):kind==='yard'?Math.round(300000*p):kind==='bunker'?Math.round(10000*p):kind==='slip'?Math.round(OWN_SLIP_COST*p):kind==='dept'?DEPTS[key]&&DEPTS[key].cost:0;}
+function shoreCost(kind,key){const p=PX();return kind==='fagent'?FAGENCY[key]&&Math.round(FAGENCY[key].cost*p):kind==='shed'?Math.round(SHED_COST*p):kind==='cold'?Math.round(COLD_COST*p):kind==='pier'?PIER_COST[key]:kind==='agency'?AGENCY[key]&&AGENCY[key].cost:kind==='hostel'?Math.round(60000*p):kind==='yard'?Math.round(300000*p):kind==='bunker'?Math.round(10000*p):kind==='slip'?Math.round(OWN_SLIP_COST*p):kind==='dept'?DEPTS[key]&&DEPTS[key].cost:0;}
 /* the best line for a ship, preferring lines already open: a new line must earn clearly more to be worth opening */
 function bestLine(sh,exclude){
   let bo=null,ba=null;
@@ -315,7 +318,8 @@ function deptCost(k){const D=DEPTS[k],o=S.depts[k],[b,perShip,perLine]=D.staff;
 /* big decisions a department may propose but never takes on its own */
 const BIG=['openmove','sellship','buyship','build'];
 function propose(k,h,act,d){
-  S.props=S.props||[];const id=h.id.replace(/:\d+$/,'');
+  S.props=(S.props||[]).filter(p=>S.m-(p.m||0)<=2); // a proposal nobody answers lapses after two months
+  const id=h.id.replace(/:\d+$/,'');
   if(S.props.some(p=>p.id===id)||(S.dismiss[id]&&S.dismiss[id]>S.m))return;
   S.props.push({id,dept:k,title:h.title,why:h.why,act,d,m:S.m});
   news(`${DEPTS[k].name} proposes: ${h.title}. See Needs attention.`,'',false);
@@ -337,7 +341,8 @@ function deptWeek(){
       // a weaker head sometimes takes the wrong item first
       let h=mine[i];if(R()<(1-c)*0.35&&mine.length>1)h=mine[Math.floor(R()*mine.length)];
       const [,act,...d0]=h.act[0],d=d0.slice(),key=h.id.split(':').slice(0,2).join(':');
-      if(BIG.includes(act)){propose(k,h,act,d);continue;}
+      // laying a ship up is the owner's call: the department proposes it rather than doing it
+      if(BIG.includes(act)||(act==='moveship'&&!d[1])){propose(k,h,act,d);continue;}
       if(!['setfare','setfares','setlineopt','setship','moveship','setyard','hire'].includes(act))continue;
       if(act==='setyard'&&!canSpend(refitCost(S.ships.find(q=>q.id===d[0])||{grt:0},d[1])))continue;
       if(act==='moveship'&&d[1]&&!S.lines[d[1]])continue;

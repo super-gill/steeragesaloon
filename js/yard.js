@@ -63,6 +63,9 @@ function fashion(style,y){
 const EXTRAS={
   wireless:{name:'Wireless telegraphy',cost:()=>2500,blurb:'A set and two operators keeping watch.'},
   reefer:{name:'Refrigerated holds',cost:g=>g*2+4000,blurb:'Insulated holds for fruit and meat.'},
+  hatch:{name:'More hatches and tween decks',cargo:true,cost:g=>g*0.8,blurb:'Cargo worked through more hatches at once: handling a quarter cheaper, half a day off each turnaround.'},
+  heavy:{name:'Heavy-lift derricks',cargo:true,cost:()=>7000,blurb:'Locomotives and machinery: general cargo and manufactures pay about 12% more.'},
+  deep:{name:'Deep tanks',cargo:true,cost:g=>g*0.6,blurb:'Palm oil and liquids in bulk: palm oil pays about 30% more.'},
   stab:{name:'Gyro stabilisers',from:1932,cost:g=>g*1.6,fs:1.03,gale:0.6,blurb:'Great spinning wheels that damp the roll.'},
   rphone:{name:'Radio-telephone',from:1936,cost:()=>7000,fs:1.02,blurb:'Passengers can telephone ashore from mid-ocean.'},
   aircon:{name:'Air conditioning',from:1937,cost:g=>g*1.3,fs:1.03,tropic:1.06,blurb:'Cooled public rooms: a boon in the tropics.'},
@@ -93,7 +96,7 @@ function defaultDesign(pk){
   const P=PURPOSES[pk||'inter'],y=yNow();
   const g=Math.round((P.size[0]*0.65+P.size[1]*0.35)/500)*500,kn=Math.round(P.speed[0]+(P.speed[1]-P.speed[0])*0.35);
   return {purpose:pk||'inter',grt:g,knots:kn,form:y>=1929?'bulb':'cruiser',subdiv:'std',mach:kn>18?'geared':'quad',fuel:'oil',
-    mix:{...P.mix},pax:P.pax,quality:1,style:y>=1933?'moderne':y>=1925?'deco':'edw',extras:{wireless:true,reefer:!!P.reefer},
+    mix:{...P.mix},pax:P.pax,quality:1,style:y>=1933?'moderne':y>=1925?'deco':'edw',extras:{wireless:true,reefer:!!P.reefer,hatch:pk==='cargo'||pk==='reefer'},
     fac:defaultFac(pk||'inter',g,y),funnels:g>=30000?3:g>=12000?2:1,builder:'clyde',contract:'fixed',name:'',line:'',auto:{mach:true,form:true}};
 }
 function builderOf(d){return d.builder==='own'?ownBuilder():BUILDERS[d.builder];}
@@ -241,7 +244,7 @@ function deliver(o,st,kn,B){
     len:st.eng.len,beam:st.eng.beam,draught:st.eng.draught,shp:st.eng.shp,range:st.eng.range,designLine:d.line||null,
     design:{form:d.form,funnels:d.funnels,purpose:d.purpose,mach:d.mach,quality:d.quality,yardNo:o.id,builder:B.name,extras:Object.keys(d.extras).filter(k=>d.extras[k])},fit:100});
   sh.up.wireless=!!d.extras.wireless;sh.up.lux=d.quality>=2;sh.fac={...(d.fac||{})};
-  for(const k of ['stab','fins','aircon','pool','cinema','rphone','radar'])if(d.extras[k])sh.up[k]=true;
+  for(const k of ['stab','fins','aircon','pool','cinema','rphone','radar','hatch','heavy','deep'])if(d.extras[k])sh.up[k]=true;
   const pool=(S.capPool||[]).slice().sort((a,b)=>b.exp-a.exp);if(pool.length){sh.captain=pool[0];S.capPool=S.capPool.filter(q=>q!==pool[0]);}
   sh.acq=S.m;S.ships.push(sh);S.orders=S.orders.filter(x=>x!==o);
   if(d.builder==='own')S.shore.slipBuilt=(S.shore.slipBuilt||0)+1;

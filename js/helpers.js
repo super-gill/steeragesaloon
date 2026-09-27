@@ -51,7 +51,10 @@ function oilPrice(m){return (m<12?3.6:m<24?3.0:2.7)*(m>=354?0.78:1)*(1+0.03*Math
 function repF(c,rep,r){const x=rep-30;if(c==='f')return clamp(1+x/(r.prestige>1.2?50:70),0.4,1.8);if(c==='s')return clamp(1+x/150,0.6,1.4);if(c==='t')return clamp(1+x/500,0.85,1.15);return clamp(1+x/100,0.5,1.6);}
 const repWord=r=>r<15?'Disreputable':r<30?'Unknown':r<45?'Respectable':r<60?'Well regarded':r<75?'Fashionable':'Illustrious';
 function shipValue(sh){return sh.base*PX()/(sh.pi0||1)*Math.pow(sh.cond/100,0.7)*Math.max(0.15,1-fatOf(sh)*0.0085)*shipMkt();}
-const crewCost=sh=>sh.grt/(sh.fuel==='coal'?32:45)*12*CREW_PAY_MULT[sh.pay===undefined?1:sh.pay]*(sh.crewK||1)*(S.wageK||1)*safetyOf().crew*PX();
+/* the ship's company: deck and engine-room hands by size and fuel (stokers for coal), and stewards by the passengers carried.
+   A freighter needs no stewards, so she is cheap to crew; a liner's hotel staff can outnumber her sailors */
+const crewCount=sh=>{const b=sh.berths||{};return (sh.fuel==='coal'?20+sh.grt/250:16+sh.grt/350)*(sh.crewK||1)+(b.f||0)*0.6+(b.s||0)*0.25+(b.tt||0)*0.12+(b.t||0)*0.05;};
+const crewCost=sh=>crewCount(sh)*16.8*CREW_PAY_MULT[sh.pay===undefined?1:sh.pay]*(S.wageK||1)*safetyOf().crew*PX();
 const insCost=sh=>shipValue(sh)*0.05/12*(sh.cond<50?1.4:1)*(fatOf(sh)>=90?2:1+Math.max(0,fatOf(sh)-60)/40);
 const confFloor=(rk,c)=>Math.ceil(ROUTES[rk].ref[c]*0.95);
 function effFare(rk,c){let f=S.lines[rk].fares[c];if(S.conf)f=Math.max(f,confFloor(rk,c));return f;}
@@ -61,7 +64,7 @@ function gcDist(p,q){const a=CHART.lonlat[p],b=CHART.lonlat[q],rad=Math.PI/180;
   const h=Math.sin(dp/2)**2+Math.cos(la1)*Math.cos(la2)*Math.sin(dl/2)**2;return 2*6371*Math.asin(Math.sqrt(h))/1.852;}
 const ACTIVE=['sea','port','repo'];
 const shipsOn=rk=>S.ships.filter(x=>x.line===rk);
-const REFIT_BASE={stab:g=>g*1.6,rphone:()=>7000,aircon:g=>g*1.3,radar:()=>32000,fins:g=>g*2,replate:g=>g*3,dock:g=>g*1.1,oil:g=>g*3.5,reefer:g=>g*3+5000,wireless:()=>2500,turbines:g=>g*5,lux:g=>g*2,refurb:g=>g*1.2,gear:g=>g*0.8};
+const REFIT_BASE={hatch:g=>g*1.2,heavy:()=>9000,deep:g=>g*0.9,stab:g=>g*1.6,rphone:()=>7000,aircon:g=>g*1.3,radar:()=>32000,fins:g=>g*2,replate:g=>g*3,dock:g=>g*1.1,oil:g=>g*3.5,reefer:g=>g*3+5000,wireless:()=>2500,turbines:g=>g*5,lux:g=>g*2,refurb:g=>g*1.2,gear:g=>g*0.8};
 const atOwnYard=sh=>S.shore&&S.shore.yards[sh.port]&&sh.state!=='sea'&&sh.state!=='repo';
 function refitCost(sh,k){if(k==='fac')return sh.facPlan?Math.round(facChange(sh,sh.facPlan).cost*(atOwnYard(sh)?0.7:1)):0;let c=k==='tourist'?8000+Math.round(sh.berths.t*0.5)*12:REFIT_BASE[k]?REFIT_BASE[k](sh.grt):0;
   c*=PX();if(c&&atOwnYard(sh))c*=0.7;return Math.round(c);}

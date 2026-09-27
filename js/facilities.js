@@ -99,9 +99,12 @@ const RF_JOBS=[ // yard jobs the refit office offers, by section
   ['Machinery and equipment',[['oil','Convert to oil firing',sh=>sh.fuel==='coal','Cuts her stokehold crew and her bunker bill.'],
     ['turbines','New turbines',sh=>!(sh.up&&sh.up.turbines),'About 1.5 knots faster and a little more economical.'],
     ['wireless','Wireless telegraphy',sh=>!(sh.up&&sh.up.wireless),'Reports from sea as things happen; needed for the mails, and tugs reach her sooner.'],
-    ['gear','Modern cargo gear',sh=>!(sh.up&&sh.up.gear),'Electric winches and derricks: a day less in every port.'],
-    ['reefer','Refrigerated holds',sh=>!(sh.up&&sh.up.reefer),'Carries chilled beef and bananas.'],
     ...Object.keys(EQUIP).map(k=>[k,EQUIP[k].name,sh=>yearNow()>=EQUIP[k].from&&!(sh.up&&sh.up[k])&&!(k==='stab'&&sh.up&&sh.up.fins),EQUIP[k].desc])]],
+  ['Cargo',[['gear','Modern cargo gear',sh=>sh.cargo>500&&!(sh.up&&sh.up.gear),'Electric winches and derricks: a day less in every port.'],
+    ['hatch','More hatches and tween decks',sh=>sh.cargo>1500&&!(sh.up&&sh.up.hatch),'Cargo worked through more hatches at once: handling a quarter cheaper and half a day off each turnaround.'],
+    ['heavy','Heavy-lift derricks',sh=>sh.cargo>1500&&!(sh.up&&sh.up.heavy),'Locomotives, boilers and machinery: general cargo and manufactures pay about 12% more.'],
+    ['deep','Deep tanks',sh=>sh.cargo>1500&&!(sh.up&&sh.up.deep),'Tanks for palm oil and other liquids in bulk: palm oil pays about 30% more.'],
+    ['reefer','Refrigerated holds',sh=>sh.cargo>500&&!(sh.up&&sh.up.reefer),'Carries chilled beef and bananas.']]],
   ['Passenger spaces',[['tourist','Tourist Third refit',sh=>S.m>=48&&sh.berths.tt===0&&sh.berths.t>0,'Half her steerage rebuilt as Tourist Third Cabin for students and teachers.'],
     ['lux','Luxury suites and a grand saloon',sh=>!(sh.up&&sh.up.lux),'First class appeal up a fifth.']]]
 ];
@@ -129,7 +132,7 @@ function rfPatch(sh,rf){
     if(k==='dock')p.cond=Math.max(sh.cond,Math.min(Math.min(92,condCap(sh)),sh.cond+35)),p.foul=0;
     if(k==='refurb')p.fit=100;if(k==='oil')p.fuel='oil';if(k==='replate')p.fat=Math.max(0,fatOf(sh)-[25,15,8,4][Math.min(3,sh.replates||0)]);
     if(k==='tourist'){const cv=Math.round(p.berths.t*0.5);p.berths.t-=cv;p.berths.tt+=Math.round(cv*0.6);}
-    if(['turbines','wireless','gear','reefer','lux'].includes(k))p.up[k]=true;
+    if(['turbines','wireless','gear','reefer','lux','hatch','heavy','deep'].includes(k))p.up[k]=true;
     if(EQUIP[k]){p.up[k]=true;p.upR[k]=true;}}
   return p;
 }
@@ -161,10 +164,10 @@ function renderRefit(){
   const pk=k=>picks[k]?`<span class="rftag">${picks[k]<50?'Marine Superintendent recommends':`Marine Superintendent: +${fmt(picks[k])}/mo`}</span>`:'';
   const inPlan=k=>sh.pendingYard===k||sh.yardKind===k||(sh.yardAdd||[]).includes(k);
   const jobRow=([k,label,ok,desc])=>{if(!ok(sh))return '';const on=!!rf.jobs[k],c=refitCost(sh,k),booked=inPlan(k);
-    return `<label class="rfopt${on?' on':''}${picks['j:'+k]?' pick':''}"><input type="checkbox" data-rfjob="${k}" ${on?'checked':''} ${booked?'disabled':''}><span><b>${label}</b> <span class="num">${booked?'booked':fmt(c)+' · '+yardDays(sh,k)+' days'}</span>${pk('j:'+k)}<small>${desc}</small></span></label>`;};
+    return `<label class="rfopt${on?' on':''}${picks['j:'+k]?' rfpick':''}"><input type="checkbox" data-rfjob="${k}" ${on?'checked':''} ${booked?'disabled':''}><span><b>${label}</b> <span class="num">${booked?'booked':fmt(c)+' · '+yardDays(sh,k)+' days'}</span>${pk('j:'+k)}<small>${desc}</small></span></label>`;};
   const used=slotsUsed(rf.fac),slots=slotsOf(sh);
   const facRow=k=>{const F=FAC[k],cur=facLv(sh,k),tgt=rf.fac[k]||0;
-    return `<div class="rffac${picks['f:'+k]?' pick':''}"><b>${F.name}</b>${pk('f:'+k)}<div class="rflv">${F.levels.map((L,i)=>{const ok=levelOk(k,i,sh.grt,y),room=i>tgt&&used-tgt+i>slots,why=!ok?(L.min&&sh.grt<L.min?`needs ${int(L.min)} tons`:`from ${L.from}`):room?'no venue free':'';
+    return `<div class="rffac${picks['f:'+k]?' rfpick':''}"><b>${F.name}</b>${pk('f:'+k)}<div class="rflv">${F.levels.map((L,i)=>{const ok=levelOk(k,i,sh.grt,y),room=i>tgt&&used-tgt+i>slots,why=!ok?(L.min&&sh.grt<L.min?`needs ${int(L.min)} tons`:`from ${L.from}`):room?'no venue free':'';
       return `<button data-act="rflevel" data-k="${k}" data-v="${i}" aria-pressed="${tgt===i}" ${why&&i!==cur?'disabled':''}>${esc(L.n)}${i===cur?' <small>now</small>':''}${why&&i!==cur?` <small>${why}</small>`:''}</button>`;}).join('')}</div>
       <small class="note">${tgt!==cur?(tgt>cur?`${fmt(facChange(sh,{...sh.fac,[k]:tgt}).cost)} to fit`:'Taken out at the refit'):''}${F.levels[tgt].staff?`${tgt!==cur?' · ':''}staff ${fmt(F.levels[tgt].staff*facSize(sh.grt,0.7)*PX())} a month`:''}</small></div>`;};
   const groups=[...new Set(FAC_KEYS.map(k=>FAC[k].g))];
@@ -197,8 +200,8 @@ function renderRefit(){
     </div></div>
     <div class="dz-ctl">
       ${RF_JOBS.map(([title,jobs])=>{const rows=jobs.map(jobRow).join('');return rows?`<section><h3>${title}</h3><div class="stack" style="gap:6px">${rows}</div></section>`:'';}).join('')}
-      <section><h3>Facilities</h3><p class="note">${slots} venues fit a ship of her size; each level takes one. Levels above what she has cost the difference; taking a facility out gives the room back to cabins.</p>
-        ${groups.map(g=>`<h4 class="lbl">${g}</h4>`+FAC_KEYS.filter(k=>FAC[k].g===g).map(facRow).join('')).join('')}</section>
+      ${CL.reduce((a,c)=>a+(sh.berths[c]||0),0)<60?`<section><h3>Facilities</h3><p class="note">She carries ${CL.reduce((a,c)=>a+(sh.berths[c]||0),0)} passengers: public rooms would never pay. Put her money into cargo fittings.</p></section>`:`<section><h3>Facilities</h3><p class="note">${slots} venues fit a ship of her size; each level takes one. Levels above what she has cost the difference; taking a facility out gives the room back to cabins.</p>
+        ${groups.map(g=>`<h4 class="lbl">${g}</h4>`+FAC_KEYS.filter(k=>FAC[k].g===g).map(facRow).join('')).join('')}</section>`}
     </div>
   </div>`);
   return true;

@@ -2,6 +2,18 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.9.2 (27 September 2026)
+- Acting departments no longer lay ships up on their own: they propose it under Needs attention and you approve or decline. A declined lay-up is not proposed again for three months.
+- Unanswered department proposals lapse after two months.
+- Head office no longer advises selling a laid-up ship during the winter months, when every ship looks like a loss.
+
+## 0.9.1 (27 September 2026)
+- Fixed: freighters were crewed like liners. Crew is now counted as deck and engine-room hands by size and fuel, plus stewards by the passengers carried, so a cargo ship costs about a third of what she did to crew while passenger ships cost much the same. Freighters now pay on a good cargo route once the 1921 freight slump is over.
+- Cargo fittings, at build and at refit: more hatches and tween decks (cheaper handling, faster turnarounds), heavy-lift derricks (general cargo and manufactures pay more), deep tanks (palm oil pays more), alongside cargo gear and refrigerated holds. New cargo liners and refrigerated ships come with extra hatches.
+- The refit office and drawing office leave out public rooms for ships that carry too few passengers for them to pay.
+- Freight on the Shore tab: freight canvassers by region win more cargo for every ship calling there; transit sheds at a port cut handling and turnaround; cold stores at the meat and fruit ports win more chilled cargo.
+- Cargo handling costs follow the price level.
+
 ## 0.9.0 (27 September 2026)
 - The refit office: every yard job, upgrade and facility for a ship in one window, like the drawing office, with the clock stopped while it is open. Tick what you want, see the cost, the days out of service, the berths it takes and what it would add a month on her line, and book it all as one yard visit. The Marine Superintendent marks the options that would pay for themselves within about three years; one button takes his picks. It replaces the yard and upgrade buttons on the ship panel, and head office advice about yard work now has a button to open it.
 - Public rooms and facilities, at build and at refit: first, second and third-class dining, theatre and music, a cinema, shops and duty free, swimming pools, a gymnasium and spa, a winter garden, and family rooms, each with levels from the modest to the grand. Each level takes a venue (a ship has two plus one per 8,000 tons), takes room from the cabins of the classes it serves, costs money to fit and to staff, and draws passengers. Shops, bars and shows earn money aboard, which shows in the ledger. Indoor rooms (pools, winter gardens, enclosed promenades) bring more passengers in the winter months. The grandest rooms need big ships and later years.
