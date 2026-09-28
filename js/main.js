@@ -66,6 +66,10 @@ document.addEventListener('click',e=>{
     case 'wread':{const m=(S.wire||[]).find(x=>x.id===+b.dataset.id);if(m&&m.read===false){m.read=true;UI.wa={id:m.id,txt:m.txt,mode:'decode',made:performance.now()};UI._tray=null;}break;}
     case 'wreadall':{for(const m of S.wire||[])if(m.read===false){m.read=true;const e=document.querySelector(`[data-hold="${m.id}"] .tg-an`);if(e)e.textContent=m.txt;}if(UI.wa)UI.wa.done=true;UI._tray=null;break;}
     case 'emmin':UI.emMin=true;break;
+    case 'dissend':disSend(+b.dataset.id);break;
+    case 'dismin':UI.disMin=true;break;
+    case 'disshow':UI.disMin=false;UI.disOpen=true;break;
+    case 'disclose':disClose();break;
     case 'emshow':{UI.emMin=false;const L=(S.emerg||[]).filter(x=>x.known&&(!x.over||S.t-x.t1<3));if(L.length&&!L.some(x=>x.id===UI.emOpen))UI.emOpen=(L.find(x=>!x.over)||L[0]).id;break;}
     case 'emtab':UI.emOpen=+b.dataset.id;break;
     case 'emreport':emOrder('report',+b.dataset.id);break;

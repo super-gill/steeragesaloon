@@ -1,7 +1,8 @@
 /* ================= CLOCK ================= */
 function advance(days){
   while(days>1e-9&&!S.over&&UI.speed>0){
-    const next=Math.floor(S.t+1e-9)+1,step=Math.min(days,next-S.t);
+    const next=Math.floor(S.t+1e-9)+1,due=S.dis&&S.dis.state==='armed'&&S.dis.t0>S.t+1e-9?S.dis.t0:next; // stop on the minute of the 1912 strike
+    const step=Math.min(days,next-S.t,due-S.t);
     moveAll(step);S.t+=step;days-=step;
     if(S.t>=next-1e-9){S.t=next;dailyTick();UI.dirty=true;}
   }

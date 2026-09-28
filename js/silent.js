@@ -9,7 +9,7 @@ function nmBetween(a,b){const q=latLon((a.x+b.x)/2,(a.y+b.y)/2);return Math.hypo
 /* the speed the office plans on: the passage her schedule allows (a foul bottom, a coaling stop), or her speed if none */
 function plannedSpeed(sh){const lg=sh.load;
   if(lg&&lg.geo===sh.geo&&lg.seaDays>0){const g=GEO(sh.geo),calls=stopsFor(sh.geo,sh.dir).length,days=lg.seaDays-calls*CALL_DAYS;if(days>0.5)return g.dist/days;}
-  return knotsOf(sh)*SPD[sh.speed]*shipMods(sh).speed*foulF(sh)*24;}
+  return knotsOf(sh)*SPD[sh.speed]*shipMods(sh).speed*foulF(sh)*24/trackF(sh.geo,S.m);}
 /* where the office thinks a silent ship is: from her last report, at her planned speed */
 function estimateOf(sh){
   const g=GEO(sh.geo),base=sh.seen||{t:sh.sailedAt||S.t,pos:0,stopped:false},v=base.v||plannedSpeed(sh);

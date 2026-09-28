@@ -17,13 +17,14 @@ function legCalc(sh,rk,dir,R,gk){
   // a foul bottom slows her; a short-legged ship stops to coal or fills cargo space with bunkers
   const short=rangeShort(sh,rk),range=dimsOf(sh).range;
   const cr=r.cruise,back=cr&&dir===1;
-  const seaDays=g.dist/(kn*sm*foulF(sh)*24)+(short>range*0.5?1.5:0),calls=back?0:g.calls.length-2;
+  const seaDays=g.dist*trackF(gk,m)/(kn*sm*foulF(sh)*24)+(short>range*0.5?1.5:0),calls=back?0:g.calls.length-2;
   const pax={};let paxRev=0,prov=0;
   // a cruise's passengers book once, for the whole cruise: homeward she carries the same people, and takes no fares
   const outPax=back?(R&&sh.load&&sh.load.cruiseOut&&sh.load.geo===gk?sh.load.pax:legCalc(sh,rk,0,null,gk).pax):null;
+  const bf=boatPaxF(sh); // under the boats law, no more passengers than her boats hold
   for(const c of CL){
     if(back){const o=outPax[c];if(!o||!o.n)continue;pax[c]={n:o.n,cap:o.cap,fare:0,rev:0};prov+=o.n*(seaDays+1)*PROV[c]*SERV_COST[L.service];continue;}
-    const b=(m>=ym(1940,0)&&!(sh.up&&sh.up.wireless))||(c==='t'&&fatOf(sh)>=90)?0:sh.berths[c];if(!b)continue;
+    const b=(m>=ym(1940,0)&&!(sh.up&&sh.up.wireless))||(c==='t'&&fatOf(sh)>=90)?0:Math.floor(sh.berths[c]*bf);if(!b)continue;
     const fare=effFare(rk,c),myA=ourAppeal(sh,rk,c),own=b*sailings(kn,rk,sm)*myA;
     const others=rivalWeight(rk,c)+ourWeight(rk,c,sh);
     // this ship's slice of the route's market for this class and direction, per crossing
@@ -246,7 +247,7 @@ function exitShip(sh,how){
   if(S.selShip===sh.id)S.selShip=S.ships[0]?S.ships[0].id:null;
 }
 function moveAll(step){
-  moveRivals(step);emTick();
+  moveRivals(step);emTick();disasterStep(step);
   for(const sh of [...S.ships]){
     if(sh.state==='lost')continue;
     if(sh.state==='sea'){
@@ -256,7 +257,7 @@ function moveAll(step){
       if(sh.brk&&!sh.brk.told&&S.t>=sh.brk.tell)breakdownVerdict(sh);
       if(sh.stopLeft>0){sh.stopLeft-=step;if(sh.stopLeft<=0){sh.stopLeft=0;if(sh.brk)breakdownResume(sh);}continue;}
       if(sh.callLeft>0){sh.callLeft-=step;continue;}
-      sh.pos+=(sh.towed?120:knotsOf(sh)*SPD[sh.speed]*shipMods(sh).speed*24*sh.slow*foulF(sh)*(sh.limp?(sh.limpF||0.4):1))*step;
+      sh.pos+=(sh.towed?120:knotsOf(sh)*SPD[sh.speed]*shipMods(sh).speed*24*sh.slow*foulF(sh)*(sh.limp?(sh.limpF||0.4):1))*step/trackF(sh.geo,S.m);
       if(sh.event&&sh.pos>=sh.event.at)triggerEvent(sh);
       if(sh.galeAt&&sh.pos>=sh.galeAt){sh.galeAt=null;const gs=sh.galeSev||0;sh.slow=0.75-0.2*gs;sh.cond=clamp(sh.cond-gs*6,5,95);addFat(sh,gs*0.5);
         if(gs>0.3){S.rep=clamp(S.rep-1,0,100);remark(sh,'sea',`Master to owners. Worst crossing I have known. She rolled her rails under for three days and the passengers are in a bad way. She is too small for this run in winter.`,`Nearly lost her off the Banks. Rolled her rails under for three days, boats stove in, passengers praying. She is too small for this run in winter. Move me or give me a bigger ship.`,'bad',100);}wire(sh,`Full gale ${posText(sh)}. Heavy seas. Hove to for some hours, now proceeding at reduced speed. Expect a day late.`);}
@@ -291,11 +292,11 @@ function dailyTick(){
   for(const rk in S.lines)if(S.ships.some(x=>x.line===rk&&ACTIVE.includes(x.state)))book('adv',-ADV_COST[S.lines[rk].adv]/30,rk); // no sailings to sell, no advertising
   book('office',-officeCost()/30);const sc=safetyCost();if(sc)book('safety',-sc/30);inquiryDaily();
   const up=shoreUpkeep()*PX();if(up)book('shore',-up/30);
-  book('interest',-S.debt*(0.065+(S.rateUp>S.m?0.02:0))/365);strikeDaily();
+  book('interest',-S.debt*(0.065+(S.rateUp>S.m?0.02:0))/365);strikeDaily();disasterDaily();
   const m=mOf(S.t);if(m!==S.m){const pm=S.m;S.m=m;monthRoll(pm);}
   if(S.cash<0&&!S.odWarn){S.odWarn=true;news(`The account is overdrawn. The bank will foreclose below ${fmt(-odLimit())}.`,'bad');}
   if(S.cash>0)S.odWarn=false;
-  if(S.cash<-odLimit()&&!S.over){S.over='bust';UI.speed=0;save();}
+  if(S.cash<-odLimit()&&!S.over){S.over=S.gross&&S.t-S.gross.t<730?'wound':'bust';UI.speed=0;save();} // claims after gross negligence: the court winds it up
 }
 function monthRoll(pm){
   const repay=Math.min(S.debt,Math.round(S.debt*0.004));S.debt-=repay;S.cash-=repay;
@@ -316,7 +317,7 @@ function monthRoll(pm){
     if(S.mail[rk])S.mail[rk].ok=false;
   }
   for(const rk of Object.keys(S.wars)){const w=S.wars[rk];w.left--;if(w.left<=0){delete S.wars[rk];S.tension[rk]=20;if(!w.quiet)news(warEndText(rk,w),S.lines[rk]?'good':'');}}
-  lineWarsMonth();trustMonth();prewarMonth();admMonth(); // the early years (trust.js, prewar.js)
+  lineWarsMonth();trustMonth();prewarMonth();admMonth();disasterMonth(); // the early years (trust.js, prewar.js)
   for(const rk of Object.keys(ROUTES)){
     const n=shipsOn(rk).filter(x=>ACTIVE.includes(x.state)).length;
     if(S.conf||!S.lines[rk]||!n||isCruise(rk)){S.tension[rk]=(S.tension[rk]||0)*0.6;continue;} // no conference on cruises

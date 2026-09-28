@@ -244,6 +244,7 @@ function renderShipDetail(sh){
       <span class="note">Every yard job, upgrade and facility for her in one window, booked as one visit.${atOwnYard(sh)?' She is at your own yard: work here is 30% cheaper and quicker.':''}</span></div>
     <div class="ctl"><span class="lbl">Her hull</span><span class="note"><strong>${fatWord(sh)}.</strong> ${Math.floor(yearNow()-sh.built)} years old${condCap(sh)<92?`; the yard can bring her to ${condCap(sh)}% at best`:''}${sh.replates?`, re-plated ${sh.replates===1?'once':sh.replates+' times'}`:''}. Hard driving, full speed, gales and neglect use up her life faster. ${dimsOf(sh).len|0} ft long, drawing ${dimsOf(sh).draught|0} ft${sh.len?'':' (estimated)'}. ${(sh.foul||0)<0.2?'Clean bottom.':(sh.foul||0)<0.45?'Some growth on her bottom.':(sh.foul||0)<0.7?'Her bottom is foul; she has lost speed.':'Badly foul and slow. She needs drydocking.'}</span></div>
     `)}
+    ${newCal()?shipGrp('safe','Boats and wireless',safeSum(sh),safeHTML(sh)):''}
     ${shipGrp('ins','Insurance',`${INS_COVER[insOf(sh).cover].short} · ${fmt(insCost(sh))} a month`,insHTML(sh))}
     ${shipGrp('crew','Master and crew',`${sh.captain?sh.captain.name+' · ':''}morale ${Math.round(sh.morale)} · ${Math.round(crewHands(sh))} hands`,`
     ${captainHTML(sh)}
@@ -676,10 +677,11 @@ function MENU_HTML(){return `<div class="modal" role="dialog" aria-modal="true" 
 function renderModal(){
   const el=$('modal');
   if(!S.over&&UI.menu){setHTML(el,MENU_HTML());return;}
+  if(!S.over&&S.dis&&S.dis.show){setHTML(el,disModalHTML());return;}
   if(!S.over){el.innerHTML='';return;}
-  const nw=netWorth(),sold=S.over==='sold';
+  const nw=netWorth(),sold=S.over==='sold',wound=S.over==='wound';
   const v=sold?`The Morven Line now belongs to the ${TRUST_NAME}. Its ships keep their names and sail under the Combine's orders; you leave with ${fmt(S.soldFor)} for the shareholders.`:'The bank has foreclosed. The Morven Line is finished.';
-  setHTML(el,`<div class="modal" role="dialog" aria-modal="true" aria-labelledby="mt"><div class="panel"><h3 id="mt">${sold?'Sold to the Combine':'Foreclosed'}</h3><p style="margin:0">${v}</p>
+  setHTML(el,`<div class="modal" role="dialog" aria-modal="true" aria-labelledby="mt"><div class="panel">${wound?woundHTML():`<h3 id="mt">${sold?'Sold to the Combine':'Foreclosed'}</h3><p style="margin:0">${v}</p>`}
     <dl class="kv">${sold?`<dt>Sale price</dt><dd>${fmt(S.soldFor)}</dd>`:''}<dt>Net worth</dt><dd>${fmt(nw)}</dd><dt>Fleet</dt><dd>${S.ships.length}</dd><dt>Reputation</dt><dd>${Math.round(S.rep)}</dd><dt>Reached</dt><dd>${dateLong(S.t)}</dd></dl>
     <button class="btn primary" data-act="newnow">Start a new line</button>
     <label class="lbl" for="loadCode2">Or load a save code</label><textarea id="loadCode2" data-keep="1" class="code" rows="2" placeholder="Paste a code here"></textarea>

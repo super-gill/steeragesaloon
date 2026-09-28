@@ -64,6 +64,7 @@ function fashion(style,y){
 }
 const EXTRAS={
   wireless:{name:'Wireless telegraphy',cost:()=>2500,blurb:'A set and two operators keeping watch.'},
+  boats:{name:'Boats for all',cost:g=>g*0.08+1000,blurb:'Lifeboats for everyone aboard, not just the legal scale.',ok:()=>newCal()},
   reefer:{name:'Refrigerated holds',cost:g=>g*2+4000,blurb:'Insulated holds for fruit and meat.'},
   hatch:{name:'More hatches and tween decks',cargo:true,cost:g=>g*0.8,blurb:'Cargo worked through more hatches at once: handling a quarter cheaper, half a day off each turnaround.'},
   heavy:{name:'Heavy-lift derricks',cargo:true,cost:()=>7000,blurb:'Locomotives and machinery: general cargo and manufactures pay about 12% more.'},
@@ -130,7 +131,7 @@ function defaultDesign(pk){
   const P=PURPOSES[pk||'inter'],y=yNow();
   const g=Math.round(Math.min(P.size[0]*0.65+P.size[1]*0.35,slipMaxYear(y)*0.8)/500)*500,kn=Math.round(P.speed[0]+(P.speed[1]-P.speed[0])*0.35+shipEraKnots(Math.floor(y)));
   return {purpose:pk||'inter',grt:g,knots:kn,form:y>=1929?'bulb':'cruiser',subdiv:'std',mach:kn>18&&y>=1911?'geared':kn>18&&y>=1905?'turb':'quad',fuel:fuelOK('oil',y)?'oil':'coal',
-    mix:{...P.mix},pax:P.pax,quality:1,style:y>=1933?'moderne':y>=1925?'deco':'edw',extras:{wireless:y>=1908,reefer:!!P.reefer,hatch:pk==='cargo'||pk==='reefer'},
+    mix:{...P.mix},pax:P.pax,quality:1,style:y>=1933?'moderne':y>=1925?'deco':'edw',extras:{wireless:y>=1908,boats:newCal()&&S.m>=ym(1912,4),reefer:!!P.reefer,hatch:pk==='cargo'||pk==='reefer'},
     layout:defaultLayout(pk||'inter',y),fac:defaultFac(pk||'inter',g,y),funnels:g>=30000?3:g>=12000?2:1,builder:'clyde',contract:'fixed',name:'',line:'',auto:{mach:true,form:true}};
 }
 function builderOf(d){return d.builder==='own'?ownBuilder():BUILDERS[d.builder];}
@@ -170,6 +171,7 @@ function designStats(d){
   let fs=(LY.fs||1)*Q.appeal*(typeof M.appeal==='function'?M.appeal(y):(M.appeal||1)),t=1,gale=1,risk=1/(B.quality*M.rel*1.02);
   for(const k in d.extras)if(d.extras[k]&&EXTRAS[k]){const x=EXTRAS[k];if(x.fs)fs*=x.fs;if(x.t)t*=x.t;if(x.gale)gale*=x.gale;if(x.risk)risk*=x.risk;}
   if(!d.name||!d.name.trim())w.push('She needs a name.');
+  else if((S.retired||[]).some(n=>n.toLowerCase()===d.name.trim().toLowerCase()))w.push('That name has been retired. No line may use it again.');
   else if(S.ships.some(x=>x.name.toLowerCase()===d.name.trim().toLowerCase())||(S.orders||[]).some(o=>o.d.name.toLowerCase()===d.name.trim().toLowerCase()))w.push('You already have a ship of that name.');
   return {berths,cargo,price,months,fuelK,crewK,fs,t,gale,risk,safety:SUBDIV[d.subdiv].safety,decay:Q.decay,warn:w,eng:e,
     parts:{hull:hull*sizeK*B.price*PX(),machinery:power*B.price*PX(),interiors:interiors*B.price*PX(),extras:extras*B.price*PX()}};
@@ -178,7 +180,7 @@ function designStats(d){
 function designShip(d,st){
   st=st||designStats(d);
   return {id:-1,name:(d.name||'Yard No. '+(S.yardNext||534)).trim(),built:Math.floor(yNow()),grt:d.grt,knots:d.knots,berths:st.berths,cargo:st.cargo,fuel:d.fuel,base:st.price,
-    up:{reefer:!!d.extras.reefer,wireless:!!d.extras.wireless},fit:100,captain:null,pay:1,morale:65,cond:95,line:null,speed:1,maint:1,autoDock:50,state:'port',port:'GLA',
+    up:{reefer:!!d.extras.reefer,wireless:!!d.extras.wireless,boats:!!d.extras.boats},fit:100,captain:null,pay:1,morale:65,cond:95,line:null,speed:1,maint:1,autoDock:50,state:'port',port:'GLA',
     fac:{...(d.fac||{})},cruiser:!!(PURPOSES[d.purpose]&&PURPOSES[d.purpose].cruiser),fuelK:st.fuelK,crewK:st.crewK,appFS:st.fs,appT:st.t,galeK:st.gale,riskK:st.risk,safety:st.safety,decayK:st.decay,style:d.style,novelty:true,design:{form:d.form,funnels:d.funnels,purpose:d.purpose,layout:d.layout},
     len:st.eng.len,beam:st.eng.beam,draught:st.eng.draught,shp:st.eng.shp,range:st.eng.range};
 }
@@ -282,7 +284,7 @@ function deliver(o,st,kn,B){
     len:st.eng.len,beam:st.eng.beam,draught:st.eng.draught,shp:st.eng.shp,range:st.eng.range,designLine:d.line||null,
     design:{layout:d.layout||null,form:d.form,funnels:d.funnels,purpose:d.purpose,mach:d.mach,quality:d.quality,yardNo:o.id,builder:B.name,extras:Object.keys(d.extras).filter(k=>d.extras[k])},fit:100});
   sh.up.wireless=!!d.extras.wireless;sh.up.lux=d.quality>=2;sh.fac={...(d.fac||{})};sh.cruiser=!!(PURPOSES[d.purpose]&&PURPOSES[d.purpose].cruiser);
-  for(const k of ['stab','fins','aircon','pool','cinema','rphone','radar','hatch','heavy','deep'])if(d.extras[k])sh.up[k]=true;
+  for(const k of ['stab','fins','aircon','pool','cinema','rphone','radar','hatch','heavy','deep','boats'])if(d.extras[k])sh.up[k]=true;
   const pool=(S.capPool||[]).slice().sort((a,b)=>b.exp-a.exp);if(pool.length){sh.captain=pool[0];S.capPool=S.capPool.filter(q=>q!==pool[0]);}
   if(o.adm&&o.admBal>0){sh.adm={bal:o.admBal,bal0:o.admBal,sub:Math.round(o.price*ADM_SUB/12)};o.admBal=0;}
   sh.acq=S.m;S.ships.push(sh);S.orders=S.orders.filter(x=>x!==o);

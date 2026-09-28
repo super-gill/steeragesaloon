@@ -202,7 +202,7 @@ function lossRecord(sh,e){
   return {name:sh.name,t:S.t,rk,due:S.t+45+Math.random()*30,dead:(sh.lost&&sh.lost.lost)||0,souls:soulsOf(sh)+crewOf(sh),cond:sh.cond,fat:fatOf(sh),morale:sh.morale||60,
     radio:radioOf(sh),drinker:has(sh,'drinker'),full:sh.speed===2,sea:rk?seaSev(sh,rk,m):0,port:rk?linePorts(rk).some(p=>!portFit(sh,p).ok):false,
     safety:S.safety===undefined?1:S.safety,ignored:e?e.orders.filter(o=>o.by==='master'&&e.canOrder).length:0,kind:e?EMERG[e.k].name.toLowerCase():'foundering',
-    grave:e?e.sev===3:false,grt:sh.grt,paid:sh.claimPaid!==undefined?sh.claimPaid:Math.round(shipValue(sh))};
+    grave:e?e.sev===3:false,grt:sh.grt,deck:cwSk(sh,'deck'),watch:nightOn(sh),cover:boatCover(sh),dis:!!(e&&e.doom),warned:!!(e&&e.warned),paid:sh.claimPaid!==undefined?sh.claimPaid:Math.round(shipValue(sh))};
 }
 function queueInquiry(sh,e){(S.inq=S.inq||[]).push(lossRecord(sh,e));}
 function inquiryDaily(){
@@ -210,7 +210,8 @@ function inquiryDaily(){
   const due=S.inq.filter(q=>q.due<=S.t);if(!due.length)return;S.inq=S.inq.filter(q=>q.due>S.t);
   for(const q of due)inquiry(q);
 }
-function inquiry(q){
+/* what the court finds: each fault adds to the blame */
+function blameOf(q){
   const F=[];let blame=0;const add=(w,t)=>{blame+=w;F.push(t);};
   if(q.fat>=90)add(3,'her hull was worn out and she should have gone to the breakers');else if(q.fat>=75)add(1.5,'her hull was tired and past her best');
   if(q.cond<35)add(2.5,'she was dangerously run down');else if(q.cond<50)add(1.2,'she was poorly maintained');
@@ -220,17 +221,29 @@ function inquiry(q){
   if(q.safety===0)add(1.5,'boat drills had been neglected as company policy');
   if(!q.radio)add(1,'she had no wireless, and help came late');
   if(q.drinker)add(1,'her master drank');
-  if(q.full&&q.kind!=='mutiny')add(0.5,'she was being driven at full speed');
+  if(q.deck!==undefined&&q.deck<40)add(0.8,'her lookouts and boat crews were poorly trained');
+  if(q.dis&&q.radio&&!q.watch)add(0.5,'her wireless kept no watch at night');
+  if(q.full&&q.kind!=='mutiny')add(q.warned?1.5:0.5,q.warned?'she kept her full speed after she had been warned':'she was being driven at full speed');
   if(q.ignored)add(0.8,'the owners gave no orders when her master asked for them');
   if(q.safety===2)blame=Math.max(0,blame-1);
   if(q.grave&&blame<1.5)blame=Math.max(0,blame-0.5); // nobody could have saved her
+  return {blame,F};
+}
+/* censure (blame 4 or more) brings the Board of Trade's inspectors; gross negligence (6 or more, with lives lost) takes
+   away the insurance and the limit on claims, and the owners and master are charged. Claims the Line cannot pay end it */
+const CENSURE=4,GROSS=6;
+function inquiry(q){
+  const {blame,F}=blameOf(q),gross=blame>=GROSS&&q.dead>0;
   const p=PX();
-  const fine=Math.round(blame*8000*p/100)*100,claims=Math.round(q.dead*(250+blame*60)*p/100)*100,recover=Math.round(q.grt*0.4*p/100)*100;
-  const clawback=q.fat>=90||q.cond<35?Math.round(q.paid*0.6/100)*100:0;
+  const fine=Math.round(blame*8000*p/100)*100,claims=Math.round(q.dead*(250+blame*60)*p*(gross?4:1)/100)*100,recover=Math.round(q.grt*0.4*p/100)*100;
+  const clawback=gross?Math.round(q.paid/100)*100:q.fat>=90||q.cond<35?Math.round(q.paid*0.6/100)*100:0;
   const total=fine+claims+recover+clawback;book('legal',-total);
   const rep=Math.round(Math.min(30,blame*3+Math.min(10,q.dead/30)));S.rep=clamp(S.rep-rep,0,100);S.stain=(S.stain||0)+blame*2.5;
+  if(blame>=CENSURE)S.bot={until:S.t+730};
+  if(gross)S.trial={at:S.t+150+Math.random()*60,name:q.name};
   const verdict=blame<1?`The court of inquiry into the loss of SS ${q.name} finds no fault with her master or owners: a ${q.kind} no one could have prevented.`
-    :`The court of inquiry into the loss of SS ${q.name} finds that ${F.slice(0,4).join('; ')}.${blame>=4?' The Morven Line is censured.':''}`;
-  news(`${verdict} Fines ${fmt(fine)}, claims from families and shippers ${fmt(claims)}, wreck and recovery ${fmt(recover)}${clawback?`, and the underwriters recover ${fmt(clawback)} of the insurance because she was unseaworthy`:''}. ${rep?`Reputation −${rep}.`:''}`,blame<1?'':'bad',true);
-  (S.inqDone=S.inqDone||[]).unshift({name:q.name,t:S.t,findings:F,blame,total,rep});if(S.inqDone.length>12)S.inqDone.length=12;
+    :`The court of inquiry into the loss of SS ${q.name} finds that ${F.slice(0,4).join('; ')}.${gross?' It finds gross negligence. The underwriters refuse to pay and take back what they paid, the claims have no limit, and her owners and master are charged with manslaughter.':blame>=CENSURE?' The Morven Line is censured, and the Board of Trade will inspect the rest of its fleet.':''}`;
+  news(`${verdict} Fines ${fmt(fine)}, claims from families and shippers ${fmt(claims)}, wreck and recovery ${fmt(recover)}${clawback?`, and the underwriters recover ${fmt(clawback)} of the insurance${gross?'':' because she was unseaworthy'}`:''}. ${rep?`Reputation −${rep}.`:''}`,blame<1?'':'bad',true);
+  (S.inqDone=S.inqDone||[]).unshift({name:q.name,t:S.t,findings:F,blame,total,rep,gross});if(S.inqDone.length>12)S.inqDone.length=12;
+  if(gross){S.gross={t:S.t,name:q.name,dead:q.dead,F,total,cover:q.cover};if(netWorth()<0||S.cash<-odLimit())woundUp();}
 }

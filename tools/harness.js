@@ -7,7 +7,7 @@
    Prints survival, net worth by year, first-year profit, rate wars and profit by route. */
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const ROOT = path.join(__dirname, '..');
-const FILES = ['chart-data', 'data', 'helpers', 'economy', 'lanes', 'wireless', 'silent', 'emergency', 'ledger', 'sim', 'rivals', 'companies', 'outside', 'trust', 'prewar', 'yard', 'naval', 'facilities', 'crew', 'state', 'clock', 'advice', 'times'].map(f => path.join(ROOT, 'js', f + '.js'));
+const FILES = ['chart-data', 'data', 'helpers', 'economy', 'lanes', 'wireless', 'silent', 'emergency', 'disaster', 'ledger', 'sim', 'rivals', 'companies', 'outside', 'trust', 'prewar', 'yard', 'naval', 'facilities', 'crew', 'state', 'clock', 'advice', 'times'].map(f => path.join(ROOT, 'js', f + '.js'));
 const SRC = FILES.map(f => [f, fs.readFileSync(f, 'utf8')]).map(([f, s]) => [f, process.env.PATCH ? s.replace(/^const /gm, 'var ') : s]);
 
 const PRELUDE = `
@@ -27,18 +27,20 @@ const H={
     else if(act==='selline'){const [rk]=d;if(!S.lines[rk]&&S.cash>12000)H.openLine(rk);}
     else if(act==='tabgo'&&d[0]==='brokers'){H.expand(12000,true);}
     UI.rev=(UI.rev||0)+1;},
+  /* after the Board of Trade's ruling a sensible owner fits boats for all before the law bites */
+  boats(){if(!newCal()||S.m<BOAT_NEWS)return;for(const x of S.ships)if(!hasBoats(x)&&paxBerths(x)>0&&!x.pendingYard&&x.state!=='yard'&&S.cash>refitCost(x,'boats')*2)doAction('setyard',[x.id,'boats']);},
   expand(buffer,prudent){buffer=Math.max(buffer,prudent?3*runningCost():0);for(const m of S.market.slice()){const dep=Math.round(m.price*0.4);if(S.cash-dep<buffer)continue;
       const b=H.bestRoute(m);if(!b||b.pm<500)continue;const sh=H.buy(m);if(!sh)continue;if(!S.lines[b.rk])H.openLine(b.rk);if(S.lines[b.rk])H.assign(sh,b.rk);return true;}return false;}
 };
 const STRATS={
   idle(){},
-  cautious(){if(S.m===S.m0)S.ships.forEach(s=>{s.autoDock=50;s.maint=1;});},
+  cautious(){H.boats();if(S.m===S.m0)S.ships.forEach(s=>{s.autoDock=50;s.maint=1;});},
   advisor(){for(let i=0;i<4;i++){const A=advice().filter(h=>h.act.length);if(!A.length)break;H.apply(A[0]);S.dismiss[A[0].id]=S.m;}},
   expander(){H.expand(8000);},
   prudent(){H.expand(12000,true);},
   /* the sensible owner the 1900 targets are set for: keeps six months' running costs in hand, borrows no more than half
      the fleet's value, buys only ships that should earn a sixth of their price a year, and lays up a ship that loses money */
-  careful(){const run=runningCost();
+  careful(){const run=runningCost();H.boats();
     // on rumours of a panic a careful owner puts spare cash into government stock, safe from a failing bank; after it, back
     if(S.crash&&S.crash.stage==='rumour'){const spare=Math.floor((S.cash-3*run)/1000)*1000;if(spare>0)gilts(true,spare);return;}
     if(S.gilts>0&&(!S.crash&&!S.call||S.cash<3*run))gilts(false,S.gilts); // back out of stock after the panic, or to pay the bills
@@ -76,7 +78,7 @@ function runGame(strategy, seed) {
         strat();}
       advance(1);
     }
-    return {bust:S.over==='bust'?S.m-S.m0:null,final:Math.round(netWorth()),ships:S.ships.length,wars,byYear,routes,firstYear:Math.round(first.reduce((a,b)=>a+b,0)),rep:Math.round(S.rep),lost,emerg:(S.emerg||[]).filter(e=>e.k!=='quar').length};
+    return {bust:S.over==='bust'||S.over==='wound'?S.m-S.m0:null,wound:S.over==='wound',last:S.over?S.news.slice(0,8).map(n=>n.t):null,final:Math.round(netWorth()),ships:S.ships.length,wars,byYear,routes,firstYear:Math.round(first.reduce((a,b)=>a+b,0)),rep:Math.round(S.rep),lost,emerg:(S.emerg||[]).filter(e=>e.k!=='quar').length};
   })()`, ctx);
 }
 
@@ -85,6 +87,7 @@ const k = v => (v < 0 ? '-' : '') + '£' + (Math.abs(v) >= 1e6 ? (Math.abs(v) / 
 function report(strategy, n) {
   const R = []; for (let i = 0; i < n; i++) R.push(runGame(strategy, i + 1));
   const busts = R.filter(r => r.bust !== null);
+  if (process.env.DEBUG) busts.forEach(b => console.log('BUST', b.bust, b.wound ? 'wound' : '', '\n  ' + b.last.join('\n  ')));
   const y0 = Math.min(...R.flatMap(r => Object.keys(r.byYear).map(Number))), yrs = [1, 2, 4, 6, 8, 10, 14].map(d => y0 + d);
   const med = y => { const v = R.map(r => r.byYear[y]).filter(v => v !== undefined); return v.length ? k(pct(v, 0.5)) : '-'; };
   const routes = {}; R.forEach(r => { for (const q in r.routes) routes[q] = (routes[q] || 0) + r.routes[q] / n; });

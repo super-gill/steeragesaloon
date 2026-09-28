@@ -101,6 +101,7 @@ const RF_JOBS=[ // yard jobs the refit office offers, by section
   ['Machinery and equipment',[['oil','Convert to oil firing',sh=>sh.fuel==='coal'&&yearNow()>=OIL_FROM,'Cuts her stokehold crew and her bunker bill.'],
     ['turbines','New turbines',sh=>yearNow()>=1905&&!(sh.up&&sh.up.turbines),'About 1.5 knots faster and a little more economical.'],
     ['wireless','Wireless telegraphy',sh=>!(sh.up&&sh.up.wireless),'Reports from sea as things happen; needed for the mails, and tugs reach her sooner.'],
+    ['boats','Boats for all',sh=>newCal()&&!hasBoats(sh)&&paxBerths(sh)>0,sh=>`Lifeboats for all ${int(fullSouls(sh))} aboard when she is full; the law asks for room for ${int(boatScale(sh.grt))}${boatLaw()?', and since July 1913 she may carry no more passengers than that allows':''}. More people live if she is ever lost.`],
     ...Object.keys(EQUIP).map(k=>[k,EQUIP[k].name,sh=>yearNow()>=EQUIP[k].from&&!(sh.up&&sh.up[k])&&!(k==='stab'&&sh.up&&sh.up.fins),EQUIP[k].desc])]],
   ['Cargo',[['gear','Modern cargo gear',sh=>sh.cargo>500&&!(sh.up&&sh.up.gear),'Electric winches and derricks: a day less in every port.'],
     ['hatch','More hatches and tween decks',sh=>sh.cargo>1500&&!(sh.up&&sh.up.hatch),'Cargo worked through more hatches at once: handling a quarter cheaper and half a day off each turnaround.'],
@@ -137,7 +138,7 @@ function rfPatch(sh,rf){
     if(k==='refurb')p.fit=100;if(k==='oil')p.fuel='oil';if(k==='replate')p.fat=Math.max(0,fatOf(sh)-[25,15,8,4][Math.min(3,sh.replates||0)]);
     if(k==='cruise'){p.berths=cruiseBerths(p.berths);p.cruiser=true;}
     if(k==='tourist'){const cv=Math.round(p.berths.t*0.5);p.berths.t-=cv;p.berths.tt+=Math.round(cv*0.6);}
-    if(['turbines','wireless','gear','reefer','lux','hatch','heavy','deep'].includes(k))p.up[k]=true;
+    if(['turbines','wireless','gear','reefer','lux','hatch','heavy','deep','boats'].includes(k))p.up[k]=true;
     if(EQUIP[k]){p.up[k]=true;p.upR[k]=true;}}
   return p;
 }

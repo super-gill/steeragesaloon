@@ -64,7 +64,7 @@ function renderDesigner(){
   const forms=Object.keys(HULLFORMS).filter(k=>techOn(HULLFORMS[k].from,y)).map(k=>pick('form',k,HULLFORMS[k].name+tag(rec.form===k),HULLFORMS[k].blurb,d.form===k)).join('');
   const machs=Object.keys(MACHINES).filter(k=>techOn(MACHINES[k].from,y)).map(k=>{const m=MACHINES[k];return pick('mach',k,m.name+tag(rec.mach===k),m.blurb,d.mach===k);}).join('');
   const styles=Object.keys(STYLES).filter(k=>techOn(STYLES[k].from,y)).map(k=>pick('style',k,STYLES[k].name,`${STYLES[k].blurb} ${fashion(k,y)>=1.06?'All the rage.':fashion(k,y)>=1?'Well liked.':'Looking dated.'}`,d.style===k)).join('');
-  const extras=Object.keys(EXTRAS).filter(k=>techOn(EXTRAS[k].from,y)).map(k=>{const e=EXTRAS[k],small=e.min&&d.grt<e.min;
+  const extras=Object.keys(EXTRAS).filter(k=>techOn(EXTRAS[k].from,y)&&(!EXTRAS[k].ok||EXTRAS[k].ok())).map(k=>{const e=EXTRAS[k],small=e.min&&d.grt<e.min;
     return `<label class="xopt${small?' off':''}"><input type="checkbox" data-dzx="${k}" ${d.extras[k]?'checked':''} ${small?'disabled':''}><span><b>${e.name}</b> <span class="num">${fmt(e.cost(d.grt)*B.price)}</span><small>${e.blurb}${small?' Needs 12,000 tons.':''}</small></span></label>`;}).join('');
   const bl=Object.keys(BUILDERS).concat(S.shore&&S.shore.slip?['own']:[]).map(k=>{const b=k==='own'?ownBuilder():BUILDERS[k],fr=slipFreeAt(k);
     return pick('builder',k,`${b.name}, ${PN[b.port]}`,`${b.blurb} Price ×${b.price.toFixed(2)}, pace ×${(1/b.speed).toFixed(2)}. ${fr<=S.m?'A slip is free now.':'Next slip free '+monthName(fr)+'.'}${d.grt>b.max?' Too small for this ship.':''}`,d.builder===k,d.grt>b.max);}).join('');

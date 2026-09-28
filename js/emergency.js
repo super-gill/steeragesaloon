@@ -56,7 +56,7 @@ function activeEmergency(){return (S.emerg||[]).find(e=>!e.over&&e.known);}
 /* how fast the clock may run: an hour a second through an emergency, slower still while the master waits for orders */
 const emBig=e=>e.sev>1||e.k==='quar';
 function emClock(){
-  const a=(S.emerg||[]).filter(e=>!e.over&&e.known&&emBig(e));if(!a.length)return null;
+  const a=(S.emerg||[]).filter(e=>!e.over&&e.known&&emBig(e));if(!a.length)return S.dis&&S.dis.state==='rival'?EM_RATE:null;
   const d=a.filter(e=>e.dec&&e.dec.owner);if(!d.length)return EM_RATE;
   // while the master waits for orders on something serious the clock all but stops: two or three minutes to decide
   return d.some(e=>e.sev>=3&&e.k!=='quar')?EM_RATE/45:d.some(e=>e.k!=='quar')?EM_RATE/30:EM_RATE/15;
@@ -69,8 +69,8 @@ function rollEmergency(sh,gk,dist,R){
   const m=mOf(S.t)%12,winter=[0,1,2,10,11].includes(m),north=GEO(gk).calls.some(c=>['HAL','SJN','NYC','QBC','MTL'].includes(c[0]));
   const mods=shipMods(sh),lenF=dist/3000,old=sh.cond<50?1.6:1;
   const W=[];
-  if(north&&[2,3,4,5,6].includes(m))W.push(['ice',0.006*(sh.up&&sh.up.radar?0.4:1)]);
-  const fr=fatRisk(sh);W.push(['wreck',0.003],['collision',0.004*(sh.up&&sh.up.radar?0.4:1)*(winter?1.4:1)],['seam',0.004*old*fr*(winter?1.8:1)*(sh.safety||1)*(1+2*seaSev(sh,sh.legRoute,m))]);
+  if(north&&[2,3,4,5,6].includes(m))W.push(['ice',0.006*(sh.up&&sh.up.radar?0.4:1)*(newCal()&&nightOn(sh)?0.8:1)*ruleRisk('ice')]);
+  const fr=fatRisk(sh);W.push(['wreck',0.003*ruleRisk('wreck')],['collision',0.004*(sh.up&&sh.up.radar?0.4:1)*(winter?1.4:1)*ruleRisk('collision')],['seam',0.004*old*fr*(winter?1.8:1)*(sh.safety||1)*(1+2*seaSev(sh,sh.legRoute,m))]);
   W.push(['fire',0.003*old*Math.sqrt(fr)*(sh.fuel==='coal'?1.3:1)]);
   const steer=sh.load&&sh.load.pax.t?sh.load.pax.t.n:0,hot=TROPIC.includes(sh.legRoute);
   if(steer>80||hot)W.push(['illness',0.012*Math.min(2,steer/500)+(hot?0.008:0)]);
@@ -82,9 +82,12 @@ function rollEmergency(sh,gk,dist,R){
 /* ships that hear the call and turn towards her */
 function addResponders(e,sh,range,max){
   const p=shipXY(sh),have=new Set(e.resp.map(r=>r.name)),R=Math.random;
-  const heard=shipsNear(p,range,sh).filter(x=>!have.has(x.name)).slice(0,max);
+  // by wireless at night, only ships keeping a watch hear her (rockets and lamps are seen by anyone on deck)
+  const all=shipsNear(p,range,sh).filter(x=>!have.has(x.name)),deaf=range>20?all.filter(n=>!hearsNow(n)):[];
+  if(deaf.length)e.deaf=Math.min(e.deaf||1e9,deaf[0].d);
+  const heard=all.filter(n=>!deaf.includes(n)).slice(0,max);
   for(const n of heard){const kn=n.own?knotsOf(S.ships.find(x=>x.name===n.name)||{knots:16}):15+R()*4;
-    e.resp.push({name:n.name,line:n.line,own:n.own,radio:n.radio,eta:S.t+n.d/kn/24,arrived:false});}
+    e.resp.push({name:n.name,line:n.line,own:n.own,radio:n.radio,eta:S.t+n.d/kn/24,arrived:false,d:n.d});}
   return heard;
 }
 function startEmergency(sh,k){
@@ -141,7 +144,7 @@ const DECIDE={
       ok:e=>e.resp.some(r=>r.arrived&&!r.navy&&!r.tug),fx:(e,sh)=>{e.transfer=true;e.capA+=6;book('fares',-Math.round((sh.load?sh.load.paxRev:0)*0.3),sh.legRoute,sh);return 'Passengers going across in the boats. Women and children first.';}},
     boats:{label:'Swing out the boats and keep pumping',hint:()=>'Everyone at boat stations. If she goes, she goes with the boats ready.',fx:e=>{e.saveA+=0.2;return 'Boats swung out. Passengers at their stations in lifebelts.';}},
     press:{label:'Keep them below and make for port',hint:()=>'Saves the passage if she holds. If she does not, the boats go late.',fx:(e,sh)=>{e.rateM*=1.12;e.saveA-=0.15;e.press=true;sh.stopLeft=0;return 'Making for port at slow speed. Passengers told to keep to their cabins.';}},
-    beach:{label:'Run her for the shore',ok:(e,sh)=>nearestPort(shipXY(sh)).d<160,hint:(e,sh)=>{const n=nearestPort(shipXY(sh));return `Beach her near ${PN[n.k]}, about ${Math.max(1,Math.round(n.d/7))} h away. Everyone lives. She may never float again.`;},
+    beach:{label:'Run her for the shore',ok:(e,sh)=>!e.doom&&nearestPort(shipXY(sh)).d<160,hint:(e,sh)=>{const n=nearestPort(shipXY(sh));return `Beach her near ${PN[n.k]}, about ${Math.max(1,Math.round(n.d/7))} h away. Everyone lives. She may never float again.`;},
       fx:(e,sh)=>{const n=nearestPort(shipXY(sh));e.beach={at:S.t+n.d/7/24,port:n.k};return `Steering for the shore near ${PN[n.k]}. Will beach her if she will not float.`;}}
   },dflt:(e,sh)=>has(sh,'driver')||has(sh,'drinker')?'press':'boats'},
   w3:{q:'She cannot last long like this.',opts:{
@@ -224,6 +227,7 @@ function emergencyStep(e,sh,step){
   const beat=e.ctrl>55?(e.ctrl-55)/6:0;
   if(e.settle)e.threat=Math.max(0,e.threat-20*h);
   else e.threat=clamp(e.threat+h*(e.rate*e.rateM*(1-e.ctrl/100)-beat),0,100);
+  if(e.doom)e.threat=Math.max(e.threat,100*Math.min(1,(S.t-e.t0)/Math.max(1e-6,e.doomAt-e.t0))); // the 1912 ship: nothing saves her
   e.peak=Math.max(e.peak,e.threat);
   const w=Math.round(e.threat),mark=Math.floor(e.threat/25);
   if(mark>(e.mark||0)&&mark<4){e.mark=mark;
@@ -257,13 +261,16 @@ function emEnd(e,sh,how){
   e.over=how;e.t1=S.t;sh.em=null;if(e.dec){e.dec=null;}
   if(how==='lost'&&(D.type==='water'||D.type==='fire')){
     const hrs=e.abandon?(S.t-e.abandon)*24:0;
-    const sv=clamp((help?0.8+0.06*help:0.42)+e.saveA+safetyOf().save+Math.min(0.2,hrs*0.05),0.1,0.995);
-    const paxLost=e.transfer?0:Math.round(souls*(1-sv)),crewLost=Math.round(crew*(1-sv)*(e.fight?1.4:1)*(e.transfer?0.7:1));
+    let sv=clamp((help?0.8+0.06*help:0.42)+e.saveA+safetyOf().save+Math.min(0.2,hrs*0.05),0.1,0.995);
+    // no more can get away than her boats hold, and the ships standing by, launched full or half empty as she was drilled
+    const cover=boatCover(sh);if(cover<1)sv=Math.min(sv,clamp(cover*([0.62,0.75,0.88][S.safety??1]+(e.saveA>0?0.05:0)+Math.min(0.1,hrs*0.03))+help*0.25+0.02,0.05,0.995));
+    let paxLost=e.transfer?0:Math.round(souls*(1-sv)),crewLost=Math.round(crew*(1-sv)*(e.fight?1.4:1)*(e.transfer?0.7:1));
+    if(e.doom){const all=souls+crew,n=Math.round(all*disDeath(sh,e));crewLost=Math.min(crew,Math.round(n*crew/Math.max(1,all)*1.2));paxLost=n-crewLost;}
     const lost=Math.min(souls+crew,paxLost+crewLost);e.dead=lost;
     emSay(e,sh,e.abandon?(D.type==='water'?'Last boats away. She is going now. Master and wireless operators leaving her. God speed.':'Last boats away. Fire through the wireless room. Leaving her. God speed.')
       :D.type==='water'?`SOS SOS. We are sinking. Abandoning ship. God speed.`:`SOS. Ship burning end to end. Abandoning her. God speed.`,'bad');
     emSay(e,null,`Signals from SS ${e.ship} ceased ${hhmm(S.t)}. ${e.resp.some(r=>!r.arrived)?'Ships still steaming for the position.':'Nothing further heard.'}`,'bad','Coast station');
-    emLater(e,help?3:9,help?`${e.resp.filter(r=>r.arrived).map(r=>r.navy?r.name:(r.tug?'Tug ':'SS ')+r.name).join(' and ')} picked up ${int(souls+crew-lost)} survivors from SS ${e.ship}.${lost?` ${int(lost)} missing.`:' All saved.'}`
+    if(e.doom)ownEnd(e,sh,lost,souls,crew);else emLater(e,help?3:9,help?`${e.resp.filter(r=>r.arrived).map(r=>r.navy?r.name:(r.tug?'Tug ':'SS ')+r.name).join(' and ')} picked up ${int(souls+crew-lost)} survivors from SS ${e.ship}.${lost?` ${int(lost)} missing.`:' All saved.'}`
       :`${lost?`Boats of SS ${e.ship} found after a long night. ${int(souls+crew-lost)} survivors. ${int(lost)} missing.`:`All the boats of SS ${e.ship} picked up. Everyone saved.`}`,lost?'bad':'good','Coast station');
     if(sh.load)book('fares',-Math.round(sh.load.paxRev*0.5),rk,sh);
     sh.lost={t:S.t,where:posText(sh),saved:1-lost/Math.max(1,souls+crew),lost};
@@ -335,7 +342,7 @@ function emHourly(e,sh,step){
 /* ---------- the emergency window ---------- */
 function emergencyHTML(){
   const L=(S.emerg||[]).filter(e=>e.known&&(!e.over||S.t-e.t1<3));
-  if(!L.length)return '';
+  if(!L.length||(S.dis&&S.dis.state==='rival'&&!L.some(x=>!x.over)))return disRivalHTML();
   const e=L.find(x=>x.id===UI.emOpen)||L.find(x=>!x.over)||L[0];
   const asking=L.some(x=>x.dec&&x.dec.owner);
   if(UI.emMin||!L.some(x=>emBig(x)||x.id===UI.emOpen))return `<button class="empill${L.some(emBig)?'':' minor'}" data-act="emshow">${asking?'Orders wanted':!L.some(emBig)?'Incident':L.some(x=>!x.over)?'Emergency':'Emergency over'}: SS ${esc(e.ship)}</button>`;
@@ -354,7 +361,7 @@ function emergencyHTML(){
   const title=D.type==='sick'?`${DISEASE[e.dis].name[0].toUpperCase()+DISEASE[e.dis].name.slice(1)} aboard`:D.name;
   const state=e.over==='saved'?'Over. She was saved.':e.over==='beached'?'Over. She was beached.':e.over==='lost'?`Over. She was lost${e.dead?', with '+e.dead+' lives':''}.`
     :e.seized?'The ship has been seized. Waiting for the navy.':e.abandon?'Abandoning ship.':e.beach?'Running for the shore.':e.threat>60?'Losing the fight.':e.ctrl>70?'Getting on top of it.':'Fighting it.';
-  const resp=e.resp.length?e.resp.map(r=>`<li>${r.navy?esc(r.name):(r.tug?'Tug ':'SS ')+esc(r.name)} <span class="meta">${r.navy?'navy':esc(r.line)}${r.own?' · yours':''}</span><span class="num">${r.arrived?'alongside':Math.max(1,Math.round((r.eta-S.t)*24))+' h away'}</span></li>`).join(''):`<li class="meta">${D.sos?'No ship has answered.':'No help needed at sea.'}</li>`;
+  const resp=e.resp.length?e.resp.map(r=>`<li>${r.navy?esc(r.name):(r.tug?'Tug ':'SS ')+esc(r.name)} <span class="meta">${r.navy?'navy':esc(r.line)}${r.own?' · yours':''}</span><span class="num">${r.arrived||S.t>=r.eta?'alongside':Math.max(1,Math.round((r.eta-S.t)*24))+' h away'}</span></li>`).join(''):`<li class="meta">${D.sos?'No ship has answered.':'No help needed at sea.'}</li>`;
   return `<div class="emerg${e.over?' done':''}" role="dialog" aria-label="Emergency">
     <div class="em-head"><div><span class="eyebrow">${e.over?'Emergency over':'Emergency'} · ${hhmm(e.t0)} ${dateLong(e.t0)}</span><h3>SS ${esc(e.ship)}: ${title}</h3></div>
       <button class="btn" data-act="emmin">Minimise</button></div>${tabs}

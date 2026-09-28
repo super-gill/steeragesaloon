@@ -40,6 +40,8 @@ function timesConditions(m,rk){
     if(g==='North Atlantic'||rk==='nap')add('ellis','Ellis Island',`America taxes each immigrant $${m>=ym(1907,0)?4:m>=ym(1903,0)?2:1}, paid by the line, and refuses about 2 in 100; the line carries them home at its own cost. A hostel at the port of sailing halves the refusals.`,'');}
   if(k<0&&m>=CONF_FROM)add('conf','The conference',`The North Atlantic lines hold fares to the conference rates and share out the steerage; members are spared rate wars.${S.conf?' The Morven Line is a member.':' The Morven Line sails outside it.'}`,'');
   if(k<0&&coalStrike(m)>1.05)add('coalstrike','The coal strike',`Bunker coal is ${pctTxt(coalStrike(m)-1)} while the miners are out.${bunkerHeld()?' Your bunker contract keeps its price.':' A bunker contract would have kept its price.'}`,'bad');
+  if(k<0&&S.dis&&S.dis.fin&&m<ym(1914,0))add('giants','After the loss',`First class is nervous of the giant ships since SS ${S.dis.name} was lost: about 8% fewer book on ships of ${int(DIS_GRT)} tons or more.`,'');
+  if(k<0&&S.dis&&S.dis.rule==='ice'&&rk&&GEO(geoKey(rk,m))&&trackF(geoKey(rk,m),m)>1)add('track','The southern track','Ships keep well south of the ice in spring: crossings on this route are about 4% longer until July.','');
   if(k<0&&preReturn(m)>1.05&&(g==='North Atlantic'||rk==='nap'))add('returns','Going home',`The American slump has closed the factories: steerage home from New York is ${pctTxt(preReturn(m)-1)} on a usual year, and fewer come out.`,'');
   if(S.riband&&k<0)add('riband','The Blue Riband',S.riband.o==='morven'?`Your SS ${S.riband.name} holds it at ${S.riband.knots} knots: the Line's standing rises while she does.`:`${RIVALS[S.riband.o]?RIVALS[S.riband.o].name:'A rival'}'s SS ${S.riband.name} holds it at ${S.riband.knots} knots.`,S.riband.o==='morven'?'good':'');
   // the recovery of the early twenties and the growth that follows, for the cabin classes
@@ -70,6 +72,9 @@ function timesComing(m){
   if(m>=ym(1911,0)&&m<ym(1911,6))out.push('American wireless law comes into force in July: ships leaving American ports with fifty or more aboard must carry it, and only ships with it will carry the mails.');
   if(m>=ym(1911,10)&&m<ym(1912,2))out.push('The miners are balloting for a national strike. If they come out, bunker coal will cost two or three times its price for weeks; a bunker contract would keep its price.');
   if(newCal()&&m<M21)for(const q of PREWAR_SHIPS)if(S.prewar&&S.prewar.ordered[q.name]&&!S.prewar.done[q.name]&&q.at-m<=6&&q.at>m)out.push(`${RIVALS[S.prewar.ordered[q.name]].name}'s ${PREWAR_NAME[q.kind]} SS ${q.name} (${int(q.grt)} tons, ${q.knots} knots) enters service on ${ROUTES[q.rk].name} in ${MONTHS[q.at%12]}.`);
+  if(newCal()&&m>=BOAT_NEWS&&m<BOAT_LAW)out.push('From July 1913 every British ship must carry boats for everyone aboard. A ship without them may carry only as many passengers as her boats hold.');
+  if(newCal()&&m>=ym(1913,8)&&m<CONV_SIGN)out.push('The maritime nations are meeting in London to agree rules for the safety of life at sea: boats, drills and the wireless watch.');
+  if(newCal()&&m>=CONV_SIGN&&m<WATCH_LAW)out.push('From July the London Convention requires a wireless watch day and night on every passenger ship: a second operator in each.');
   if(k>=36&&k<42)out.push('A far tighter immigration law is before Congress. If it passes, steerage to New York will fall much further.');
   if(k>=150&&k<155)out.push('Prohibition looks likely to be repealed by the end of 1933: New York will sell drink again, and the cruises to nowhere will lose their point.');
   if(k>=213&&k<228)out.push('The Ocean Aid Convention comes into force in January 1940: from then, ships without wireless may carry no passengers.');

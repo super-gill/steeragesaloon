@@ -11,7 +11,7 @@
    a decade. */
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const ROOT = path.join(__dirname, '..');
-const FILES = ['chart-data', 'data', 'helpers', 'economy', 'lanes', 'wireless', 'silent', 'emergency', 'ledger', 'sim', 'rivals', 'companies', 'outside', 'trust', 'prewar', 'yard', 'naval', 'facilities', 'crew', 'state', 'clock', 'advice', 'times']
+const FILES = ['chart-data', 'data', 'helpers', 'economy', 'lanes', 'wireless', 'silent', 'emergency', 'disaster', 'ledger', 'sim', 'rivals', 'companies', 'outside', 'trust', 'prewar', 'yard', 'naval', 'facilities', 'crew', 'state', 'clock', 'advice', 'times']
   .map(f => path.join(ROOT, 'js', f + '.js')).filter(f => fs.existsSync(f));
 const SRC = FILES.map(f => [f, fs.readFileSync(f, 'utf8')]);
 const RNG = `Math.random=(function(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};})(SEED);`;
@@ -40,7 +40,7 @@ function run(seed, years) {
             cash:cos.reduce((a,c)=>a+c.cash,0),debt:cos.reduce((a,c)=>a+(c.debt||0),0),ours:S.ships.length,px:PX()});}}
       advance(1);
     }
-    return {fails,entrants,yearly,emptyFlag:empty.flag||0,emptyWhere:Object.keys(empty.where||{}),emptyAt:empty.where||{},bust:S.over==='bust'};
+    return {fails,entrants,yearly,emptyFlag:empty.flag||0,emptyWhere:Object.keys(empty.where||{}),emptyAt:empty.where||{},bust:S.over==='bust'||S.over==='wound'};
   })()`, ctx);
 }
 const [, , yA, nA, verbose] = process.argv, years = +yA || 40, n = +nA || 10;

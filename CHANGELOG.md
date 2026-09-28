@@ -2,6 +2,20 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.24.0 (28 September 2026)
+The 1912 disaster, the safety rules and the negligence ending.
+- Lifeboats are part of every ship. Before the disaster the law asks only for the old scale: room for 960 people on any ship of 10,000 tons or more, fewer on smaller ships, whatever she carries. Boats for all can be fitted at any time (a week in the yard, or an extra in the drawing office). In every sinking no more can get away than her boats hold, and a well-drilled crew launches them fuller.
+- The wireless watch: each ship with a set can keep it by day only or day and night, the second operator costing about a hand's wage. At night a call for help is heard only by ships keeping a watch, and a watched bridge gets the ice warnings.
+- The 1912 disaster. Between late March and early May 1912 a giant of 40,000 tons or more is lost on the North Atlantic: the worst-run one at sea. The rival Imperial Atlantic's Hyperborean always fits well, so the Line's own giant is chosen only if she is run as badly or worse. She strikes ice at night, is rammed in fog on the approaches, or hits a derelict, depending on where she is, and always sinks in about two and a half hours. Between a third and two thirds of those aboard die, set by her boats, drills, deck crew, the night watch and the orders given.
+- If the ship is a rival's, the wireless room follows her. Your ships within 150 miles that hear the call can be sent to help: they lose the time, earn reputation, and save lives if they arrive before the rescuer.
+- Afterwards one page is shown, the same whoever owned her: what happened, why so many died, what changes. Only numbers are given for the dead, the name is retired, routine advice keeps quiet for four weeks, and first class is nervous of the giants until 1914.
+- The rules that follow: boats for all are law for British ships from July 1913 (a ship without them carries only as many passengers as her boats hold), announced in October 1912. The London Convention is signed in January 1914 and makes the night watch compulsory on passenger ships from July. The way the ship was lost adds one more: the southern spring track after ice, fog speed after a collision, or the removal of derelicts.
+- The court's tiers, in every game: a censure brings the Board of Trade's inspections for two years, which detain unfit ships and send them to the yard. Gross negligence with lives lost takes away the insurance and the limit on claims (four times as large), and the owners and master are tried. A line that cannot pay is wound up: a new ending, with what the court found and what the Line saved money on.
+- New findings at the inquiry: poorly trained lookouts and boat crews, and full speed kept after warnings (weighted heavily). The underwriters write, and the Marine Superintendent warns, about any ship whose loss would count as gross negligence.
+- The ship's panel has a Boats and wireless section. The refit office offers boats for all. The times warns of the boats law and the Convention.
+- The clock stops on the minute of the 1912 strike so it falls at the right hour.
+- The harness's `careful` and `cautious` owners fit boats for all after the ruling. Bankruptcies count a line wound up by the court.
+
 ## 0.23.0 (28 September 2026)
 Speed and splendour: 1907 to 1913.
 - The great lines race for speed and size. Nordmark's Nordstern (1907) and Imperial Atlantic's turbine twins Invicta and Indomita (1907, 25 knots) contest the Blue Riband; Imperial's giants Atlantean (1911) and Hyperborean (1912), each over 45,000 tons, and Nordmark's 52,000-ton Weltmeer (1913) follow, with Compagnie Aurore's Provence Royale. Each is ordered two or three years ahead, and The times says when she is due.

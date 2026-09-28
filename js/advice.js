@@ -70,12 +70,12 @@ const idleCost=sh=>0.25*crewCost(sh)+(sh.captain?sh.captain.wage:0)+insCost(sh);
 const DEPT_OF={wcr:'traffic',cpay:'crew',ctrain:'crew',off:'crew',review:'sec',reserve:'sec',buy:'traffic',build:'traffic','rep-mail':'sec','rep-low':'sec','conf-war':'sec',pier:'sec',agency:'sec',bunker:'sec',dept:'sec',
   fare:'fares',tension:'fares',adv:'fares',service:'fares',match:'fares',
   move:'traffic',unlay:'traffic',layup:'traffic',sell:'traffic',rin:'traffic',
-  speed:'marine',maint:'marine',thresh:'marine',dock:'marine',scrape:'marine',oil:'marine',refurb:'marine',reefer:'marine',wireless:'marine',replate:'marine',scrap:'marine',
+  speed:'marine',maint:'marine',thresh:'marine',dock:'marine',scrape:'marine',oil:'marine',refurb:'marine',reefer:'marine',wireless:'marine',replate:'marine',boats:'marine',watch:'marine',gross:'marine',censure:'marine',scrap:'marine',
   pay:'crew',captain:'crew'};
 const deptOf=h=>DEPT_OF[h.id.split(/[:0-9]/)[0]]||'sec';
 let ADV_CACHE={key:null,list:[]};
 function advice(){MOD_EPOCH++;
-  const key=S.m+'|'+UI.rev;
+  const quiet=S.quietUntil>S.t,key=S.m+'|'+UI.rev+'|'+quiet;
   if(ADV_CACHE.key===key)return ADV_CACHE.list;
   const A=[],mo=S.m%12,reserve=3*runningCost();
   const raised=new Set(),add=h=>{raised.add(h.id);if((S.dismiss[h.id]||-1)>=S.m)return;h.dept=deptOf(h);h.info=!h.act.some(a=>DOING.includes(a[1]));A.push(h);};
@@ -211,6 +211,16 @@ function advice(){MOD_EPOCH++;
       add({id:`wireless:${sh.id}`,scope:'ship',ref:sh.id,sev:'tip',gain:150,title:`Fit wireless to SS ${sh.name}`,
         why:`${S.m>=ym(1937,8)?(S.m>=ym(1940,0)?'Under the Ocean Aid Convention she may carry no passengers without it. ':'From 1940 the Ocean Aid Convention bars passenger ships without wireless. '):''}${wirelessRule()?`Only ships with wireless can carry the mails${S.m<ym(1940,0)?' or tell you when she is in trouble':''}${S.mail[r0]?', and this route has a contract':''}.`:'From July 1911 American law will require wireless on any ship leaving an American port with fifty or more aboard, and only ships with it will carry the mails. Meanwhile it lets her report from sea and call for help.'} Without it, nothing is heard of her at sea unless a passing ship sees her lamps. ${money(refitCost(sh,'wireless'))} and a week in the yard.`,
         act:[[sh.pendingYard?'Add it to her yard visit':'Book it','setyard',sh.id,'wireless']]});
+    // boats, the night watch, and what a court would find if she were lost
+    if(newCal()&&!hasBoats(sh)&&paxBerths(sh)>0&&S.m>=BOAT_NEWS&&!inVisit('boats'))
+      add({id:`boats:${sh.id}`,scope:'ship',ref:sh.id,sev:S.m>=BOAT_LAW?'bad':'warn',gain:S.m>=BOAT_LAW?900:500,title:`Fit boats for all to SS ${sh.name}`,
+        why:`${S.m>=BOAT_LAW?`The law now limits her to ${int(boatPaxMax(sh))} passengers, as many as her boats hold after her crew.`:`From July 1913 she may carry only as many as her boats hold: ${int(Math.max(0,boatScale(sh.grt)-crewOf(sh)))} passengers after her crew.`} Boats for all cost ${money(refitCost(sh,'boats'))} and ${yardDays(sh,'boats')} days in the yard.`,
+        act:[[sh.pendingYard?'Add it to her yard visit':'Book it','setyard',sh.id,'boats']]});
+    if(newCal()&&radioOf(sh)&&!nightOn(sh)&&paxBerths(sh)>=200&&S.m>=ym(1910,0))add({id:`watch:${sh.id}`,scope:'ship',ref:sh.id,sev:'tip',gain:120,title:`Keep a night watch on SS ${sh.name}`,
+      why:`Her operator goes to bed at night. A second man (${money(16.8*PX())} a month) would hear a call for help after dark, and pass the night's ice warnings to her bridge.`,act:[['Keep the watch','setship',sh.id,'nightWatch',1]]});
+    {const pb=potBlame(sh);if(pb.blame>=CENSURE)add({id:`${pb.blame>=GROSS?'gross':'censure'}:${sh.id}`,scope:'ship',ref:sh.id,sev:pb.blame>=GROSS?'bad':'warn',gain:pb.blame>=GROSS?1000:450,
+      title:pb.blame>=GROSS?`A loss of SS ${sh.name} would be gross negligence`:`A loss of SS ${sh.name} would bring a censure`,
+      why:`If she were lost now with lives, the court would find that ${pb.F.slice(0,4).join('; ')}. ${pb.blame>=GROSS?'That is gross negligence: the underwriters would not pay, the claims would have no limit, and a line that cannot pay them is wound up.':'That is a censure, and the Board of Trade would detain any unfit ship in the fleet.'}`,act:[['View her','selship',sh.id]]});}
     // crew by department: pay where morale is low, drills where skill is poor, better officers when the pool has them
     {const cw=cwOf(sh),off=offOf(sh);
       for(const d of CD_KEYS){const q=cw[d];if(deptCount(sh,d)<1)continue;
@@ -281,6 +291,7 @@ function advice(){MOD_EPOCH++;
     why:'Members cannot be targeted by rate wars. The price is a fare floor at 95% of the line rate and a cap on steerage. Worth it if you keep provoking wars.',act:[['Conference','tabgo','company']]});
   for(const id in S.dismiss)if(S.dismiss[id]===UNTIL_CLEAR&&!raised.has(id))delete S.dismiss[id]; // the situation has passed: it may be raised afresh
   A.sort((a,b)=>b.gain-a.gain);
+  if(quiet)A.splice(0,A.length,...A.filter(h=>/^(boats|gross|censure):/.test(h.id))); // the weeks after the loss: routine advice keeps quiet
   ADV_CACHE={key,list:A};
   return A;
 }
