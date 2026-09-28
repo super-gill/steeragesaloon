@@ -1,5 +1,11 @@
 /* ================= DATA ================= */
-const GAME_VERSION='0.18.0',GAME_BUILT='28 September 2026'; // bump on every release; see CHANGELOG.md
+const GAME_VERSION='0.19.0',GAME_BUILT='28 September 2026'; // bump on every release; see CHANGELOG.md
+/* ---------- the calendar ----------
+   Month 0 is January 1900 and day 0 is 1 January 1900. ym(year,month) names a month (month 0 = January), so every date
+   the game cares about reads as a date. History written for the 1921 game is kept exact by counting from M21. */
+const YEAR0=1900,M21=(1921-YEAR0)*12;
+const ym=(y,mo)=>(y-YEAR0)*12+(mo||0);
+const yearOfM=m=>1921+(m-M21)/12; // the year, fractional, as the 1921 game counted it
 const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 const CL=['f','s','t','tt'];
 const CL_NAME={f:'First',s:'Second',t:'Third',tt:'Tourist Third'};
@@ -58,7 +64,7 @@ const ROUTES={
        dirw:{f:1,s:1,t:1,tt:1},season:[1,1,.95,.75,.4,.25,.2,.2,.3,.55,.85,1],cruise:{cname:'the West Indies',turn:1,spend:2,months:[11,0,1,2]},
        blurb:'Ten days from New York to Nassau and Havana and back, for Americans escaping the winter. Rum is legal in Havana.'},
   cnw:{group:'Cruises',prestige:0.8,ref:{f:10,s:6,t:3,tt:4},base:{f:40,s:60,t:150,tt:0},cargo:{out:{c:'general',t:0},home:{c:'general',t:0}},war:0,
-       dirw:{f:1,s:1,t:1,tt:1},season:[.35,.35,.45,.6,.85,1,1,1,.85,.6,.45,.4],cruise:{cname:'cruises to nowhere',turn:0.4,home:1,spend:2,bar:{f:3.5,s:2.5,t:1.6,tt:2},steerage:true,months:[4,5,6,7,8],until:156},
+       dirw:{f:1,s:1,t:1,tt:1},season:[.35,.35,.45,.6,.85,1,1,1,.85,.6,.45,.4],cruise:{cname:'cruises to nowhere',turn:0.4,home:1,spend:2,bar:{f:3.5,s:2.5,t:1.6,tt:2},steerage:true,months:[4,5,6,7,8],until:ym(1934,0)},
        blurb:'Two nights from New York to beyond the limit, where the bar can open, and back. Cheap, crowded and very profitable, until Prohibition ends in December 1933.'}
 };
 /* geography: a route (or its winter variant) as sailed in a given month */
@@ -177,44 +183,44 @@ const FAGENCY={
 const SHED_COST=18000,COLD_COST=30000,COLD_PORTS=['BUE','MVD','KIN','LIV','SOU','GLA','NYC'];
 const YARD_PORTS={GLA:'the Clyde',LIV:'the Mersey'};
 const HIST=[
-  {m:0,t:'The Morven Line opens its Glasgow office with one elderly ship, the SS Morven, and a £40,000 mortgage. The post-war freight boom has collapsed and coal is dear.'},
-  {m:5,t:'The US Emergency Quota Act caps immigration by nationality. Southern European steerage to New York falls sharply.'},
-  {m:24,t:'Trade is recovering. Wealthier Americans are crossing to Europe in growing numbers.'},
-  {m:42,t:'The Johnson-Reed Act slashes US immigration again. Italian emigration to New York all but stops. Canada still wants settlers.'},
-  {m:48,t:'The big lines are refitting steerage into Tourist Third Cabin for students and teachers. Your yard can now do the same.'},
-  {m:62,t:'The coal owners and miners are deadlocked. The newspapers talk of a general strike by May: bunker coal may soon be very dear.'},
-  {m:64,t:'General Strike. The miners are locked out and bunker coal prices soar.'},
-  {m:71,t:'The coal dispute is over. Bunker prices ease.'},
-  {m:105,t:'Wall Street has crashed. Expect bookings to fall, first class hardest.'},
-  {m:108,t:'Bookings for next season are falling away, and the other lines are already shading their fares to fill berths.'},
-  {m:113,t:'The United States raises its tariffs sharply. Cargo is getting scarce on every route.'},
-  {m:128,t:'Britain leaves the gold standard. Freight rates and fares are in turmoil.'},
-  {m:132,t:'The depths of the Depression. Across the world, ships are being laid up by the hundred.'},
-  {m:156,t:'Trade is slowly recovering. Bookings are creeping back.'},
-  {m:170,t:'Imperial Atlantic announces an 80,000-ton express liner for the Southampton run. The race for the Blue Riband is on again.'},
-  {m:180,t:'Radio-telephone service from mid-ocean opens. First-class passengers can now call London from the Grand Banks.'},
-  {m:185,t:'The Zeppelin company opens a weekly airship service from Frankfurt to New Jersey. The newspapers call it the end of the liner, and some first-class passengers agree.'},
-  {m:193,t:'Air conditioning comes to sea: cooled dining saloons for the tropical trades.'},
-  {m:200,t:'A sharp recession in America. Bookings dip for the coming season.'},
-  {m:208,t:'The airship Graf Aurelian burns at her mooring mast in New Jersey. The airship boom ends overnight, and first class comes back to the liners.'},
-  {m:213,t:'The Ocean Aid Convention is signed in London. From January 1940 every passenger ship must keep a continuous wireless watch, and every ship must answer a distress call. Ships without wireless may carry no passengers.'},
-  {m:215,t:"Imperial Atlantic's superliner Britannic Queen enters service: 80,000 tons, 30 knots, and the Blue Riband on her maiden voyage."},
-  {m:222,t:'The war scare of the late thirties passes. The governments of Europe turn to trade, and the shipyards to liners.'},
-  {m:228,t:'The Ocean Aid Convention is in force. Silent ships are barred from carrying passengers.'},
-  {m:243,t:'Washington eases the immigration quotas. With Europe at peace and prospering, the emigrant trade to New York revives.'},
-  {m:258,t:'The coal mines cannot keep up. Bunker coal is dearer every year, and oil is the fuel of the future.'},
-  {m:280,t:'Paid holidays for American workers: the tourist-class boom begins.'},
-  {m:302,t:'Radiolocation sets, developed from naval experiments, are offered for merchant ships. They see through fog and darkness.'},
-  {m:308,t:'The long boom: trade across the Atlantic grows year on year.'},
-  {m:325,t:'Model basins at Clydebank and Hamburg are refining hull lines as never before.'},
-  {m:348,t:'High-pressure steam turbines and a new contemporary style in ship interiors.'},
-  {m:354,t:'Middle-Eastern oil floods the market. Bunker oil is cheaper than it has been for a generation.'},
-  {m:375,t:'Flying boats begin carrying the transatlantic mails. The Post Office cuts its mail payments by a fifth.'},
-  {m:401,t:'Fin stabilisers: retractable fins that all but stop a ship rolling.'},
-  {m:418,t:'Winter cruising from New York to the Caribbean is all the rage. Liners that once lay idle in winter now sail full.'},
-  {m:453,t:'A jet airliner crosses the Atlantic in six hours. Few can afford it, but the shipping men are uneasy.'},
-  {m:496,t:'After a run of accidents, the Atlantic Air Conference caps jet flights and fares. The liner keeps its passengers.'},
-  {m:540,t:'The Atomic Energy Authority offers a nuclear power plant for large ships: no bunkers, ever, at a price.'}
+  {m:ym(1921,0),t:'The Morven Line opens its Glasgow office with one elderly ship, the SS Morven, and a £40,000 mortgage. The post-war freight boom has collapsed and coal is dear.'},
+  {m:ym(1921,5),t:'The US Emergency Quota Act caps immigration by nationality. Southern European steerage to New York falls sharply.'},
+  {m:ym(1923,0),t:'Trade is recovering. Wealthier Americans are crossing to Europe in growing numbers.'},
+  {m:ym(1924,6),t:'The Johnson-Reed Act slashes US immigration again. Italian emigration to New York all but stops. Canada still wants settlers.'},
+  {m:ym(1925,0),t:'The big lines are refitting steerage into Tourist Third Cabin for students and teachers. Your yard can now do the same.'},
+  {m:ym(1926,2),t:'The coal owners and miners are deadlocked. The newspapers talk of a general strike by May: bunker coal may soon be very dear.'},
+  {m:ym(1926,4),t:'General Strike. The miners are locked out and bunker coal prices soar.'},
+  {m:ym(1926,11),t:'The coal dispute is over. Bunker prices ease.'},
+  {m:ym(1929,9),t:'Wall Street has crashed. Expect bookings to fall, first class hardest.'},
+  {m:ym(1930,0),t:'Bookings for next season are falling away, and the other lines are already shading their fares to fill berths.'},
+  {m:ym(1930,5),t:'The United States raises its tariffs sharply. Cargo is getting scarce on every route.'},
+  {m:ym(1931,8),t:'Britain leaves the gold standard. Freight rates and fares are in turmoil.'},
+  {m:ym(1932,0),t:'The depths of the Depression. Across the world, ships are being laid up by the hundred.'},
+  {m:ym(1934,0),t:'Trade is slowly recovering. Bookings are creeping back.'},
+  {m:ym(1935,2),t:'Imperial Atlantic announces an 80,000-ton express liner for the Southampton run. The race for the Blue Riband is on again.'},
+  {m:ym(1936,0),t:'Radio-telephone service from mid-ocean opens. First-class passengers can now call London from the Grand Banks.'},
+  {m:ym(1936,5),t:'The Zeppelin company opens a weekly airship service from Frankfurt to New Jersey. The newspapers call it the end of the liner, and some first-class passengers agree.'},
+  {m:ym(1937,1),t:'Air conditioning comes to sea: cooled dining saloons for the tropical trades.'},
+  {m:ym(1937,8),t:'A sharp recession in America. Bookings dip for the coming season.'},
+  {m:ym(1938,4),t:'The airship Graf Aurelian burns at her mooring mast in New Jersey. The airship boom ends overnight, and first class comes back to the liners.'},
+  {m:ym(1938,9),t:'The Ocean Aid Convention is signed in London. From January 1940 every passenger ship must keep a continuous wireless watch, and every ship must answer a distress call. Ships without wireless may carry no passengers.'},
+  {m:ym(1938,11),t:"Imperial Atlantic's superliner Britannic Queen enters service: 80,000 tons, 30 knots, and the Blue Riband on her maiden voyage."},
+  {m:ym(1939,6),t:'The war scare of the late thirties passes. The governments of Europe turn to trade, and the shipyards to liners.'},
+  {m:ym(1940,0),t:'The Ocean Aid Convention is in force. Silent ships are barred from carrying passengers.'},
+  {m:ym(1941,3),t:'Washington eases the immigration quotas. With Europe at peace and prospering, the emigrant trade to New York revives.'},
+  {m:ym(1942,6),t:'The coal mines cannot keep up. Bunker coal is dearer every year, and oil is the fuel of the future.'},
+  {m:ym(1944,4),t:'Paid holidays for American workers: the tourist-class boom begins.'},
+  {m:ym(1946,2),t:'Radiolocation sets, developed from naval experiments, are offered for merchant ships. They see through fog and darkness.'},
+  {m:ym(1946,8),t:'The long boom: trade across the Atlantic grows year on year.'},
+  {m:ym(1948,1),t:'Model basins at Clydebank and Hamburg are refining hull lines as never before.'},
+  {m:ym(1950,0),t:'High-pressure steam turbines and a new contemporary style in ship interiors.'},
+  {m:ym(1950,6),t:'Middle-Eastern oil floods the market. Bunker oil is cheaper than it has been for a generation.'},
+  {m:ym(1952,3),t:'Flying boats begin carrying the transatlantic mails. The Post Office cuts its mail payments by a fifth.'},
+  {m:ym(1954,5),t:'Fin stabilisers: retractable fins that all but stop a ship rolling.'},
+  {m:ym(1955,10),t:'Winter cruising from New York to the Caribbean is all the rage. Liners that once lay idle in winter now sail full.'},
+  {m:ym(1958,9),t:'A jet airliner crosses the Atlantic in six hours. Few can afford it, but the shipping men are uneasy.'},
+  {m:ym(1962,4),t:'After a run of accidents, the Atlantic Air Conference caps jet flights and fares. The liner keeps its passengers.'},
+  {m:ym(1966,0),t:'The Atomic Energy Authority offers a nuclear power plant for large ships: no bunkers, ever, at a price.'}
 ];
 const MILESTONES=[
   ['ships2','A second ship',()=>S.ships.length>=2],

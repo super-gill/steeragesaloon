@@ -25,14 +25,14 @@ function econ(sh,rk,patch,shPatch){
 /* the same averaged over the coming year (four seasons), for decisions that last */
 function econYear(sh,rk,patch,shPatch){
   const t0=S.t;let pm=0,k=0;
-  try{for(const q of [0,3,6,9]){const m=S.m+q;S.t=(Date.UTC(1921+Math.floor(m/12),m%12,15)-T0)/864e5;pm+=econ(sh,rk,patch,shPatch).pm;k++;}}
+  try{for(const q of [0,3,6,9]){const m=S.m+q;S.t=tOfM(m);pm+=econ(sh,rk,patch,shPatch).pm;k++;}}
   finally{S.t=t0;}
   return {pm:pm/k};
 }
 /* the same averaged over given months of the year (a cruise's season), the next time each comes round */
 function econMonths(sh,rk,ms,shPatch){
   const t0=S.t;let pm=0;
-  try{for(const mo of ms){const m=S.m+((mo-S.m%12)+12)%12;S.t=(Date.UTC(1921+Math.floor(m/12),m%12,15)-T0)/864e5;pm+=econ(sh,rk,null,shPatch).pm;}}
+  try{for(const mo of ms){const m=S.m+((mo-S.m%12)+12)%12;S.t=tOfM(m);pm+=econ(sh,rk,null,shPatch).pm;}}
   finally{S.t=t0;}
   return pm/ms.length;
 }
@@ -50,7 +50,7 @@ const homeOf=sh=>onProgramme(sh)?sh.homeLine:sh.line&&!isCruise(sh.line)?sh.line
 function yearPlan(sh,cp){
   cp=cp||cruiseProg(sh);const key=S.m+'|'+UI.rev+'|'+sh.id+'|'+cp.join();if(YEAR_PLAN.key===key)return YEAR_PLAN.v;
   const home=homeOf(sh),t0=S.t,idle=-idleCost(sh),months=[];
-  try{for(let i=0;i<12;i++){const m=S.m+i,mo=m%12;S.t=(Date.UTC(1921+Math.floor(m/12),mo,15)-T0)/864e5;
+  try{for(let i=0;i<12;i++){const m=S.m+i,mo=m%12;S.t=tOfM(m);
     const c=cp.find(k=>cruiseInSeason(k,m))||null,base=home&&S.lines[home]?econ(sh,home).pm:idle;
     months.push({m,mo,rk:c||home||null,cruise:!!c,pm:c?econ(sh,c).pm:base,base});}}
   finally{S.t=t0;}
@@ -87,7 +87,7 @@ function advice(){
     const lm=LM.m%12,winter=WINTER.includes(lm);
     const worst=Object.keys(LM.lines).filter(k=>ROUTES[k]).sort((a,b)=>LM.lines[a]-LM.lines[b])[0];
     add({id:'review'+LM.m,scope:'co',sev:'bad',gain:1e6,title:`${MONTHS[lm]} lost ${money(-LM.net)}`,
-      why:`${costs.map(([l,v])=>`${l} took ${rev>0?Math.round(v/rev*100)+'% of revenue':money(v)}`).join(', ')}.${worst&&LM.lines[worst]<0?` ${ROUTES[worst].name} was the weakest line at ${money(LM.lines[worst])}.`:''}${winter?' Winter is the slack season: first class runs at about half its summer level, so some winter losses are normal. The question is whether summer covers them.':''}${S.m>=106&&S.m<160?' The Depression is hitting every line; laying up ships that cannot pay their way is how the survivors got through it.':''}`,act:[]});
+      why:`${costs.map(([l,v])=>`${l} took ${rev>0?Math.round(v/rev*100)+'% of revenue':money(v)}`).join(', ')}.${worst&&LM.lines[worst]<0?` ${ROUTES[worst].name} was the weakest line at ${money(LM.lines[worst])}.`:''}${winter?' Winter is the slack season: first class runs at about half its summer level, so some winter losses are normal. The question is whether summer covers them.':''}${S.m>=ym(1929,10)&&S.m<ym(1934,4)?' The Depression is hitting every line; laying up ships that cannot pay their way is how the survivors got through it.':''}`,act:[]});
   }
   // ---- lines: fares, tension, advertising and service ----
   for(const rk of Object.keys(S.lines)){
@@ -207,9 +207,9 @@ function advice(){
     if(sh.fuel==='coal'&&yearNow()-sh.built<28)yard('oil',{fuel:'oil'},`Convert SS ${sh.name} to oil`,'Oil firing cuts her stokehold crew and her bunker bill.');
     if((sh.berths.f+sh.berths.s)>0&&(sh.fit||0)<50)yard('refurb',{fit:100},`Refurbish SS ${sh.name}`,`Her saloons are tired (fittings ${Math.round(sh.fit||0)}%), and first and second class notice.`);
     if(!(sh.up&&sh.up.reefer)&&COMM[ROUTES[r0].cargo.home.c].reefer)yard('reefer',{up:{...sh.up,reefer:true}},`Fit refrigerated holds to SS ${sh.name}`,`Her route's homeward cargo, ${COMM[ROUTES[r0].cargo.home.c].name.toLowerCase()}, needs cold holds; without them she takes only a sliver of it.`);
-    if(!(sh.up&&sh.up.wireless)&&(S.mail[r0]||S.rep>=35||S.m>=200)&&canSpend(refitCost(sh,'wireless'))&&!inVisit('wireless'))
+    if(!(sh.up&&sh.up.wireless)&&(S.mail[r0]||S.rep>=35||S.m>=ym(1937,8))&&canSpend(refitCost(sh,'wireless'))&&!inVisit('wireless'))
       add({id:`wireless:${sh.id}`,scope:'ship',ref:sh.id,sev:'tip',gain:150,title:`Fit wireless to SS ${sh.name}`,
-        why:`${S.m>=200?(S.m>=228?'Under the Ocean Aid Convention she may carry no passengers without it. ':'From 1940 the Ocean Aid Convention bars passenger ships without wireless. '):''}Only ships with wireless can carry the mails${S.m<228?' or tell you when she is in trouble':''}${S.mail[r0]?', and this route has a contract':''}. Without it, nothing is heard of her at sea unless a passing ship sees her lamps. ${money(refitCost(sh,'wireless'))} and a week in the yard.`,
+        why:`${S.m>=ym(1937,8)?(S.m>=ym(1940,0)?'Under the Ocean Aid Convention she may carry no passengers without it. ':'From 1940 the Ocean Aid Convention bars passenger ships without wireless. '):''}Only ships with wireless can carry the mails${S.m<ym(1940,0)?' or tell you when she is in trouble':''}${S.mail[r0]?', and this route has a contract':''}. Without it, nothing is heard of her at sea unless a passing ship sees her lamps. ${money(refitCost(sh,'wireless'))} and a week in the yard.`,
         act:[[sh.pendingYard?'Add it to her yard visit':'Book it','setyard',sh.id,'wireless']]});
     // crew by department: pay where morale is low, drills where skill is poor, better officers when the pool has them
     {const cw=cwOf(sh),off=offOf(sh);
@@ -257,7 +257,7 @@ function advice(){
   // piers where your ships call often enough to repay one within four years
   const calls={};for(const sh of S.ships)if(sh.line&&ACTIVE.includes(sh.state)){const r=ROUTES[sh.line],rt=sailings(knotsOf(sh),sh.line);
     r.calls.forEach((p,i)=>{const end=i===0||i===r.calls.length-1;calls[p]=(calls[p]||0)+rt*(end?1:2)*sh.grt*(end?0.08:0.04);});}
-  const early=S.m<12&&S.ships.length<2;
+  const early=S.m-(S.m0||M21)<12&&S.ships.length<2;
   if(!early)for(const p in calls){if(S.shore.piers[p]||!PIER_COST[p])continue;const save=calls[p]*0.6-350,cost=PIER_COST[p];
     if(save>0&&cost/save<=48&&canSpend(cost))add({id:`pier:${p}`,scope:'co',sev:'tip',gain:save,title:`Build a pier at ${PN[p]}`,
       why:`Your ships pay about ${money(calls[p])} a month in dues there. Your own pier cuts that by 60% and takes a day off each turnaround. ${money(cost)}, repaid in about ${Math.ceil(cost/save)} months.`,act:[['Build it','shorebuy','pier',p],['Shore','tabgo','shore']]});}
@@ -355,7 +355,7 @@ function bestLine(sh,exclude){
 }
 /* every six months the traffic figures are run for a new ship; only when the line could pay for one */
 function buildIdea(){
-  if(S.ships.length<3||(S.orders||[]).length||yearNow()<1923)return null;
+  if(S.ships.length<3||(S.orders||[]).length||yearNow()<yearOfM(S.m0||M21)+2)return null;
   if(S.buildIdea&&S.m-S.buildIdea.m<6)return S.buildIdea.v;
   let best=null;const reach=S.cash+headroom();
   for(const pk of ['inter','emig','mixed','cargo','reefer','tourist','express','cruise']){if(!techOn(PURPOSES[pk].from,yearNow()))continue;

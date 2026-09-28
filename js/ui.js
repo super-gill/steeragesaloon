@@ -453,7 +453,7 @@ function marketHTML(rk,estPax,n){
   if(r.cruise)tens=`<p class="note">No conference on cruises: no rate wars and no fare floor, but a small market shared with the cruising companies.</p>`;
   else if(L&&!S.conf)tens=tens.replace(/<\/div>$/,`${confBtn()}</div>`);
   const mv=S.rmoves.filter(q=>q.rk===rk||q.to===rk).slice(0,4);
-  const moves=mv.length?`<div class="ctl"><span class="lbl">Rival moves here</span><ul class="note" style="padding-left:18px;margin:0">${mv.map(q=>`<li>${MONTHS[q.m%12].slice(0,3)} ${1921+Math.floor(q.m/12)}: ${RIVALS[q.o].name} ${q.kind==='add'?'added SS '+q.ship:q.kind==='move'?(q.to===rk?'moved SS '+q.ship+' here':'took SS '+q.ship+' off to '+ROUTES[q.to].name):'scrapped SS '+q.ship}</li>`).join('')}</ul></div>`:'';
+  const moves=mv.length?`<div class="ctl"><span class="lbl">Rival moves here</span><ul class="note" style="padding-left:18px;margin:0">${mv.map(q=>`<li>${MONTHS[q.m%12].slice(0,3)} ${YEAR0+Math.floor(q.m/12)}: ${RIVALS[q.o].name} ${q.kind==='add'?'added SS '+q.ship:q.kind==='move'?(q.to===rk?'moved SS '+q.ship+' here':'took SS '+q.ship+' off to '+ROUTES[q.to].name):'scrapped SS '+q.ship}</li>`).join('')}</ul></div>`:'';
   return `<div class="ctl"><span class="lbl">Market report · this month, estimated</span>
     <div class="tablewrap"><table><thead><tr><th>Line</th><th class="r">Share</th><th class="r">First</th><th class="r">Second</th><th class="r">Third</th></tr></thead><tbody>${me}${rows}</tbody></table></div>
     <p class="note">${notes.join(' ')}</p></div>${tens}${moves}`;
@@ -503,7 +503,7 @@ function chart(){
   const W2=320,H2=80,P=6,mn=Math.min(0,...h),mx=Math.max(1,...h);
   const x=i=>P+i*(W2-2*P)/(h.length-1),y=v=>H2-P-(v-mn)/(mx-mn)*(H2-2*P);
   const pts=h.map((v,i)=>`${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
-  return `<div><div class="row"><span class="lbl">Cash since January 1921</span><span class="meta num">high ${fmt(mx)}</span></div>
+  return `<div><div class="row"><span class="lbl">Cash since ${monthName(S.m0||M21)}</span><span class="meta num">high ${fmt(mx)}</span></div>
     <svg class="chart" viewBox="0 0 ${W2} ${H2}" role="img" aria-label="Cash over time"><polygon points="${x(0)},${y(mn)} ${pts} ${x(h.length-1)},${y(mn)}" style="fill:var(--brass-soft)" opacity=".6"/>
     ${mn<0?`<line x1="${P}" x2="${W2-P}" y1="${y(0)}" y2="${y(0)}" style="stroke:var(--muted)" stroke-dasharray="3 3"/>`:''}
     <polyline points="${pts}" style="fill:none;stroke:var(--brass)" stroke-width="1.8"/><circle cx="${x(h.length-1)}" cy="${y(h[h.length-1])}" r="3.5" style="fill:${h[h.length-1]<0?'var(--bad)':'var(--brass)'}"/></svg></div>`;
@@ -591,7 +591,7 @@ function renderFinance(){
       <div class="btns">${[10000,100000,1000000].filter(v=>v<=Math.max(10000,S.debt)).map(v=>`<button class="btn" data-act="repay" data-id="${v}" ${S.cash<Math.min(v,S.debt)||S.debt<=0||S.over?'disabled':''}>Repay ${fmt(v)}</button>`).join('')}</div>
       <p class="note">The bank lends up to 70% of your fleet and property, and 90% of your government stock. Its overdraft runs to ${fmt(odLimit())} (£8,000 plus half your unused borrowing); below that it forecloses.</p></section>
     <section class="sec"><h2>Government stock</h2>
-      <p class="note">Consols pay 3½% a year and are safe if your bank fails. They fall a little in a panic, and selling costs ½%. Cash in the bank earns nothing${S.m>=180?', and banks do fail':''}.</p>
+      <p class="note">Consols pay 3½% a year and are safe if your bank fails. They fall a little in a panic, and selling costs ½%. Cash in the bank earns nothing${S.m>=ym(1936,0)?', and banks do fail':''}.</p>
       <dl class="kv"><dt>Holding</dt><dd>${fmt(S.gilts||0)}</dd><dt>Interest</dt><dd>${fmt((S.gilts||0)*0.035/12)}/mo</dd></dl>
       <div class="btns">${[10000,100000,1000000].filter(v=>v<=Math.max(10000,S.cash)).map(v=>`<button class="btn" data-act="giltbuy" data-id="${v}" ${S.cash<v||S.over?'disabled':''}>Buy ${fmt(v)}</button>`).join('')}</div>
       ${S.gilts>0?`<div class="btns">${[10000,100000,1000000].filter(v=>v<=S.gilts).map(v=>`<button class="btn" data-act="giltsell" data-id="${v}">Sell ${fmt(v)}</button>`).join('')}<button class="btn" data-act="giltsell" data-id="all">Sell all</button></div>`:''}</section>

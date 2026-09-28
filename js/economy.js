@@ -26,7 +26,7 @@ function applyPrices(){
 function inflate(){
   const m=S.m,f=crashF(m);
   // flat in the twenties, falling in the slump, two per cent in the thirties, three in the long post-war boom
-  const base=m<12?-0.04:m<108?0.008:m<300?0.02:0.03;
+  const k=m-M21,base=k<12?-0.04:k<108?0.008:k<300?0.02:0.03;
   const r=base-0.06*slump(m)-0.05*f+(Math.random()-0.5)*0.01;
   S.pi=(S.pi||1)*(1+r/12);applyPrices();
   // each January the lines revise their tariffs to the price level, and the Morven Line's fares follow
@@ -48,7 +48,7 @@ const shipMkt=()=>1-0.4*crashF(S.m); // second-hand ship prices in a panic
 function crashMonth(){
   const m=S.m,c=S.crash;
   if(S.call&&m>=S.call.due)callDue();
-  if(!c){const since=m-(S.lastCrash||120);if(m<180||since<96)return;
+  if(!c){const since=m-(S.lastCrash||ym(1931,0));if(m<ym(1936,0)||since<96)return;
     if(Math.random()<0.004+Math.min(0.02,(since-96)*0.0004)){
       const bank=Math.random()<0.6;S.crash={stage:'rumour',m0:m,bank,panicAt:m+1+(Math.random()<0.5?1:0),depth:0.3+Math.random()*0.2,rec:24+Math.floor(Math.random()*18)};
       news(bank?`Whispers in the City: ${BANK_NAME}, which keeps the Morven Line's accounts, is said to be badly overextended. Some owners are quietly moving their money into government stock.`
@@ -91,7 +91,7 @@ function gilts(buy,amt){
 function taxMonth(net){
   S.yearNet=(S.yearNet||0)+net;
   if(S.m%12!==0)return;const profit=S.yearNet;S.yearNet=0;
-  const thr=150000*PX();if(S.m<48||profit<=thr)return;
+  const thr=150000*PX();if(S.m<ym(1925,0)||profit<=thr)return;
   const tax=Math.round((profit-thr)*0.3/100)*100;book('tax',-tax);
   news(`Excess profits duty: on ${fmt(profit)} earned last year the Treasury takes ${fmt(tax)}.`,'bad');
 }
@@ -100,7 +100,7 @@ const HOME_PORTS=['GLA','LIV','SOU','AVO'];
 function unionMonth(){
   const m=S.m,n=S.ships.length;
   if(S.union&&m>=S.union.until){unionAnswer(false,true);return;}
-  if(S.union||S.strike||m<30||n<3||m-(S.lastUnion||0)<24)return;
+  if(S.union||S.strike||m<ym(1923,6)||n<3||m-(S.lastUnion||M21)<24)return;
   const rich=S.lastMonth&&S.lastMonth.net>30000*PX()?1.6:S.lastMonth&&S.lastMonth.net>0?1:0.5;
   if(Math.random()<0.004*Math.pow(n,0.75)*rich){
     const pct=[5,8,10,12][Math.floor(Math.random()*4)];S.union={pct,until:m+1};S.lastUnion=m;
@@ -125,7 +125,7 @@ function strikeDaily(){
 function combineMonth(){
   const m=S.m;
   if(S.combine&&m>=S.combine.until){S.combine=null;S.lastCombine=m;news('The combine against the Morven Line has broken up over the division of the spoils.','good',true);return;}
-  if(S.combine||m<96||S.ships.length<10||m-(S.lastCombine||0)<60)return;
+  if(S.combine||m<ym(1929,0)||S.ships.length<10||m-(S.lastCombine||M21)<60)return;
   const ours=S.ships.reduce((a,x)=>a+x.grt,0),theirs={};for(const x of S.rships||[])theirs[x.owner]=(theirs[x.owner]||0)+x.grt;
   const big=Math.max(0,...Object.values(theirs));
   if(ours<0.8*big||Math.random()>0.06)return;
@@ -154,7 +154,7 @@ function airLevel(y){
 }
 function airShare(rk,c,m){
   if(ROUTES[rk].cruise)return 0;
-  const a=airLevel(1921+m/12)*(AIR_ROUTE[rk]||0.2)*(AIR_CLASS[c]||0);if(!a)return 0;
+  const a=airLevel(yearOfM(m))*(AIR_ROUTE[rk]||0.2)*(AIR_CLASS[c]||0);if(!a)return 0;
   const fast=typeof S!=='undefined'&&S.ships&&S.ships.some(x=>x.line===rk&&knotsOf(x)>=26);
   return Math.min(0.25,a*(fast?0.6:1));
 }

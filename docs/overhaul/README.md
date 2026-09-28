@@ -42,7 +42,7 @@ The research notes behind the data tab are in `research/`.
 | 0.16.0 | Balance pass: the 12 stacked changes (below) |
 | 0.17.0 | Half-speed clock and 14x; events slow instead of pause; per-ship insurance |
 | 0.18.0 | Current affairs panel |
-| 0.19.0 | Calendar moved to a 1900 base, date code in one place; saves break |
+| 0.19.0 | Calendar moved to a 1900 base, date code in one place; saves break (done: identical results confirmed) |
 | 0.20.0 | Rivals as real companies (R1) |
 | 0.21.0 | Shore services that earn |
 | 0.22.0 | 1900 to 1906, 1900 becomes the start |

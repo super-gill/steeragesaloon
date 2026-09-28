@@ -32,7 +32,7 @@ const H={
 };
 const STRATS={
   idle(){},
-  cautious(){if(S.m===0)S.ships.forEach(s=>{s.autoDock=50;s.maint=1;});},
+  cautious(){if(S.m===S.m0)S.ships.forEach(s=>{s.autoDock=50;s.maint=1;});},
   advisor(){for(let i=0;i<4;i++){const A=advice().filter(h=>h.act.length);if(!A.length)break;H.apply(A[0]);S.dismiss[A[0].id]=S.m;}},
   expander(){H.expand(8000);},
   prudent(){H.expand(12000,true);},
@@ -56,14 +56,14 @@ function runGame(strategy, seed) {
     const strat=STRATS['${strategy}'];
     const byYear={},routes={},first=[];let wars=0,lastM=-1,lost=0,emerg=0;
     const origNews=news;news=function(t,k,p){if(/leads a rate war/.test(t))wars++;if(/ is lost|constructive total loss/.test(t))lost++;return origNews(t,k,p);};
-    while(!S.over&&S.t<5480){
+    while(!S.over&&S.t-S.t0<5480){
       if(S.m!==lastM){lastM=S.m;
-        if(S.lastMonth){for(const k in S.lastMonth.lines)if(ROUTES[k])routes[k]=(routes[k]||0)+S.lastMonth.lines[k];if(S.lastMonth.m<12)first.push(S.lastMonth.net);}
-        if(S.m%12===0)byYear[1921+S.m/12]=Math.round(netWorth());
+        if(S.lastMonth){for(const k in S.lastMonth.lines)if(ROUTES[k])routes[k]=(routes[k]||0)+S.lastMonth.lines[k];if(S.lastMonth.m-S.m0<12)first.push(S.lastMonth.net);}
+        if(S.m%12===0)byYear[YEAR0+S.m/12]=Math.round(netWorth());
         strat();}
       advance(1);
     }
-    return {bust:S.over==='bust'?S.m:null,final:Math.round(netWorth()),ships:S.ships.length,wars,byYear,routes,firstYear:Math.round(first.reduce((a,b)=>a+b,0)),rep:Math.round(S.rep),lost,emerg:(S.emerg||[]).filter(e=>e.k!=='quar').length};
+    return {bust:S.over==='bust'?S.m-S.m0:null,final:Math.round(netWorth()),ships:S.ships.length,wars,byYear,routes,firstYear:Math.round(first.reduce((a,b)=>a+b,0)),rep:Math.round(S.rep),lost,emerg:(S.emerg||[]).filter(e=>e.k!=='quar').length};
   })()`, ctx);
 }
 

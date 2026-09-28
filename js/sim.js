@@ -23,7 +23,7 @@ function legCalc(sh,rk,dir,R,gk){
   const outPax=back?(R&&sh.load&&sh.load.cruiseOut&&sh.load.geo===gk?sh.load.pax:legCalc(sh,rk,0,null,gk).pax):null;
   for(const c of CL){
     if(back){const o=outPax[c];if(!o||!o.n)continue;pax[c]={n:o.n,cap:o.cap,fare:0,rev:0};prov+=o.n*(seaDays+1)*PROV[c]*SERV_COST[L.service];continue;}
-    const b=(m>=228&&!(sh.up&&sh.up.wireless))||(c==='t'&&fatOf(sh)>=90)?0:sh.berths[c];if(!b)continue;
+    const b=(m>=ym(1940,0)&&!(sh.up&&sh.up.wireless))||(c==='t'&&fatOf(sh)>=90)?0:sh.berths[c];if(!b)continue;
     const fare=effFare(rk,c),myA=ourAppeal(sh,rk,c),own=b*sailings(kn,rk,sm)*myA;
     const others=rivalWeight(rk,c)+ourWeight(rk,c,sh);
     // this ship's slice of the route's market for this class and direction, per crossing
@@ -274,7 +274,7 @@ function moveAll(step){
 }
 const shoreUpkeep=()=>{const s=S.shore;return Object.keys(s.fagents||{}).length*500+Object.keys(s.sheds||{}).length*200+Object.keys(s.cold||{}).length*400+Object.keys(s.piers).length*350+Object.keys(s.agents).length*300+Object.keys(s.hostels).length*250+Object.keys(s.yards).length*800+(s.slip?1500:0)+Object.keys(S.depts||{}).reduce((a,k)=>a+deptCost(k).total,0);};
 function dailyTick(){
-  wireTick();silentDaily();if(Math.floor(S.t)%7===0)deptWeek();
+  wireTick();silentDaily();if(Math.floor(S.t-D21)%7===0)deptWeek(); // Saturdays, counted as the 1921 game did
   for(const sh of S.ships){
     if(sh.state==='lost')continue;
     const act=ACTIVE.includes(sh.state),f=act?1:sh.state==='yard'?0.5:0.25;
@@ -351,7 +351,7 @@ function monthRoll(pm){
   if(!S.offer&&S.rep>=40){
     const c=Object.keys(S.lines).filter(rk=>!S.mail[rk]&&!isCruise(rk)&&ROUTES[rk].group!=='Trades'&&shipsOn(rk).some(x=>x.up&&x.up.wireless&&ACTIVE.includes(x.state)));
     if(c.length&&Math.random()<0.25){const rk=c[Math.floor(Math.random()*c.length)];
-      S.offer={route:rk,pay:Math.round((1200+Math.random()*600)*ROUTES[rk].dist/3100*(S.m>=375?0.8:1)*PX()/50)*50,exp:S.m+2};
+      S.offer={route:rk,pay:Math.round((1200+Math.random()*600)*ROUTES[rk].dist/3100*(S.m>=ym(1952,3)?0.8:1)*PX()/50)*50,exp:S.m+2};
       news(`The Post Office is inviting tenders for the ${ROUTES[rk].name} mail. See Needs attention.`,'good',true);}
   }
   if(S.m%3===0)refreshMarket();
@@ -392,8 +392,8 @@ function eventClock(t,grave){
 
 /* things the timeline does, besides the news */
 function eraEvents(){
-  if(S.m===(1938-1921)*12+11&&!S.rships.some(x=>x.name==='Britannic Queen')){
+  if(S.m===ym(1938,11)&&!S.rships.some(x=>x.name==='Britannic Queen')){
     const x=makeRivalShip('imperial','exp',1938);Object.assign(x,{name:'Britannic Queen',grt:80000,knots:30});const K=RIVAL_KIND.liner(80000);
     x.berths={f:Math.round(K.berths.f),s:Math.round(K.berths.s),t:Math.round(K.berths.t)};x.cargo=Math.round(K.cargo);S.rships.push(x);newRivalVis(x);}
-  if(S.m===(1952-1921)*12+3)for(const rk in S.mail)S.mail[rk].pay=Math.round(S.mail[rk].pay*0.8);
+  if(S.m===ym(1952,3))for(const rk in S.mail)S.mail[rk].pay=Math.round(S.mail[rk].pay*0.8);
 }

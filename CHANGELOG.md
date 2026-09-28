@@ -2,6 +2,13 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.19.0 (28 September 2026)
+The calendar moves to 1900. Nothing in the game changes yet: this is the groundwork for the 1900 start.
+- The game's calendar now runs from January 1900. The game still starts in January 1921, and plays exactly as before: the same seeds give the same games, day by day and in the balance harness.
+- Every date the game cares about is written as a date (a year and a month) instead of a count of months since 1921, and the calendar lives in one place (data.js and helpers.js).
+- Saves from earlier versions cannot be carried over. A player with an old save starts a new game and is told why once; the old save is left in the browser, untouched.
+- Cash history on the Finance tab counts from the start of the game, not from January 1921.
+
 ## 0.18.0 (28 September 2026)
 Current affairs.
 - The times, on the Overview: the month's season and what it means, then every condition in force and what it is doing to trade in numbers, for the line most of the fleet sails: the season against the year's average, the American quotas, the post-war slump and the prosperous twenties, the Depression (and how far costs have fallen with it), a panic in the City, the long boom, air competition, the coal dispute and dear coal, the cost of living, rate wars on your lines and Prohibition. Everything is read from the same figures the sailings use.

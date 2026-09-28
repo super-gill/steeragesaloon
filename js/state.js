@@ -1,9 +1,9 @@
 /* ================= STATE ================= */
-const KEY='steerage-saloon-v2';
+const KEY='steerage-saloon-v3',OLD_KEYS=['steerage-saloon-v2']; // v3: the calendar counts from 1900 (0.19.0); older saves are retired
 let S=null;
 const UI={speed:0,tab:'overview',confirm:null,banner:'Paused. Press 1× to start the clock.',eventMode:(()=>{try{return localStorage.getItem('ss_eventmode')||'slow';}catch(e){return 'slow';}})(),view:'ext',dirty:true};
 function newGame(){
-  S={v:2,t:0,m:0,cash:18000,debt:40000,rep:30,conf:false,ships:[],lines:{},wars:{},mail:{},offer:null,market:[],news:[],hist:[18000],
+  S={v:3,t:D21,m:M21,t0:D21,m0:M21,cash:18000,debt:40000,rep:30,conf:false,ships:[],lines:{},wars:{},mail:{},offer:null,market:[],news:[],hist:[18000],
      mtd:blankLedger(),lastMonth:null,nextId:1,over:false,selShip:1,selLine:'hal',odWarn:false,tension:{},pax:{},lastPax:{},rivalIdx:{},dismiss:{},
      shore:{piers:{},agents:{},hostels:{},yards:{},bunker:null,fagents:{},sheds:{},cold:{}},miles:{},capPool:[],capNext:1,depts:{},tut:{},tutSeen:{},orders:[],bslips:{},yardNext:534,wire:[],wireQ:[],wireNext:0,ghosts:[]};
   S.lines.hal={fares:defaultFares('hal'),service:1,adv:1,last:[null,null]};
@@ -13,7 +13,9 @@ function newGame(){
   save();UI.dirty=true;
 }
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
-function load(){try{const t=localStorage.getItem(KEY);if(t){const s=JSON.parse(t);if(s&&s.v===2)return migrate(s);}}catch(e){}return null;}
+function load(){try{const t=localStorage.getItem(KEY);if(t){const s=JSON.parse(t);if(s&&s.v===3)return migrate(s);}}catch(e){}return null;}
+/* a save from before 0.19 is from another calendar: it cannot be carried over, so the owner is told once */
+function oldSaveNote(){try{if(OLD_KEYS.some(k=>localStorage.getItem(k))&&!localStorage.getItem(KEY)&&!localStorage.getItem('ss_oldnote')){localStorage.setItem('ss_oldnote','1');return true;}}catch(e){}return false;}
 function migrate(s){
   (s.emerg||[]).forEach(e=>{e.rateM=e.rateM||1;e.capA=e.capA||0;e.saveA=e.saveA||0;e.later=e.later||[];e.orders=e.orders||[];e.sev=e.sev||2;if(e.k==='illness'&&!e.dis)e.dis='flu';});
   s.tension=s.tension||{};s.dismiss=s.dismiss||{};s.pax=s.pax||{};s.lastPax=s.lastPax||{};s.rivalIdx=s.rivalIdx||{};
@@ -57,7 +59,7 @@ async function readSaveCode(code){
   const kind=code[CODE_TAG.length],body=unb64u(code.slice(CODE_TAG.length+1));
   const bytes=kind==='z'?await pipeBytes(body,new DecompressionStream('deflate-raw')):body;
   const s=JSON.parse(new TextDecoder().decode(bytes));
-  if(!s||s.v!==2||!Array.isArray(s.ships))throw new Error('The code is damaged or from an incompatible version.');
+  if(!s||s.v!==3||!Array.isArray(s.ships))throw new Error('The code is damaged or from an incompatible version.');
   return migrate(s);
 }
 async function loadSaveCode(code){

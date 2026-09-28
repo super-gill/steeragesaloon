@@ -74,14 +74,14 @@ function marketFor(rk){
     const dem=r.base[c]*Math.max(dirW(rk,c),1-dirW(rk,c));S.mkt[rk][c]=dem>0?MKT_LOAD*(r.mload||1)*cap/dem:0;}
   let cc=0;for(const x of S.rships)if(x.route===rk)cc+=x.cargo*sailings(x.knots,rk);S.cmkt[rk]=CARGO_LOAD*cc/Math.max(1,r.cargo.out.t,r.cargo.home.t);
   // the route's normal load, so rivals judge trade against what is usual for that route
-  const st=routeStats(rk,6);let p=0,c=0;for(const o in st.owners){p+=st.owners[o].pax;c+=st.owners[o].cap;}S.load0[rk]=c?p/c:0.5;
+  const st=routeStats(rk,ym(1921,6));let p=0,c=0;for(const o in st.owners){p+=st.owners[o].pax;c+=st.owners[o].cap;}S.load0[rk]=c?p/c:0.5;
 }
 
 /* ---------- market maths ---------- */
 const turnPair=rk=>{const c=ROUTES[rk].cruise;return c?c.turn+(c.home!==undefined?c.home:TURN_DAYS):2*TURN_DAYS;};
 const sailings=(knots,rk,sm=1)=>{const r=ROUTES[rk];return 30/(2*r.dist/(knots*sm*24)+turnPair(rk)+(r.cruise?1:2)*(r.calls.length-2)*CALL_DAYS);}; // round trips per month
 function marketM(rk,c,dir,m){const r=ROUTES[rk];if(!routeOpen(rk,m))return 0;return S.mkt[rk][c]*r.base[c]*(dir===0?dirW(rk,c):1-dirW(rk,c))*seasonOf(rk,c,m)*histMod(c,rk,m);}
-function rivalBerths(x,c){if(isCruise(x.route)){const st=ROUTES[x.route].cruise.steerage;return c==='tt'?(st?0:x.berths.t):c==='t'?(st?x.berths.t:0):x.berths[c];}if(c==='tt')return S.m>=48?Math.round(x.berths.t*0.25):0;if(c==='t'&&S.m>=48)return Math.round(x.berths.t*0.75);return x.berths[c];}
+function rivalBerths(x,c){if(isCruise(x.route)){const st=ROUTES[x.route].cruise.steerage;return c==='tt'?(st?0:x.berths.t):c==='t'?(st?x.berths.t:0):x.berths[c];}if(c==='tt')return S.m>=ym(1925,0)?Math.round(x.berths.t*0.25):0;if(c==='t'&&S.m>=ym(1925,0))return Math.round(x.berths.t*0.75);return x.berths[c];}
 /* speed sells cabins, above all on prestige routes: an old 14-knot steamer cannot hold first class against 20-knot giants */
 const speedAppeal=(knots,rk,c)=>{const p=ROUTES[rk].prestige,k=(c==='f'||c==='s')?Math.max(0,(p-0.8)*1.8):Math.max(0,(p-0.8)*0.4);return Math.pow(knots/16,k);};
 /* how fares move demand. Below the line rate a cut wins passengers at the usual rate; above it they walk to the next
@@ -179,7 +179,7 @@ function rivalsMonth(){
     for(const rk of routes){const st=stats[rk].owners[o],ourShare=stats[rk].ours.pax/Math.max(1,stats[rk].total);
       const fight=ourShare>0.3&&co.cash>180000&&R()<0.08*P.aggr; // answer an interloper with tonnage
       if(fight||(st.rel>1.12&&co.cash>260000&&R()<0.16*P.aggr+(ourShare>0.25?0.1:0))){
-        const sh=makeRivalShip(o,rk,1921+Math.floor(m/12)),era=Math.max(0,(m-108)/12);sh.knots=+(P.knots[1]-Math.random()+Math.min(5,era*0.15)).toFixed(1);if(era>0){sh.grt=Math.round(sh.grt*(1+Math.min(0.5,era*0.02))/100)*100;}S.rships.push(sh);newRivalVis(sh);co.cash-=220000;rivalMove(o,rk,'add',sh.name);break;}}
+        const sh=makeRivalShip(o,rk,Math.floor(yearOfM(m))),era=Math.max(0,(m-ym(1930,0))/12);sh.knots=+(P.knots[1]-Math.random()+Math.min(5,era*0.15)).toFixed(1);if(era>0){sh.grt=Math.round(sh.grt*(1+Math.min(0.5,era*0.02))/100)*100;}S.rships.push(sh);newRivalVis(sh);co.cash-=220000;rivalMove(o,rk,'add',sh.name);break;}}
     // retreat from weak routes
     for(const rk of routes){const st=stats[rk].owners[o];
       // incumbents hold their home trades: they only give ground below their starting fleet when the money runs out
@@ -193,7 +193,7 @@ function rivalsMonth(){
         else if(ships.length>1){dropRival(x);co.cash+=x.grt*2;rivalMove(o,rk,'retire',x.name);}
         break;}}
     // old ships go to the breakers
-    for(const x of S.rships.filter(y=>y.owner===o&&1921+m/12-y.built>32)){if(R()<0.08){dropRival(x);rivalMove(o,x.route,'retire',x.name);}}
+    for(const x of S.rships.filter(y=>y.owner===o&&yearOfM(m)-y.built>32)){if(R()<0.08){dropRival(x);rivalMove(o,x.route,'retire',x.name);}}
     // insolvency: sell a third of the fleet, one of them cheap to the Morven Line's brokers
     if(co.cash<-150000){
       const fleet=S.rships.filter(y=>y.owner===o).sort((a,b)=>a.built-b.built),sell=fleet.slice(0,Math.max(1,Math.floor(fleet.length/3)));
@@ -223,7 +223,7 @@ function stepVis(x,route,step){
   const sp=x.knots*24*step;
   if(v.repo){v.repo.pos+=sp;if(v.repo.pos>=laneDist(v.port,v.repo.to)){v.port=v.repo.to;v.repo=null;v.wait=0.5;if(!route)return false;}return true;}
   v.pos+=sp;const d=GEO(v.gk).dist;
-  if(v.pos>=d){v.port=geoEnds(v.gk)[v.dir===0?1:0];v.pos=d;v.wait=TURN_DAYS*(0.7+0.6*jr(x.id+Math.floor(S.t)));if(!route)return false;}
+  if(v.pos>=d){v.port=geoEnds(v.gk)[v.dir===0?1:0];v.pos=d;v.wait=TURN_DAYS*(0.7+0.6*jr(x.id+Math.floor(S.t-D21)));if(!route)return false;}
   return true;
 }
 function rivalPos(x){const v=x.v||initVis(x);

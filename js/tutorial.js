@@ -3,7 +3,7 @@
 const TUT=[
   {id:'clock',title:'Start the clock',tab:null,
     text:'The Line runs in real time. Press 1× in the header to let the days pass, and pause whenever you need to think. The clock stops by itself when something big happens.',
-    done:()=>S.t>=1},
+    done:()=>S.t-(S.t0||D21)>=1},
   {id:'ship',title:'Look over the Morven',tab:'fleet',
     text:'The Fleet tab is your ship: where she is, her condition, her master and crew, and the yard. She is old and slow, but she is paid for, bar the mortgage.',
     done:()=>S.tutSeen&&S.tutSeen.fleet},
@@ -12,7 +12,7 @@ const TUT=[
     done:()=>S.tutSeen&&S.tutSeen.lines},
   {id:'wire',title:'Read the wireless room',tab:'overview',
     text:'Reports from your ships arrive in the wireless room on the Overview. The Morven has no wireless set: between ports you will hear nothing from her unless another ship passes the word on. The chart shows only where she ought to be.',
-    done:()=>(S.wire||[]).length>=2&&S.t>=8},
+    done:()=>(S.wire||[]).length>=2&&S.t-(S.t0||D21)>=8},
   {id:'trip',title:'See her through a round trip',tab:'lines',
     text:'Glasgow to Halifax and back takes about three weeks. Watch how many she carries each way and what the round trip earns. Winter is lean; summer pays.',
     done:()=>{const L=S.lines.hal;return !!(L&&L.last[0]&&L.last[1]);}},

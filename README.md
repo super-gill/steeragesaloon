@@ -11,7 +11,7 @@ It is a static browser game with no build step. Open `index.html`, or serve the 
 | `index.html` | Page shell: header, chart, side panels |
 | `css/style.css` | All styling, light and dark themes |
 | `js/chart-data.js` | Generated Atlantic chart (North and South): land, graticule, ports, route polylines with calls, distances. Made by `tools/gen-chart.mjs` |
-| `js/data.js` | Game data: routes and trades, commodities, classes, seasons, ships for sale, upgrades, captains' traits, shore property, departments, rivals, historical events, milestones |
+| `js/data.js` | The calendar (`YEAR0`, `ym(year, month)`, `M21`), and game data: routes and trades, commodities, classes, seasons, ships for sale, upgrades, captains' traits, shore property, departments, rivals, historical events, milestones |
 | `js/helpers.js` | Dates, formatting, demand and slump modifiers, prices, refit costs, captains and per-ship modifiers |
 | `js/economy.js` | The economy: the price level and inflation, panics and bank failures, called loans, government stock, excess profits duty, union claims and strikes, the rival combine, air competition, office overhead, ship fatigue, the safety policy and courts of inquiry |
 | `js/lanes.js` | Sea lanes as a network: positions along any lane, and the passage a ship follows between two ports |
@@ -38,6 +38,10 @@ It is a static browser game with no build step. Open `index.html`, or serve the 
 Scripts are plain (non-module) files loaded in the order in `index.html` and share one global scope, so the game also runs straight from disk.
 
 ## Releasing
+
+## The calendar
+
+Month 0 is January 1900 and day 0 is 1 January 1900. Name a month with `ym(year, month)` (month 0 is January), never a bare number. History written for the 1921 game counts from `M21` (January 1921) inside a few functions in `helpers.js`; `tOfM(m)` gives a day in a month, and `yearOfM(m)` the fractional year. The game records where it started in `S.m0` and `S.t0`.
 
 Bump `GAME_VERSION` in `js/data.js`, change `?v=` on every script and stylesheet link in `index.html` to match (so browsers fetch the new files instead of cached ones), and add an entry to `CHANGELOG.md`.
 

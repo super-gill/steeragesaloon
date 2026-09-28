@@ -106,7 +106,7 @@ const RF_JOBS=[ // yard jobs the refit office offers, by section
     ['heavy','Heavy-lift derricks',sh=>sh.cargo>1500&&!(sh.up&&sh.up.heavy),'Locomotives, boilers and machinery: general cargo and manufactures pay about 12% more.'],
     ['deep','Deep tanks',sh=>sh.cargo>1500&&!(sh.up&&sh.up.deep),'Tanks for palm oil and other liquids in bulk: palm oil pays about 30% more.'],
     ['reefer','Refrigerated holds',sh=>sh.cargo>500&&!(sh.up&&sh.up.reefer),'Carries chilled beef and bananas.']]],
-  ['Passenger spaces',[['tourist','Tourist Third refit',sh=>S.m>=48&&sh.berths.tt===0&&sh.berths.t>0,'Half her steerage rebuilt as Tourist Third Cabin for students and teachers.'],
+  ['Passenger spaces',[['tourist','Tourist Third refit',sh=>S.m>=ym(1925,0)&&sh.berths.tt===0&&sh.berths.t>0,'Half her steerage rebuilt as Tourist Third Cabin for students and teachers.'],
     ['lux','Luxury suites and a grand saloon',sh=>!(sh.up&&sh.up.lux),'First class appeal up a fifth.'],
     ['cruise','Convert her for cruising',sh=>!sh.cruiser&&CL.reduce((a,c)=>a+(sh.berths[c]||0),0)>=60,sh=>`Steerage out, cabins in, sun decks and a white hull: cruise passengers like her a quarter more. ${sh.berths.t?`Her ${int(sh.berths.t)} steerage berths become about ${int(Math.round(sh.berths.t*0.3))} Tourist cabins and a few more in first and second: she can no longer carry emigrants.`:'She keeps her berths.'}`]]]
 ];

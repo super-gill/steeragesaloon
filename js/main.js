@@ -132,7 +132,7 @@ document.addEventListener('touchstart',e=>{if(e.target.closest('#traybody')){UI.
 document.addEventListener('scroll',e=>{if(e.target&&e.target.id==='traybody'){UI.trayTouch=performance.now()+2500;UI.trayHold=true;setTimeout(()=>{if(!UI.trayHover&&UI.trayTouch<=performance.now()){UI.trayHold=false;UI.dirty=true;}},2600);}},true);
 window.addEventListener('pagehide',()=>save());
 
-S=load();if(!S)newGame();applyPrices();
+{const old=oldSaveNote();S=load();if(!S){newGame();if(old)news('Saves from before version 0.19 cannot be carried over: the calendar now runs from 1900, so this is a new game. The old save is left untouched in the browser.','bad');}}applyPrices();
 if(location.hash.startsWith('#save=')){const code=location.hash.slice(1);history.replaceState(null,'',location.pathname+location.search);
   loadSaveCode(code).then(()=>news('Game loaded from a save link.'),e=>{UI.loadMsg={ok:false,t:'The save link could not be read: '+(e.message||'damaged code')};UI.menu=true;UI.dirty=true;});}
 layoutMode();UI.dirty=true;applyView();requestAnimationFrame(frame);
