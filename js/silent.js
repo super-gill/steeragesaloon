@@ -61,14 +61,22 @@ function founder(sh){
   } else {sh.state='lost';sh.stopLeft=0;}
 }
 /* the mortgagees are paid first out of the insurance: her share of the line's debt */
-function payMortgage(sh,v){if(!(S.debt>0))return;const fv=S.ships.reduce((a,x)=>a+shipValue(x),0)||1,p=Math.min(S.debt,v,S.debt*shipValue(sh)/fv);S.debt-=p;S.cash-=p;
-  if(p>100)news(`${fmt(Math.round(p))} of the insurance goes straight to the mortgagees.`);}
+function payMortgage(sh,v){if(!(S.debt>0))return 0;const p=Math.min(S.debt,v,shipMortgage(sh));S.debt-=p;S.cash-=p;return p;}
+/* a claim for her loss: the insured sum less the excess (k below 1 when the underwriters take over a wreck), the mortgagees
+   paid first out of it; the record of claims raises every premium for a few years */
+function insClaim(sh,k){
+  const ins=insOf(sh),v=shipValue(sh),paid=Math.max(0,Math.round(insured(sh)*(k||1)-(ins.cover==='none'?0:v*INS_EXCESS[ins.excess].x)));
+  S.cash+=paid;const bank=payMortgage(sh,paid);sh.claimPaid=paid;if(paid>0)S.insLoss=(S.insLoss||0)+1;
+  const txt=ins.cover==='none'?'She was not insured: the Line bears the whole loss.'
+    :`The underwriters pay ${fmt(paid)}${bank>100?`, of which ${fmt(Math.round(bank))} goes straight to the mortgagees`:''}; the Line keeps ${fmt(Math.round(paid-bank))}${ins.cover==='mort'?' (she was insured for her mortgage only)':''}.`;
+  return {paid,bank,txt};
+}
 /* the underwriters pay the insured value; the loss of life is never forgotten */
 function loseShip(sh){
-  const L=sh.lost||{lost:0,saved:1},v=Math.round(shipValue(sh));
-  S.cash+=v;S.rep=clamp(S.rep-(L.lost>200?8:L.lost>20?5:2),0,100);payMortgage(sh,v); // the court of inquiry decides the rest
+  const L=sh.lost||{lost:0,saved:1},c=insClaim(sh);
+  S.rep=clamp(S.rep-(L.lost>200?8:L.lost>20?5:2),0,100); // the court of inquiry decides the rest
   if(!sh.inqQ)queueInquiry(sh,null);
-  news(`SS ${sh.name} is lost${L.where?' '+L.where:''}. ${L.lost?`${int(L.lost)} lives lost.`:'Everyone aboard was saved.'} The underwriters pay ${fmt(v)}. A court of inquiry will sit.`,'bad',true);
+  news(`SS ${sh.name} is lost${L.where?' '+L.where:''}. ${L.lost?`${int(L.lost)} lives lost.`:'Everyone aboard was saved.'} ${c.txt} A court of inquiry will sit.`,'bad',2);
   S.ships=S.ships.filter(x=>x!==sh);if(S.selShip===sh.id)S.selShip=S.ships[0]?S.ships[0].id:null;
 }
 /* daily: overdue ships, drifting ships, posted missing */

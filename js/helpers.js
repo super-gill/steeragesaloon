@@ -44,11 +44,15 @@ function depression(c,m){
 }
 /* how deep the slump is, 0 to 1, for rates that fall with it */
 const slump=m=>m<106?0:m<120?(m-105)/14:m<156?1:Math.max(0,1-(m-156)/48);
+/* in a slump the costs of running ships fall too: coal, wages, dues and insurance all come down at the trough */
+const SLUMP_CUT={fuel:0.25,wage:0.10,dues:0.15,ins:0.10};
+const slumpK=(k,m)=>1-SLUMP_CUT[k]*slump(m===undefined?(typeof S!=='undefined'&&S?S.m:0):m);
 const cargoMod=m=>crashMod('s',m)*(m>=306?1+Math.min(0.25,(m-306)/12*0.02):1)*(1-0.2*slump(m))*(m<12?0.75:m<24?0.9:m<106?1:m<120?0.75:m<156?0.62:Math.min(1,0.62+0.38*(m-156)/48));
 const cargoSeason=(c,m)=>COMM[c].season?COMM[c].season[m%12]:1;
 const dirW=(rk,c)=>(ROUTES[rk].dirw&&ROUTES[rk].dirw[c])||DIRW[c];
 function coalPrice(m){let b=(m<12?2.3:m<24?1.75:1.6)*(m>=258?1+Math.min(0.6,(m-258)/12*0.06):1);if(m>=64&&m<=70)b*=1.9;return b*(1+0.04*Math.sin(m*1.3));}
-function oilPrice(m){return (m<12?3.6:m<24?3.0:2.7)*(m>=354?0.78:1)*(1+0.03*Math.sin(m*0.9));}
+/* oil is dear at first; by the mid-twenties it costs about nine-tenths of coal for the same miles, and saves stokers and days in port besides */
+function oilPrice(m){return (m<12?3.6:m<24?3.0:m<48?2.7-0.75*(m-24)/24:1.95)*(m>=354?0.78:1)*(1+0.03*Math.sin(m*0.9));}
 function repF(c,rep,r){const x=rep-30;if(c==='f')return clamp(1+x/(r.prestige>1.2?50:70),0.4,1.8);if(c==='s')return clamp(1+x/150,0.6,1.4);if(c==='t')return clamp(1+x/500,0.85,1.15);return clamp(1+x/100,0.5,1.6);}
 const repWord=r=>r<15?'Disreputable':r<30?'Unknown':r<45?'Respectable':r<60?'Well regarded':r<75?'Fashionable':'Illustrious';
 function shipValue(sh){return sh.base*PX()/(sh.pi0||1)*Math.pow(sh.cond/100,0.7)*Math.max(0.15,1-fatOf(sh)*0.0085)*shipMkt();}
@@ -56,7 +60,21 @@ function shipValue(sh){return sh.base*PX()/(sh.pi0||1)*Math.pow(sh.cond/100,0.7)
    A freighter needs no stewards, so she is cheap to crew; a liner's hotel staff can outnumber her sailors */
 const crewCount=sh=>crewHands(sh); // by department: see crew.js
 const crewCost=sh=>crewCostOf(sh);
-const insCost=sh=>shipValue(sh)*0.05/12*(sh.cond<50?1.4:1)*(fatOf(sh)>=90?2:1+Math.max(0,fatOf(sh)-60)/40);
+/* ---------- hull insurance, ship by ship ----------
+   The owner chooses the cover and the excess. The premium follows her condition and wear, the excess, and the Line's
+   record of claims (ice and war come with the 1900 eras). While she is mortgaged the bank insists on cover for its share at least. */
+const INS_COVER={none:{name:'None',short:'None'},mort:{name:'The mortgage only',short:'Mortgage'},value:{name:'Her market value',short:'Market value'},agreed:{name:'An agreed value, a quarter above market',short:'Agreed value'}};
+const INS_KEYS=['none','mort','value','agreed'];
+const INS_EXCESS=[{name:'None',k:1.15,x:0,own:0.1},{name:'Standard',k:1,x:0.02,own:1},{name:'High',k:0.8,x:0.08,own:2.5}];
+const shipMortgage=sh=>{if(!(S.debt>0))return 0;const fv=S.ships.reduce((a,x)=>a+shipValue(x),0)||1;return Math.min(S.debt,S.debt*shipValue(sh)/fv);};
+function insOf(sh){const i=sh.ins||(sh.ins={...(S.insDefault||{cover:'value',excess:1})});return {cover:i.cover==='none'&&S.debt>0?'mort':i.cover,excess:i.excess===undefined?1:i.excess};}
+function insured(sh){const c=insOf(sh).cover;return c==='none'?0:c==='mort'?shipMortgage(sh):c==='agreed'?shipValue(sh)*1.25:shipValue(sh);}
+/* the underwriters' rate a year: 5% for a sound ship on a quiet route */
+function insRate(sh){
+  const f=fatOf(sh);
+  return 0.05*(sh.cond<50?1.4:1)*(f>=90?2:1+Math.max(0,f-60)/40)*(1+0.15*(S.insLoss||0))*INS_EXCESS[insOf(sh).excess].k*slumpK('ins');
+}
+const insCost=sh=>insured(sh)*insRate(sh)/12*(sh.state==='laid'?0.3:1); // laid up she is insured for port risks only
 const confFloor=(rk,c)=>Math.ceil(ROUTES[rk].ref[c]*0.95);
 function effFare(rk,c){let f=S.lines[rk].fares[c];if(S.conf&&!ROUTES[rk].cruise)f=Math.max(f,confFloor(rk,c));return f;} // the conference has no say over cruises
 function defaultFares(rk){const r=ROUTES[rk].ref;return {f:r.f,s:r.s,t:r.t,tt:r.tt};}

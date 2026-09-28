@@ -106,7 +106,7 @@ const TROPIC=['cot','ban','waf','rpl','nap'];
 function shoreMult(rk,c){
   if(!S.shore)return 1;const calls=ROUTES[rk].calls;let x=1;
   for(const a in S.shore.agents)if(AGENCY[a].ports.some(p=>calls.includes(p)))x*=(c==='t'||c==='tt')?1.07:1.03;
-  if((c==='t'||c==='tt')&&calls.some(p=>S.shore.hostels[p]))x*=1.05;
+  if((c==='t'||c==='tt')&&calls.some(p=>S.shore.hostels[p]))x*=1.12;
   return x;
 }
 function rivalWeight(rk,c,owner){let a=0;for(const x of S.rships)if(x.route===rk&&(!owner||x.owner===owner)){const b=rivalBerths(x,c);if(b)a+=b*sailings(x.knots,rk)*rivalAppeal(x.owner,rk,c,x);}return a;}

@@ -81,6 +81,7 @@ function callDue(){
   if(owe>0){S.cash-=owe;S.debt-=owe;news(`The rest of the called loan, ${fmt(owe)}, is taken from the account.`,'bad',true);}
 }
 /* government stock: safe from a failed bank, pays three and a half per cent, falls a little in a panic */
+function insMonth(){S.insLoss=(S.insLoss||0)*0.96;} // claims fade from the underwriters' memory over a few years
 function giltsMonth(){if(S.gilts>0)book('invest',S.gilts*0.035/12);}
 function gilts(buy,amt){
   if(buy){amt=Math.min(amt,Math.floor(Math.max(0,S.cash)));if(amt<=0)return false;S.cash-=amt;S.gilts=(S.gilts||0)+amt;return true;}
@@ -199,7 +200,7 @@ function lossRecord(sh,e){
   return {name:sh.name,t:S.t,rk,due:S.t+45+Math.random()*30,dead:(sh.lost&&sh.lost.lost)||0,souls:soulsOf(sh)+crewOf(sh),cond:sh.cond,fat:fatOf(sh),morale:sh.morale||60,
     radio:radioOf(sh),drinker:has(sh,'drinker'),full:sh.speed===2,sea:rk?seaSev(sh,rk,m):0,port:rk?linePorts(rk).some(p=>!portFit(sh,p).ok):false,
     safety:S.safety===undefined?1:S.safety,ignored:e?e.orders.filter(o=>o.by==='master'&&e.canOrder).length:0,kind:e?EMERG[e.k].name.toLowerCase():'foundering',
-    grave:e?e.sev===3:false,grt:sh.grt,paid:Math.round(shipValue(sh))};
+    grave:e?e.sev===3:false,grt:sh.grt,paid:sh.claimPaid!==undefined?sh.claimPaid:Math.round(shipValue(sh))};
 }
 function queueInquiry(sh,e){(S.inq=S.inq||[]).push(lossRecord(sh,e));}
 function inquiryDaily(){

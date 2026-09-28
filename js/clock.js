@@ -9,7 +9,8 @@ function advance(days){
 let lastT=performance.now();
 function frame(t){
   const dt=Math.min(0.1,(t-lastT)/1000);lastT=t;
-  if(S&&!S.over&&UI.speed>0){const er=emClock();advance(dt*(er&&!UI.emNormal?Math.min(er,SPEEDS[UI.speed]):SPEEDS[UI.speed]));
+  if(UI.slow&&t>UI.slow.until){UI.slow=null;UI.dirty=true;}
+  if(S&&!S.over&&UI.speed>0){const er=emClock();let r=SPEEDS[UI.speed];if(er&&!UI.emNormal)r=Math.min(er,r);if(UI.slow)r=Math.min(UI.slow.rate,r);advance(dt*r);
     if(er&&!UI.dirty&&t-(UI.emDrawn||0)>250){UI.emDrawn=t;setHTML($('emergw'),emergencyHTML());}}
   if(UI.dirty){render();UI.dirty=false;}
   drawShips();animWire(t);

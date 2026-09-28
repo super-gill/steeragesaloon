@@ -6,14 +6,22 @@ document.addEventListener('click',e=>{
   {const al=b.closest('.alert[data-aid]:not([data-sticky])');if(al)(S.attnSeen=S.attnSeen||{})[al.dataset.aid]=true;}
   const a=b.dataset.act,sh=S.ships.find(x=>x.id===S.selShip),L=S.lines[S.selLine];
   if(a!=='cancel'&&!a.startsWith('ask')&&!['exit','closeline','leave','new','loadcode'].includes(a))UI.confirm=null;
+  if(UI.slow&&!['zoom','zoomfit'].includes(a))UI.slow=null; // the owner is dealing with it: back to full speed
   switch(a){
+    case 'eventmode':UI.eventMode=b.dataset.v;try{localStorage.setItem('ss_eventmode',UI.eventMode);}catch(e){}break;
+    case 'unslow':UI.slow=null;break;
+    case 'inscover':if(sh&&INS_COVER[b.dataset.v]&&!(b.dataset.v==='none'&&S.debt>0)){insOf(sh);sh.ins.cover=b.dataset.v;sh.ownerSet=S.t;}break;
+    case 'insall':if(sh){const p=insOf(sh);S.insDefault={cover:p.cover,excess:p.excess};S.ships.forEach(x=>{x.ins={...S.insDefault};});}break;
+    case 'insexcess':if(sh){insOf(sh);sh.ins.excess=+b.dataset.v;}break;
     case 'speed':if(!S.over){UI.speed=+b.dataset.v;if(UI.speed>0)UI.banner=null;else UI.banner='Paused.';}break;
     case 'selship':S.selShip=+b.dataset.id;UI.tab='fleet';(S.tutSeen=S.tutSeen||{}).fleet=true;break;
     case 'selline':S.selLine=b.dataset.id;UI.tab='lines';(S.tutSeen=S.tutSeen||{}).lines=true;break;
     case 'tabgo':UI.tab=(UI.wide&&b.dataset.tab==='overview')?UI.tab:b.dataset.tab;(S.tutSeen=S.tutSeen||{})[b.dataset.tab]=true;break;
     case 'tutoff':if(S.tut)S.tut.off=true;break;
     case 'setfare':case 'setfares':case 'setlineopt':case 'setship':case 'moveship':case 'setyard':case 'sellship':case 'hire':case 'shorebuy':case 'deptmode':case 'openmove':case 'buyship':case 'newhead':case 'propyes':case 'propno':case 'build':case 'scrapship':case 'crewset':case 'appoint':case 'setwc':case 'cruiseadd':case 'cruisedrop':
-      {const d=JSON.parse(b.dataset.d||'[]');if(a==='moveship'||a==='openmove'||a==='setship'||a==='setwc'||a==='cruiseadd'||a==='cruisedrop'){const x=S.ships.find(q=>q.id===d[0]);if(x)x.ownerSet=S.t;}if(a==='crewset'||a==='appoint'){const x=S.ships.find(q=>q.id===d[0]);if(x)x.crewSet=S.t;}doAction(a,d);}ADV_CACHE.key=null;break;
+      {const d=JSON.parse(b.dataset.d||'[]');if(a==='moveship'||a==='openmove'||a==='setship'||a==='setwc'||a==='cruiseadd'||a==='cruisedrop'){const x=S.ships.find(q=>q.id===d[0]);if(x)x.ownerSet=S.t;}if(a==='crewset'||a==='appoint'){const x=S.ships.find(q=>q.id===d[0]);if(x)x.crewSet=S.t;}const bef=advice().map(h=>[h.id,h.title]);doAction(a,d);ADV_CACHE.key=null;UI.rev++;
+        const now=new Set(advice().map(h=>h.id)),gone=bef.filter(([id])=>!now.has(id)&&!(b.closest('.advice[data-key]')&&b.closest('.advice[data-key]').dataset.key===id));
+        UI.advGone=gone.length&&b.closest('.advice')?{rev:UI.rev,titles:gone.map(q=>q[1])}:null;}ADV_CACHE.key=null;break;
     case 'shipgrp':{const o=UI.shipGrp=UI.shipGrp||{earn:true,upkeep:true,crew:false,retire:false};o[b.dataset.id]=!o[b.dataset.id];break;}
     case 'plopen':UI.plOpen=UI.plOpen===+b.dataset.id?null:+b.dataset.id;break;
     case 'plmonth':UI.plMonth=b.dataset.id;break;
@@ -103,7 +111,6 @@ document.addEventListener('change',e=>{
   const t=e.target;
   if(t.dataset.fare&&S.lines[S.selLine]){S.lines[S.selLine].fares[t.dataset.fare]=clamp(Math.round(+t.value||1),1,500);}
   if(t.dataset.shipline){const sh=S.ships.find(x=>x.id===S.selShip);if(sh){sh.line=t.value||null;sh.ownerSet=S.t;if(sh.line&&sh.state==='laid'){sh.state='port';sh.portLeft=1;}}}
-  if(t.dataset.autop)UI.autoPause=t.checked;
   if(t.dataset.wirert)UI.wireRoutine=t.checked;
   if(t.dataset.dzx&&UI.dz){UI.dz.extras[t.dataset.dzx]=t.checked;}
   if(t.dataset.dzline&&UI.dz){UI.dz.line=t.value;}

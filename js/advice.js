@@ -8,10 +8,12 @@ function withTemp(sh,rk,patch,shPatch,fn){
   if(shPatch)for(const k in shPatch){ss[k]=sh[k];sh[k]=shPatch[k];}
   try{return fn();}finally{L.fares=saved.fares;L.service=saved.service;L.adv=saved.adv;for(const k in ss)sh[k]=ss[k];if(!had)delete S.lines[rk];}
 }
+/* her turnaround at both ends, as this ship will actually manage it: gear, hatches, piers and sheds all count */
+const turnFor=(sh,rk)=>{if(ROUTES[rk].cruise)return turnPair(rk);const [a,b]=geoEnds(geoKey(rk,S.m));return turnDays(sh,a)+turnDays(sh,b);};
 /* a ship's expected monthly result on a route this month, at current settings (patches try alternatives) */
 function econ(sh,rk,patch,shPatch){
   return withTemp(sh,rk,patch,shPatch,()=>{
-    const L=S.lines[rk],w=legCalc(sh,rk,0,null),e=legCalc(sh,rk,1,null),rt=w.seaDays+e.seaDays+turnPair(rk);
+    const L=S.lines[rk],w=legCalc(sh,rk,0,null),e=legCalc(sh,rk,1,null),rt=w.seaDays+e.seaDays+turnFor(sh,rk);
     const legNet=l=>l.paxRev+(l.onboard||0)+l.cargoRev+l.mail-l.fuelC-l.prov-l.agents-l.port;
     const n=Math.max(1,shipsOn(rk).length);
     const fixed=(crewCost(sh)+(sh.captain?sh.captain.wage:0)+insCost(sh)+MAINT_COST[sh.maint]*sh.grt/8000+(sh.fac?facMods(sh).staff*PX():0))*rt/30;
@@ -28,9 +30,9 @@ function econYear(sh,rk,patch,shPatch){
   return {pm:pm/k};
 }
 /* the same averaged over given months of the year (a cruise's season), the next time each comes round */
-function econMonths(sh,rk,ms){
+function econMonths(sh,rk,ms,shPatch){
   const t0=S.t;let pm=0;
-  try{for(const mo of ms){const m=S.m+((mo-S.m%12)+12)%12;S.t=(Date.UTC(1921+Math.floor(m/12),m%12,15)-T0)/864e5;pm+=econ(sh,rk).pm;}}
+  try{for(const mo of ms){const m=S.m+((mo-S.m%12)+12)%12;S.t=(Date.UTC(1921+Math.floor(m/12),m%12,15)-T0)/864e5;pm+=econ(sh,rk,null,shPatch).pm;}}
   finally{S.t=t0;}
   return pm/ms.length;
 }
@@ -190,24 +192,25 @@ function advice(){
     if(!sh.autoDock&&sh.cond<60)add({id:`thresh:${sh.id}`,scope:'ship',ref:sh.id,sev:'warn',gain:450,title:`SS ${sh.name} has no service threshold`,
       why:`She is at ${Math.round(sh.cond)}% and falling. A threshold sends her to drydock automatically before breakdowns get frequent.`,act:[['Use 50%','setship',sh.id,'autoDock',50]]});
     // yard work that pays for itself, judged over a year and only if the reserve can bear it
-    const yard=(k,shPatch,label,why)=>{if(sh.pendingYard)return;const cost=refitCost(sh,k);if(!canSpend(cost))return;
+    const inVisit=k=>sh.pendingYard===k||(sh.yardAdd||[]).includes(k);
+    const yard=(k,shPatch,label,why)=>{if(inVisit(k))return;const cost=refitCost(sh,k);if(!canSpend(cost))return;
       const save=econYear(sh,r0,null,shPatch).pm-curY.pm;if(save>0&&cost/save<=30)add({id:`${k==='oil'?'oil':k}:${sh.id}`,scope:'ship',ref:sh.id,sev:'tip',gain:save,title:label,
         why:`${why} It would add about ${money(save)} a month and pay back its ${money(cost)} in about ${Math.ceil(cost/save)} months; she is out of service for ${yardDays(sh,k)} days.`,
-        act:[['Book it','setyard',sh.id,k],['Refit office','refit',sh.id,k]]});};
+        act:[[sh.pendingYard?'Add it to her yard visit':'Book it','setyard',sh.id,k],['Refit office','refit',sh.id,k]]});};
     if((sh.foul||0)>0.45){if(sh.cond>=70)yard('scrape',{foul:0},`Scrape the bottom of SS ${sh.name}`,`Her master reports her bottom foul: she is slower and burning more. Her condition is good, so a few days' scrape will do.`);
       else yard('dock',{foul:0,cond:Math.min(92,sh.cond+35)},`Drydock SS ${sh.name}`,`Her master reports her bottom foul: she is slower and burning more.`);}
     { const f=fatOf(sh),n=sh.replates||0;
-      if(f>=62&&f<90&&n<3&&!sh.pendingYard&&canSpend(refitCost(sh,'replate'))&&shipValue(sh)>refitCost(sh,'replate'))add({id:`replate:${sh.id}`,scope:'ship',ref:sh.id,sev:'tip',gain:250+f*4,title:`Re-plate SS ${sh.name}`,
+      if(f>=62&&f<90&&n<3&&!inVisit('replate')&&canSpend(refitCost(sh,'replate'))&&shipValue(sh)>refitCost(sh,'replate'))add({id:`replate:${sh.id}`,scope:'ship',ref:sh.id,sev:'tip',gain:250+f*4,title:`Re-plate SS ${sh.name}`,
         why:`The surveyors find her plating wasting and her frames tired. New plate and frames (${money(refitCost(sh,'replate'))}, ${yardDays(sh,'replate')} days) buy her years of safe service${n?', though less than last time':''}. Left alone she gets more dangerous every crossing and loses her steerage certificate.`,act:[['Book it','setyard',sh.id,'replate']]});
       if(f>=88&&S.ships.length>1)add({id:`scrap:${sh.id}`,scope:'ship',ref:sh.id,sev:'warn',gain:600,title:`Send SS ${sh.name} to the breakers`,
         why:`She is worn out: ${f>=90?'no steerage certificate, double insurance, and':''} a far higher chance of a serious emergency every crossing. A loss now would go badly at the inquiry.`,act:[['Send her to the breakers','scrapship',sh.id],['View her','selship',sh.id]]}); }
     if(sh.fuel==='coal'&&yearNow()-sh.built<28)yard('oil',{fuel:'oil'},`Convert SS ${sh.name} to oil`,'Oil firing cuts her stokehold crew and her bunker bill.');
     if((sh.berths.f+sh.berths.s)>0&&(sh.fit||0)<50)yard('refurb',{fit:100},`Refurbish SS ${sh.name}`,`Her saloons are tired (fittings ${Math.round(sh.fit||0)}%), and first and second class notice.`);
     if(!(sh.up&&sh.up.reefer)&&COMM[ROUTES[r0].cargo.home.c].reefer)yard('reefer',{up:{...sh.up,reefer:true}},`Fit refrigerated holds to SS ${sh.name}`,`Her route's homeward cargo, ${COMM[ROUTES[r0].cargo.home.c].name.toLowerCase()}, needs cold holds; without them she takes only a sliver of it.`);
-    if(!(sh.up&&sh.up.wireless)&&(S.mail[r0]||S.rep>=35||S.m>=200)&&canSpend(refitCost(sh,'wireless'))&&!sh.pendingYard)
+    if(!(sh.up&&sh.up.wireless)&&(S.mail[r0]||S.rep>=35||S.m>=200)&&canSpend(refitCost(sh,'wireless'))&&!inVisit('wireless'))
       add({id:`wireless:${sh.id}`,scope:'ship',ref:sh.id,sev:'tip',gain:150,title:`Fit wireless to SS ${sh.name}`,
         why:`${S.m>=200?(S.m>=228?'Under the Ocean Aid Convention she may carry no passengers without it. ':'From 1940 the Ocean Aid Convention bars passenger ships without wireless. '):''}Only ships with wireless can carry the mails${S.m<228?' or tell you when she is in trouble':''}${S.mail[r0]?', and this route has a contract':''}. Without it, nothing is heard of her at sea unless a passing ship sees her lamps. ${money(refitCost(sh,'wireless'))} and a week in the yard.`,
-        act:[['Book it','setyard',sh.id,'wireless']]});
+        act:[[sh.pendingYard?'Add it to her yard visit':'Book it','setyard',sh.id,'wireless']]});
     // crew by department: pay where morale is low, drills where skill is poor, better officers when the pool has them
     {const cw=cwOf(sh),off=offOf(sh);
       for(const d of CD_KEYS){const q=cw[d];if(deptCount(sh,d)<1)continue;
@@ -339,7 +342,7 @@ function doAction(act,d){
   }
   return false;
 }
-function shoreCost(kind,key){const p=PX();return kind==='fagent'?FAGENCY[key]&&Math.round(FAGENCY[key].cost*p):kind==='shed'?Math.round(SHED_COST*p):kind==='cold'?Math.round(COLD_COST*p):kind==='pier'?PIER_COST[key]:kind==='agency'?AGENCY[key]&&AGENCY[key].cost:kind==='hostel'?Math.round(60000*p):kind==='yard'?Math.round(300000*p):kind==='bunker'?Math.round(10000*p):kind==='slip'?Math.round(OWN_SLIP_COST*p):kind==='dept'?DEPTS[key]&&DEPTS[key].cost:0;}
+function shoreCost(kind,key){const p=PX();return kind==='fagent'?FAGENCY[key]&&Math.round(FAGENCY[key].cost*p):kind==='shed'?Math.round(SHED_COST*p):kind==='cold'?Math.round(COLD_COST*p):kind==='pier'?PIER_COST[key]:kind==='agency'?AGENCY[key]&&AGENCY[key].cost:kind==='hostel'?Math.round(35000*p):kind==='yard'?Math.round(150000*p):kind==='bunker'?Math.round(10000*p):kind==='slip'?Math.round(OWN_SLIP_COST*p):kind==='dept'?DEPTS[key]&&DEPTS[key].cost:0;}
 /* the best line for a ship, preferring lines already open: a new line must earn clearly more to be worth opening */
 function bestLine(sh,exclude){
   let bo=null,ba=null;

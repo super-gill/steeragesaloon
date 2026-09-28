@@ -35,7 +35,7 @@ function deliverWire(m,pause){
   m.t=Math.max(m.t,Math.floor(S.t*24)/24);S.wire.unshift(m);if(S.wire.length>60)S.wire.length=60;
   m.read=m.k==='r'; // agents' cables arrive in plain words; signals from sea wait to be decoded
   if(typeof UI!=='undefined'){if(!m.read)UI.wa={id:m.id,txt:m.txt,mode:'print',made:typeof performance!=='undefined'?performance.now():0};
-    if(pause&&UI.autoPause&&UI.speed>0){UI.speed=0;UI.banner=`SS ${m.ship}: ${plainTel(m.txt)}`;}}
+    if(pause)eventClock(`SS ${m.ship}: ${plainTel(m.txt)}`);}
 }
 function wireTick(){if(!S.wireQ||!S.wireQ.length)return;const due=S.wireQ.filter(m=>m.at<=S.t);if(!due.length)return;
   S.wireQ=S.wireQ.filter(m=>m.at>S.t);due.forEach(m=>{delete m.at;deliverWire(m);});}

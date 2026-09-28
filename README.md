@@ -25,12 +25,13 @@ It is a static browser game with no build step. Open `index.html`, or serve the 
 | `js/yard.js` | Shipbuilding: purposes, hull forms, machinery, fittings, extras, builders and slips, prices, stage payments, orders and delivery; newer ships for the brokers |
 | `js/facilities.js` | Public rooms and facilities (dining, shows, cinema, shops, pools, spa, winter garden, family rooms) with levels, venues, room, staff, appeal, winter draw and money spent aboard; refit equipment; the refit office window and the Marine Superintendent's picks |
 | `js/state.js` | Game state, new game, save and load (browser localStorage) with migrations, save codes |
-| `js/clock.js` | Real-time clock: pause, 1×, 3×, 7× and the frame loop |
+| `js/clock.js` | Real-time clock: pause, 1×, 3×, 7×, 14×, slowing on big events, and the frame loop |
 | `js/map.js` | Chart rendering, pan and zoom, ship markers |
 | `js/profile.js` | Procedural ship drawings: exterior and cutaway |
 | `js/advice.js` | Head-office advice (Mr Ferguson and the departments), the shared action handler, and departments acting on their own advice |
 | `js/design.js` | The drawing office window and the order book |
 | `js/tutorial.js` | The first-year briefing |
+| `js/times.js` | The times: the season, conditions in force, what is coming and the history so far |
 | `js/ui.js` | Panels and tabs, rendered by patching the DOM in place |
 | `js/main.js` | Input handling and start-up |
 

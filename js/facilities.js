@@ -155,8 +155,25 @@ function rfPicks(sh){ // options that pay back within about three years
   if(!(sh.cond>=70)||(sh.foul||0)>0.45)out['j:dock']=out['j:dock']||1;
   return out;
 }
+/* the Refit Office's warnings: luxury equipment earns through first and second class, so on a ship with few of them it never pays */
+const RF_FS_JOBS=['lux',...Object.keys(EQUIP).filter(k=>EQUIP[k].fs)];
+function rfFlags(sh){
+  const out={},rf0={jobs:{},fac:{...(sh.fac||{})}},rk=sh.line||sh.legRoute;if(!rk)return out;
+  const fs=(sh.berths.f||0)+(sh.berths.s||0);
+  for(const [,jobs] of RF_JOBS)for(const [k,,ok] of jobs){if(!RF_FS_JOBS.includes(k)||!ok(sh))continue;
+    const c=refitCost(sh,k),g=rfValue(sh,rf0,{job:k});if(g>0&&c/g<=36)continue;
+    out[k]={g,fs,pay:g>0?Math.round(c/g):null};}
+  return out;
+}
+/* what a cruise conversion would earn her in each cruise's season, against the same months on her own line */
+function rfCruise(sh){
+  const rk=homeOf(sh),p=rfPatch(sh,{jobs:{cruise:true},fac:{...(sh.fac||{})}});
+  const v=Object.keys(ROUTES).filter(k=>isCruise(k)&&routeOpen(k,S.m)).map(k=>{const ms=ROUTES[k].cruise.months;
+    return {rk:k,pm:econMonths(sh,k,ms,p),now:econMonths(sh,k,ms),home:rk&&S.lines[rk]&&!isCruise(rk)?econMonths(sh,rk,ms):-idleCost(sh)};}).sort((a,b)=>(b.pm-b.home)-(a.pm-a.home));
+  return v;
+}
 const RF_CACHE={};
-function rfCached(sh,fn,key){const k=key+'|'+S.m+'|'+sh.id+'|'+sh.line;if(RF_CACHE[fn]&&RF_CACHE[fn].k===k)return RF_CACHE[fn].v;const v=fn==='picks'?rfPicks(sh):null;RF_CACHE[fn]={k,v};return v;}
+function rfCached(sh,fn,key){const k=key+'|'+S.m+'|'+sh.id+'|'+sh.line;if(RF_CACHE[fn]&&RF_CACHE[fn].k===k)return RF_CACHE[fn].v;const v=fn==='picks'?rfPicks(sh):fn==='flags'?rfFlags(sh):fn==='cruise'?rfCruise(sh):null;RF_CACHE[fn]={k,v};return v;}
 function renderRefit(){
   const el=$('designer');if(!UI.refitOpen)return false;
   const rf=UI.rf,sh=S.ships.find(x=>x.id===rf.sid);if(!sh){closeRefit();return false;}
@@ -167,8 +184,13 @@ function renderRefit(){
   const where=sh.state==='sea'||sh.state==='repo'?'She is at sea: the work starts when she reaches port.':sh.state==='yard'?'':`She is at ${PN[sh.port]}: the work starts at once.`;
   const pk=k=>picks[k]?`<span class="rftag">${picks[k]<50?'Marine Superintendent recommends':`Marine Superintendent: +${fmt(picks[k])}/mo`}</span>`:'';
   const inPlan=k=>sh.pendingYard===k||sh.yardKind===k||(sh.yardAdd||[]).includes(k);
+  const ckey=JSON.stringify(sh.fac||{})+JSON.stringify(sh.up||{})+JSON.stringify(sh.berths)+Math.round(sh.cond)+Math.round(sh.fit||0);
+  const flag=k=>{if(!RF_FS_JOBS.includes(k))return '';const f=rfCached(sh,'flags',ckey)[k];if(!f)return '';
+    return `<span class="rftag warn">Refit Office: only pays on a big first-class ship. She has ${int(f.fs)} first and second berths${f.g>0?`; about +${fmt(f.g)} a month, ${Math.round(f.pay/12)} years to pay back`:', and it would earn her nothing'}.</span>`;};
+  const cruiseNote=()=>{const v=rfCached(sh,'cruise',ckey);if(!v||!v.length)return '';const b=v[0],gain=b.pm-b.home;
+    return `<span class="rftag cr${gain>0?'':' warn'}">Refit Office: converted, her best cruise is ${ROUTES[b.rk].name} (${cruiseMonthsText(b.rk)}), about ${fmt(Math.round(b.pm))} a month in season against ${fmt(Math.round(b.home))} on her line${b.now>-1e9?` (${fmt(Math.round(b.now))} cruising as she is)`:''}.${gain>0?'':' Cruising would not pay her.'}</span>`;};
   const jobRow=([k,label,ok,desc])=>{if(!ok(sh))return '';const on=!!rf.jobs[k],c=refitCost(sh,k),booked=inPlan(k);
-    return `<label class="rfopt${on?' on':''}${picks['j:'+k]?' rfpick':''}"><input type="checkbox" data-rfjob="${k}" ${on?'checked':''} ${booked?'disabled':''}><span><b>${label}</b> <span class="num">${booked?'booked':fmt(c)+' · '+yardDays(sh,k)+' days'}</span>${pk('j:'+k)}<small>${typeof desc==='function'?desc(sh):desc}</small></span></label>`;};
+    return `<label class="rfopt${on?' on':''}${picks['j:'+k]?' rfpick':''}"><input type="checkbox" data-rfjob="${k}" ${on?'checked':''} ${booked?'disabled':''}><span><b>${label}</b> <span class="num">${booked?'booked':fmt(c)+' · '+yardDays(sh,k)+' days'}</span>${pk('j:'+k)}${picks['j:'+k]?'':flag(k)}${k==='cruise'?cruiseNote():''}<small>${typeof desc==='function'?desc(sh):desc}</small></span></label>`;};
   const used=slotsUsed(rf.fac),slots=slotsOf(sh);
   const facRow=k=>{const F=FAC[k],cur=facLv(sh,k),tgt=rf.fac[k]||0;
     return `<div class="rffac${picks['f:'+k]?' rfpick':''}"><b>${F.name}</b>${pk('f:'+k)}<div class="rflv">${F.levels.map((L,i)=>{const ok=levelOk(k,i,sh.grt,y),room=i>tgt&&used-tgt+i>slots,why=!ok?(L.min&&sh.grt<L.min?`needs ${int(L.min)} tons`:`from ${L.from}`):room?'no venue free':'';
@@ -203,7 +225,8 @@ function renderRefit(){
       <button class="btn primary" data-act="rfbook" ${!P.list.length||S.over||((sh.state==='port'||sh.state==='yard')&&S.cash<P.total)?'disabled':''}>Book the refit · ${fmt(P.total)}</button>
     </div></div>
     <div class="dz-ctl">
-      ${RF_JOBS.map(([title,jobs])=>{const rows=jobs.map(jobRow).join('');return rows?`<section><h3>${title}</h3><div class="stack" style="gap:6px">${rows}</div></section>`:'';}).join('')}
+      ${RF_JOBS.map(([title,jobs])=>{const rows=jobs.map(jobRow).join(''),have=jobs.filter(([k])=>(sh.up&&sh.up[k])||(k==='oil'&&sh.fuel==='oil')||(k==='cruise'&&sh.cruiser)).map(([k,label])=>k==='oil'?'oil firing':k==='cruise'?'converted for cruising':(UPGRADES[k]||EQUIP[k]||{name:label}).name.toLowerCase());
+        return rows||have.length?`<section><h3>${title}</h3>${have.length?`<p class="note">Already fitted: ${have.join(', ')}.</p>`:''}<div class="stack" style="gap:6px">${rows}</div></section>`:'';}).join('')}
       ${CL.reduce((a,c)=>a+(sh.berths[c]||0),0)<60?`<section><h3>Facilities</h3><p class="note">She carries ${CL.reduce((a,c)=>a+(sh.berths[c]||0),0)} passengers: public rooms would never pay. Put her money into cargo fittings.</p></section>`:`<section><h3>Facilities</h3><p class="note">${slots} venues fit a ship of her size; each level takes one. Levels above what she has cost the difference; taking a facility out gives the room back to cabins.</p>
         ${groups.map(g=>`<h4 class="lbl">${g}</h4>`+FAC_KEYS.filter(k=>FAC[k].g===g).map(facRow).join('')).join('')}</section>`}
     </div>

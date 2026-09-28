@@ -407,6 +407,8 @@ input[type=range]{width:100%;accent-color:var(--brass)}
 .rflv button:disabled{opacity:.45;cursor:default}
 .rflv button small{opacity:.75;font-size:10.5px}
 .rffac .rftag{margin-left:0}
+.rfopt .rftag.warn,.rfopt .rftag.cr{display:block;margin:3px 0 0;font-weight:600;letter-spacing:0}
+.rftag.warn{color:var(--warn)}
 
 /* fleet by line board */
 .board{width:100%;border-collapse:collapse;font-size:13px}
@@ -467,3 +469,13 @@ input[type=range]{width:100%;accent-color:var(--brass)}
 .cdot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle}
 .cruisehelp ul{padding-left:18px;margin:4px 0 0}
 .yr-key{font-size:11px;color:var(--muted);margin:0 0 4px}
+.advgone{border-left:3px solid var(--good);padding:6px 10px;background:var(--surface2);color:var(--ink)}
+
+/* the times */
+.times .tlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;font-size:13px}
+.times .tlist li{padding-left:10px;border-left:3px solid var(--line)}
+.times .tlist li.bad{border-left-color:var(--bad)} .times .tlist li.good{border-left-color:var(--good)}
+.times .tsoon{display:flex;flex-direction:column;gap:4px}
+.times .tsoon li{border-left-color:var(--brass)}
+.thist summary{cursor:pointer;font-size:12.5px;font-weight:600;color:var(--muted)}
+.thist .news{margin-top:8px;max-height:320px}

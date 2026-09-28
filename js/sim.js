@@ -2,11 +2,11 @@
 const TURN_DAYS=4,CALL_DAYS=1;
 const turnDays=(sh,port)=>Math.max(2,TURN_DAYS-(sh.up&&sh.up.gear?1:0)-(S.shore&&S.shore.piers[port]?1:0)-((sh.up&&sh.up.hatch)||(S.shore&&S.shore.sheds&&S.shore.sheds[port])?0.5:0)+crewMods(sh).turn);
 /* freight canvassers in a region the route calls at, and cold stores at its ports, win this line more cargo */
-const cargoPull=(rk,reefer)=>{const sh=S.shore||{},calls=ROUTES[rk].calls;let f=1;for(const a in sh.fagents||{})if(FAGENCY[a]&&FAGENCY[a].ports.some(p=>calls.includes(p)))f+=0.15;if(reefer&&Object.keys(sh.cold||{}).some(p=>calls.includes(p)))f+=0.2;return f;};
+const cargoPull=(rk,reefer)=>{const sh=S.shore||{},calls=ROUTES[rk].calls;let f=1;for(const a in sh.fagents||{})if(FAGENCY[a]&&FAGENCY[a].ports.some(p=>calls.includes(p)))f+=0.075;if(reefer&&Object.keys(sh.cold||{}).some(p=>calls.includes(p)))f+=0.2;return f;};
 const bunkerDiscount=()=>S.shore&&S.shore.bunker&&S.shore.bunker.until>=S.m?0.88:1;
-const fuelPrice=(sh,m)=>(sh.fuel==='coal'?coalPrice(m):oilPrice(m))*bunkerDiscount()*PX();
+const fuelPrice=(sh,m)=>(sh.fuel==='coal'?coalPrice(m):oilPrice(m))*bunkerDiscount()*slumpK('fuel',m)*PX();
 const fuelRate=(sh,sm)=>sh.grt/(sh.fuel==='coal'?70:95)*Math.pow(sm,3)*(sh.up&&sh.up.turbines?0.92:1)*(sh.fuelK||1)*crewMods(sh).fuel;
-const duesAt=(sh,port,mult)=>sh.grt*mult*(S.shore&&S.shore.piers[port]?0.4:1)*PX();
+const duesAt=(sh,port,mult)=>sh.grt*mult*(S.shore&&S.shore.piers[port]?0.4:1)*slumpK('dues')*PX();
 /* the intermediate calls of a geography in sailing order for a direction, as [port, nm from departure] */
 function stopsFor(gk,dir){if(dir===1&&ROUTES[gk]&&ROUTES[gk].cruise)return []; // a cruise sails home non-stop
   const g=GEO(gk),c=g.calls.slice(1,-1);return (dir===0?c.map(x=>[x[0],x[1]]):c.reverse().map(x=>[x[0],g.dist-x[1]]));}
@@ -149,13 +149,13 @@ function breakdownResume(sh){
   if(B.o==='fail'){
     const toDest=dist-sh.pos,back=sh.pos<toDest*0.8,nm=Math.min(sh.pos,toDest);
     // the underwriters meet salvage above the owner's excess; passengers sent home get their money back
-    const tug=Math.round((800+nm*3)*(sh.up&&sh.up.wireless?0.7:1)*PX()/50)*50,own=Math.min(tug,Math.round((600*PX()+Math.max(0,tug-600*PX())*0.25)/50)*50);book('salvage',-own,rk,sh);
+    const tug=Math.round((800+nm*3)*(sh.up&&sh.up.wireless?0.7:1)*PX()/50)*50,ic=insOf(sh),ix=INS_EXCESS[ic.excess],own=ic.cover==='value'||ic.cover==='agreed'?Math.min(tug,Math.round((600*PX()*ix.own+Math.max(0,tug-600*PX()*ix.own)*0.25)/50)*50):tug;book('salvage',-own,rk,sh);
     const refund=back?Math.round(lg.paxRev):0;
     if(back){book('refund',-refund,rk,sh);lg.cargoRev=0;lg.mail=0;sh.dir^=1;sh.pos=dist-sh.pos;sh.stops=[];sh.nextCall=0;}
     else{sh.stops=sh.stops.slice(sh.nextCall).filter(x=>x[1]>sh.pos);sh.nextCall=0;}
     sh.towed=true;const tt=`Tug alongside SS ${sh.name}. Tow connected. Proceeding to ${PN[destOf(sh)]} at five knots.${back?' All fares to be refunded.':''}`;
     if(radioOf(sh))wire(sh,tt,'bad');else{relay(sh,tt,"Salvage tug's wireless",0,'bad');sh.seen={t:S.t,pos:sh.pos,stopped:false,v:120};}
-    news(`SS ${sh.name} broke down beyond repair at sea and is under tow to ${PN[destOf(sh)]}. Salvage ${fmt(tug)}, of which the underwriters pay ${fmt(tug-own)} and the Line ${fmt(own)}.${back?` She is going back, so her passengers are sent on by other lines and their fares refunded: ${fmt(refund)}.`:''}`,'bad');return;}
+    news(`SS ${sh.name} broke down beyond repair at sea and is under tow to ${PN[destOf(sh)]}. Salvage ${fmt(tug)}, ${own<tug?`of which the underwriters pay ${fmt(tug-own)} and the Line ${fmt(own)}`:'all of it the Line\'s: her policy does not cover salvage'}.${back?` She is going back, so her passengers are sent on by other lines and their fares refunded: ${fmt(refund)}.`:''}`,'bad');return;}
   wire(sh,`Repairs complete. Under way again at full speed.`,'good');
 }
 function voyageFlavour(sh){
@@ -272,7 +272,7 @@ function moveAll(step){
     }
   }
 }
-const shoreUpkeep=()=>{const s=S.shore;return Object.keys(s.fagents||{}).length*250+Object.keys(s.sheds||{}).length*200+Object.keys(s.cold||{}).length*400+Object.keys(s.piers).length*350+Object.keys(s.agents).length*300+Object.keys(s.hostels).length*250+Object.keys(s.yards).length*1200+(s.slip?1500:0)+Object.keys(S.depts||{}).reduce((a,k)=>a+deptCost(k).total,0);};
+const shoreUpkeep=()=>{const s=S.shore;return Object.keys(s.fagents||{}).length*500+Object.keys(s.sheds||{}).length*200+Object.keys(s.cold||{}).length*400+Object.keys(s.piers).length*350+Object.keys(s.agents).length*300+Object.keys(s.hostels).length*250+Object.keys(s.yards).length*800+(s.slip?1500:0)+Object.keys(S.depts||{}).reduce((a,k)=>a+deptCost(k).total,0);};
 function dailyTick(){
   wireTick();silentDaily();if(Math.floor(S.t)%7===0)deptWeek();
   for(const sh of S.ships){
@@ -281,7 +281,7 @@ function dailyTick(){
     const key=act?(sh.state==='sea'?sh.legRoute:sh.line):'_idle';
     book('crew',-(crewCost(sh)*f+(sh.captain?sh.captain.wage:0))/30,key,sh);
     if(act&&sh.fac)book('crew',-facMods(sh).staff*PX()/30,key,sh);
-    book('upkeep',-(insCost(sh)/30+(act?MAINT_COST[sh.maint]*sh.grt/8000/30:0)),key,sh);
+    book('ins',-insCost(sh)/30,key,sh);if(act)book('upkeep',-MAINT_COST[sh.maint]*sh.grt/8000/30,key,sh);
     if(act&&sh.cond<condCap(sh))sh.cond=clamp(sh.cond+MAINT_GAIN[sh.maint]/30,5,condCap(sh));
     else if(sh.state==='laid')sh.cond=clamp(sh.cond-0.02,5,95);
     foulDaily(sh);
@@ -303,7 +303,7 @@ function monthRoll(pm){
     const c={};for(const k in shipAcc[sh.id]||{})c[k]=Math.round(shipAcc[sh.id][k]);(sh.plc=sh.plc||[]).push(c);if(sh.plc.length>12)sh.plc.shift();}
   S.lastMonth={m:pm,cat:S.mtd.cat,lines:S.mtd.lines,ships:shipAcc,net,repay,capex:S.mtd.capex||0};
   {const r=o=>{const q={};for(const k in o)q[k]=Math.round(o[k]);return q;};(S.plHist=S.plHist||[]).push({m:pm,cat:r(S.mtd.cat),lines:r(S.mtd.lines)});if(S.plHist.length>12)S.plHist.shift();}S.mtd=blankLedger();
-  inflate();giltsMonth();taxMonth(net);crashMonth();unionMonth();combineMonth();
+  inflate();giltsMonth();insMonth();taxMonth(net);crashMonth();if(typeof seasonNews==='function')seasonNews(S.m);unionMonth();combineMonth();
   S.lastPax=S.pax;S.pax={};
   for(const id in RIVALS)S.rivalIdx[id]=clamp((S.rivalIdx[id]||1)+(Math.random()-0.5)*0.04,0.93,1.06);
   S.hist.push(Math.round(S.cash));if(S.hist.length>240)S.hist.splice(0,S.hist.length-240);
@@ -373,13 +373,21 @@ function refreshMarket(){
 /* the monthly bill for keeping the fleet and office going, before fuel and port costs */
 const runningCost=()=>S.ships.reduce((a,x)=>a+crewCost(x)+(x.captain?x.captain.wage:0)+insCost(x)+MAINT_COST[x.maint]*x.grt/8000,0)+600+250*S.ships.length+shoreUpkeep();
 const fleetValue=()=>S.ships.reduce((a,s)=>a+shipValue(s),0);
-const shoreValue=()=>{const s=S.shore;let v=0;for(const p in s.piers)v+=PIER_COST[p]*0.6;for(const y in s.yards)v+=120000*0.6;if(s.slip)v+=OWN_SLIP_COST*0.5;for(const h in s.hostels)v+=25000*0.5;for(const p in s.sheds||{})v+=SHED_COST*0.5;for(const p in s.cold||{})v+=COLD_COST*0.5;return v;};
-const netWorth=()=>S.cash+fleetValue()+shoreValue()-S.debt;
-const headroom=()=>Math.max(0,0.7*(fleetValue()+shoreValue())-S.debt);
+const shoreValue=()=>{const s=S.shore;let v=0;for(const p in s.piers)v+=PIER_COST[p]*0.6;for(const y in s.yards)v+=120000*0.6;if(s.slip)v+=OWN_SLIP_COST*0.5;for(const h in s.hostels)v+=35000*0.5;for(const p in s.sheds||{})v+=SHED_COST*0.5;for(const p in s.cold||{})v+=COLD_COST*0.5;return v;};
+const netWorth=()=>S.cash+(S.gilts||0)+fleetValue()+shoreValue()-S.debt;
+const headroom=()=>Math.max(0,0.7*(fleetValue()+shoreValue())+0.9*(S.gilts||0)-S.debt); // government stock is the best security a bank can hold
 const odLimit=()=>8000+0.5*headroom(); // the bank forecloses when cash falls below minus this
 function news(t,k,pauseIt){
   S.news.unshift({d:Math.floor(S.t),t,k:k||''});if(S.news.length>80)S.news.length=80;
-  if(pauseIt&&UI.autoPause&&UI.speed>0){UI.speed=0;UI.banner=t;}
+  if(pauseIt)eventClock(t,pauseIt===2);
+}
+/* on big news the clock slows (or pauses, or carries on, as the owner prefers); it picks up again once the owner acts or the moment passes */
+function eventClock(t,grave){
+  if(typeof UI==='undefined'||UI.speed===0||S.over||UI.eventMode==='off')return;
+  if(UI.eventMode==='pause'){UI.speed=0;UI.banner=t;return;}
+  const s=grave?SLOW_GRAVE:SLOW_EVENT,now=typeof performance!=='undefined'?performance.now():0;
+  if(UI.slow&&UI.slow.rate<s.rate&&UI.slow.until>now)return; // a graver slow-down already running stays
+  UI.slow={rate:s.rate,until:now+s.ms,text:t};UI.dirty=true;
 }
 
 /* things the timeline does, besides the news */

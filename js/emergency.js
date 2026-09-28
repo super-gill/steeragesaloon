@@ -248,9 +248,8 @@ function emergencyStep(e,sh,step){
 const sickNow=(e,sh)=>{const n=Math.max(2,Math.round((e.crew?crewOf(sh):soulsOf(sh))*e.threat/100*0.45));return `${int(n)} ${e.crew?'of the crew':'passengers'}`;};
 /* a ship given up: to the sea, or to the underwriters */
 function writeOff(e,sh,how){
-  sh.lost={t:S.t,where:posText(sh),saved:1,lost:0};queueInquiry(sh,e);
-  const v=Math.round(shipValue(sh)*0.85);S.cash+=v;S.rep=clamp(S.rep-3,0,100);payMortgage(sh,v);
-  news(`SS ${e.ship} is a constructive total loss ${how}. Everyone aboard was saved. The underwriters pay ${fmt(v)} and take her over.`,'bad',true);
+  sh.lost={t:S.t,where:posText(sh),saved:1,lost:0};const c=insClaim(sh,0.85);queueInquiry(sh,e);S.rep=clamp(S.rep-3,0,100);
+  news(`SS ${e.ship} is a constructive total loss ${how}. Everyone aboard was saved. ${insOf(sh).cover==='none'?c.txt:`The underwriters take her over. ${c.txt}`}`,'bad',2);
   S.ships=S.ships.filter(x=>x!==sh);if(S.selShip===sh.id)S.selShip=S.ships[0]?S.ships[0].id:null;
 }
 function emEnd(e,sh,how){
@@ -293,7 +292,7 @@ function emEnd(e,sh,how){
     S.rep=clamp(S.rep-Math.round(sev*4),0,100);sh.stopLeft=e.delay||0;
     emSay(e,sh,`${D.type==='water'?'Leak under control':'Fire out'}. Proceeding at reduced speed${help?', escorted':''}. ${sev>0.5?'Damage heavy. Will need the yard.':'Damage moderate.'}`,'good');}
   if(D.type==='sick'){const dd=DISEASE[e.dis]||DISEASE.flu,pool=e.crew?crewOf(sh):souls,ill=Math.round(pool*e.peak/100*0.45),dead=Math.round(ill*dd.mort*(e.iso?0.7:1)*crewMods(sh).sick);
-    e.dead=dead;S.rep=clamp(S.rep-(dead>10?dd.rep+2:dead?dd.rep:1),0,100);
+    e.dead=dead;const sg=offOf(sh).surg;S.rep=clamp(S.rep-(dead>10?dd.rep+2:dead?dd.rep:(sg&&sg.skill>=60?-1:0)),0,100); // an outbreak with no deaths is no scandal; a good surgeon's handling of it is praised
     if(!e.landed)sh.quarantine={dis:e.dis,iso:!!e.iso,quiet:!!e.quiet,peak:e.peak};
     emSay(e,sh,`Outbreak over. ${ill} were ill. ${dead?dead+' died.':'No deaths.'}${e.landed?' Sick landed ashore.':e.quiet?'':' Expect quarantine on arrival.'}`,dead?'bad':'good');}
   if(D.type==='unrest'){sh.stopLeft=0;if(!e.settle){const c=Math.round(800+R()*2000);book('crew',-c,rk,sh);S.rep=clamp(S.rep-3,0,100);}

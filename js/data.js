@@ -1,5 +1,5 @@
 /* ================= DATA ================= */
-const GAME_VERSION='0.15.0',GAME_BUILT='27 September 2026'; // bump on every release; see CHANGELOG.md
+const GAME_VERSION='0.18.0',GAME_BUILT='28 September 2026'; // bump on every release; see CHANGELOG.md
 const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 const CL=['f','s','t','tt'];
 const CL_NAME={f:'First',s:'Second',t:'Third',tt:'Tourist Third'};
@@ -84,7 +84,7 @@ const SERV={f:[.8,1,1.15],s:[.9,1,1.08],t:[.97,1,1.02],tt:[.88,1,1.1]};
 const SPD_D={f:[.92,1,1.06],s:[.95,1,1.04],t:[1,1,1],tt:[.95,1,1.03]};
 const PROV={f:1.2,s:.45,t:.12,tt:.25}; // catering, pounds per passenger per day
 const CRUISE_SPEND={f:.7,s:.35,t:.1,tt:.2}; // bars, deck games and shore excursions on a cruise, pounds per passenger per day
-const SERV_COST=[.7,1,1.9], SERV_REP=[-.8,.1,1.2];
+const SERV_COST=[.7,1,1.6], SERV_REP=[-.8,.1,1.2];
 const SPD=[.85,1,1.1], SPD_REP=[-.3,0,.4], SPD_WEAR=[.8,1,1.7];
 const MAINT_COST=[0,700,1800], MAINT_GAIN=[0,1.4,3.2];
 const ADV_COST=[0,300,800,1500], ADV_MULT=[1,1.06,1.12,1.17];
@@ -114,7 +114,10 @@ const RIVALS={
   pampas:{name:'Pampas & Plate Line',flag:'British'},
   gulf:{name:'Mersey & Gulf Line',flag:'British'}
 };
-const SPEEDS=[0,0.6,1.8,4.2]; // game days per real second at Pause, 1×, 3×, 7×
+const SPEEDS=[0,0.3,0.9,2.1,4.2]; // game days per real second at Pause, 1×, 3×, 7×, 14×: a year is about 20 minutes at 1×
+const SPEED_LABELS=['Pause','1×','3×','7×','14×'];
+/* a big event slows the clock rather than stopping it: a quarter of 1× for 20 seconds, a tenth for 30 after the worst news */
+const SLOW_EVENT={rate:0.075,ms:20000},SLOW_GRAVE={rate:0.03,ms:30000};
 const TEMPL=[
   {name:'Morven',built:1899,grt:8000,knots:14,berths:{f:60,s:180,t:900,tt:0},cargo:3000,fuel:'coal',base:200000},
   {name:'Tay Castle',built:1895,grt:5500,knots:13,berths:{f:30,s:110,t:700,tt:0},cargo:2400,fuel:'coal',base:140000},
@@ -165,11 +168,11 @@ const HOSTEL_PORTS=['GLA','LIV','SOU','HAM'];
 /* freight: canvassing agents win cargo for every line calling in their region; transit sheds speed handling at a port;
    cold stores hold chilled meat and fruit for the ships that can carry it */
 const FAGENCY={
-  british:{name:'British freight canvassers',ports:['GLA','LIV','MOV','QUE','AVO','SOU'],cost:10000},
-  continent:{name:'Continental forwarding agents',ports:['HAM','CHE'],cost:10000},
-  med:{name:'Mediterranean forwarding agents',ports:['GEN','NAP','GIB','LIS'],cost:8000},
-  americas:{name:'American shipping brokers',ports:['NYC','HAL','SJN','QBC','MTL','NOL','GAL','KIN','RIO','MVD','BUE'],cost:14000},
-  africa:{name:'West African produce buyers',ports:['FRE','LAG'],cost:8000}
+  british:{name:'British freight canvassers',ports:['GLA','LIV','MOV','QUE','AVO','SOU'],cost:20000},
+  continent:{name:'Continental forwarding agents',ports:['HAM','CHE'],cost:20000},
+  med:{name:'Mediterranean forwarding agents',ports:['GEN','NAP','GIB','LIS'],cost:16000},
+  americas:{name:'American shipping brokers',ports:['NYC','HAL','SJN','QBC','MTL','NOL','GAL','KIN','RIO','MVD','BUE'],cost:28000},
+  africa:{name:'West African produce buyers',ports:['FRE','LAG'],cost:16000}
 };
 const SHED_COST=18000,COLD_COST=30000,COLD_PORTS=['BUE','MVD','KIN','LIV','SOU','GLA','NYC'];
 const YARD_PORTS={GLA:'the Clyde',LIV:'the Mersey'};

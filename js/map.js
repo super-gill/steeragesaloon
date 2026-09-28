@@ -69,6 +69,7 @@ function renderMap(){
   renderPorts();
   const b=document.getElementById('banner');
   if(UI.speed===0&&UI.banner&&!S.over){b.hidden=false;setHTML(b,`<span>${UI.banner}</span><button class="btn primary" data-act="speed" data-v="1">Resume</button>`);}
+  else if(UI.slow&&UI.speed>0&&!S.over){b.hidden=false;setHTML(b,`<span><b>Slowed</b> · ${UI.slow.text}</span><button class="btn primary" data-act="unslow">Carry on</button>`);}
   else b.hidden=true;
 }
 const MARKS={};

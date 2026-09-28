@@ -1,7 +1,7 @@
 /* ================= STATE ================= */
 const KEY='steerage-saloon-v2';
 let S=null;
-const UI={speed:0,tab:'overview',confirm:null,banner:'Paused. Press 1× to start the clock.',autoPause:true,view:'ext',dirty:true};
+const UI={speed:0,tab:'overview',confirm:null,banner:'Paused. Press 1× to start the clock.',eventMode:(()=>{try{return localStorage.getItem('ss_eventmode')||'slow';}catch(e){return 'slow';}})(),view:'ext',dirty:true};
 function newGame(){
   S={v:2,t:0,m:0,cash:18000,debt:40000,rep:30,conf:false,ships:[],lines:{},wars:{},mail:{},offer:null,market:[],news:[],hist:[18000],
      mtd:blankLedger(),lastMonth:null,nextId:1,over:false,selShip:1,selLine:'hal',odWarn:false,tension:{},pax:{},lastPax:{},rivalIdx:{},dismiss:{},

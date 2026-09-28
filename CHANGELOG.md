@@ -2,6 +2,45 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.18.0 (28 September 2026)
+Current affairs.
+- The times, on the Overview: the month's season and what it means, then every condition in force and what it is doing to trade in numbers, for the line most of the fleet sails: the season against the year's average, the American quotas, the post-war slump and the prosperous twenties, the Depression (and how far costs have fallen with it), a panic in the City, the long boom, air competition, the coal dispute and dear coal, the cost of living, rate wars on your lines and Prohibition. Everything is read from the same figures the sailings use.
+- Coming: the next season and when it starts, and what a real owner would know was on the way (the 1924 immigration bill, the coal strike, the end of Prohibition, the Ocean Aid Convention).
+- History so far: every headline since 1921, newest first, with those still in force marked.
+- A line in the news as each season turns.
+- A ship's profit and loss names what is weighing on her line now (winter, the quotas, the Depression and so on).
+- The page's scripts carry the version, so a browser picks up each release instead of an old copy.
+
+## 0.17.1 (28 September 2026)
+- A ship's panel says in her description whether she has wireless, and the refit office lists what each section already has fitted, so equipment that is already aboard no longer just seems to be missing.
+- Head office's yard suggestions for a ship stay up when she is already booked into the yard, and offer to add the work to the same visit, instead of disappearing.
+- When acting on one suggestion settles others (a line now has its ship, a contract changes the sums), the Advice tray says which ones and why they went, instead of them vanishing without a word.
+
+## 0.17.0 (28 September 2026)
+The clock and insurance.
+- The clock runs at half its old speed: a year takes about 20 minutes at 1×. A new 14× runs at the old 7× for quiet stretches.
+- Big events slow the clock instead of stopping it: it drops to a quarter of 1× for about 20 seconds (a tenth, for 30 seconds, when a ship is lost), with the news in the banner, then picks up again on its own. Acting on anything, or pressing Carry on, brings it back at once. In Company settings, "On big events" chooses slow down (the default), pause as before, or carry on.
+- Insurance on each ship's panel, in its own group. Choose the cover: none, the mortgage only, her market value (the default) or an agreed value a quarter above it; while she is mortgaged the bank insists on cover for its share. Choose the excess: none, standard or high, trading the premium against what the Line pays itself on a claim.
+- The panel shows what she is insured for, the premium and rate, and what a loss would pay, how much of it goes to the mortgagees and what the Line keeps. One button sets the same policy for the whole fleet and for new ships.
+- Premiums follow her condition and wear as before, plus the excess and the Line's recent claims, which fade over a few years. Laid up, she is insured for port risks only, at about a third of the premium.
+- A loss now pays by her policy: the insured sum less the excess, the mortgagees first, and the news says what the Line keeps. With no cover the Line bears the whole loss; with mortgage-only cover salvage is not covered either.
+- Insurance has its own line in the Finance ledger and in each ship's profit and loss, apart from maintenance.
+
+## 0.16.0 (28 September 2026)
+A balance pass, the first release of the 1900 overhaul.
+- In the Depression the costs of running ships fall too: at the trough coal and oil cost a quarter less, wages a tenth less, port dues 15% less and insurance a tenth less, easing back with the recovery. A good ship on a good line can keep sailing through the slump.
+- Government stock counts in the Line's net worth, and the bank lends against it (90% of its value).
+- A laid-up ship keeps her crew content, but with no sea time and no training their skill drifts down; training costs stop while she is laid up.
+- An outbreak aboard with no deaths costs no reputation, and a good surgeon's handling of it earns a little.
+- The forecasts count each ship's own turnaround at both ends of her route, so cargo gear, hatches, piers and transit sheds now show the days and money they save.
+- Oil gets cheaper through the mid-twenties to about nine-tenths the cost of coal for the same miles, so an oil conversion can pay for itself.
+- Freight canvassers win about 8% more cargo instead of 15%, and cost twice as much to appoint and to keep.
+- A repair yard costs £150,000 instead of £300,000, and £800 a month instead of £1,200.
+- An emigrant hostel costs £35,000 instead of £60,000, and lifts steerage on lines calling there by 12% instead of 5%.
+- A lavish table costs less to keep (provisions at 1.6 times standard instead of 1.9).
+- The refit office warns when stabilisers, the radio-telephone, air conditioning or luxury suites would only pay on a big first-class ship, with what they would earn her and how long they would take to pay back.
+- Beside a cruise conversion, the refit office shows what she would earn on her best cruise once converted, against her own line in the same months and cruising as she is.
+
 ## 0.15.0 (27 September 2026)
 - Cruise programmes: a ship can have several cruises, not just one. In each cruise's months she sails it from its home port; where two seasons meet she finishes the one she is on first; in the months between she goes back to her own line, or lays up if she had none. A converted ship can cruise most of the year: Madeira in winter, the Mediterranean in spring and autumn, the fjords in summer.
 - Her year, on her panel: a strip of the next twelve months showing where she will sail and about what she makes each month, and her average month with the programme against her own line all year, after the light passages between home ports.

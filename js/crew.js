@@ -44,7 +44,7 @@ function offOf(sh){
   for(const r of OFF_KEYS){if(OFFICER[r].need(sh)){if(!sh.off[r])sh.off[r]=makeOfficer(r,offRand,4);}else if(sh.off[r])sh.off[r]=null;}
   return sh.off;
 }
-const offWage=o=>Math.round(o.wage*PX());
+const offWage=o=>Math.round(o.wage*slumpK('wage')*PX());
 function refreshOffPool(){
   const n=S.depts&&S.depts.crew?5:3,boost=S.depts&&S.depts.crew?8:0;
   S.offPool={};for(const r of OFF_KEYS)S.offPool[r]=Array.from({length:n},()=>makeOfficer(r,offRand,boost));
@@ -54,7 +54,7 @@ const cwSk=(sh,d)=>{const q=cwOf(sh)[d],o=offOf(sh)[CDEPT[d].off];return q.sk*0.
 
 function cdCost(sh,d){
   const q=cwOf(sh)[d],n=deptCount(sh,d)*MAN[q.man][1],px=PX();
-  return n*16.8*CREW_PAY_MULT[q.pay]*(CDEPT[d].union?(S.wageK||1):1)*safetyOf().crew*px+n*TRAIN[q.train][1]*px;
+  return (n*16.8*CREW_PAY_MULT[q.pay]*(CDEPT[d].union?(S.wageK||1):1)*safetyOf().crew*px+(sh.state==='laid'?0:n*TRAIN[q.train][1]*px))*slumpK('wage');
 }
 function crewCostOf(sh){
   let c=0;for(const d of CD_KEYS)c+=cdCost(sh,d);
@@ -86,9 +86,10 @@ function crewMonth(){
     let tot=0,n=0;
     for(const d of CD_KEYS){const q=cw[d],o=off[CDEPT[d].off];if(dm)q.mor=clamp(q.mor+dm,0,100);
       const tgt=MORALE_TARGET[q.pay]+m+(q.man===0?-8:q.man===2?4:0)+(q.train?3:0)+(o?(o.skill-50)/10:-3);
-      q.mor=clamp(q.mor+(tgt-q.mor)*0.15,0,100);
+      if(sh.state==='laid'){q.sk=clamp(q.sk-0.8,25,95);} // laid up: no training and no sea time, so skill drifts down, but the men kept on are content
+      else{q.mor=clamp(q.mor+(tgt-q.mor)*0.15,0,100);
       const st=TRAIN[q.train][2]+(o?(o.skill-50)/5:-4)-(q.mor<40?10:0);
-      q.sk=clamp(q.sk+(st-q.sk)*0.06,10,95);
+      q.sk=clamp(q.sk+(st-q.sk)*0.06,10,95);}
       const k=deptCount(sh,d)*MAN[q.man][1];tot+=q.mor*k;n+=k;}
     sh.morale=n?tot/n:60;sh._mor=sh.morale;sh.pay=cw.deck.pay;
   }
