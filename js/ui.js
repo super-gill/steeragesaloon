@@ -261,7 +261,7 @@ function renderShipDetail(sh){
 }
 
 /* her own account and her choice of line, side by side: what she made, and what she would make elsewhere */
-const INCOME=['fares','onboard','cargo','mail','shorein'];
+const INCOME=['fares','onboard','cargo','mail','shorein','subsidy'];
 let SHIP_OPTS={key:null};
 function shipOptions(sh){
   const key=S.m+'|'+UI.rev+'|'+sh.id;if(SHIP_OPTS.key===key)return SHIP_OPTS.v;
@@ -520,7 +520,7 @@ function chart(){
     <polyline points="${pts}" style="fill:none;stroke:var(--brass)" stroke-width="1.8"/><circle cx="${x(h.length-1)}" cy="${y(h[h.length-1])}" r="3.5" style="fill:${h[h.length-1]<0?'var(--bad)':'var(--brass)'}"/></svg></div>`;
 }
 /* profit and loss by ship: four figures a ship, and the company's own costs below, adding up to the Line's result */
-const PL_TAKE=['fares','onboard','cargo','mail'],PL_RUN=['fuel','port','crew','upkeep','ins'];
+const PL_TAKE=['fares','onboard','cargo','mail','subsidy'],PL_RUN=['fuel','port','crew','upkeep','ins'];
 const avgOf=list=>{const o={};for(const c of list)for(const k in c)o[k]=(o[k]||0)+c[k]/list.length;return o;};
 function plData(){
   const mode=UI.plMonth||'year',LM=S.lastMonth,H=S.plHist||[];

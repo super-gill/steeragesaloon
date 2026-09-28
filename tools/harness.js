@@ -7,7 +7,7 @@
    Prints survival, net worth by year, first-year profit, rate wars and profit by route. */
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const ROOT = path.join(__dirname, '..');
-const FILES = ['chart-data', 'data', 'helpers', 'economy', 'lanes', 'wireless', 'silent', 'emergency', 'ledger', 'sim', 'rivals', 'companies', 'outside', 'trust', 'yard', 'naval', 'facilities', 'crew', 'state', 'clock', 'advice', 'times'].map(f => path.join(ROOT, 'js', f + '.js'));
+const FILES = ['chart-data', 'data', 'helpers', 'economy', 'lanes', 'wireless', 'silent', 'emergency', 'ledger', 'sim', 'rivals', 'companies', 'outside', 'trust', 'prewar', 'yard', 'naval', 'facilities', 'crew', 'state', 'clock', 'advice', 'times'].map(f => path.join(ROOT, 'js', f + '.js'));
 const SRC = FILES.map(f => [f, fs.readFileSync(f, 'utf8')]).map(([f, s]) => [f, process.env.PATCH ? s.replace(/^const /gm, 'var ') : s]);
 
 const PRELUDE = `
@@ -39,7 +39,12 @@ const STRATS={
   /* the sensible owner the 1900 targets are set for: keeps six months' running costs in hand, borrows no more than half
      the fleet's value, buys only ships that should earn a sixth of their price a year, and lays up a ship that loses money */
   careful(){const run=runningCost();
-    if(S.debt<0.5*fleetValue())for(const m of S.market.slice()){const dep=Math.round(m.price*0.4);if(S.cash-dep<Math.max(12000*PX(),5*run))continue;
+    // on rumours of a panic a careful owner puts spare cash into government stock, safe from a failing bank; after it, back
+    if(S.crash&&S.crash.stage==='rumour'){const spare=Math.floor((S.cash-3*run)/1000)*1000;if(spare>0)gilts(true,spare);return;}
+    if(S.gilts>0&&(!S.crash&&!S.call||S.cash<3*run))gilts(false,S.gilts); // back out of stock after the panic, or to pay the bills
+    if(S.crash||S.call)return;
+    if(S.debt>0&&S.cash>12*run){const r=Math.min(S.debt,Math.floor((S.cash-12*run)/1000)*1000);if(r>0){S.cash-=r;S.debt-=r;}} // pay down the mortgage when flush
+    if(S.debt-Math.max(0,S.cash)<0.35*fleetValue())for(const m of S.market.slice()){const dep=Math.round(m.price*0.4);if(S.cash-dep<Math.max(12000*PX(),6*run))continue;
       const b=H.bestRoute(m);if(!b||b.pm*12<m.price/8)continue;const sh=H.buy(m);if(!sh)continue;if(!S.lines[b.rk])H.openLine(b.rk);if(S.lines[b.rk])H.assign(sh,b.rk);break;}
     // twice a year: a ship that lost money over the year goes where she would pay, or is sold; a worn-out one is sold
     if(S.m%6===0)for(const x of S.ships.slice()){if(S.ships.length<2)break;const loss=(x.pl||[]).length>=12&&x.pl.reduce((a,v)=>a+v,0)<0;

@@ -69,7 +69,7 @@ function renderDesigner(){
   const bl=Object.keys(BUILDERS).concat(S.shore&&S.shore.slip?['own']:[]).map(k=>{const b=k==='own'?ownBuilder():BUILDERS[k],fr=slipFreeAt(k);
     return pick('builder',k,`${b.name}, ${PN[b.port]}`,`${b.blurb} Price ×${b.price.toFixed(2)}, pace ×${(1/b.speed).toFixed(2)}. ${fr<=S.m?'A slip is free now.':'Next slip free '+monthName(fr)+'.'}${d.grt>b.max?' Too small for this ship.':''}`,d.builder===k,d.grt>b.max);}).join('');
   const mixRow=c=>`<div class="mixrow"><span>${CL_NAME[c]}</span><input type="range" min="0" max="100" step="1" value="${d.mix[c]}" data-dz="mix.${c}" aria-label="${CL_NAME[c]} share of passenger space" ${c==='tt'&&y<1925?'disabled':''}><span class="num">${st.berths[c]} berths</span></div>`;
-  const ok=!st.warn.length,dep=Math.round(st.price*0.1),b=f.best,fl=f.line;
+  const ok=!st.warn.length,dep=Math.round(st.price*0.1*(d.adm&&admEligible(d)?1/3:1)),b=f.best,fl=f.line;
   const pct=v=>Math.round(v*100);
   const reach=S.cash+headroom(),need=st.price*0.6;
   const fund=reach<need?`<p class="warnline">You would need about ${fmt(need)} over the next ${Math.round(st.months*0.62)+2} months to reach her launch, and you can raise about ${fmt(Math.max(0,reach))} today. Work stops if a payment cannot be met.</p>`:'';
@@ -94,7 +94,8 @@ function renderDesigner(){
       ${fund}</div><div class="dz-bot stack">
       <div class="ctl"><label class="lbl" for="dzName">Her name</label><div class="row" style="gap:6px"><input id="dzName" data-dzname="1" data-keep="1" value="${esc(d.name)}" placeholder="Name her" maxlength="28" style="flex:1"><button class="btn" data-act="dzname">Suggest</button></div></div>
       <div class="ctl"><span class="lbl">Contract</span><div class="seg">${[['fixed','Fixed price (+8%)'],['cost','Cost plus']].map(([k,l])=>`<button data-act="dz" data-k="contract" data-v="${k}" aria-pressed="${d.contract===k}">${l}</button>`).join('')}</div>
-        <span class="note">${d.contract==='fixed'?'The yard carries the risk of rising costs.':'Cheaper on paper, but overruns are yours.'} Payments: 10% with the order (${fmt(dep)}), 20% at the keel, 30% at the launch, 40% on delivery, when the bank will advance up to half her price on mortgage. If you cannot pay a stage, work stops; six months unpaid and the yard cancels. ${st.months} months on the slip.</span></div>
+        ${admEligible(d)?`<div class="row" style="justify-content:flex-start;gap:8px"><button class="btn" data-act="dzadm" aria-pressed="${!!d.adm}">${d.adm?'On Admiralty terms':'Take the Admiralty\'s terms'}</button></div><span class="note">Built to naval standards (5% dearer). The Admiralty lends two thirds of every payment at 2.75% over twenty years and pays ${fmt(Math.round(st.price*ADM_SUB/1000)*1000)} a year while she sails. In a war she may be taken as an armed merchant cruiser, and her loan must be repaid before she is sold.</span>`:newCal()&&S.m>=ADM_FROM&&S.m<M21?`<span class="note">The Admiralty offers cheap loans and a subsidy for ships of 24 knots and 20,000 tons or more built to naval standards.</span>`:''}
+        <span class="note">${d.contract==='fixed'?'The yard carries the risk of rising costs.':'Cheaper on paper, but overruns are yours.'} Payments: 10% with the order (${fmt(dep)}${d.adm&&admEligible(d)?', your third of it':''}), 20% at the keel, 30% at the launch, 40% on delivery, when the bank will advance up to half her price on mortgage. If you cannot pay a stage, work stops; six months unpaid and the yard cancels. ${st.months} months on the slip.</span></div>
       ${UI.dzMsg?`<p class="badline">${UI.dzMsg}</p>`:''}
       <button class="btn primary" data-act="dzorder" ${!ok||S.cash<dep||S.over?'disabled':''}>Place the order · ${fmt(dep)} now</button>
     </div></div>

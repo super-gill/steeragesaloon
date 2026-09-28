@@ -65,7 +65,8 @@ const slotsOf=sh=>2+Math.floor(sh.grt/8000);
 const slotsUsed=(fac)=>FAC_KEYS.reduce((a,k)=>a+((fac&&fac[k])||0),0);
 const levelOk=(k,l,grt,y)=>{const L=FAC[k].levels[l];return !!L&&(!L.min||grt>=L.min)&&(!L.from||y>=L.from);};
 /* what the ship's facilities add up to: appeal by class (capped), winter draw, money spent aboard, staff */
-function facMods(sh){
+function facMods(sh){return modCached('facMods',sh,facModsRaw);}
+function facModsRaw(sh){
   const key=JSON.stringify(sh.fac||{})+'|'+JSON.stringify(sh.upR||{})+'|'+sh.grt;
   if(sh._fm&&sh._fm.k===key)return sh._fm.v;
   const app={f:0,s:0,tt:0,t:0},win={f:0,s:0,tt:0,t:0},spend={f:0,s:0,tt:0,t:0};let staff=0;

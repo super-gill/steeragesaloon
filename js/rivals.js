@@ -93,7 +93,7 @@ function marketFor(rk,opens){
 /* ---------- market maths ---------- */
 const turnPair=rk=>{const c=ROUTES[rk].cruise;return c?c.turn+(c.home!==undefined?c.home:TURN_DAYS):2*TURN_DAYS;};
 const sailings=(knots,rk,sm=1)=>{const r=ROUTES[rk];return 30/(2*r.dist/(knots*sm*24)+turnPair(rk)+(r.cruise?1:2)*(r.calls.length-2)*CALL_DAYS);}; // round trips per month
-function marketM(rk,c,dir,m){const r=ROUTES[rk];if(!routeOpen(rk,m))return 0;return S.mkt[rk][c]*r.base[c]*(dir===0?dirW(rk,c):1-dirW(rk,c))*seasonOf(rk,c,m)*histMod(c,rk,m);}
+function marketM(rk,c,dir,m){const r=ROUTES[rk];if(!routeOpen(rk,m))return 0;return S.mkt[rk][c]*r.base[c]*(dir===0?dirW(rk,c):1-dirW(rk,c))*seasonOf(rk,c,m)*histMod(c,rk,m)*(dir===1&&(c==='t'||c==='tt')?preReturn(m):1);}
 function rivalBerths(x,c){if(isCruise(x.route)){const st=ROUTES[x.route].cruise.steerage;return c==='tt'?(st?0:x.berths.t):c==='t'?(st?x.berths.t:0):x.berths[c];}if(c==='tt')return S.m>=ym(1925,0)?Math.round(x.berths.t*0.25):0;if(c==='t'&&S.m>=ym(1925,0))return Math.round(x.berths.t*0.75);return x.berths[c];}
 /* speed sells cabins, above all on prestige routes: an old 14-knot steamer cannot hold first class against 20-knot giants */
 const speedAppeal=(knots,rk,c)=>{const p=ROUTES[rk].prestige,k=(c==='f'||c==='s')?Math.max(0,(p-0.8)*1.8):Math.max(0,(p-0.8)*0.4);return Math.pow(knots/16,k);};
@@ -124,7 +124,17 @@ function shoreMult(rk,c){
   if((c==='t'||c==='tt')&&calls.some(p=>S.shore.hostels[p]))x*=1.12;
   return x;
 }
-function rivalWeight(rk,c,owner){let a=0;for(const x of S.rships)if(x.route===rk&&(!owner||x.owner===owner)){const b=rivalBerths(x,c);if(b)a+=b*sailings(x.knots,rk)*rivalAppeal(x.owner,rk,c,x);}return a;}
+/* rival weight is asked for thousands of times while head office runs its forecasts; it cannot change within a day
+   unless the rival fleets, fares, a war or the Line's shared shore services change, so it is kept for the day */
+const RW_CACHE={k:null,m:new Map()};
+function rivalWeight(rk,c,owner){
+  const day=Math.floor(S.t)+'|'+S.m+'|'+S.rships.length+'|'+(S.rnext||0)+'|'+Object.keys(S.wars).length+'|'+Object.keys((S.shore&&S.shore.sell)||{}).length;
+  if(RW_CACHE.k!==day){RW_CACHE.k=day;RW_CACHE.m.clear();}
+  const key=rk+c+(owner||'')+'|'+((S.rfare&&S.rfare[rk])||1)+'|'+(S.wars[rk]?S.wars[rk].left:0);
+  let v=RW_CACHE.m.get(key);if(v===undefined){v=rivalWeightRaw(rk,c,owner);RW_CACHE.m.set(key,v);}
+  return v;
+}
+function rivalWeightRaw(rk,c,owner){let a=0;for(const x of S.rships)if(x.route===rk&&(!owner||x.owner===owner)){const b=rivalBerths(x,c);if(b)a+=b*sailings(x.knots,rk)*rivalAppeal(x.owner,rk,c,x);}return a;}
 function ourWeight(rk,c,exclude){let a=0;if(!S.lines[rk])return 0;
   for(const sh of S.ships)if(sh!==exclude&&sh.line===rk&&ACTIVE.includes(sh.state)&&sh.berths[c])a+=sh.berths[c]*sailings(knotsOf(sh),rk,SPD[sh.speed])*ourAppeal(sh,rk,c);return a;}
 function cargoWeight(rk,exclude,reefer){let a=0;for(const x of S.rships)if(x.route===rk)a+=x.cargo*sailings(x.knots,rk)*(reefer&&!x.reefer?0.15:1);a*=outCargo(rk); // shared canvassers help them
@@ -178,7 +188,7 @@ function rivalMove(o,rk,kind,ship,to){
 }
 /* the rival lines' month: fares, then each company's accounts and decisions (companies.js), then new lines */
 function rivalsMonth(){
-  const m=S.m,R=Math.random;
+  const m=S.m,R=Math.random;RW_CACHE.k=null;
   // price matching: where the Morven Line undercuts, the route's fare level follows it down over a few months
   S.rfare=S.rfare||{};
   for(const rk in ROUTES){const cur=S.rfare[rk]||1,act=S.lines[rk]&&S.ships.some(x=>x.line===rk&&ACTIVE.includes(x.state));
@@ -205,7 +215,7 @@ function rivalsMonth(){
       const sh0=coFleet(o).reduce((a,x)=>a+x.grt,0)/Math.max(1,S.rships.reduce((a,x)=>a+x.grt,0)),big=sh0<=0.2?1:Math.max(0.05,1-(sh0-0.2)*5); // the biggest lines grow more slowly: their bankers and the conference hold them back
       if((S.rorders||[]).some(q=>q.o===o&&q.rk===rk))continue; // one ship on order for a trade at a time
       // in the emigrant years the lines add tonnage later: they wait for the ships to run well above their usual loads
-      const grow=newCal()&&m<ym(1914,7)?1.3:1.12;
+      const grow=newCal()&&m<ym(1914,7)?1.2:1.12;
       if(fight||(st.rel>grow&&coProfit(o)>0&&R()<(0.16*P.aggr+(ourShare>0.25?0.1:0))*big)){
         // a new ship takes ten months to a year and a half to build (half a year for a ship bought to fight), so a sudden boom
         // leaves the trade short of berths for a while
@@ -230,7 +240,7 @@ function rivalsMonth(){
     if(m%12===0&&coAlive(o))coYearEnd(o);
     coFinance(o,stats);
   }
-  coEntrants(stats);
+  coEntrants(stats);RW_CACHE.k=null; // ships moved, sold, built or scrapped: weigh them afresh
 }
 /* seasonal demand now, relative to the reference month used for load0 (July 1921) */
 function seasonNorm(rk,m){const r=ROUTES[rk];let a=0,b=0;for(const c of ['f','s','t','tt']){if(c==='tt'&&!r.cruise)continue;a+=r.base[c]*seasonOf(rk,c,m);b+=r.base[c]*seasonOf(rk,c,6);}return a/b;} // season only: quotas and booms register as real change
@@ -240,7 +250,7 @@ function initVis(x){const gk=geoKey(x.route,S.m),d=GEO(gk).dist,out=x.phase<0.5,
   return x.v={gk,dir:out?0:1,pos:(out?x.phase*2:x.phase*2-1)*d,wait:0,port:out?A:B,repo:null};}
 function newRivalVis(x){const gk=geoKey(x.route,S.m),[A]=geoEnds(gk);x.v={gk,dir:0,pos:0,wait:2+jr(x.id)*3,port:A,repo:null};}
 /* a ship that leaves a route's market (sold, scrapped, withdrawn) keeps sailing to the next port before she goes */
-function dropRival(x){S.rships=S.rships.filter(y=>y!==x);const v=x.v;if(v&&!(v.wait>0))(S.ghosts=S.ghosts||[]).push({id:x.id,name:x.name,owner:x.owner,knots:x.knots,v});}
+function dropRival(x){RW_CACHE.k=null;S.rships=S.rships.filter(y=>y!==x);const v=x.v;if(v&&!(v.wait>0))(S.ghosts=S.ghosts||[]).push({id:x.id,name:x.name,owner:x.owner,knots:x.knots,v});}
 function startRivalLeg(x,route){const v=x.v,gk=geoKey(route,S.m),[A,B]=geoEnds(gk);
   if(v.port===A||v.port===B){v.gk=gk;v.dir=v.port===A?0:1;v.pos=0;}
   else v.repo={to:laneDist(v.port,A)<=laneDist(v.port,B)?A:B,pos:0};}

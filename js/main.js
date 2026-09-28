@@ -54,6 +54,7 @@ document.addEventListener('click',e=>{
     case 'dzview':UI.dzView=b.dataset.v;break;
     case 'dzauto':if(UI.dz)UI.dz.auto={mach:true,form:true};break;
     case 'dz':dzSet(b.dataset.k,b.dataset.v);UI.dzMsg=null;break;
+    case 'dzadm':if(UI.dz)UI.dz.adm=!UI.dz.adm;break;
     case 'dzname':{const L=SHIP_NAMES[UI.dz.purpose]||SHIP_NAMES.inter,used=new Set(S.ships.map(x=>x.name).concat((S.orders||[]).map(o=>o.d.name)));
       const c=L.filter(n=>!used.has(n));UI.dz.name=c.length?c[Math.floor(Math.random()*c.length)]:L[0]+' II';const i=$('dzName');if(i)i.value=UI.dz.name;break;}
     case 'dzorder':{const r=placeOrder(UI.dz);if(r.ok){UI.dz=null;UI.dzMsg=null;closeDesigner();UI.tab='brokers';}else UI.dzMsg=r.why;break;}

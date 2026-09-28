@@ -5,8 +5,8 @@ function withTemp(sh,rk,patch,shPatch,fn){
   const had=!!S.lines[rk];if(!had)S.lines[rk]={fares:defaultFares(rk),service:1,adv:1,last:[null,null]};
   const L=S.lines[rk],saved={fares:L.fares,service:L.service,adv:L.adv},ss={};
   if(patch){if(patch.fares)L.fares={...L.fares,...patch.fares};if(patch.service!==undefined)L.service=patch.service;if(patch.adv!==undefined)L.adv=patch.adv;}
-  if(shPatch)for(const k in shPatch){ss[k]=sh[k];sh[k]=shPatch[k];}
-  try{return fn();}finally{L.fares=saved.fares;L.service=saved.service;L.adv=saved.adv;for(const k in ss)sh[k]=ss[k];if(!had)delete S.lines[rk];}
+  if(shPatch){MOD_EPOCH++;for(const k in shPatch){ss[k]=sh[k];sh[k]=shPatch[k];}}
+  try{return fn();}finally{L.fares=saved.fares;L.service=saved.service;L.adv=saved.adv;for(const k in ss)sh[k]=ss[k];if(shPatch)MOD_EPOCH++;if(!had)delete S.lines[rk];}
 }
 /* her turnaround at both ends, as this ship will actually manage it: gear, hatches, piers and sheds all count */
 const turnFor=(sh,rk)=>{if(ROUTES[rk].cruise)return turnPair(rk);const [a,b]=geoEnds(geoKey(rk,S.m));return turnDays(sh,a)+turnDays(sh,b);};
@@ -74,7 +74,7 @@ const DEPT_OF={wcr:'traffic',cpay:'crew',ctrain:'crew',off:'crew',review:'sec',r
   pay:'crew',captain:'crew'};
 const deptOf=h=>DEPT_OF[h.id.split(/[:0-9]/)[0]]||'sec';
 let ADV_CACHE={key:null,list:[]};
-function advice(){
+function advice(){MOD_EPOCH++;
   const key=S.m+'|'+UI.rev;
   if(ADV_CACHE.key===key)return ADV_CACHE.list;
   const A=[],mo=S.m%12,reserve=3*runningCost();
@@ -293,7 +293,7 @@ function shownAdvice(){if(S.advSeen)delete S.advSeen;return advice();}
 const capScore=c=>Math.min(c.exp,25)/5+c.traits.reduce((a,t)=>a+(CAPT_TRAITS[t].good?2:-3),0);
 
 /* ---------- actions: shared by buttons, departments and the test harness ---------- */
-function doAction(act,d){
+function doAction(act,d){MOD_EPOCH++;
   const ship=id=>S.ships.find(q=>q.id===id);
   switch(act){
     case 'setfare':{const [rk,c,v]=d;if(S.lines[rk]){S.lines[rk].fares[c]=v;return true;}return false;}

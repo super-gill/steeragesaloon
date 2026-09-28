@@ -161,7 +161,7 @@ function designStats(d){
   let extras=fc.cost/PX();for(const k in d.extras)if(d.extras[k]&&EXTRAS[k])extras+=EXTRAS[k].cost(g);
   // the biggest ships cost far more than their tonnage: longer slips, heavier plate, more of everything done once only
   const sizeK=1+0.6*Math.pow(Math.max(0,(g-20000)/40000),1.3);
-  const base=(hull*sizeK*(LY.cost||1)+power+interiors+extras)*B.price*(d.contract==='fixed'?1.08:1)*PX();
+  const base=(hull*sizeK*(LY.cost||1)+power+interiors+extras)*B.price*(d.contract==='fixed'?1.08:1)*(d.adm&&admEligible(d)?1.05:1)*PX(); // naval standards cost a twentieth more
   const price=Math.round(base/1000)*1000;
   const months=Math.round((6+g/1600)*Math.pow(Math.max(1,e.shp/15000),0.12)*[0.95,1,1.08,1.15][d.quality]*B.speed*Math.sqrt(P.cx));
   // running character: coal or oil a day at service speed, set by her engines and her lines
@@ -216,22 +216,23 @@ function slipsMonth(){
 const STAGES={drawing:'In the drawing office',waiting:'Waiting for a slip',framing:'Keel laid, framing',plating:'Plating the hull',fitting:'Launched, fitting out',trials:'On trials',done:'Delivered'};
 function placeOrder(d){
   const st=designStats(d);if(st.warn.length)return {ok:false,why:st.warn[0]};
-  const dep=Math.round(st.price*0.1);if(S.cash<dep)return {ok:false,why:`The yard wants ${fmt(dep)} with the order.`};
+  const adm=!!(d.adm&&admEligible(d)),dep=Math.round(st.price*0.1),own=adm?Math.round(dep/3):dep;if(S.cash<own)return {ok:false,why:`The yard wants ${fmt(own)} with the order${adm?' (the Admiralty pays the rest)':''}.`};
   S.orders=S.orders||[];S.yardNext=S.yardNext||534;
-  const o={id:S.yardNext++,d:Object.assign(JSON.parse(JSON.stringify(d)),{auto:{mach:false,form:false}}),price:st.price,paid:0,due:0,months:st.months,prog:0,stage:'drawing',left:2,ordered:S.m,late:0,unpaid:0,log:[],pi0:PX()};
+  const o={id:S.yardNext++,d:Object.assign(JSON.parse(JSON.stringify(d)),{auto:{mach:false,form:false}}),price:st.price,paid:0,due:0,months:st.months,prog:0,stage:'drawing',left:2,ordered:S.m,late:0,unpaid:0,log:[],pi0:PX(),adm,admBal:0};
   o.d.name=o.d.name.trim();
   pay(o,dep,'deposit');S.orders.push(o);
   logOrder(o,`Ordered from ${builderOf(o.d).name} as Yard No. ${o.id}. ${fmt(dep)} paid with the order.`);
   news(`The Morven Line orders a new ${PURPOSES[d.purpose].name.toLowerCase()}, SS ${o.d.name}, from ${builderOf(o.d).name}: ${int(d.grt)} tons, ${d.knots} knots, ${fmt(st.price)}.`,'good',true);
   return {ok:true,o};
 }
-function pay(o,amt,what){S.cash-=amt;o.paid+=amt;S.mtd.capex=(S.mtd.capex||0)+amt;}
+/* a stage payment: on Admiralty terms the Admiralty lends two thirds of it, added to her loan */
+function pay(o,amt,what){const own=o.adm?amt/3:amt;S.cash-=own;o.paid+=amt;if(o.adm)o.admBal=(o.admBal||0)+amt-own;S.mtd.capex=(S.mtd.capex||0)+own;}
 const currentStyle=()=>{const y=yNow();return y>=1950?'contemp':y>=1933?'moderne':y>=1925?'deco':'edw';};
 function logOrder(o,t){o.log.unshift({m:S.m,t});if(o.log.length>12)o.log.length=12;}
 /* stage payments: 10% with the order, 20% at the keel, 30% at the launch, the rest on delivery */
 function bill(o,share,what){
   const amt=Math.round(o.price*share);
-  if(S.cash-amt>=-odLimit()*0.5){pay(o,amt,what);logOrder(o,`${fmt(amt)} paid ${what}.`);return true;}
+  if(S.cash-(o.adm?amt/3:amt)>=-odLimit()*0.5){pay(o,amt,what);logOrder(o,`${fmt(amt)} paid ${what}.`);return true;}
   o.due+=amt;o.unpaid++;logOrder(o,`Could not pay ${fmt(amt)} ${what}. The yard has stopped work.`);
   news(`${builderOf(o.d).name} has stopped work on SS ${o.d.name}: ${fmt(amt)} is owed.`,'bad',true);return false;
 }
@@ -283,11 +284,12 @@ function deliver(o,st,kn,B){
   sh.up.wireless=!!d.extras.wireless;sh.up.lux=d.quality>=2;sh.fac={...(d.fac||{})};sh.cruiser=!!(PURPOSES[d.purpose]&&PURPOSES[d.purpose].cruiser);
   for(const k of ['stab','fins','aircon','pool','cinema','rphone','radar','hatch','heavy','deep'])if(d.extras[k])sh.up[k]=true;
   const pool=(S.capPool||[]).slice().sort((a,b)=>b.exp-a.exp);if(pool.length){sh.captain=pool[0];S.capPool=S.capPool.filter(q=>q!==pool[0]);}
+  if(o.adm&&o.admBal>0){sh.adm={bal:o.admBal,bal0:o.admBal,sub:Math.round(o.price*ADM_SUB/12)};o.admBal=0;}
   sh.acq=S.m;S.ships.push(sh);S.orders=S.orders.filter(x=>x!==o);
   if(d.builder==='own')S.shore.slipBuilt=(S.shore.slipBuilt||0)+1;
   // the bank takes a mortgage on the new ship as on any other
   const mort=Math.min(Math.round(o.price*0.5),Math.max(0,Math.round(headroom())));if(mort>0){S.debt+=mort;S.cash+=mort;}
-  news(`SS ${d.name} made ${kn} knots on the measured mile and is handed over at ${PN[B.port]}.${mort>0?` The bank advances ${fmt(mort)} on her mortgage.`:''} ${sh.captain?sh.captain.name+' takes command.':''} Assign her to a line.`,'good',true);
+  news(`SS ${d.name} made ${kn} knots on the measured mile and is handed over at ${PN[B.port]}.${sh.adm?` The Admiralty's loan on her stands at ${fmt(Math.round(sh.adm.bal))}, and it pays ${fmt(sh.adm.sub*12)} a year while she sails.`:''}${mort>0?` The bank advances ${fmt(mort)} on her mortgage.`:''} ${sh.captain?sh.captain.name+' takes command.':''} Assign her to a line.`,'good',true);
   wire(sh,`SS ${d.name} handed over at ${PN[B.port]}. Trials ${kn} knots. Ready for service.`,'good');
 }
 

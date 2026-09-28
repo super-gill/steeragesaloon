@@ -1,5 +1,5 @@
 /* ================= DATA ================= */
-const GAME_VERSION='0.22.0',GAME_BUILT='28 September 2026'; // bump on every release; see CHANGELOG.md
+const GAME_VERSION='0.23.0',GAME_BUILT='28 September 2026'; // bump on every release; see CHANGELOG.md
 /* ---------- the calendar ----------
    Month 0 is January 1900 and day 0 is 1 January 1900. ym(year,month) names a month (month 0 = January), so every date
    the game cares about reads as a date. History written for the 1921 game is kept exact by counting from M21. */
@@ -210,6 +210,12 @@ const HIST=[
   {m:ym(1904,10),t:'The New York lines patch up their pool. Steerage fares climb back.'},
   {m:ym(1905,2),t:'The first turbine liner crosses the Atlantic. Turbines are on offer at the yards: smooth, fast and dear.'},
   {m:ym(1906,3),t:'Immigration to the United States passes a million a year. Every steerage berth to New York is full in the spring.'},
+  {m:ym(1907,0),t:'The head tax on immigrants rises to $4. Emigration to the United States is heading for a record year.'},
+  {m:ym(1908,0),t:'The North Atlantic lines form a conference: fare floors, a steerage quota and no rate wars between members. The Morven Line may join.'},
+  {m:ym(1908,3),t:'The American slump has closed the factories. More emigrants are going home than coming out; eastbound steerage is full and westbound half empty.'},
+  {m:ym(1911,6),t:'From today American law requires wireless on any ship leaving an American port with fifty or more aboard. Only ships with wireless will carry the mails.'},
+  {m:ym(1912,2),t:'The miners are out: a national coal strike. Bunker coal costs two or three times its price, and many liners are laid up in Southampton and Liverpool. Lines with bunker contracts keep sailing.'},
+  {m:ym(1912,4),t:'The coal strike is over. Bunker prices fall back.'},
   {m:ym(1921,0),only:'1921',t:'The Morven Line opens its Glasgow office with one elderly ship, the SS Morven, and a £40,000 mortgage. The post-war freight boom has collapsed and coal is dear.'},
   {m:ym(1921,5),t:'The US Emergency Quota Act caps immigration by nationality. Southern European steerage to New York falls sharply.'},
   {m:ym(1923,0),t:'Trade is recovering. Wealthier Americans are crossing to Europe in growing numbers.'},

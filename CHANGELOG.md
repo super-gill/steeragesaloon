@@ -2,6 +2,23 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.23.0 (28 September 2026)
+Speed and splendour: 1907 to 1913.
+- The great lines race for speed and size. Nordmark's Nordstern (1907) and Imperial Atlantic's turbine twins Invicta and Indomita (1907, 25 knots) contest the Blue Riband; Imperial's giants Atlantean (1911) and Hyperborean (1912), each over 45,000 tons, and Nordmark's 52,000-ton Weltmeer (1913) follow, with Compagnie Aurore's Provence Royale. Each is ordered two or three years ahead, and The times says when she is due.
+- The panic of 1907: rumours on Wall Street in September, panic in October. Ships lose a quarter of their value, the bank calls in part of the Line's loans with six months to pay and stops lending for a year, and the Line's bank may fail. Government stock is safe from a failing bank.
+- In 1908 more emigrants go home than come out: eastbound steerage is full and westbound half empty, and 1909 is still heavy.
+- The North Atlantic conference forms in January 1908: fare floors, a steerage quota, no rate wars for members. The Line may join. Wars between the lines become rare.
+- The seamen's strike of June 1911 holds ships in the home ports for about three weeks. The national coal strike of March 1912 puts bunker coal at up to two and a half times its price until May; a bunker contract keeps its price through it (and through the 1926 strike).
+- The Blue Riband goes to the fastest ship on the North Atlantic. Win it and the Line's standing rises while she holds it.
+- The Admiralty's terms for fast ships: from July 1903 a ship of 24 knots and 20,000 tons or more can be ordered on Admiralty terms in the drawing office. Built to naval standards (5% dearer), she has two thirds of every payment lent at 2.75% over twenty years, and earns a yearly subsidy of 4.5% of her price. The loan counts against net worth and the bank's lending, and is repaid from her sale or her insurance. In a war she may be taken as an armed merchant cruiser.
+- A great line in trouble is reconstructed once by its bankers instead of failing outright.
+- The American wireless law of July 1911, the $4 head tax of 1907 and the coal strike are in the history, and The times warns of them before they come.
+- Canada's emigration boom is damped a little, so one old ship on the Canadian run no longer makes a fortune on its own.
+- Rival lines add tonnage a little sooner in the boom years.
+- Scrapping a ship pays at the day's prices.
+- Head office's forecasts run about 40% faster: rival weights and each ship's modifiers are worked out once a day instead of thousands of times.
+- The harness's `careful` owner shelters cash in government stock on rumours of a panic, sells stock to pay its bills, pays down its mortgage when flush and keeps its net debt under a third of its fleet's value.
+
 ## 0.22.0 (28 September 2026)
 The steerage flood: the game starts in 1900.
 - A new game starts in January 1900. The Morven Line opens in Glasgow with one elderly emigrant ship, the 1881 SS Morven (4,600 tons, 12.5 knots, over a thousand steerage berths), £7,000 in the bank and a £16,000 mortgage.

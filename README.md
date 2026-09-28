@@ -2,7 +2,7 @@
 
 A real-time shipping line management sim. You run the Morven Line from its Glasgow head office from January 1900, with one elderly emigrant ship and a mortgage, and no end date (in this world the liner trade never declined, so later decades are invented): open passenger lines and cargo trades, buy, refit and retire ships, hire masters, build up a shore establishment and head-office departments, and survive the rate wars of the emigrant years, the American trust, breakdowns, the US immigration quotas, the 1926 coal strike and the Depression.
 
-The 1900 overhaul is under way (see `docs/overhaul/README.md`): 1900 to 1906 are written; from 1907 to 1920 the game runs on the pre-war curves until the panic, the conference, the 1912 disaster, the war and the bubble arrive in later releases; from January 1921 it carries on as the 1921 game.
+The 1900 overhaul is under way (see `docs/overhaul/README.md`): 1900 to 1913 are written, bar the 1912 disaster (0.24); from 1914 to 1920 the game holds the 1913 curves until the war and the bubble arrive in later releases; from January 1921 it carries on as the 1921 game.
 
 It is a static browser game with no build step. Open `index.html`, or serve the folder with GitHub Pages (from the repo root; `.nojekyll` is included).
 
@@ -25,6 +25,7 @@ It is a static browser game with no build step. Open `index.html`, or serve the 
 | `js/rivals.js` | Rival lines: fleets, the shared market on each route, price matching, and each rival's monthly decisions |
 | `js/outside.js` | Outside work: piers, repair yards, hostels, booking agents and freight canvassers selling spare capacity to the rival lines |
 | `js/trust.js` | The early years: rate wars between the lines before the 1908 conference, and the International Ocean Combine (formed 1902): its members, purchases, offers for the Line and the rate wars that answer a refusal |
+| `js/prewar.js` | Speed and splendour, 1907 to 1913: the express liners and giants the great lines build, the 1907 panic, the 1911 seamen's strike and 1912 coal strike, the Blue Riband, and the Admiralty's terms for fast ships |
 | `js/companies.js` | Rival lines as companies: accounts, borrowing, dividends, fleet renewal, distress sales, failure and the receivers, new lines |
 | `js/naval.js` | Naval architecture: port limits, route weather, displacement, length, form and power, bunkers and range; the engineers' recommendation and report; fouling, port fit, seakeeping and masters' remarks in service |
 | `js/yard.js` | Shipbuilding: purposes, hull forms, machinery, fittings, extras, builders and slips, prices, stage payments, orders and delivery; newer ships for the brokers |
@@ -73,6 +74,17 @@ A new game starts in January 1900 (`START`). Games begun in January 1921 by 0.19
 - **The Combine** (`trustMonth`): in October 1902 the International Ocean Combine forms over Imperial Atlantic and Columbia (`S.trust`), each loaded with £400,000 (1921 money) of the Combine's bonds as cash. Before 1908 it buys a weak independent liner company now and then (up to five members), paying its net worth plus a quarter; members keep their names and do not fight each other. Once the Line has three ships it may offer to buy it, about once in three years and never within two of a refusal, for 1.3 to 1.6 times its net worth (`S.trustOffer`). Selling ends the game (`S.over = 'sold'`); refusing, or letting the offer lapse after two months, brings a rate war on the Line's two busiest trades (steerage 60%, cabins 75% of the line rate for 6 to 10 months).
 - **The biggest lines** grow more slowly once they hold a fifth of all rival tonnage, answer an interloper less readily past 35%, and are kept off the receivers' sales past 30% (`coShare`), so no line swallows the rest.
 
+## Speed and splendour, 1907 to 1913 (`js/prewar.js`)
+
+- **The racers and the giants** (`PREWAR_SHIPS`): Nordmark's Nordstern (1907, 24,500 tons, 23.5 knots), Imperial Atlantic's turbine twins Invicta and Indomita (1907, 31,500 tons, 25 knots), Imperial's giants Atlantean (1911) and Hyperborean (1912, 45,000 tons and more, 21 knots), Aurore's Provence Royale (1912) and Nordmark's Weltmeer (1913, 52,000 tons). Each is ordered and paid for two to three years before she sails; if her line has failed the order passes to the strongest British liner line, which names her itself.
+- **The 1907 panic**: rumours in September, panic in October, through the panic system in `economy.js` (`S.crash.y1907`). Emigration's fall is already in the immigration figures, so the panic's own cut to demand is small (0.12); second-hand ships lose a quarter of their value (not two fifths), the bank calls in 60% of its usual share of the loans with six months to pay, and there is a one in four chance that the Line's bank fails.
+- **Going home**: eastbound steerage is 70% above usual in 1908 and 20% in 1909 (`preReturn`).
+- **The conference** forms in January 1908 (`CONF_FROM` in `trust.js`).
+- **Strikes**: the seamen's strike of June 1911 holds the Line's ships in the home ports for about three weeks; the national coal strike of March 1912 raises bunker coal by up to 2.4 times from February to May (`coalStrike`). A bunker contract keeps its price through this strike and the 1926 one (`bunkerHeld`, `coalPrice(m, held)`).
+- **The Blue Riband** (`blueRiband`): held by the fastest ship in service on a North Atlantic trade from 22 knots up; while the Line holds it, reputation drifts towards a mark 5 points higher.
+- **The Admiralty's terms** (from July 1903, on the 1900 calendar only): a ship of 24 knots and 20,000 tons or more may be built to naval standards (5% dearer). The Admiralty lends two thirds of every stage payment at 2.75%, repaid over twenty years (`ADM_*`, `sh.adm`), and pays a subsidy of 4.5% of her price a year, booked as `subsidy`. The loan counts against net worth and what the bank will lend (`admDebt`), and is repaid out of her sale or her insurance. In war she may be taken as an armed merchant cruiser (0.26).
+- **Great lines rescued**: an original line with eight ships or more is reconstructed once by its bankers (debts cut by two fifths, its two oldest ships sold) instead of failing outright.
+
 ## Rival companies
 
 Each rival line (`RIVAL_P` and `RIVALS`, with the company record in `S.rivals[id]`) keeps accounts in `js/companies.js`:
@@ -115,7 +127,7 @@ Run from the repo root with Node (and Python for the bundler).
 
 | Command | What it does |
 |---|---|
-| `node tools/harness.js` | Plays the first fifteen years (1900 to 1914) headless under scripted strategies (idle, cautious, careful, advisor, expander, prudent, office, undercutter, liverpool), many seeds each, and prints survival, net worth by year, first-year profit, rate wars and profit by route. `careful` is the sensible owner the 1914 targets are set for: six months' running costs in hand, borrowing under half the fleet's value, buying only ships that should earn a sixth of their price a year, moving or selling losers and worn-out ships |
+| `node tools/harness.js` | Plays the first fifteen years (1900 to 1914) headless under scripted strategies (idle, cautious, careful, advisor, expander, prudent, office, undercutter, liverpool), many seeds each, and prints survival, net worth by year, first-year profit, rate wars and profit by route. `careful` is the sensible owner the 1914 targets are set for: six months' running costs in hand, keeping its debt, less cash in hand, under a third of the fleet's value, buying only ships that should earn an eighth of their price a year, moving spare cash into government stock on rumours of a panic, moving or selling losers and worn-out ships |
 | `node tools/harness.js advisor 20` | One strategy, 20 seeds |
 | `node tools/companies.js [years] [seeds] [verbose]` | Plays the given years (default 40) headless with a plain expanding player who cannot go bust, and prints the rival companies year by year (ships, tonnage, lines, the biggest line's share, cash, debt), failures and new lines per decade, and checks that no line dominates, no trade lies empty and failures stay at a few a decade |
 | `node tools/outside.js [years] [seeds] [sell]` | Gives the Line a full shore establishment, plays the given years (default 15) and prints what each place would earn a month from other lines every January, against its running cost and price; with `sell` every place sells, and it prints what each earned and the Line's own takings, for the trade-off |
@@ -127,7 +139,7 @@ Run from the repo root with Node (and Python for the bundler).
 
 Checked with the harness after any economic change. For the 1900 start (the overhaul's stage 1, finished in 0.23):
 
-- A sensible owner (`careful`) has 3 to 6 ships in August 1914, and fewer than 1 in 5 such games go bankrupt before the war.
+- A sensible owner (`careful`) has 3 to 6 ships in August 1914, and fewer than 1 in 5 such games go bankrupt before the war. At 0.23: 4 in 20 bankrupt (the 1907 panic and the 1908 slump), median fleet 7, median net worth £87,000.
 - The first year makes a few thousand pounds with the one ship; margins are good enough through 1906 to add a ship every year or two.
 - Rate wars are frequent before 1908 and rare after.
 - The harness's blind strategies (`expander`, `prudent`, `office`) borrow to the hilt and mostly fail in the 1908 slump in emigration; that is intended.

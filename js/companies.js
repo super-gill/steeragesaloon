@@ -105,6 +105,12 @@ function coBuyer(x,seller){
 }
 /* the receivers: some ships to other lines, the best bargains to the Morven Line's brokers, the old to the breakers */
 function coFail(o){
+  // a great line is not let go at the first failure: its bankers reconstruct it once, writing down its debts and
+  // selling its two oldest ships, and it sails on
+  if(!S.rivals[o].rescued&&coFleet(o).length>=8&&!S.rivals[o].born){const co=S.rivals[o];co.rescued=S.m;
+    co.debt=Math.round(co.debt*0.6);for(const x of coFleet(o).sort((a,b)=>a.built-b.built).slice(0,2)){co.cash+=coShipVal(x)*0.6;dropRival(x);rivalMove(o,x.route,'sold',x.name);}
+    co.cash=Math.max(co.cash,coReserve(o));
+    news(`${RIVALS[o].name} is in difficulties. Its bankers reconstruct it: debts written down, two old ships sold, and it sails on.`,'',false);return;}
   const co=S.rivals[o],m=S.m,R=Math.random,name=RIVALS[o].name,fleet=coFleet(o).sort((a,b)=>b.built-a.built);
   const routes=[...new Set(fleet.map(x=>x.route))],n=fleet.length,took={};let ours=0,sold=0,broken=0;
   for(const x of fleet){

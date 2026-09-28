@@ -64,7 +64,8 @@ function crewCostOf(sh){
 const crewHands=sh=>{const cw=cwOf(sh);return CD_KEYS.reduce((a,d)=>a+deptCount(sh,d)*MAN[cw[d].man][1],0);};
 
 /* what the crew does for her; 1 is the old behaviour, at skill 50 and standard manning */
-function crewMods(sh){
+function crewMods(sh){return modCached('crewMods',sh,crewModsRaw);}
+function crewModsRaw(sh){
   const cw=cwOf(sh),off=offOf(sh),e=cwSk(sh,'eng'),dk=cwSk(sh,'deck'),ct=cwSk(sh,'cat'),man=d=>cw[d].man-1;
   return {
     brk:(1+(50-e)/120)*(1-0.12*man('eng')),

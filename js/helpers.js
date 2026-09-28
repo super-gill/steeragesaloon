@@ -32,10 +32,12 @@ const histNow=()=>HIST.filter(h=>!h.only||!newCal());
    and Argentina. Cabin travel grows steadily; cargo with world trade. 1914 to 1920 hold the 1913 level until the
    war years are written (0.26 to 0.28). */
 const PRE_US=[1,1.09,1.45,1.91,1.81,2.29,2.45,2.87,1.75,1.68,2.32,1.96,1.87,2.67];
-const PRE_CA=[1,1.09,1.5,2.85,2.9,3.25,4.2,3.7,5.8,3.3,4.6,6.9,7.9,8.9].map(v=>Math.pow(v,0.85));
+const PRE_CA=[1,1.09,1.5,2.85,2.9,3.25,4.2,3.7,5.8,3.3,4.6,6.9,7.9,8.9].map(v=>Math.pow(v,0.7));
 const PRE_AR=[1,1.06,0.68,0.89,1.48,2.09,2.97,2.46,3.01,2.72,3.41,2.66,3.81,3.56];
 /* a yearly series at month m: each year's figure at mid-year, straight lines between */
 function preYear(arr,m){const y=clamp(YEAR0+m/12-0.5,YEAR0,YEAR0+arr.length-1),i=Math.min(arr.length-2,Math.floor(y-YEAR0)),f=y-YEAR0-i;return arr[i]+(arr[i+1]-arr[i])*f;}
+/* going home before the war: in the American slump of 1908 more emigrants went home than came out, and 1909 was still heavy */
+const preReturn=m=>!newCal()||m>=M21?1:m>=ym(1908,0)&&m<ym(1909,0)?1.7:m>=ym(1909,0)&&m<ym(1910,0)?1.2:1;
 const preYears=m=>clamp(YEAR0+m/12-YEAR0,0,13.99); // years since 1900, held at the end of 1913
 /* passenger demand before 1921, as a multiple of January 1900 */
 function preDemand(c,rk,m){
@@ -109,7 +111,7 @@ const cargoSeason=(c,m)=>COMM[c].season?COMM[c].season[m%12]:1;
 const dirW=(rk,c)=>(ROUTES[rk].dirw&&ROUTES[rk].dirw[c])||DIRW[c];
 /* bunker coal before 1921, against the price level: dear in the 1900 boom, cheap by 1910 (real export prices, rebased) */
 const PRE_COAL=[2.5,2.2,2.0,1.95,1.9,1.85,1.9,2.0,1.9,1.8,1.8,1.85,1.95,2.0];
-function coalPrice(m){if(m<M21)return preYear(PRE_COAL,m)*(m>=ym(1914,0)?1.1:1)*(1+0.04*Math.sin(m*1.3));m-=M21;let b=(m<12?2.3:m<24?1.75:1.6)*(m>=258?1+Math.min(0.6,(m-258)/12*0.06):1);if(m>=64&&m<=70)b*=1.9;return b*(1+0.04*Math.sin(m*1.3));}
+function coalPrice(m,held){if(m<M21)return preYear(PRE_COAL,m)*(m>=ym(1914,0)?1.1:1)*(held?1:coalStrike(m))*(1+0.04*Math.sin(m*1.3));m-=M21;let b=(m<12?2.3:m<24?1.75:1.6)*(m>=258?1+Math.min(0.6,(m-258)/12*0.06):1);if(m>=64&&m<=70&&!held)b*=1.9;return b*(1+0.04*Math.sin(m*1.3));} // a bunker contract keeps its coal through a strike
 /* oil is dear at first; by the mid-twenties it costs about nine-tenths of coal for the same miles, and saves stokers and days in port besides */
 function oilPrice(m){m-=M21;return (m<12?3.6:m<24?3.0:m<48?2.7-0.75*(m-24)/24:1.95)*(m>=354?0.78:1)*(1+0.03*Math.sin(m*0.9));}
 function repF(c,rep,r){const x=rep-30;if(c==='f')return clamp(1+x/(r.prestige>1.2?50:70),0.4,1.8);if(c==='s')return clamp(1+x/150,0.6,1.4);if(c==='t')return clamp(1+x/500,0.85,1.15);return clamp(1+x/100,0.5,1.6);}
@@ -163,7 +165,13 @@ function makeCaptain(R=Math.random){
 }
 const has=(sh,t)=>!!(sh.captain&&sh.captain.traits.includes(t));
 /* per-ship modifiers from captain, crew morale, upgrades and fittings */
-function shipMods(sh){
+/* per-ship modifiers are asked for constantly by the forecasts and never change within a day unless the ship is changed:
+   they are kept per ship until the day turns or MOD_EPOCH moves (any action, and any forecast that patches a ship) */
+let MOD_EPOCH=0;
+const MOD_CACHE={shipMods:new WeakMap(),crewMods:new WeakMap(),facMods:new WeakMap()};
+function modCached(kind,sh,fn){const k=Math.floor(S.t)+'|'+MOD_EPOCH,c=MOD_CACHE[kind].get(sh);if(c&&c.k===k)return c.v;const v=fn(sh);MOD_CACHE[kind].set(sh,{k,v});return v;}
+function shipMods(sh){return modCached('shipMods',sh,shipModsRaw);}
+function shipModsRaw(sh){
   const exp=sh.captain?Math.min(sh.captain.exp,30):5,mor=sh.morale===undefined?60:sh.morale,cm=crewMods(sh);
   return {
     speed:(has(sh,'driver')?1.04:1)*(has(sh,'cautious')?0.97:1),

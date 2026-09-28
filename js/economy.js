@@ -46,7 +46,7 @@ function crashF(m){ // how hard the panic is biting, 0 to 1
   const k=m-c.panicAt;return k<6?1:Math.max(0,1-(k-6)/Math.max(1,c.rec-6));
 }
 function crashMod(c,m){const f=crashF(m);return f?1-f*S.crash.depth*{f:1.2,s:1,t:0.8,tt:1}[c]:1;}
-const shipMkt=()=>1-0.4*crashF(S.m); // second-hand ship prices in a panic
+const shipMkt=()=>1-(S.crash&&S.crash.y1907?0.25:0.4)*crashF(S.m); // second-hand ship prices in a panic (the 1907 panic was an American one, and milder here)
 function crashMonth(){
   const m=S.m,c=S.crash;
   if(S.call&&m>=S.call.due)callDue();
@@ -65,7 +65,7 @@ function panic(c){
   if(c.bank){const keep=5000*PX(),lost=Math.round(Math.max(0,S.cash-keep)*0.75);
     if(lost>0){book('crash',-lost);news(`${BANK_NAME[0].toUpperCase()+BANK_NAME.slice(1)} has closed its doors. The liquidators will pay about five shillings in the pound. The Morven Line loses ${fmt(lost)}.`,'bad',true);}
     else news(`${BANK_NAME[0].toUpperCase()+BANK_NAME.slice(1)} has closed its doors. The Morven Line had little on deposit.`,'bad',true);}
-  if(S.debt>20000*PX()){const amt=Math.round(S.debt*(c.bank?0.25:0.15)/100)*100;S.call={amt,due:m+3};
+  if(S.debt>20000*PX()){const amt=Math.round(S.debt*(c.bank?0.25:0.15)*(c.y1907?0.6:1)/100)*100;S.call={amt,due:m+(c.y1907?6:3)};
     news(`${c.bank?'The receivers':'The bank'} call in ${fmt(amt)} of the Morven Line's loans, due by ${monthName(m+3)}. There will be no new lending for a year, and interest is up two points.`,'bad',true);}
   S.noLend=m+12;S.rateUp=m+12;
   if(S.gilts>0){const g=Math.round(S.gilts*0.12);S.gilts-=g;news(`Government stock has fallen: the Line's holding is worth ${fmt(g)} less.`,'bad');}
@@ -77,7 +77,7 @@ function callDue(){
   if(owe<=0){news(`The called loan of ${fmt(c.amt)} is repaid.`,'good');return;}
   const fleet=S.ships.filter(x=>x.state!=='sea'&&x.state!=='repo'&&x.state!=='lost').sort((a,b)=>shipValue(b)-shipValue(a));
   while(owe>0&&fleet.length&&S.ships.length>0){const x=fleet.shift(),v=Math.round(shipValue(x)*0.6);
-    S.ships=S.ships.filter(y=>y!==x);if(S.selShip===x.id)S.selShip=S.ships[0]?S.ships[0].id:null;
+    S.ships=S.ships.filter(y=>y!==x);if(S.selShip===x.id)S.selShip=S.ships[0]?S.ships[0].id:null;admRepay(x);
     const use=Math.min(v,owe);owe-=use;S.debt-=use;S.cash+=v-use;
     news(`The bank has seized SS ${x.name} and sold her at a forced sale for ${fmt(v)} against the called loan.`,'bad',true);}
   if(owe>0){S.cash-=owe;S.debt-=owe;news(`The rest of the called loan, ${fmt(owe)}, is taken from the account.`,'bad',true);}

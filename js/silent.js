@@ -76,7 +76,7 @@ function insClaim(sh,k){
 }
 /* the underwriters pay the insured value; the loss of life is never forgotten */
 function loseShip(sh){
-  const L=sh.lost||{lost:0,saved:1},c=insClaim(sh);
+  const L=sh.lost||{lost:0,saved:1},c=insClaim(sh);admRepay(sh); // her Admiralty loan is settled out of the claim
   S.rep=clamp(S.rep-(L.lost>200?8:L.lost>20?5:2),0,100); // the court of inquiry decides the rest
   if(!sh.inqQ)queueInquiry(sh,null);
   news(`SS ${sh.name} is lost${L.where?' '+L.where:''}. ${L.lost?`${int(L.lost)} lives lost.`:'Everyone aboard was saved.'} ${c.txt} A court of inquiry will sit.`,'bad',2);

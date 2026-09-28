@@ -4,7 +4,7 @@ const turnDays=(sh,port)=>Math.max(2,TURN_DAYS-(sh.up&&sh.up.gear?1:0)-(S.shore&
 /* freight canvassers in a region the route calls at, and cold stores at its ports, win this line more cargo */
 const cargoPull=(rk,reefer)=>{const sh=S.shore||{},calls=ROUTES[rk].calls;let f=1;for(const a in sh.fagents||{})if(FAGENCY[a]&&FAGENCY[a].ports.some(p=>calls.includes(p)))f+=0.075;if(reefer&&Object.keys(sh.cold||{}).some(p=>calls.includes(p)))f+=0.2;return f;};
 const bunkerDiscount=()=>S.shore&&S.shore.bunker&&S.shore.bunker.until>=S.m?0.88:1;
-const fuelPrice=(sh,m)=>(sh.fuel==='coal'?coalPrice(m):oilPrice(m))*bunkerDiscount()*slumpK('fuel',m)*PX();
+const fuelPrice=(sh,m)=>(sh.fuel==='coal'?coalPrice(m,bunkerHeld()):oilPrice(m))*bunkerDiscount()*slumpK('fuel',m)*PX();
 const fuelRate=(sh,sm)=>sh.grt/(sh.fuel==='coal'?70:95)*Math.pow(sm,3)*(sh.up&&sh.up.turbines?0.92:1)*(sh.fuelK||1)*crewMods(sh).fuel;
 const duesAt=(sh,port,mult)=>sh.grt*mult*(S.shore&&S.shore.piers[port]?0.4:1)*slumpK('dues')*PX();
 /* the intermediate calls of a geography in sailing order for a direction, as [port, nm from departure] */
@@ -240,9 +240,9 @@ function yardJobDone(sh,k){
   if(UPGRADES[k]&&k!=='lux'){sh.up[k]=true;news(`SS ${sh.name} returns with ${UPGRADES[k].name.toLowerCase()}.`,'good');}
 }
 function exitShip(sh,how){
-  const v=how==='scrap'?sh.grt*2:Math.round(shipValue(sh)*0.9);
-  S.cash+=v;S.ships=S.ships.filter(x=>x!==sh);
-  news(how==='scrap'?`SS ${sh.name} sold to the breakers for ${fmt(v)}.`:`SS ${sh.name} sold for ${fmt(v)}.`);
+  const v=how==='scrap'?Math.round(sh.grt*2*PX()):Math.round(shipValue(sh)*0.9);
+  S.cash+=v;const adm=admRepay(sh);S.ships=S.ships.filter(x=>x!==sh);
+  news((how==='scrap'?`SS ${sh.name} sold to the breakers for ${fmt(v)}.`:`SS ${sh.name} sold for ${fmt(v)}.`)+(adm?` ${fmt(Math.round(adm))} of it repays her Admiralty loan.`:''));
   if(S.selShip===sh.id)S.selShip=S.ships[0]?S.ships[0].id:null;
 }
 function moveAll(step){
@@ -316,7 +316,7 @@ function monthRoll(pm){
     if(S.mail[rk])S.mail[rk].ok=false;
   }
   for(const rk of Object.keys(S.wars)){const w=S.wars[rk];w.left--;if(w.left<=0){delete S.wars[rk];S.tension[rk]=20;if(!w.quiet)news(warEndText(rk,w),S.lines[rk]?'good':'');}}
-  lineWarsMonth();trustMonth(); // the early years: lines at war with each other, and the Combine (trust.js)
+  lineWarsMonth();trustMonth();prewarMonth();admMonth(); // the early years (trust.js, prewar.js)
   for(const rk of Object.keys(ROUTES)){
     const n=shipsOn(rk).filter(x=>ACTIVE.includes(x.state)).length;
     if(S.conf||!S.lines[rk]||!n||isCruise(rk)){S.tension[rk]=(S.tension[rk]||0)*0.6;continue;} // no conference on cruises
@@ -340,7 +340,7 @@ function monthRoll(pm){
   if(act.length){const svc=act.reduce((a,x)=>a+(S.lines[x.line].service-1),0)/act.length,spd=act.reduce((a,x)=>a+(x.speed-1),0)/act.length;
     const pop=act.filter(x=>has(x,'popular')).length/act.length;
     S.stain=(S.stain||0)*0.97;
-    const target=32-S.stain+[0,0,3][S.safety===undefined?1:S.safety]+22*svc+8*spd+(Object.keys(S.mail).length?5:0)+4*pop+Math.min(4,2*Object.keys(S.shore.hostels).length);S.rep=clamp(S.rep+(target-S.rep)*0.12,0,100);}
+    const target=32-S.stain+[0,0,3][S.safety===undefined?1:S.safety]+22*svc+8*spd+(Object.keys(S.mail).length?5:0)+4*pop+Math.min(4,2*Object.keys(S.shore.hostels).length)+ribandRep();S.rep=clamp(S.rep+(target-S.rep)*0.12,0,100);}
   if(S.shore.bunker&&S.shore.bunker.until===S.m-1)news('Your bunker contract has expired. Coal and oil are back at market prices.','bad');
   if(S.offer&&S.offer.exp<=S.m)S.offer=null;
   // a cruise that has ended (Prohibition's repeal ends the cruises to nowhere): its ships are laid up and the line closes
@@ -376,8 +376,8 @@ function refreshMarket(){
 const runningCost=()=>S.ships.reduce((a,x)=>a+crewCost(x)+(x.captain?x.captain.wage:0)+insCost(x)+MAINT_COST[x.maint]*x.grt/8000,0)+600+250*S.ships.length+shoreUpkeep();
 const fleetValue=()=>S.ships.reduce((a,s)=>a+shipValue(s),0);
 const shoreValue=()=>{const s=S.shore;let v=0;for(const p in s.piers)v+=PIER_COST[p]*0.6;for(const y in s.yards)v+=120000*0.6;if(s.slip)v+=OWN_SLIP_COST*0.5;for(const h in s.hostels)v+=35000*0.5;for(const p in s.sheds||{})v+=SHED_COST*0.5;for(const p in s.cold||{})v+=COLD_COST*0.5;return v;};
-const netWorth=()=>S.cash+(S.gilts||0)+fleetValue()+shoreValue()-S.debt;
-const headroom=()=>Math.max(0,0.7*(fleetValue()+shoreValue())+0.9*(S.gilts||0)-S.debt); // government stock is the best security a bank can hold
+const netWorth=()=>S.cash+(S.gilts||0)+fleetValue()+shoreValue()-S.debt-admDebt();
+const headroom=()=>Math.max(0,0.7*(fleetValue()+shoreValue())+0.9*(S.gilts||0)-S.debt-admDebt()); // government stock is the best security a bank can hold
 const odLimit=()=>8000+0.5*headroom(); // the bank forecloses when cash falls below minus this
 function news(t,k,pauseIt){
   S.news.unshift({d:Math.floor(S.t),t,k:k||''});if(S.news.length>80)S.news.length=80;
