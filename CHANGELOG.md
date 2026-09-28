@@ -2,6 +2,16 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.25.0 (28 September 2026)
+Liveries and ship variety.
+- The Line has its own colours: funnel with up to two bands and a black top, hull, boot-topping, upperworks and a house flag. A new game opens a chooser with twelve presets and a live drawing of the Morven, or you can make your own. The Company tab shows the colours and changes them.
+- Each ship wears the colours she was last painted in. New ships come out in the Line's colours; ships from the brokers arrive in their old owners'. Changing the Line's colours changes no ship at once.
+- Repainting takes dry dock: a repaint job in the refit office (about a week), or, with the setting on (the default), at a ship's next overhaul, re-plating or repair, charged as extra work.
+- Every rival line has its own colours. Click a rival's ship on the chart for a card with her drawing, size, speed, age and route.
+- No two ships look alike unless they are sisters: funnels, masts, superstructure, portholes, sheer, ventilators and boats vary with each ship's seed, and ships built to one design share it. Old ships of the 1880s carry three or four masts. A ship with boats for all shows a second row of boats. The house flag flies from the mainmast.
+- Your ships' markers on the chart take the Line's funnel colour.
+- Corrected the 0.24 balance note: the `careful` owner went bankrupt in 6 of 20 games at 0.24, not 5 (the figure was taken before 0.24's last timing fixes).
+
 ## 0.24.0 (28 September 2026)
 The 1912 disaster, the safety rules and the negligence ending.
 - Lifeboats are part of every ship. Before the disaster the law asks only for the old scale: room for 960 people on any ship of 10,000 tons or more, fewer on smaller ships, whatever she carries. Boats for all can be fitted at any time (a week in the yard, or an extra in the drawing office). In every sinking no more can get away than her boats hold, and a well-drilled crew launches them fuller.

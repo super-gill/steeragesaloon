@@ -214,7 +214,7 @@ svg.chart{width:100%;height:auto;display:block}
 .modal .panel{max-width:460px;width:100%}
 .modal h3{font-family:var(--display);font-size:32px;font-weight:400}
 .ratchet{gap:10px}
-.shipm.rival{pointer-events:auto;cursor:default}
+.shipm.rival{pointer-events:auto;cursor:pointer}
 .shipm.rival .hull{left:-7px;top:-2.5px;width:14px;height:5px;opacity:.9}
 .rdot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px}
 .ver{font-family:var(--mono);letter-spacing:.04em;text-transform:none;opacity:.85;margin-left:6px}
@@ -486,3 +486,24 @@ input[type=range]{width:100%;accent-color:var(--brass)}
 /* outside work: the own use / sell spare switch under an owned shore property */
 .outrow{display:flex;flex-direction:column;gap:4px;margin:-2px 0 8px;padding:6px 0 0 10px;border-left:2px solid var(--line)}
 .outrow .seg button{font-size:12px;padding:4px 9px}
+/* a rival's ship, from her marker */
+.rcardw{position:absolute;right:56px;bottom:10px;z-index:14;width:min(340px,calc(100% - 80px));pointer-events:none}
+.rcardw > *{pointer-events:auto}
+.rcard{background:var(--surface);border:1px solid var(--line);border-radius:4px;box-shadow:0 6px 20px rgba(0,0,0,.22);padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.rcard h3{margin:2px 0 0;font-size:16px}
+.rcard .eyebrow{color:var(--muted)}
+.rcard .btn.quiet{font-size:18px;padding:0 6px;line-height:1}
+/* the Line's colours */
+.modal .panel.livpick{max-width:620px;max-height:calc(100vh - 32px);overflow:auto}
+.livprev{border:1px solid var(--line);border-radius:3px;overflow:hidden}
+.livgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:6px}
+.livp{all:unset;cursor:pointer;display:flex;gap:8px;align-items:center;padding:5px 8px;border:1px solid var(--line);border-radius:3px;background:var(--surface2);font-size:12.5px;line-height:1.25}
+.livp[aria-pressed="true"]{border-color:var(--brass);box-shadow:inset 3px 0 0 var(--brass)}
+.livp:focus-visible{outline:2px solid var(--brass)}
+.livp svg{flex:none}
+.livown summary{cursor:pointer;font-weight:600;font-size:13px}
+.livcs{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:6px 12px;margin-top:8px}
+.livc{display:flex;align-items:center;gap:6px;font-size:12.5px}
+.livc span{flex:1}
+.livc input[type=color]{width:38px;height:24px;padding:0;border:1px solid var(--line);border-radius:3px;background:none}
+@media (max-width:980px){.rcardw{position:fixed;left:8px;right:8px;bottom:8px;width:auto;z-index:54}}

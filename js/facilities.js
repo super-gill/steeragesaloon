@@ -97,6 +97,7 @@ const RF_JOBS=[ // yard jobs the refit office offers, by section
   ['Hull and upkeep',[['scrape','Scrape and paint the bottom',sh=>true,sh=>`A few days in dry dock for a clean bottom: her speed back and less coal burned. Nothing for her condition.${(sh.foul||0)>0.1?` She is ${sh.foul>0.6?'badly ':''}foul now.`:' Her bottom is clean at present.'}`],
     ['dock','Drydock overhaul',sh=>true,'Scrape, paint and overhaul: +35 condition and a clean bottom.'],
     ['replate','Re-plate and renew frames',sh=>fatOf(sh)>35,'Buys years of hull life, less each time.'],
+    ['paint','Repaint in the Line\'s colours',sh=>paintDiff(sh),'Funnels, hull and boot-topping in the Line\'s colours. About a week in dry dock.'],
     ['refurb','Refurbish the public rooms',sh=>(sh.fit||0)<90,'Cabins, saloons and linen as new, in the style of the day.']]],
   ['Machinery and equipment',[['oil','Convert to oil firing',sh=>sh.fuel==='coal'&&yearNow()>=OIL_FROM,'Cuts her stokehold crew and her bunker bill.'],
     ['turbines','New turbines',sh=>yearNow()>=1905&&!(sh.up&&sh.up.turbines),'About 1.5 knots faster and a little more economical.'],
@@ -135,7 +136,7 @@ function rfPatch(sh,rf){
   for(const k in rf.jobs){if(!rf.jobs[k])continue;
     if(k==='scrape')p.foul=0;
     if(k==='dock')p.cond=Math.max(sh.cond,Math.min(Math.min(92,condCap(sh)),sh.cond+35)),p.foul=0;
-    if(k==='refurb')p.fit=100;if(k==='oil')p.fuel='oil';if(k==='replate')p.fat=Math.max(0,fatOf(sh)-[25,15,8,4][Math.min(3,sh.replates||0)]);
+    if(k==='refurb')p.fit=100;if(k==='paint')p.paint=livFill(lineLiv());if(k==='oil')p.fuel='oil';if(k==='replate')p.fat=Math.max(0,fatOf(sh)-[25,15,8,4][Math.min(3,sh.replates||0)]);
     if(k==='cruise'){p.berths=cruiseBerths(p.berths);p.cruiser=true;}
     if(k==='tourist'){const cv=Math.round(p.berths.t*0.5);p.berths.t-=cv;p.berths.tt+=Math.round(cv*0.6);}
     if(['turbines','wireless','gear','reefer','lux','hatch','heavy','deep','boats'].includes(k))p.up[k]=true;

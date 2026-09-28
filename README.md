@@ -20,6 +20,7 @@ It is a static browser game with no build step. Open `index.html`, or serve the 
 | `js/wireless.js` | Wireless and cable traffic: coast stations, positions, telegraphese, Morse |
 | `js/emergency.js` | Emergencies: collision, ice, flooding, fire, illness, mutiny, piracy; severity; responders and salvage tugs; the master's questions and the owner's orders; diseases and port quarantine; the emergency window |
 | `js/disaster.js` | Lifeboats (the legal scale and boats for all), the night wireless watch, the 1912 disaster (which ship, the strike, the rival's sinking and the wireless room, the aftermath page), the rules that follow it (the boats law of 1913, the London Convention of 1914, the southern track), the Board of Trade's inspections after a censure, and the negligence ending |
+| `js/livery.js` | Liveries: the presets, the rivals' fixed colours, each ship's own paint, repainting, the colour chooser; the variety each ship is drawn with (her seed, or her design for sisters); the house flag; the card for a rival's ship |
 | `js/silent.js` | Ships without wireless: reckoned positions, overdue notices, sightings and relays by passing ships, foundering, posted missing |
 | `js/ledger.js` | Month-to-date accounts by category and by line |
 | `js/sim.js` | The simulation: bookings and cargo per voyage, departures, calls, arrivals, breakdowns, yards and upgrades, crew morale, daily costs, month roll |
@@ -34,7 +35,7 @@ It is a static browser game with no build step. Open `index.html`, or serve the 
 | `js/state.js` | Game state, new game, save and load (browser localStorage) with migrations, save codes |
 | `js/clock.js` | Real-time clock: pause, 1×, 3×, 7×, 14×, slowing on big events, and the frame loop |
 | `js/map.js` | Chart rendering, pan and zoom, ship markers |
-| `js/profile.js` | Procedural ship drawings: exterior and cutaway |
+| `js/profile.js` | Procedural ship drawings, exterior and cutaway, in each ship's own colours and with her own variations |
 | `js/advice.js` | Head-office advice (Mr Ferguson and the departments), the shared action handler, and departments acting on their own advice |
 | `js/design.js` | The drawing office window and the order book |
 | `js/tutorial.js` | The first-year briefing |
@@ -96,6 +97,15 @@ A new game starts in January 1900 (`START`). Games begun in January 1921 by 0.19
   - Afterwards: one aftermath page, the same whoever owned her (numbers only, no names); the ship's name is retired (`S.retired`); routine advice keeps quiet for four weeks (`S.quietUntil`); first class is 8% shy of the giants until 1914 (`giantShy`). The rule that follows the way in: after ice, the southern spring track (northern crossings 4% longer from March to June, ice risk ×0.4); after a collision, fog speed (all crossings 1% longer, collisions ×0.6); after a derelict, wrecks are removed (×0.4); the last two from January 1914.
 - **The court's tiers** (all games, `blameOf` and `inquiry` in `economy.js`): no fault or minor fault as before. A censure (blame 4 or more) also brings the Board of Trade's inspections for two years: a worn-out, run-down or mutinous ship is detained in port and sent to the yard (`botInspect`). Gross negligence (blame 6 or more, with lives lost): the underwriters refuse to pay and take back what they paid, the claims are four times as large (no legal limit), and the owners and master are tried about half a year later. If the Line's net worth is below nothing, or it goes bust within two years, the court winds it up (`S.over='wound'`): an ending page that says what the court found and what the Line saved money on. The underwriters write, and the Marine Superintendent warns, about any ship whose loss would be gross negligence (`potBlame`).
 
+## Liveries and ship variety (`js/livery.js`)
+
+- **The Line's colours** (`S.livery`): funnel colour with up to two bands and a black top or not, hull, boot-topping, upperworks and a house flag (colour, emblem colour and emblem). A new game opens the chooser: twelve presets (`LIV_PRESETS`) with a live drawing of the Morven, or the Line's own. The Company tab shows the colours and can change them.
+- **Each ship's paint** (`sh.paint`): what she was last painted in. Ships the Line builds come out in its colours; ships from the brokers come in their old owners' colours (`oldOwnerPaint`, seeded from the ship so the game's dice are untouched). When the Line changes its colours, every ship keeps the old ones until she is repainted.
+- **Repainting** is a yard job (`paint`: about a week, a tenth of a pound a ton plus £300 at the day's prices) in the refit office. With "repaint at the next dry dock" on (the default, `S.repaintDock`), a ship going in for an overhaul, re-plating or repairs is repainted at the same visit, charged as extra work.
+- **The rivals' colours** (`RIVAL_LIV`) are fixed; lines founded later take colours built from their own map colour (`rivalLiv`). Clicking a rival's marker on the chart opens a card with her drawing, size, speed, age and route.
+- **Variety** (`varOf`): every ship is drawn from a seed: funnel height, width and rake, masts (three or four on ships of the 1880s, one or two on the newest), the length of her superstructure, rows of portholes, window spacing, the forecastle and poop, sheer, ventilators and lifeboat spacing. Ships built to one design share a seed, so sisters look alike. A ship with boats for all carries a second row of boats. Cruise ships, fruit ships and post-war liners keep white hulls in their line's funnel colours.
+- **The chart**: the Line's markers take its funnel colour.
+
 ## Rival companies
 
 Each rival line (`RIVAL_P` and `RIVALS`, with the company record in `S.rivals[id]`) keeps accounts in `js/companies.js`:
@@ -150,7 +160,7 @@ Run from the repo root with Node (and Python for the bundler).
 
 Checked with the harness after any economic change. For the 1900 start (the overhaul's stage 1, finished in 0.23):
 
-- A sensible owner (`careful`) has 3 to 6 ships in August 1914, and fewer than 1 in 5 such games go bankrupt before the war. At 0.24: 5 in 20 bankrupt (the 1907 panic, the 1908 slump and losses at sea; 5 in 20 too with the boats and the night watch switched off, so the extra one is the dice), median fleet 8, median net worth £89,000.
+- A sensible owner (`careful`) has 3 to 6 ships in August 1914, and fewer than 1 in 5 such games go bankrupt before the war. At 0.25: 7 in 20 bankrupt (6 in 20 without repainting at dry dock, the same as 0.24; the 0.24 notes said 5 in 20, measured before its last timing fixes), median fleet 7, median net worth £95,000 in 1914. This is over the target; the busts are the 1907 panic, the 1908 slump and losses at sea, and 20 seeds swing by two either way. To be brought back under before the war releases.
 - An owner who does nothing (`idle`) is hurt by the boats law: from July 1913 the Morven carries about a third of her steerage until she has boats for all. Head office and the news warn from October 1912.
 - The first year makes a few thousand pounds with the one ship; margins are good enough through 1906 to add a ship every year or two.
 - Rate wars are frequent before 1908 and rare after.

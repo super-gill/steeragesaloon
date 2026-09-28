@@ -94,6 +94,7 @@ function drawShips(){
     el.style.transform=(ox||oy)?`translate(${ox}px,${oy}px)`:'';
     el.querySelector('.hull').style.transform=`rotate(${ang}deg)`;
     const sel=S.selShip===sh.id;
+    {const P=paintOf(sh),c=lum(P.funnel)>0.8?(P.band1||P.hull):P.funnel;el.querySelector('.hull').style.background=sh.state==='yard'||sh.state==='laid'||(!est&&sh.state==='sea'&&(sh.stopLeft>0||sh.limp||sh.towed))?'':c;}
     el.className='shipm'+(sel?' sel':'')+(est?' est'+(sh.overdue?' overdue':''):'')+(!est&&sh.state==='sea'&&(sh.stopLeft>0||sh.limp||sh.towed)?' broken':'')+(sh.state==='yard'?' yard':'')+(sh.state==='laid'?' laid':'');
     const tag=el.querySelector('.tag');const txt=sel||VIEW.z>=1.8?'SS '+sh.name+(est?' (reckoned)':''):'';if(tag.textContent!==txt)tag.textContent=txt;
   }
@@ -106,7 +107,7 @@ function drawRivals(){
   const O=document.getElementById('shipsO'),seen=new Set();
   for(const x of (S.rships||[]).concat(S.ghosts||[])){
     seen.add(x.id);let el=RMARKS[x.id];
-    if(!el){el=document.createElement('div');el.className='shipm rival';el.innerHTML='<div class="hull"></div>';O.prepend(el);RMARKS[x.id]=el;}
+    if(!el){el=document.createElement('div');el.className='shipm rival';el.dataset.act='rcard';el.dataset.id=x.id;el.innerHTML='<div class="hull"></div>';O.prepend(el);RMARKS[x.id]=el;}
     const p=rivalXY(x);
     el.style.left=(p.x/W*100)+'%';el.style.top=(p.y/H*100)+'%';el.style.transform=p.ox?`translate(${p.ox.toFixed(1)}px,${p.oy.toFixed(1)}px)`:'';
     const h=el.firstChild;h.style.transform=`rotate(${p.ang}deg)`;h.style.background=RIVAL_P[x.owner].col;

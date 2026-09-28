@@ -11,7 +11,9 @@ function newGame(){
   S.pi=pi;S.fareIdx=pi;applyPrices();S.lines.hal.fares=defaultFares('hal'); // the tables at the day's prices before anything is priced
   const mv=makeShip(START_SHIP,58,'GLA');mv.line='hal';mv.state='port';mv.portLeft=2;S.ships.push(mv);
   initRivals();refreshMarket();S.capPool=[0,1,2,3].map(()=>makeCaptain());news(histNow().find(h=>h.m===m0).t,'hist');
+  S.livery=livFill(LIV_DEFAULT);S.repaintDock=true;
   UI.speed=0;UI.banner='Paused. Press 1× to start the clock.';UI.confirm=null;
+  livPickOpen('new');UI.livPrev=0;
   save();UI.dirty=true;
 }
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}

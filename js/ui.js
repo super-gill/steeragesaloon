@@ -656,7 +656,14 @@ function renderCompany(){
     <p class="note">${SAFETY[sp].desc}${SAFETY[sp].cost?` About ${fmt(safetyCost())} a month for the fleet.`:''}</p>
     ${(S.inqDone||[]).length?`<span class="lbl">Courts of inquiry</span><ul class="note" style="padding-left:18px;margin:0">${S.inqDone.map(q=>`<li><strong>SS ${esc(q.name)}</strong>, ${dateLong(q.t)}: ${q.blame<1?'no fault found':q.findings.slice(0,3).join('; ')}. ${fmt(q.total)}${q.rep?`, reputation −${q.rep}`:''}.</li>`).join('')}</ul>`:''}
     ${S.stain>1?`<p class="warnline">The newspapers have not forgotten the Line's losses: its standing is held back until the memory fades.</p>`:''}</section>`;
+  const L=lineLiv(),old=S.ships.filter(paintDiff).length;
+  const colours=`<section class="sec"><h2>The Line's colours</h2><div class="row" style="align-items:center;justify-content:flex-start;gap:12px">
+      <svg viewBox="0 0 40 30" width="40" height="30" aria-hidden="true"><rect x="12" y="2" width="16" height="26" style="fill:${L.funnel};stroke:#2B2E30" stroke-width=".5"/>${L.band1?`<rect x="12" y="11" width="16" height="3" style="fill:${L.band1}"/>`:''}${L.band2?`<rect x="12" y="15" width="16" height="3" style="fill:${L.band2}"/>`:''}${L.top?'<rect x="12" y="2" width="16" height="6" style="fill:#15181A"/>':''}</svg>
+      <svg viewBox="0 0 15 11" width="30" height="22" aria-label="House flag">${flagSVG(1,1,L.flag)}</svg><span class="meta">${esc(L.name||'')}</span></div>
+    <p class="note">${old?`${old===1?'One ship still sails':`${old} ships still sail`} in other colours${S.repaintDock!==false?': each takes the Line\'s at her next dry dock':''}. The refit office can repaint a ship on her own (about a week in dry dock).`:'Every ship sails in the Line\'s colours.'}</p>
+    <button class="btn" data-act="livopen" style="width:fit-content" ${S.over?'disabled':''}>Change the colours</button></section>`;
   setHTML($('pane-company'),`
+    ${colours}
     <section class="sec"><h2>Departments</h2>${S.ships.length<4?`<p class="warnline">With ${S.ships.length===1?'one ship':S.ships.length+' ships'} a department costs more than it can save: they start to pay their way at about four ships. Each costs its opening fee plus wages and rent every month.</p>`:''}<p class="note">Each department advises in its own field, and can be told to act on its advice. A department is only as good as its head and staff: a muddled head misses months and misjudges fares, a careful one lets small gains go. Acting departments keep a cash reserve and never open lines, buy, build or sell ships on their own: they bring those to you as proposals.</p><div class="stack">${depts}</div></section>
     ${safety}
     <section class="sec"><h2>North Atlantic conference</h2>${conf}</section>
@@ -677,6 +684,7 @@ function MENU_HTML(){return `<div class="modal" role="dialog" aria-modal="true" 
 function renderModal(){
   const el=$('modal');
   if(!S.over&&UI.menu){setHTML(el,MENU_HTML());return;}
+  if(!S.over&&UI.liv){setHTML(el,livPickHTML());return;}
   if(!S.over&&S.dis&&S.dis.show){setHTML(el,disModalHTML());return;}
   if(!S.over){el.innerHTML='';return;}
   const nw=netWorth(),sold=S.over==='sold',wound=S.over==='wound';
@@ -706,4 +714,4 @@ function ratchet(){
     el.style.minHeight='';const h=el.offsetHeight;if(h>el._min)el._min=h;if(el._min)el.style.minHeight=el._min+'px';
   }
 }
-function render(){renderHeader();renderTabs();renderMap();renderDesigner();setHTML($('emergw'),emergencyHTML());if(UI.wide&&UI.tab!=='overview')renderOverview();PANE_RENDER[UI.tab]();renderModal();ratchet();}
+function render(){renderHeader();renderTabs();renderMap();renderDesigner();setHTML($('emergw'),emergencyHTML());setHTML($('rcardw'),rivalCardHTML());if(UI.wide&&UI.tab!=='overview')renderOverview();PANE_RENDER[UI.tab]();renderModal();ratchet();}

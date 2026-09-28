@@ -205,6 +205,7 @@ function arrive(sh){
 const YARD_BUNDLE=0.85,bundleCost=(sh,k)=>Math.round(refitCost(sh,k)*YARD_BUNDLE);
 const bundleDays=days=>{const d=days.slice().sort((a,b)=>b-a);return Math.round(d[0]+0.3*d.slice(1).reduce((a,b)=>a+b,0));};
 function enterYard(sh,k){
+  if((k==='dock'||k==='replate'||k==='repair')&&k!=='paint'&&repaintAtDock(sh)&&!(sh.yardAdd||[]).includes('paint'))(sh.yardAdd=sh.yardAdd||[]).push('paint'); // new colours go on at her next dry dock
   const c=refitCost(sh,k);if(c)book('yard',-c,'_idle',sh);
   const add=[];for(const x of sh.yardAdd||[]){if(x===k)continue;const cx=bundleCost(sh,x);if(S.cash>=cx){if(cx)book('yard',-cx,'_idle',sh);add.push(x);}
     else news(`The account cannot cover ${YARD_NAME[x]} for SS ${sh.name} (${fmt(cx)}); the yard leaves it out.`,'bad');}
@@ -234,6 +235,7 @@ function yardJobDone(sh,k){
   if(k==='repair'){sh.cond=Math.min(condCap(sh),sh.cond+15);news(`SS ${sh.name} has been repaired and returns to service.`);}
   if(k==='engine'){sh.cond=Math.min(condCap(sh),sh.cond+8);news(`SS ${sh.name}'s engines are repaired.`);}
   if(k==='refurb'){sh.fit=100;const ns=currentStyle();const re=ns!==(sh.style||'edw');sh.style=ns;news(`SS ${sh.name} returns freshly refurbished${re?', her public rooms redone in the '+STYLES[ns].name+' style':', her saloons like new'}.`,'good');}
+  if(k==='paint'){sh.paint=livFill(lineLiv());news(`SS ${sh.name} comes out of dry dock in the Line's colours.`);}
   if(k==='lux'){sh.up.lux=true;sh.fit=100;news(`SS ${sh.name} returns with luxury first-class suites.`,'good');}
   if(k==='fac')applyFacPlan(sh);
   if(k==='hatch'||k==='heavy'||k==='deep'){sh.up[k]=true;news(`SS ${sh.name} returns with ${YARD_NAME[k]}.`,'good');}
@@ -371,7 +373,7 @@ function refreshMarket(){
   const y=yearNow(),old=TEMPL.filter(t=>t.built<=y-1&&(!t.from||y>=t.from)&&y-t.built<34&&!S.ships.some(s=>s.name===t.name)&&!keep.some(k=>k.name===t.name)).sort(()=>Math.random()-0.5);
   // as the old list ages, the brokers offer ships built in the years since
   const nNew=Math.min(4,Math.max(0,Math.round((y-1924)/4),old.length<4?4-old.length:0,newCal()?Math.round((y-yearOfM(S.m0)-2)/3):0));const pool=old.slice(0,4-nNew);for(let i=pool.length;i<4;i++)pool.push(genMarketShip());
-  S.market=keep.concat(pool.map(t=>{const sh=makeShip(t,45+Math.random()*35,ports[Math.floor(Math.random()*ports.length)]);if(t.gen)Object.assign(sh,t.gen);sh.price=Math.round(shipValue(sh)*(1.25+Math.random()*0.25)/100)*100;return sh;}));
+  S.market=keep.concat(pool.map(t=>{const sh=makeShip(t,45+Math.random()*35,ports[Math.floor(Math.random()*ports.length)]);if(t.gen)Object.assign(sh,t.gen);sh.paint=oldOwnerPaint(sh);sh.price=Math.round(shipValue(sh)*(1.25+Math.random()*0.25)/100)*100;return sh;}));
 }
 /* the monthly bill for keeping the fleet and office going, before fuel and port costs */
 const runningCost=()=>S.ships.reduce((a,x)=>a+crewCost(x)+(x.captain?x.captain.wage:0)+insCost(x)+MAINT_COST[x.maint]*x.grt/8000,0)+600+250*S.ships.length+shoreUpkeep();

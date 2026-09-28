@@ -287,7 +287,7 @@ function deliver(o,st,kn,B){
   for(const k of ['stab','fins','aircon','pool','cinema','rphone','radar','hatch','heavy','deep','boats'])if(d.extras[k])sh.up[k]=true;
   const pool=(S.capPool||[]).slice().sort((a,b)=>b.exp-a.exp);if(pool.length){sh.captain=pool[0];S.capPool=S.capPool.filter(q=>q!==pool[0]);}
   if(o.adm&&o.admBal>0){sh.adm={bal:o.admBal,bal0:o.admBal,sub:Math.round(o.price*ADM_SUB/12)};o.admBal=0;}
-  sh.acq=S.m;S.ships.push(sh);S.orders=S.orders.filter(x=>x!==o);
+  sh.paint=livFill(lineLiv());sh.acq=S.m;S.ships.push(sh);S.orders=S.orders.filter(x=>x!==o);
   if(d.builder==='own')S.shore.slipBuilt=(S.shore.slipBuilt||0)+1;
   // the bank takes a mortgage on the new ship as on any other
   const mort=Math.min(Math.round(o.price*0.5),Math.max(0,Math.round(headroom())));if(mort>0){S.debt+=mort;S.cash+=mort;}
