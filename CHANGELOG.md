@@ -2,6 +2,19 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.20.0 (28 September 2026)
+Rival lines are real companies.
+- Every rival line keeps accounts: cash, money borrowed against its fleet, what its fleet is worth, and a year of takings and profit. It earns from the same passengers and cargo your ships compete for on each route, and pays running costs that follow wages, coal and port dues (all lower in a slump), plus interest.
+- Each line has a character: aggressive, combative or cautious; going for prestige or for volume; a heavy borrower, careful, or one that keeps its money in the bank.
+- Lines build where their ships are running full and they can pay for it, borrowing as far as their character allows. The biggest lines grow more slowly. Flush lines repay their loans, pay a dividend each January and replace their oldest ships with faster new ones.
+- A line that runs short and cannot borrow more sells ships, oldest first, to other lines or abroad. One that still cannot pay its way fails: the receivers sell up to two of its ships cheaply through your brokers, others to lines with money, and the rest for scrap or abroad. A small line with one or two ships left is wound up instead.
+- New lines come in behind failed ones four months to a year later, sooner where a trade has been left with no rival ships at all, and later while a slump is deep. They put their ships where loads are best. A line that has a busy trade to itself may draw a challenger.
+- The Company tab shows each rival's accounts and character with a health mark (prospering, sound, stretched, in trouble), and the lines that have failed and been founded. Each line's panel lists rival failures, sales, new ships and new lines on that route.
+- A young ship taken off a weak route is sold, not sent to the breakers.
+- The combine against the Morven Line is funded by the lines still trading.
+- A new tool, `tools/companies.js`, plays forty years and checks the rival companies stay healthy as a group: in 1921 to 1940 about one failure a decade in the 1920s and two in the 1930s, no line with more than about 60% of rival tonnage, and no trade left empty for two years outside a slump.
+- Balance: the plain harness strategies end close to where they did in 0.19 and the first year is a little kinder. Following head office does better than before (median net worth in 1930 about £360,000 against £260,000), mostly from rivals failing on the lines the Morven Line is winning.
+
 ## 0.19.0 (28 September 2026)
 The calendar moves to 1900. Nothing in the game changes yet: this is the groundwork for the 1900 start.
 - The game's calendar now runs from January 1900. The game still starts in January 1921, and plays exactly as before: the same seeds give the same games, day by day and in the balance harness.

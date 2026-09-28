@@ -36,6 +36,7 @@ function migrate(s){
     if(sh.state==='sea'&&!sh.geo){sh.geo=sh.legRoute;sh.pos=Math.min(sh.pos,GEO(sh.geo).dist-1);sh.stops=stopsFor(sh.geo,sh.dir).filter(x=>x[1]>sh.pos);sh.nextCall=0;sh.callLeft=0;}
   });
   if(!s.capPool||!s.capPool.length)s.capPool=[0,1,2,3].map(()=>makeCaptain());
+  applyPrices(); // the tables at the save's own prices, before the rival companies are set up against them
   ensureRivals();
   if(s.over==='end')s.over=false;
   S=prev;

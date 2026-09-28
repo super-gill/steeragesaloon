@@ -3,28 +3,30 @@
    Each route has one shared market per class and direction. Every ship on the route, ours or theirs,
    takes a slice in proportion to berths x crossings per month x appeal. */
 const MKT_LOAD=0.62,CARGO_LOAD=0.75; // rival fleets start the game this full in third class (the market is sized from it)
+/* prestige: how cabin passengers rate them; aggr: how hard they fight and how readily they build; lev: how far
+   they will borrow against their fleet (a half is a borrower, a fifth a hoarder). Lines founded in play are added here. */
 const RIVAL_P={
-  imperial:{prestige:1.15,aggr:1.2,cash:900000,col:'#8C2F2F',knots:[15,19],grt:[11000,19000],
+  imperial:{lev:0.5,prestige:1.15,aggr:1.2,cash:900000,col:'#8C2F2F',knots:[15,19],grt:[11000,19000],
     names:['Albionic','Cambrian Star','Northumbrian','Aurelian','Valentia','Orcadian','Mercian','Hibernian','Wessexian','Lothian','Dalriadan','Brigantian','Silurian','Pictavian','Cornubian','Demetian','Iceni','Atrebatic','Belgavian','Novantian']},
-  nordmark:{prestige:1.05,aggr:1.0,cash:400000,col:'#4A4F55',knots:[15,18],grt:[10000,16000],
+  nordmark:{lev:0.4,prestige:1.05,aggr:1.0,cash:400000,col:'#4A4F55',knots:[15,18],grt:[10000,16000],
     names:['Weserland','Elbstern','Friesland','Holstein','Nordlicht','Havelberg','Stralsund','Dithmarschen','Vierlande','Lüneburg','Altmark','Uckermark','Wendland']},
-  columbia:{prestige:0.88,aggr:0.7,cash:300000,col:'#2E4E7A',knots:[14,17],grt:[9000,14000],
+  columbia:{lev:0.25,prestige:0.88,aggr:0.7,cash:300000,col:'#2E4E7A',knots:[14,17],grt:[9000,14000],
     names:['Chesapeake','Old Dominion','Liberty Bell','Columbian','Shenandoah','Potomac','Allegheny','Susquehanna']},
-  dominion:{prestige:1.0,aggr:0.8,cash:500000,col:'#8A5A1E',knots:[14,17],grt:[9000,15000],
+  dominion:{lev:0.35,prestige:1.0,aggr:0.8,cash:500000,col:'#8A5A1E',knots:[14,17],grt:[9000,15000],
     names:['Acadian Star','Fundy','Manitoban','Saguenay','Ottawa Queen','Assiniboine','Gaspé','Mistassini','Nipigon','Kamouraska','Témiscouata','Chaleur','Tadoussac']},
-  partenope:{prestige:0.95,aggr:0.9,cash:350000,col:'#2E6A4A',knots:[14,17],grt:[8000,13000],
+  partenope:{lev:0.45,prestige:0.95,aggr:0.9,cash:350000,col:'#2E6A4A',knots:[14,17],grt:[8000,13000],
     names:['Vesuvio','Capri','Sorrento','Amalfi','Ischia','Procida','Posillipo','Positano']},
-  aurore:{prestige:1.25,aggr:1.0,cash:700000,col:'#3B4F8F',knots:[16,21],grt:[12000,24000],kind:'liner',
+  aurore:{lev:0.55,prestige:1.25,aggr:1.0,cash:700000,col:'#3B4F8F',knots:[16,21],grt:[12000,24000],kind:'liner',
     names:['Val de Loire','Aquitaine','Côte d\'Argent','Saintonge','Vendée','Limousin','Touraine','Anjou','Berry']},
-  antilles:{prestige:0.95,aggr:0.8,cash:400000,col:'#B8860B',knots:[14,16],grt:[4000,7000],kind:'fruit',
+  antilles:{lev:0.2,prestige:0.95,aggr:0.8,cash:400000,col:'#B8860B',knots:[14,16],grt:[4000,7000],kind:'fruit',
     names:['Montego','Port Antonio','Blue Mountain','Ocho Rios','Manchioneal','Lucea','Annotto','Savanna']},
-  guinea:{prestige:0.9,aggr:0.9,cash:500000,col:'#556B2F',knots:[11,14],grt:[5000,9000],kind:'mixed',
+  guinea:{lev:0.3,prestige:0.9,aggr:0.9,cash:500000,col:'#556B2F',knots:[11,14],grt:[5000,9000],kind:'mixed',
     names:['Sherbro','Calabar','Bonny','Accra','Cape Palmas','Opobo','Lokoja','Badagry']},
-  pampas:{prestige:1.05,aggr:1.0,cash:600000,col:'#8B3A62',knots:[13,16],grt:[8000,14000],kind:'plate',
+  pampas:{lev:0.4,prestige:1.05,aggr:1.0,cash:600000,col:'#8B3A62',knots:[13,16],grt:[8000,14000],kind:'plate',
     names:['Pampero','Estancia','Rosario','Tucumán','Mendoza','Paraná','Córdoba','Salado','Tandil']},
-  meridian:{prestige:1.0,aggr:0.6,cash:450000,col:'#5C7C8A',knots:[14,16],grt:[8000,14000],kind:'cruise',
+  meridian:{lev:0.25,prestige:1.0,aggr:0.6,cash:450000,col:'#5C7C8A',knots:[14,16],grt:[8000,14000],kind:'cruise',
     names:['Arcadia Star','Meridiana','Azure Isle','Southern Cross','Halcyon','Alcina','Belvedere','Solent Star','Caravel','Serenade','Coral Queen','Mirabelle']},
-  gulf:{prestige:0.8,aggr:0.8,cash:350000,col:'#6B5B45',knots:[10,13],grt:[5000,8000],kind:'cargo',
+  gulf:{lev:0.35,prestige:0.8,aggr:0.8,cash:350000,col:'#6B5B45',knots:[10,13],grt:[5000,8000],kind:'cargo',
     names:['Brazos','Sabine','Atchafalaya','Calcasieu','Trinity','Neches','Pearl','Mobile']}
 };
 const RIVAL_START={hal:[['dominion',3],['imperial',1]],lha:[['dominion',4],['imperial',2]],
@@ -58,13 +60,14 @@ function initRivals(){
 /* add rivals, markets and norms for any route or rival line the save does not have yet (new games and old saves alike) */
 function ensureRivals(){
   S.rships=S.rships||[];S.rnext=S.rnext||1;S.rivals=S.rivals||{};S.rmoves=S.rmoves||[];S.lastRivalPax=S.lastRivalPax||{};S.mkt=S.mkt||{};S.cmkt=S.cmkt||{};S.load0=S.load0||{};
-  for(const o in RIVAL_P)if(!S.rivals[o])S.rivals[o]={cash:RIVAL_P[o].cash};
+  coRegister(); // lines founded in play, from the save
   for(const x of S.rships)if(x.reefer===undefined)x.reefer=false;
   for(const rk in S.mkt)if(typeof S.mkt[rk]==='number')marketFor(rk); // 0.3 saves: one number per route becomes one per class
   for(const rk in RIVAL_START){if(S.mkt[rk]!==undefined)continue;
     for(const [o,n] of RIVAL_START[rk])for(let i=0;i<n;i++)S.rships.push(makeRivalShip(o,rk));
     marketFor(rk);}
   for(const rk in ROUTES)if(S.cmkt[rk]===undefined){let cc=0;for(const x of S.rships)if(x.route===rk)cc+=x.cargo*sailings(x.knots,rk);const r=ROUTES[rk];S.cmkt[rk]=CARGO_LOAD*cc/Math.max(1,r.cargo.out.t,r.cargo.home.t);}
+  coEnsure(); // company accounts, and each route's running costs
 }
 /* size a route's passenger market from the rival fleet on it, so they start MKT_LOAD full in the busy direction */
 function marketFor(rk){
@@ -117,7 +120,8 @@ function cargoWeight(rk,exclude,reefer){let a=0;for(const x of S.rships)if(x.rou
 /* Monthly passengers on a route, split between us and each rival line (estimate for the current month). */
 function routeStats(rk,m){
   const owners={},ours={pax:0,cap:0};
-  for(const x of S.rships)if(x.route===rk){const o=owners[x.owner]=owners[x.owner]||{ships:0,pax:0,cap:0};o.ships++;}
+  const r=ROUTES[rk];
+  for(const x of S.rships)if(x.route===rk){const o=owners[x.owner]=owners[x.owner]||{ships:0,pax:0,cap:0,rev:0,grt:0,cargoT:0};o.ships++;o.grt+=x.grt;}
   for(const c of ['f','s','t','tt']){
     const rw={};let tot=ourWeight(rk,c);for(const o in owners){rw[o]=rivalWeight(rk,c,o);tot+=rw[o];}
     if(tot<=0)continue;
@@ -125,18 +129,23 @@ function routeStats(rk,m){
     for(const dir of [0,1]){
       const M=marketM(rk,c,dir,m);
       for(const o in owners){let cap=0;for(const x of S.rships)if(x.route===rk&&x.owner===o)cap+=rivalBerths(x,c)*sailings(x.knots,rk);
-        owners[o].pax+=Math.min(cap,M*rw[o]/tot);owners[o].cap+=cap;}
+        const p=Math.min(cap,M*rw[o]/tot);owners[o].pax+=p;owners[o].cap+=cap;owners[o].rev+=p*(r.cruise&&dir===1?0:(r.ref[c]||r.ref.t))*rivalFare(o,rk);}
       let cap=0;for(const sh of S.ships)if(sh.line===rk&&ACTIVE.includes(sh.state))cap+=(sh.berths[c]||0)*sailings(knotsOf(sh),rk,SPD[sh.speed]);
       ours.pax+=Math.min(cap,M*ow/tot);ours.cap+=cap;
     }
   }
+  // cargo: each direction's offer, shared by hold space as the ships' own sailings share it
+  if(!r.cruise&&routeOpen(rk,m))for(const dir of [0,1]){const cd=dir===0?r.cargo.out:r.cargo.home,cm=COMM[cd.c],offer=S.cmkt[rk]*cd.t*cargoSeason(cd.c,m),cw=cargoWeight(rk,null,cm.reefer);
+    if(offer<=0||cw<=0)continue;
+    for(const o in owners){let w=0;for(const x of S.rships)if(x.route===rk&&x.owner===o)w+=x.cargo*sailings(x.knots,rk)*(cm.reefer&&!x.reefer?0.15:1);
+      const t=Math.min(w,offer*w/cw);owners[o].cargoT+=t;owners[o].rev+=t*cm.rate*cargoMod(m);}}
   let rivalPax=0;for(const o in owners){owners[o].load=owners[o].cap?owners[o].pax/owners[o].cap:0;rivalPax+=owners[o].pax;}
   return {owners,ours,rivalPax,total:rivalPax+ours.pax};
 }
 const RP_CACHE={};
 function rivalPax(rk,m){const k=rk+'|'+m+'|'+Math.floor(S.t)+'|'+S.rships.length+'|'+Object.keys(S.wars).join()+'|'+((S.rfare&&S.rfare[rk])||1);if(RP_CACHE[rk]&&RP_CACHE[rk].k===k)return RP_CACHE[rk].v;const v=routeStats(rk,m).rivalPax;RP_CACHE[rk]={k,v};return v;}
 function ownersOn(rk){const o={};for(const x of S.rships)if(x.route===rk)o[x.owner]=(o[x.owner]||0)+1;return o;}
-function topRival(rk){const o=ownersOn(rk);const k=Object.keys(o).sort((a,b)=>o[b]*RIVAL_P[b].aggr-o[a]*RIVAL_P[a].aggr)[0];return k||RIVAL_START[rk][0][0];}
+function topRival(rk){const o=ownersOn(rk);const k=Object.keys(o).sort((a,b)=>o[b]*RIVAL_P[b].aggr-o[a]*RIVAL_P[a].aggr)[0];return k||(RIVAL_START[rk]||[]).map(q=>q[0]).find(coAlive)||coLive()[0];}
 function routeAggr(rk){const o=ownersOn(rk);let w=0,a=0;for(const k in o){w+=o[k];a+=o[k]*RIVAL_P[k].aggr;}return w?a/w:0.6;}
 function pressure(rk,fares,ourPax,n,m){
   let sum=0;for(const c of ['f','s','t'])sum+=fares[c]/ROUTES[rk].ref[c];
@@ -145,7 +154,6 @@ function pressure(rk,fares,ourPax,n,m){
   return {p:clamp(p,0,100),share,ratio,rp};
 }
 const tensionWord=t=>t<40?'Calm':t<65?'Uneasy':'Hostile';
-const rivalHealth=c=>c>600000?'Flush':c>250000?'Comfortable':c>50000?'Stretched':'Struggling';
 
 /* ---------- the rivals' monthly decisions ---------- */
 function rivalMove(o,rk,kind,ship,to){
@@ -154,7 +162,9 @@ function rivalMove(o,rk,kind,ship,to){
   if(kind==='add')news(`${n} puts the new SS ${ship} on ${R}.${mine?' Expect thinner loads.':''}`,mine?'bad':'');
   if(kind==='move')news(`${n} moves SS ${ship} from ${R} to ${ROUTES[to].name}.`,S.lines[to]?'bad':mine?'good':'');
   if(kind==='retire')news(`${n} sends the old SS ${ship} to the breakers.${mine?' Less competition on '+R+'.':''}`,mine?'good':'');
+  if(kind==='sold'&&mine)news(`${n} has sold SS ${ship} off ${R} to raise money.`,'good');
 }
+/* the rival lines' month: fares, then each company's accounts and decisions (companies.js), then new lines */
 function rivalsMonth(){
   const m=S.m,R=Math.random;
   // price matching: where the Morven Line undercuts, the route's fare level follows it down over a few months
@@ -167,43 +177,38 @@ function rivalsMonth(){
   for(const x of S.rships)if(!routeOpen(x.route,m)){const to=Object.keys(ROUTES).find(k=>isCruise(k)&&routeOpen(k,m)&&k!==x.route&&ROUTES[k].calls[0]===ROUTES[x.route].calls[0])||'cwi';rivalMove(x.owner,x.route,'move',x.name,to);x.route=to;}
   const stats={};for(const rk in ROUTES)stats[rk]=routeStats(rk,m);
   S.lastRivalPax={};for(const rk in ROUTES)S.lastRivalPax[rk]=Math.round(stats[rk].rivalPax);
-  for(const o in RIVAL_P){
+  const relOf=(o,k)=>{const q=stats[k].owners[o];return q?q.load/Math.max(0.05,S.load0[k]*seasonNorm(k,m)):0;};
+  for(const o of coLive()){
     const P=RIVAL_P[o],co=S.rivals[o];
-    // earnings: a ship makes money above about 60% loads; rate wars cost the participants
-    for(const rk in ROUTES){const st=stats[rk].owners[o];if(!st)continue;
-      st.rel=st.load/Math.max(0.05,S.load0[rk]*seasonNorm(rk,m));
-      let per=0;for(const x of S.rships)if(x.route===rk&&x.owner===o)per+=(st.rel-0.85)*x.grt*1.2;
-      co.cash+=per;if(S.wars[rk])co.cash-=st.ships*2500;}
+    coAccounts(o,stats);
     const routes=Object.keys(ROUTES).filter(rk=>stats[rk].owners[o]);
-    // grow where loads are strong, more eagerly where the Morven Line is taking share
+    for(const rk of routes)stats[rk].owners[o].rel=relOf(o,rk);
+    // grow where loads are strong, more eagerly where the Morven Line is taking share, if the money is there
     for(const rk of routes){const st=stats[rk].owners[o],ourShare=stats[rk].ours.pax/Math.max(1,stats[rk].total);
-      const fight=ourShare>0.3&&co.cash>180000&&R()<0.08*P.aggr; // answer an interloper with tonnage
-      if(fight||(st.rel>1.12&&co.cash>260000&&R()<0.16*P.aggr+(ourShare>0.25?0.1:0))){
-        const sh=makeRivalShip(o,rk,Math.floor(yearOfM(m))),era=Math.max(0,(m-ym(1930,0))/12);sh.knots=+(P.knots[1]-Math.random()+Math.min(5,era*0.15)).toFixed(1);if(era>0){sh.grt=Math.round(sh.grt*(1+Math.min(0.5,era*0.02))/100)*100;}S.rships.push(sh);newRivalVis(sh);co.cash-=220000;rivalMove(o,rk,'add',sh.name);break;}}
+      const fight=ourShare>0.3&&R()<0.08*P.aggr; // answer an interloper with tonnage
+      const sh0=coFleet(o).reduce((a,x)=>a+x.grt,0)/Math.max(1,S.rships.reduce((a,x)=>a+x.grt,0)),big=sh0<=0.25?1:Math.max(0.05,1-(sh0-0.25)*4); // the biggest lines grow more slowly: their bankers and the conference hold them back
+      if(fight||(st.rel>1.12&&coProfit(o)>0&&R()<(0.16*P.aggr+(ourShare>0.25?0.1:0))*big)){
+        const sh=makeRivalShip(o,rk,Math.floor(yearOfM(m))),era=Math.max(0,(m-ym(1930,0))/12);sh.knots=+(P.knots[1]-Math.random()+Math.min(5,era*0.15)).toFixed(1);if(era>0){sh.grt=Math.round(sh.grt*(1+Math.min(0.5,era*0.02))/100)*100;}
+        const price=coNewPrice(sh);if(!coCanPay(o,price,fight))continue;
+        coPay(o,price);S.rships.push(sh);newRivalVis(sh);rivalMove(o,rk,'add',sh.name);break;}}
     // retreat from weak routes
     for(const rk of routes){const st=stats[rk].owners[o];
       // incumbents hold their home trades: they only give ground below their starting fleet when the money runs out
       const home=(RIVAL_START[rk]||[]).find(q=>q[0]===o),floor=home?Math.ceil(home[1]*0.75):0;
-      if(st.ships<=floor&&co.cash>50000)continue;
+      if(st.ships<=floor&&!coShort(o))continue;
+      if(co.born!==undefined&&m-co.born<18&&!coShort(o))continue; // a new line gives its first trade a year and a half
       if(st.rel<0.72&&st.ships>0&&R()<0.3){
         const ships=S.rships.filter(x=>x.route===rk&&x.owner===o).sort((a,b)=>a.built-b.built),x=ships[0];
-        const relOf=k=>{const q=stats[k].owners[o];return q?q.load/Math.max(0.05,S.load0[k]*seasonNorm(k,m)):0;};
-        const alt=Object.keys(ROUTES).filter(k=>k!==rk&&stats[k].owners[o]&&relOf(k)>1.0).sort((a,b)=>relOf(b)-relOf(a))[0];
+        const alt=Object.keys(ROUTES).filter(k=>k!==rk&&stats[k].owners[o]&&stats[k].owners[o].rel>1.0).sort((a,b)=>stats[b].owners[o].rel-stats[a].owners[o].rel)[0];
         if(alt&&ships.length>0&&(ships.length>1||R()<0.5)){x.route=alt;rivalMove(o,rk,'move',x.name,alt);}
-        else if(ships.length>1){dropRival(x);co.cash+=x.grt*2;rivalMove(o,rk,'retire',x.name);}
+        else if(ships.length>1){dropRival(x);if(coAge(x)<20){co.cash+=coShipVal(x)*0.75;rivalMove(o,rk,'sold',x.name);}else{co.cash+=coScrap(x);rivalMove(o,rk,'retire',x.name);}} // a young ship is sold abroad, an old one broken up
         break;}}
     // old ships go to the breakers
-    for(const x of S.rships.filter(y=>y.owner===o&&yearOfM(m)-y.built>32)){if(R()<0.08){dropRival(x);rivalMove(o,x.route,'retire',x.name);}}
-    // insolvency: sell a third of the fleet, one of them cheap to the Morven Line's brokers
-    if(co.cash<-150000){
-      const fleet=S.rships.filter(y=>y.owner===o).sort((a,b)=>a.built-b.built),sell=fleet.slice(0,Math.max(1,Math.floor(fleet.length/3)));
-      sell.forEach(dropRival);co.cash=100000;
-      news(`${RIVALS[o].name} is in financial trouble and is selling ${sell.length} ship${sell.length>1?'s':''}.`,'good',true);
-      const x=sell[sell.length-1];
-      const t={name:x.name,built:x.built,grt:x.grt,knots:x.knots,berths:{f:x.berths.f,s:x.berths.s,t:x.berths.t,tt:0},cargo:x.cargo,fuel:'coal',base:x.grt*26,note:`Ex-${RIVALS[o].name}, sold cheaply by the receivers.`};
-      t.reefer=x.reefer;const sh=makeShip(t,55+Math.random()*20,['GLA','LIV','NAP'][Math.floor(Math.random()*3)]);sh.price=Math.round(shipValue(sh)*0.7/100)*100;sh.bargain=true;sh.listed=S.m;S.market.push(sh);
-    }
+    for(const x of S.rships.filter(y=>y.owner===o&&yearOfM(m)-y.built>32)){if(R()<0.08){dropRival(x);co.cash+=coScrap(x);rivalMove(o,x.route,'retire',x.name);}}
+    if(m%12===0&&coAlive(o))coYearEnd(o);
+    coFinance(o,stats);
   }
+  coEntrants(stats);
 }
 /* seasonal demand now, relative to the reference month used for load0 (July 1921) */
 function seasonNorm(rk,m){const r=ROUTES[rk];let a=0,b=0;for(const c of ['f','s','t','tt']){if(c==='tt'&&!r.cruise)continue;a+=r.base[c]*seasonOf(rk,c,m);b+=r.base[c]*seasonOf(rk,c,6);}return a/b;} // season only: quotas and booms register as real change

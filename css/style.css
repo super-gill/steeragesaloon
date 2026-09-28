@@ -479,3 +479,7 @@ input[type=range]{width:100%;accent-color:var(--brass)}
 .times .tsoon li{border-left-color:var(--brass)}
 .thist summary{cursor:pointer;font-size:12.5px;font-weight:600;color:var(--muted)}
 .thist .news{margin-top:8px;max-height:320px}
+/* rival company accounts on the Company tab */
+.cogrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:6px 14px;margin:6px 0 2px}
+.cogrid>div{display:flex;flex-direction:column;min-width:0}
+.cogrid .num{font-variant-numeric:tabular-nums}

@@ -131,7 +131,7 @@ function combineMonth(){
   if(ours<0.8*big||Math.random()>0.06)return;
   const top=Object.keys(S.lines).map(rk=>[rk,shipsOn(rk).length]).sort((a,b)=>b[1]-a[1]).slice(0,3).map(q=>q[0]);
   S.combine={until:m+18+Math.floor(Math.random()*12),rk:top};
-  for(const o in S.rivals)S.rivals[o].cash+=400000*PX();
+  for(const o of coLive())S.rivals[o].cash+=400000*PX();
   news(`The other Atlantic lines have formed a combine against the Morven Line: pooled funds, new tonnage and fighting rates on ${top.map(k=>ROUTES[k].name).join(', ')}.${S.conf?' The conference has expelled the Morven Line.':''}`,'bad',true);
   S.conf=false;
 }

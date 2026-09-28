@@ -429,6 +429,15 @@ function lineShipsHTML(rk,ships){
   return `<div class="ctl"><span class="lbl">Ships on this line</span><div class="tablewrap"><table class="board"><thead><tr><th></th><th class="r">Last</th><th class="r">Avg</th><th class="r">Expect</th></tr></thead><tbody>${rows}</tbody></table></div>
     <span class="note">Last month, her twelve-month average, and what she should make a month here over the coming year. Click a ship to open her.</span></div>`;
 }
+/* one rival move, as the line's panel tells it */
+function rmoveText(q,rk){switch(q.kind){
+  case 'add':return 'added SS '+q.ship;
+  case 'move':return q.to===rk?'moved SS '+q.ship+' here':'took SS '+q.ship+' off to '+ROUTES[q.to].name;
+  case 'sold':return 'sold SS '+q.ship+(q.to&&RIVALS[q.to]?' to '+RIVALS[q.to].name:'');
+  case 'renew':return 'replaced SS '+q.old+' with the new SS '+q.ship;
+  case 'fail':return 'failed';
+  case 'enter':return 'started sailing here';
+  default:return 'scrapped SS '+q.ship;}}
 function marketHTML(rk,estPax,n){
   const r=ROUTES[rk],m=S.m,L=S.lines[rk],st=routeStats(rk,m),tot=Math.max(1,st.total);
   const f=v=>'£'+Math.round(v);
@@ -453,7 +462,7 @@ function marketHTML(rk,estPax,n){
   if(r.cruise)tens=`<p class="note">No conference on cruises: no rate wars and no fare floor, but a small market shared with the cruising companies.</p>`;
   else if(L&&!S.conf)tens=tens.replace(/<\/div>$/,`${confBtn()}</div>`);
   const mv=S.rmoves.filter(q=>q.rk===rk||q.to===rk).slice(0,4);
-  const moves=mv.length?`<div class="ctl"><span class="lbl">Rival moves here</span><ul class="note" style="padding-left:18px;margin:0">${mv.map(q=>`<li>${MONTHS[q.m%12].slice(0,3)} ${YEAR0+Math.floor(q.m/12)}: ${RIVALS[q.o].name} ${q.kind==='add'?'added SS '+q.ship:q.kind==='move'?(q.to===rk?'moved SS '+q.ship+' here':'took SS '+q.ship+' off to '+ROUTES[q.to].name):'scrapped SS '+q.ship}</li>`).join('')}</ul></div>`:'';
+  const moves=mv.length?`<div class="ctl"><span class="lbl">Rival moves here</span><ul class="note" style="padding-left:18px;margin:0">${mv.map(q=>`<li>${MONTHS[q.m%12].slice(0,3)} ${YEAR0+Math.floor(q.m/12)}: ${RIVALS[q.o].name} ${rmoveText(q,rk)}</li>`).join('')}</ul></div>`:'';
   return `<div class="ctl"><span class="lbl">Market report · this month, estimated</span>
     <div class="tablewrap"><table><thead><tr><th>Line</th><th class="r">Share</th><th class="r">First</th><th class="r">Second</th><th class="r">Third</th></tr></thead><tbody>${me}${rows}</tbody></table></div>
     <p class="note">${notes.join(' ')}</p></div>${tens}${moves}`;
@@ -604,6 +613,22 @@ function renderFinance(){
 function ownersByRoute(o){const c={};for(const y of S.rships)if(y.owner===o)c[y.route]=(c[y.route]||0)+1;return Object.keys(c).map(rk=>`${ROUTES[rk].name} ${c[rk]}`).join(' · ');}
 const confBtn=()=>S.conf?(UI.confirm==='leave'?`<div class="btns"><button class="btn danger" data-act="leave">Confirm: leave</button><button class="btn" data-act="cancel">Stay</button></div>`:`<button class="btn" data-act="leave" style="width:fit-content">Leave the conference</button>`)
   :`<div class="row"><button class="btn" data-act="join" ${S.cash<3000||S.over?'disabled':''} style="width:fit-content">Join the conference · £3,000</button><span class="meta">then £350 a month; fare floor and steerage quota, no rate wars</span></div>`;
+/* the rival companies: what each is worth, what it made in the last year, how it is run, and the lines that have come and gone */
+function rivalsHTML(){
+  const live=coLive().sort((a,b)=>coWorth(b)-coWorth(a));
+  const card=o=>{const x=RIVALS[o],P=RIVAL_P[o],co=S.rivals[o],fleet=coFleet(o),grt=fleet.reduce((a,y)=>a+y.grt,0),[hw,hk]=coHealth(o),h=co.h||[];
+    const kf=v=>fmt(Math.round(v/1000)*1000),rev=coYear(o,'rev'),net=coYear(o,'net'),g=(lbl,v,cls)=>`<div><span class="lbl">${lbl}</span><span class="num ${cls||''}">${v}</span></div>`;
+    return `<div class="card" data-key="rv${o}"><div class="row"><strong><span class="rdot" style="background:${P.col}"></span>${x.name}</strong><span class="chip ${hk}">${hw}</span></div>
+      <div class="meta">${x.flag} · ${fleet.length} ship${fleet.length===1?'':'s'}, ${int(grt)} tons · ${coCharacter(o).join(', ')}${co.born!==undefined&&co.born!==null?` · founded ${monthName(co.born)}`:''}</div>
+      <div class="cogrid">${g('Cash',kf(co.cash),co.cash<0?'neg':'')}${g('Borrowed',kf(co.debt))}${g('Fleet worth',kf(coValue(o)))}${g('Net worth',kf(coWorth(o)),coWorth(o)<0?'neg':'')}
+        ${g(h.length<12?`Takings, ${h.length} mo`:'Takings, 12 mo',kf(rev))}${g(h.length<12?`Profit, ${h.length} mo`:'Profit, 12 mo',kf(net),net<0?'neg':'pos')}${co.div?g('Last dividend',kf(co.div)):''}</div>
+      <div class="meta">${ownersByRoute(o)||'No ships at sea'}</div></div>`;};
+  const gone=(S.coFails||[]).map(q=>`<li>${monthName(q.m)}: <strong>${RIVALS[q.o]?RIVALS[q.o].name:q.o}</strong> failed with ${q.ships} ship${q.ships===1?'':'s'}${q.routes.length?`, on ${q.routes.map(rk=>ROUTES[rk]?ROUTES[rk].name:rk).join(', ')}`:''}.</li>`);
+  const born=(S.coNew||[]).map(q=>`<li>${monthName(q.m)}: <strong>${RIVALS[q.o].name}</strong> (${RIVALS[q.o].flag.split(',')[0]}) started on ${q.routes.map(rk=>ROUTES[rk].name).join(' and ')}.</li>`);
+  return `<section class="sec"><h2>Rival lines</h2><p class="note">Each rival is a company: it earns from the same passengers and cargo as your ships, pays its running costs and interest, builds when trade is good and the money is there, and sells ships when it is short. One that cannot pay its way fails, and the receivers sell its ships, some cheaply through your brokers. New lines come in behind. Their moves on each route are on that line's panel.</p>
+    <div class="stack">${live.map(card).join('')}</div>
+    ${gone.length||born.length?`<details class="thist"><summary>Lines come and gone (${gone.length+born.length})</summary>${gone.length?`<span class="lbl">Failed</span><ul class="note" style="padding-left:18px;margin:0">${gone.join('')}</ul>`:''}${born.length?`<span class="lbl">Founded</span><ul class="note" style="padding-left:18px;margin:0">${born.join('')}</ul>`:''}</details>`:''}</section>`;
+}
 function renderCompany(){
   const own='<span class="chip sea">Owned</span>',buy=(kind,key,label)=>{const c=shoreCost(kind,key);return `<button class="btn" data-act="shorebuy" data-d='${JSON.stringify([kind,key])}' ${S.cash<c||S.over?'disabled':''}>${label||'Buy'} · ${fmt(c)}</button>`;};
   const depts=Object.keys(DEPTS).map(k=>{const d=DEPTS[k],o=S.depts[k],dc=deptCost(k);
@@ -631,11 +656,7 @@ function renderCompany(){
     <section class="sec"><h2>Departments</h2>${S.ships.length<4?`<p class="warnline">With ${S.ships.length===1?'one ship':S.ships.length+' ships'} a department costs more than it can save: they start to pay their way at about four ships. Each costs its opening fee plus wages and rent every month.</p>`:''}<p class="note">Each department advises in its own field, and can be told to act on its advice. A department is only as good as its head and staff: a muddled head misses months and misjudges fares, a careful one lets small gains go. Acting departments keep a cash reserve and never open lines, buy, build or sell ships on their own: they bring those to you as proposals.</p><div class="stack">${depts}</div></section>
     ${safety}
     <section class="sec"><h2>North Atlantic conference</h2>${conf}</section>
-    <section class="sec"><h2>Rival lines</h2><p class="note">Their moves on each route are on that line's panel.</p>${Object.keys(RIVAL_P).map(o=>{const x=RIVALS[o],fleet=S.rships.filter(y=>y.owner===o),by=ownersByRoute(o);
-      return `<div class="card" data-key="rv${o}"><div class="row"><strong><span class="rdot" style="background:${RIVAL_P[o].col}"></span>${x.name}</strong><span class="chip ${S.rivals[o].cash<50000?'bad':S.rivals[o].cash<250000?'yard':'sea'}">${rivalHealth(S.rivals[o].cash)}</span></div>
-        <div class="meta">${x.flag} · ${fleet.length} ship${fleet.length===1?'':'s'} · ${RIVAL_P[o].aggr>=1.1?'aggressive':RIVAL_P[o].aggr>=0.9?'combative':'cautious'}</div>
-        <div class="meta">${by||'No ships at sea'}</div>
-</div>`;}).join('')}</section>
+    ${rivalsHTML()}
     <section class="sec"><h2>Milestones</h2><div class="stack" style="gap:4px">${MILESTONES.map(([id,label])=>`<div class="row" data-key="mi${id}"><span class="${S.miles[id]!==undefined?'':'meta'}">${label}</span><span class="meta">${S.miles[id]!==undefined?monthName(S.miles[id]):'Not yet'}</span></div>`).join('')}</div></section>
 `);
 }
