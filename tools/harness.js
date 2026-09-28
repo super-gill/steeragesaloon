@@ -44,6 +44,8 @@ const STRATS={
     // on rumours of a panic a careful owner puts spare cash into government stock, safe from a failing bank; after it, back
     if(S.crash&&S.crash.stage==='rumour'){const spare=Math.floor((S.cash-3*run)/1000)*1000;if(spare>0)gilts(true,spare);return;}
     if(S.gilts>0&&(!S.crash&&!S.call||S.cash<3*run))gilts(false,S.gilts); // back out of stock after the panic, or to pay the bills
+    // overdrawn and sinking: raise cash by selling the ship that earns least for her value, before the bank forecloses
+    if(S.cash<-0.35*odLimit()&&S.ships.length>1&&!S.ships.some(x=>x.pendingExit)){const w=S.ships.filter(x=>x.state==='port'||x.state==='laid'||x.state==='sea').map(x=>({x,y:(x.pl||[]).reduce((a,v)=>a+v,0)/Math.max(1,shipValue(x))})).sort((a,b)=>a.y-b.y)[0];if(w)doAction('sellship',[w.x.id]);}
     if(S.crash||S.call)return;
     if(S.debt>0&&S.cash>12*run){const r=Math.min(S.debt,Math.floor((S.cash-12*run)/1000)*1000);if(r>0){S.cash-=r;S.debt-=r;}} // pay down the mortgage when flush
     if(S.debt-Math.max(0,S.cash)<0.35*fleetValue())for(const m of S.market.slice()){const dep=Math.round(m.price*0.4);if(S.cash-dep<Math.max(12000*PX(),6*run))continue;
@@ -69,16 +71,17 @@ function runGame(strategy, seed) {
   return vm.runInContext(`(function(){
     newGame();UI.autoPause=false;UI.speed=1;UI.rev=0;
     const strat=STRATS['${strategy}'];
-    const byYear={},routes={},first=[];let wars=0,lastM=-1,lost=0,emerg=0;
-    const origNews=news;news=function(t,k,p){if(/leads a rate war|fall out on|answers with a rate war/.test(t))wars++;if(/ is lost|constructive total loss/.test(t))lost++;return origNews(t,k,p);};
+    const byYear={},routes={},first=[],trace=[],keyN=[];let wars=0,lastM=-1,lost=0,emerg=0;
+    const origNews=news;news=function(t,k,p){if(k==='bad'&&p){keyN.push(monthName(S.m)+': '+t.slice(0,150));if(keyN.length>14)keyN.shift();}if(/leads a rate war|fall out on|answers with a rate war/.test(t))wars++;if(/ is lost|constructive total loss/.test(t))lost++;return origNews(t,k,p);};
     while(!S.over&&S.t-S.t0<5480){
       if(S.m!==lastM){lastM=S.m;
         if(S.lastMonth){for(const k in S.lastMonth.lines)if(ROUTES[k])routes[k]=(routes[k]||0)+S.lastMonth.lines[k];if(S.lastMonth.m-S.m0<12)first.push(S.lastMonth.net);}
         if(S.m%12===0)byYear[YEAR0+S.m/12]=Math.round(netWorth());
+        if(S.m%6===0)trace.push(\`\${monthName(S.m)} cash \${Math.round(S.cash/1000)}k debt \${Math.round(S.debt/1000)}k gilts \${Math.round((S.gilts||0)/1000)}k fleet \${S.ships.length} val \${Math.round(fleetValue()/1000)}k nw \${Math.round(netWorth()/1000)}k\`);
         strat();}
       advance(1);
     }
-    return {bust:S.over==='bust'||S.over==='wound'?S.m-S.m0:null,wound:S.over==='wound',last:S.over?S.news.slice(0,8).map(n=>n.t):null,final:Math.round(netWorth()),ships:S.ships.length,wars,byYear,routes,firstYear:Math.round(first.reduce((a,b)=>a+b,0)),rep:Math.round(S.rep),lost,emerg:(S.emerg||[]).filter(e=>e.k!=='quar').length};
+    return {bust:S.over==='bust'||S.over==='wound'?S.m-S.m0:null,wound:S.over==='wound',last:S.over?S.news.slice(0,8).map(n=>n.t):null,trace,keyN,final:Math.round(netWorth()),ships:S.ships.length,wars,byYear,routes,firstYear:Math.round(first.reduce((a,b)=>a+b,0)),rep:Math.round(S.rep),lost,emerg:(S.emerg||[]).filter(e=>e.k!=='quar').length};
   })()`, ctx);
 }
 
@@ -87,7 +90,7 @@ const k = v => (v < 0 ? '-' : '') + '£' + (Math.abs(v) >= 1e6 ? (Math.abs(v) / 
 function report(strategy, n) {
   const R = []; for (let i = 0; i < n; i++) R.push(runGame(strategy, i + 1));
   const busts = R.filter(r => r.bust !== null);
-  if (process.env.DEBUG) busts.forEach(b => console.log('BUST', b.bust, b.wound ? 'wound' : '', '\n  ' + b.last.join('\n  ')));
+  if (process.env.DEBUG) busts.forEach(b => console.log('BUST', b.bust, b.wound ? 'wound' : '', '\n  ' + (process.env.DEBUG === '2' ? b.trace.join('\n  ') + '\n  --\n  ' + b.keyN.join('\n  ') : b.last.join('\n  '))));
   const y0 = Math.min(...R.flatMap(r => Object.keys(r.byYear).map(Number))), yrs = [1, 2, 4, 6, 8, 10, 14].map(d => y0 + d);
   const med = y => { const v = R.map(r => r.byYear[y]).filter(v => v !== undefined); return v.length ? k(pct(v, 0.5)) : '-'; };
   const routes = {}; R.forEach(r => { for (const q in r.routes) routes[q] = (routes[q] || 0) + r.routes[q] / n; });

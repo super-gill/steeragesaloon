@@ -283,6 +283,12 @@ function advice(){MOD_EPOCH++;
   const fuelLast=LM?-(LM.cat.fuel||0):0;
   if(fuelLast>6000&&!(S.shore.bunker&&S.shore.bunker.until>=S.m)&&canSpend(shoreCost('bunker')))add({id:'bunker',scope:'co',sev:'tip',gain:fuelLast*0.12-10000/24,title:'Sign a bunker contract',
     why:`You spent ${money(fuelLast)} on coal and oil last month. A two-year contract with a bunkering firm takes 12% off for ${money(shoreCost('bunker'))} down.`,act:[['Sign it','shorebuy','bunker'],['Shore','tabgo','shore']]});
+  // overdrawn and going deeper: sell the ship that earns least for her value before the bank forecloses
+  if(S.cash<-0.35*odLimit()&&S.ships.length>1&&!S.ships.some(x=>x.pendingExit)){
+    const w=S.ships.filter(x=>x.state!=='lost'&&x.state!=='yard').map(x=>({x,y:(x.pl||[]).reduce((a,v)=>a+v,0)/Math.max(1,shipValue(x))})).sort((a,b)=>a.y-b.y)[0];
+    if(w)add({id:'raise:'+w.x.id,scope:'co',sev:'bad',gain:5000,title:`Raise cash: sell SS ${w.x.name}`,
+      why:`The account is ${money(-S.cash)} overdrawn and the bank forecloses at ${money(odLimit())}. SS ${w.x.name} has earned least for what she is worth over the last year; selling her brings in about ${money(shipValue(w.x)*0.9)}.`,
+      act:[['Sell her','sellship',w.x.id],['View her','selship',w.x.id]]});}
   if(S.ships.length>=4&&Object.keys(S.depts).length===0)add({id:'dept',scope:'co',sev:'tip',gain:200,title:'Your line has outgrown one office',
     why:'With four ships or more, departments pay their way: a Fares Office, a Traffic Department, a Marine Superintendent and a Crewing Office can each act on their own advice every month. See the Company tab.',act:[['Head office','tabgo','company']]});
   if(S.rep<25&&Object.values(S.lines).some(l=>l.service===0))add({id:'rep-low',scope:'co',sev:'warn',gain:300,title:'Your name is suffering',

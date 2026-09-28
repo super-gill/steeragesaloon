@@ -66,7 +66,7 @@ function panic(c){
     if(lost>0){book('crash',-lost);news(`${BANK_NAME[0].toUpperCase()+BANK_NAME.slice(1)} has closed its doors. The liquidators will pay about five shillings in the pound. The Morven Line loses ${fmt(lost)}.`,'bad',true);}
     else news(`${BANK_NAME[0].toUpperCase()+BANK_NAME.slice(1)} has closed its doors. The Morven Line had little on deposit.`,'bad',true);}
   if(S.debt>20000*PX()){const amt=Math.round(S.debt*(c.bank?0.25:0.15)*(c.y1907?0.6:1)/100)*100;S.call={amt,due:m+(c.y1907?6:3)};
-    news(`${c.bank?'The receivers':'The bank'} call in ${fmt(amt)} of the Morven Line's loans, due by ${monthName(m+3)}. There will be no new lending for a year, and interest is up two points.`,'bad',true);}
+    news(`${c.bank?'The receivers':'The bank'} call in ${fmt(amt)} of the Morven Line's loans, due by ${monthName(S.call.due)}. There will be no new lending for a year, and interest is up two points.`,'bad',true);}
   S.noLend=m+12;S.rateUp=m+12;
   if(S.gilts>0){const g=Math.round(S.gilts*0.12);S.gilts-=g;news(`Government stock has fallen: the Line's holding is worth ${fmt(g)} less.`,'bad');}
 }
@@ -75,6 +75,10 @@ function callDue(){
   const c=S.call;S.call=null;let owe=c.amt;
   const pay=Math.min(owe,Math.max(0,S.cash));if(pay>0){S.cash-=pay;S.debt-=pay;owe-=pay;}
   if(owe<=0){news(`The called loan of ${fmt(c.amt)} is repaid.`,'good');return;}
+  // what the account can bear within the overdraft is taken from it; ships are seized only for the rest
+  const room=Math.max(0,Math.floor(S.cash+odLimit()*0.8)),od=Math.min(owe,room);
+  if(od>0){S.cash-=od;S.debt-=od;owe-=od;news(owe>0?`The bank takes ${fmt(od)} of the called loan by overdraft.`:`The called loan of ${fmt(c.amt)} is met, ${fmt(od)} of it by overdraft. The account is overdrawn.`,'bad',true);}
+  if(owe<=0)return;
   const fleet=S.ships.filter(x=>x.state!=='sea'&&x.state!=='repo'&&x.state!=='lost').sort((a,b)=>shipValue(b)-shipValue(a));
   while(owe>0&&fleet.length&&S.ships.length>0){const x=fleet.shift(),v=Math.round(shipValue(x)*0.6);
     S.ships=S.ships.filter(y=>y!==x);if(S.selShip===x.id)S.selShip=S.ships[0]?S.ships[0].id:null;admRepay(x);
@@ -202,7 +206,7 @@ function lossRecord(sh,e){
   return {name:sh.name,t:S.t,rk,due:S.t+45+Math.random()*30,dead:(sh.lost&&sh.lost.lost)||0,souls:soulsOf(sh)+crewOf(sh),cond:sh.cond,fat:fatOf(sh),morale:sh.morale||60,
     radio:radioOf(sh),drinker:has(sh,'drinker'),full:sh.speed===2,sea:rk?seaSev(sh,rk,m):0,port:rk?linePorts(rk).some(p=>!portFit(sh,p).ok):false,
     safety:S.safety===undefined?1:S.safety,ignored:e?e.orders.filter(o=>o.by==='master'&&e.canOrder).length:0,kind:e?EMERG[e.k].name.toLowerCase():'foundering',
-    grave:e?e.sev===3:false,grt:sh.grt,deck:cwSk(sh,'deck'),watch:nightOn(sh),cover:boatCover(sh),dis:!!(e&&e.doom),warned:!!(e&&e.warned),paid:sh.claimPaid!==undefined?sh.claimPaid:Math.round(shipValue(sh))};
+    grave:e?e.sev===3:false,grt:sh.grt,deck:cwSk(sh,'deck'),watch:nightOn(sh),cover:boatCover(sh),early:newCal()&&S.m<ym(1914,0),dis:!!(e&&e.doom),warned:!!(e&&e.warned),paid:sh.claimPaid!==undefined?sh.claimPaid:Math.round(shipValue(sh))};
 }
 function queueInquiry(sh,e){(S.inq=S.inq||[]).push(lossRecord(sh,e));}
 function inquiryDaily(){
@@ -215,7 +219,7 @@ function blameOf(q){
   const F=[];let blame=0;const add=(w,t)=>{blame+=w;F.push(t);};
   if(q.fat>=90)add(3,'her hull was worn out and she should have gone to the breakers');else if(q.fat>=75)add(1.5,'her hull was tired and past her best');
   if(q.cond<35)add(2.5,'she was dangerously run down');else if(q.cond<50)add(1.2,'she was poorly maintained');
-  if(q.sea>0.35)add(1.2,'she was too small for the weather on that route');
+  if(q.sea>(q.early?0.6:0.35))add(1.2,'she was too small for the weather on that route'); // before the war a ship of 4,000 or 5,000 tons was an ordinary Atlantic ship
   if(q.port)add(0.5,'she was too big for some of the ports on her line');
   if(q.morale<40)add(1,'her crew were sullen and badly paid');
   if(q.safety===0)add(1.5,'boat drills had been neglected as company policy');
@@ -235,7 +239,7 @@ const CENSURE=4,GROSS=6;
 function inquiry(q){
   const {blame,F}=blameOf(q),gross=blame>=GROSS&&q.dead>0;
   const p=PX();
-  const fine=Math.round(blame*8000*p/100)*100,claims=Math.round(q.dead*(250+blame*60)*p*(gross?4:1)/100)*100,recover=Math.round(q.grt*0.4*p/100)*100;
+  const fine=Math.round(blame*8000*p/100)*100,claims=Math.round(Math.min(q.dead*(250+blame*60)*p*(q.early?0.5:1),gross?Infinity:15*q.grt)*(gross?4:1)/100)*100,recover=Math.round(q.grt*0.4*p/100)*100;
   const clawback=gross?Math.round(q.paid/100)*100:q.fat>=90||q.cond<35?Math.round(q.paid*0.6/100)*100:0;
   const total=fine+claims+recover+clawback;book('legal',-total);
   const rep=Math.round(Math.min(30,blame*3+Math.min(10,q.dead/30)));S.rep=clamp(S.rep-rep,0,100);S.stain=(S.stain||0)+blame*2.5;

@@ -2,6 +2,14 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.25.1 (28 September 2026)
+A balance pass on 1900 to 1913: a sensible owner now goes bankrupt in about 1 game in 10 before the war, down from about 3 in 10.
+- A court of inquiry before 1914 no longer calls a ship of four or five thousand tons "too small for the weather" on the North Atlantic: in those years she was an ordinary Atlantic ship. The Morven, on the route the game gives you, was being blamed for it in every winter loss.
+- Claims from families before 1914 are half what they are later (emigrants' families abroad seldom claimed), and all claims are limited by law to £15 a ton of the ship, except after gross negligence, when there is no limit.
+- A called loan the Line cannot pay is first taken by overdraft, within the overdraft's limit; the bank seizes ships only for the rest. The notice now gives the right date (six months in 1907, not three).
+- Head office says when the account is going deep into overdraft, and which ship to sell to raise cash (the one that has earned least for her value).
+- The harness's `careful` owner does the same, and the harness can print a half-yearly trace of each bankrupt game (`DEBUG=2`).
+
 ## 0.25.0 (28 September 2026)
 Liveries and ship variety.
 - The Line has its own colours: funnel with up to two bands and a black top, hull, boot-topping, upperworks and a house flag. A new game opens a chooser with twelve presets and a live drawing of the Morven, or you can make your own. The Company tab shows the colours and changes them.

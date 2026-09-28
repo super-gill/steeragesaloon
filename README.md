@@ -150,6 +150,7 @@ Run from the repo root with Node (and Python for the bundler).
 |---|---|
 | `node tools/harness.js` | Plays the first fifteen years (1900 to 1914) headless under scripted strategies (idle, cautious, careful, advisor, expander, prudent, office, undercutter, liverpool), many seeds each, and prints survival, net worth by year, first-year profit, rate wars and profit by route. `careful` is the sensible owner the 1914 targets are set for: six months' running costs in hand, keeping its debt, less cash in hand, under a third of the fleet's value, buying only ships that should earn an eighth of their price a year, moving spare cash into government stock on rumours of a panic, moving or selling losers and worn-out ships |
 | `node tools/harness.js advisor 20` | One strategy, 20 seeds |
+| `DEBUG=1 node tools/harness.js careful 40` | Also prints the last news of each bankrupt game; `DEBUG=2` prints a half-yearly trace of its cash, debt and fleet and its big events |
 | `node tools/companies.js [years] [seeds] [verbose]` | Plays the given years (default 40) headless with a plain expanding player who cannot go bust, and prints the rival companies year by year (ships, tonnage, lines, the biggest line's share, cash, debt), failures and new lines per decade, and checks that no line dominates, no trade lies empty and failures stay at a few a decade |
 | `node tools/outside.js [years] [seeds] [sell]` | Gives the Line a full shore establishment, plays the given years (default 15) and prints what each place would earn a month from other lines every January, against its running cost and price; with `sell` every place sells, and it prints what each earned and the Line's own takings, for the trade-off |
 | `node tools/routes.js [seed] [ship]` | What a ship (default the Morven; try "Kinross" or "Rio Negro") would earn per month on each route, every January and July, as the rivals evolve |
@@ -160,7 +161,8 @@ Run from the repo root with Node (and Python for the bundler).
 
 Checked with the harness after any economic change. For the 1900 start (the overhaul's stage 1, finished in 0.23):
 
-- A sensible owner (`careful`) has 3 to 6 ships in August 1914, and fewer than 1 in 5 such games go bankrupt before the war. At 0.25: 7 in 20 bankrupt (6 in 20 without repainting at dry dock, the same as 0.24; the 0.24 notes said 5 in 20, measured before its last timing fixes), median fleet 7, median net worth £95,000 in 1914. This is over the target; the busts are the 1907 panic, the 1908 slump and losses at sea, and 20 seeds swing by two either way. To be brought back under before the war releases.
+- A sensible owner (`careful`) has 3 to 6 ships in August 1914, and fewer than 1 in 5 such games go bankrupt before the war. At 0.25.1, over 40 seeds (20 swing by two either way): 4 in 40 bankrupt, median fleet 7, median net worth £59,000 in 1914. Before 0.25.1 it was 12 in 40, mostly the starting ship lost in a winter gale and judged too small for her route, and the 1907 panic's called loans.
+- An owner who does nothing (`idle`): 6 in 30 bankrupt, nearly all in 1914 once the boats law cuts the Morven's steerage. `cautious`: 3 in 30.
 - An owner who does nothing (`idle`) is hurt by the boats law: from July 1913 the Morven carries about a third of her steerage until she has boats for all. Head office and the news warn from October 1912.
 - The first year makes a few thousand pounds with the one ship; margins are good enough through 1906 to add a ship every year or two.
 - Rate wars are frequent before 1908 and rare after.
