@@ -483,3 +483,6 @@ input[type=range]{width:100%;accent-color:var(--brass)}
 .cogrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:6px 14px;margin:6px 0 2px}
 .cogrid>div{display:flex;flex-direction:column;min-width:0}
 .cogrid .num{font-variant-numeric:tabular-nums}
+/* outside work: the own use / sell spare switch under an owned shore property */
+.outrow{display:flex;flex-direction:column;gap:4px;margin:-2px 0 8px;padding:6px 0 0 10px;border-left:2px solid var(--line)}
+.outrow .seg button{font-size:12px;padding:4px 9px}

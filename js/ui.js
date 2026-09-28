@@ -260,7 +260,7 @@ function renderShipDetail(sh){
 }
 
 /* her own account and her choice of line, side by side: what she made, and what she would make elsewhere */
-const INCOME=['fares','onboard','cargo','mail'];
+const INCOME=['fares','onboard','cargo','mail','shorein'];
 let SHIP_OPTS={key:null};
 function shipOptions(sh){
   const key=S.m+'|'+UI.rev+'|'+sh.id;if(SHIP_OPTS.key===key)return SHIP_OPTS.v;
@@ -486,13 +486,13 @@ function renderShore(){
   const sh=S.shore,buy=(kind,key,label)=>{const c=shoreCost(kind,key);return `<button class="btn" data-act="shorebuy" data-d='${JSON.stringify([kind,key])}' ${S.cash<c||S.over?'disabled':''}>${label||'Buy'} · ${fmt(c)}</button>`;};
   const own='<span class="chip sea">Owned</span>';
   const myPorts=[...new Set(Object.keys(S.lines).flatMap(rk=>ROUTES[rk].calls).concat(Object.keys(sh.piers)))].filter(p=>PIER_COST[p]);
-  const piers=myPorts.map(p=>`<div class="uprow" data-key="pi${p}"><div><strong>${PN[p]}</strong><div class="meta">${S.ships.filter(x=>x.line&&ROUTES[x.line].calls.includes(p)).length} of your ships call here</div></div>${sh.piers[p]?own:buy('pier',p)}</div>`).join('')||'<p class="note">Open a line first. Piers can be built at the ports your lines call at.</p>';
-  const agents=Object.keys(AGENCY).map(a=>`<div class="uprow" data-key="ag${a}"><div><strong>${AGENCY[a].name}</strong><div class="meta">${AGENCY[a].ports.map(p=>PN[p]).join(', ')}</div></div>${sh.agents[a]?own:buy('agency',a,'Appoint')}</div>`).join('');
-  const fag=Object.keys(FAGENCY).map(a=>`<div class="uprow" data-key="fa${a}"><div><strong>${FAGENCY[a].name}</strong><div class="meta">${FAGENCY[a].ports.map(p=>PN[p]).join(', ')}</div></div>${(sh.fagents||{})[a]?own:buy('fagent',a,'Appoint')}</div>`).join('');
+  const piers=myPorts.map(p=>`<div class="uprow" data-key="pi${p}"><div><strong>${PN[p]}</strong><div class="meta">${S.ships.filter(x=>x.line&&ROUTES[x.line].calls.includes(p)).length} of your ships call here</div></div>${sh.piers[p]?own:buy('pier',p)}</div>${sh.piers[p]?outHTML('pier:'+p):''}`).join('')||'<p class="note">Open a line first. Piers can be built at the ports your lines call at.</p>';
+  const agents=Object.keys(AGENCY).map(a=>`<div class="uprow" data-key="ag${a}"><div><strong>${AGENCY[a].name}</strong><div class="meta">${AGENCY[a].ports.map(p=>PN[p]).join(', ')}</div></div>${sh.agents[a]?own:buy('agency',a,'Appoint')}</div>${sh.agents[a]?outHTML('agency:'+a):''}`).join('');
+  const fag=Object.keys(FAGENCY).map(a=>`<div class="uprow" data-key="fa${a}"><div><strong>${FAGENCY[a].name}</strong><div class="meta">${FAGENCY[a].ports.map(p=>PN[p]).join(', ')}</div></div>${(sh.fagents||{})[a]?own:buy('fagent',a,'Appoint')}</div>${(sh.fagents||{})[a]?outHTML('fagent:'+a):''}`).join('');
   const sheds=myPorts.map(p=>`<div class="uprow" data-key="sd${p}"><div><strong>${PN[p]}</strong></div>${(sh.sheds||{})[p]?own:buy('shed',p,'Build')}</div>`).join('')||'<p class="note">Open a line first.</p>';
   const colds=COLD_PORTS.filter(p=>myPorts.includes(p)).map(p=>`<div class="uprow" data-key="cs${p}"><div><strong>${PN[p]}</strong></div>${(sh.cold||{})[p]?own:buy('cold',p,'Build')}</div>`).join('')||`<p class="note">Cold stores can be built at ${COLD_PORTS.map(p=>PN[p]).join(', ')}, once a line of yours calls there.</p>`;
-  const hostels=HOSTEL_PORTS.map(p=>`<div class="uprow" data-key="ho${p}"><div><strong>${PN[p]}</strong></div>${sh.hostels[p]?own:buy('hostel',p,'Build')}</div>`).join('');
-  const yards=Object.keys(YARD_PORTS).map(p=>`<div class="uprow" data-key="yd${p}"><div><strong>A repair yard on ${YARD_PORTS[p]}</strong><div class="meta">At ${PN[p]}${sh.slip===p?' · with a building slip, '+(sh.slipBuilt||0)+' ships built':''}</div></div>${!sh.yards[p]?buy('yard',p):!sh.slip?buy('slip',p,'Add a building slip'):own}</div>`).join('');
+  const hostels=HOSTEL_PORTS.map(p=>`<div class="uprow" data-key="ho${p}"><div><strong>${PN[p]}</strong></div>${sh.hostels[p]?own:buy('hostel',p,'Build')}</div>${sh.hostels[p]?outHTML('hostel:'+p):''}`).join('');
+  const yards=Object.keys(YARD_PORTS).map(p=>`<div class="uprow" data-key="yd${p}"><div><strong>A repair yard on ${YARD_PORTS[p]}</strong><div class="meta">At ${PN[p]}${sh.slip===p?' · with a building slip, '+(sh.slipBuilt||0)+' ships built':''}</div></div>${!sh.yards[p]?buy('yard',p):!sh.slip?buy('slip',p,'Add a building slip'):own}</div>${sh.yards[p]?outHTML('yard:'+p):''}`).join('');
   const bk=sh.bunker&&sh.bunker.until>=S.m;
   setHTML($('pane-shore'),`
     <section class="sec"><h2>Piers</h2><p class="note">Your own pier cuts port dues there by 60% and takes a day off each turnaround. ${fmt(350*PX())} a month each to run.</p><div class="stack" style="gap:6px">${piers}</div></section>
@@ -503,7 +503,8 @@ function renderShore(){
       <p class="note" style="margin-top:10px"><strong>Transit sheds</strong> at a port cut cargo handling there by 40% and half a day off each turnaround. ${fmt(200*PX())} a month each.</p><div class="stack" style="gap:6px">${sheds}</div>
       <p class="note" style="margin-top:10px"><strong>Cold stores</strong> hold chilled meat and fruit for your refrigerated ships: about 20% more of those cargoes on lines calling there. ${fmt(400*PX())} a month each.</p><div class="stack" style="gap:6px">${colds}</div></section>
     <section class="sec"><h2>Bunkers</h2><div class="uprow"><div><strong>Bunker contract</strong><div class="meta">${bk?`12% off coal and oil until ${monthName(sh.bunker.until)}`:'Two years at 12% off coal and oil, paid up front'}</div></div>${bk?own:buy('bunker',null,'Sign')}</div></section>
-    <section class="sec"><p class="note">Shore establishment costs ${fmt(shoreUpkeep()*PX())} a month in all, and its property is worth about ${fmt(shoreValue())} to the bank.</p></section>`);
+    <section class="sec"><p class="note">Shore establishment costs ${fmt(shoreUpkeep()*PX())} a month in all, and its property is worth about ${fmt(shoreValue())} to the bank.${outKeys().some(outSelling)?` Outside work for other lines brought in ${fmt(outKeys().reduce((a,k)=>a+outYear(k),0))} over the last year.`:''}</p>
+      <p class="note">Piers, repair yards, hostels and agents can sell what your own fleet does not use to the other lines, who pay out of their own accounts. They gain by it as well: berths and repairs are cheaper for them, and a shared hostel or agency wins them passengers and cargo on the routes it serves, some of them yours. Sheds, cold stores and the bunker contract are for your own ships only.</p></section>`);
 }
 
 /* ---------- Finance ---------- */

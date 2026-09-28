@@ -93,7 +93,7 @@ const speedAppeal=(knots,rk,c)=>{const p=ROUTES[rk].prestige,k=(c==='f'||c==='s'
 const fareDemand=(ratio,c)=>clamp(Math.pow(ratio,ratio>=1?E[c]:E[c]*2.6),0.03,1.8);
 function rivalAppeal(o,rk,c,x){
   const f=rivalFare(o,rk);
-  return fareDemand(1/f,c)*RIVAL_P[o].prestige*(x?speedAppeal(x.knots,rk,c):1);
+  return fareDemand(1/f,c)*RIVAL_P[o].prestige*(x?speedAppeal(x.knots,rk,c):1)*outAppeal(rk,c); // shared hostels and agents help them
 }
 /* rivals' fare level on a route, as a multiple of the line rate: their own pricing, price matching, and any rate war */
 function rivalFare(o,rk){const war=S.wars[rk];return (S.rivalIdx[o]||1)*((S.rfare&&S.rfare[rk])||1)*(war?war.mult:1);}
@@ -115,13 +115,13 @@ function shoreMult(rk,c){
 function rivalWeight(rk,c,owner){let a=0;for(const x of S.rships)if(x.route===rk&&(!owner||x.owner===owner)){const b=rivalBerths(x,c);if(b)a+=b*sailings(x.knots,rk)*rivalAppeal(x.owner,rk,c,x);}return a;}
 function ourWeight(rk,c,exclude){let a=0;if(!S.lines[rk])return 0;
   for(const sh of S.ships)if(sh!==exclude&&sh.line===rk&&ACTIVE.includes(sh.state)&&sh.berths[c])a+=sh.berths[c]*sailings(knotsOf(sh),rk,SPD[sh.speed])*ourAppeal(sh,rk,c);return a;}
-function cargoWeight(rk,exclude,reefer){let a=0;for(const x of S.rships)if(x.route===rk)a+=x.cargo*sailings(x.knots,rk)*(reefer&&!x.reefer?0.15:1);
+function cargoWeight(rk,exclude,reefer){let a=0;for(const x of S.rships)if(x.route===rk)a+=x.cargo*sailings(x.knots,rk)*(reefer&&!x.reefer?0.15:1);a*=outCargo(rk); // shared canvassers help them
   for(const sh of S.ships)if(sh!==exclude&&sh.line===rk&&ACTIVE.includes(sh.state))a+=sh.cargo*sailings(knotsOf(sh),rk,SPD[sh.speed])*(reefer&&!(sh.up&&sh.up.reefer)?0.15:1);return a;}
 /* Monthly passengers on a route, split between us and each rival line (estimate for the current month). */
 function routeStats(rk,m){
   const owners={},ours={pax:0,cap:0};
   const r=ROUTES[rk];
-  for(const x of S.rships)if(x.route===rk){const o=owners[x.owner]=owners[x.owner]||{ships:0,pax:0,cap:0,rev:0,grt:0,cargoT:0};o.ships++;o.grt+=x.grt;}
+  for(const x of S.rships)if(x.route===rk){const o=owners[x.owner]=owners[x.owner]||{ships:0,pax:0,cap:0,rev:0,paxRev:0,cargoRev:0,grt:0,cargoT:0};o.ships++;o.grt+=x.grt;}
   for(const c of ['f','s','t','tt']){
     const rw={};let tot=ourWeight(rk,c);for(const o in owners){rw[o]=rivalWeight(rk,c,o);tot+=rw[o];}
     if(tot<=0)continue;
@@ -129,7 +129,7 @@ function routeStats(rk,m){
     for(const dir of [0,1]){
       const M=marketM(rk,c,dir,m);
       for(const o in owners){let cap=0;for(const x of S.rships)if(x.route===rk&&x.owner===o)cap+=rivalBerths(x,c)*sailings(x.knots,rk);
-        const p=Math.min(cap,M*rw[o]/tot);owners[o].pax+=p;owners[o].cap+=cap;owners[o].rev+=p*(r.cruise&&dir===1?0:(r.ref[c]||r.ref.t))*rivalFare(o,rk);}
+        const p=Math.min(cap,M*rw[o]/tot);owners[o].pax+=p;owners[o].cap+=cap;const pr=p*(r.cruise&&dir===1?0:(r.ref[c]||r.ref.t))*rivalFare(o,rk);owners[o].rev+=pr;owners[o].paxRev+=pr;}
       let cap=0;for(const sh of S.ships)if(sh.line===rk&&ACTIVE.includes(sh.state))cap+=(sh.berths[c]||0)*sailings(knotsOf(sh),rk,SPD[sh.speed]);
       ours.pax+=Math.min(cap,M*ow/tot);ours.cap+=cap;
     }
@@ -138,7 +138,7 @@ function routeStats(rk,m){
   if(!r.cruise&&routeOpen(rk,m))for(const dir of [0,1]){const cd=dir===0?r.cargo.out:r.cargo.home,cm=COMM[cd.c],offer=S.cmkt[rk]*cd.t*cargoSeason(cd.c,m),cw=cargoWeight(rk,null,cm.reefer);
     if(offer<=0||cw<=0)continue;
     for(const o in owners){let w=0;for(const x of S.rships)if(x.route===rk&&x.owner===o)w+=x.cargo*sailings(x.knots,rk)*(cm.reefer&&!x.reefer?0.15:1);
-      const t=Math.min(w,offer*w/cw);owners[o].cargoT+=t;owners[o].rev+=t*cm.rate*cargoMod(m);}}
+      const t=Math.min(w,offer*w/cw),cr=t*cm.rate*cargoMod(m);owners[o].cargoT+=t;owners[o].rev+=cr;owners[o].cargoRev+=cr;}}
   let rivalPax=0;for(const o in owners){owners[o].load=owners[o].cap?owners[o].pax/owners[o].cap:0;rivalPax+=owners[o].pax;}
   return {owners,ours,rivalPax,total:rivalPax+ours.pax};
 }
@@ -177,6 +177,7 @@ function rivalsMonth(){
   for(const x of S.rships)if(!routeOpen(x.route,m)){const to=Object.keys(ROUTES).find(k=>isCruise(k)&&routeOpen(k,m)&&k!==x.route&&ROUTES[k].calls[0]===ROUTES[x.route].calls[0])||'cwi';rivalMove(x.owner,x.route,'move',x.name,to);x.route=to;}
   const stats={};for(const rk in ROUTES)stats[rk]=routeStats(rk,m);
   S.lastRivalPax={};for(const rk in ROUTES)S.lastRivalPax[rk]=Math.round(stats[rk].rivalPax);
+  outsideMonth(stats); // the rivals pay for any spare capacity the Morven Line sells them
   const relOf=(o,k)=>{const q=stats[k].owners[o];return q?q.load/Math.max(0.05,S.load0[k]*seasonNorm(k,m)):0;};
   for(const o of coLive()){
     const P=RIVAL_P[o],co=S.rivals[o];

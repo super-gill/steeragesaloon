@@ -2,6 +2,15 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.21.0 (28 September 2026)
+Shore services that earn.
+- Piers, repair yards, emigrant hostels, booking agents and freight canvassers can sell what your own fleet does not use to the other lines. Each has a switch on the Shore tab: own use (the default) or sell spare.
+- A pier takes other lines' ships in the berths your own ships leave free, for a fee well below the dues they save. A repair yard takes outside work in the berths your fleet is not using, busier when the rival fleets are big and quieter in a slump. A hostel beds other lines' emigrants for a fee. Agents and canvassers book for other lines on commission.
+- The rival lines pay out of their own accounts, and gain by it: berths and repairs are cheaper for them, and a shared hostel or agency wins them passengers and cargo on the routes it serves, some of which may be yours. That is the trade-off.
+- Each place shows what it would earn from other lines before you switch it on, and what it has earned since, with how busy it is. The Finance ledger has a line for shore earnings from other lines.
+- Head office suggests selling spare berths at a pier or a yard once they would earn about £400 a month. Hostels and agents are left to you.
+- A new tool, `tools/outside.js`, prints what every kind of place earns year by year against its cost, and the effect of selling everything on the Line's own takings. With a full shore establishment, selling everything earns about a tenth of what it cost each year; the shared hostels and agents take about 6% off a small fleet's own takings on the routes they serve.
+
 ## 0.20.0 (28 September 2026)
 Rival lines are real companies.
 - Every rival line keeps accounts: cash, money borrowed against its fleet, what its fleet is worth, and a year of takings and profit. It earns from the same passengers and cargo your ships compete for on each route, and pays running costs that follow wages, coal and port dues (all lower in a slump), plus interest.

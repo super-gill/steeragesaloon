@@ -266,6 +266,10 @@ function advice(){
     let before=0;for(const x of ships)before+=econ(x,x.line).pm;S.shore.agents[a]=true;let after=0;try{for(const x of ships)after+=econ(x,x.line).pm;}finally{delete S.shore.agents[a];}
     const save=after-before-300;if(save>0&&cost/save<=30)add({id:`agency:${a}`,scope:'co',sev:'tip',gain:save,title:`Open ${AGENCY[a].name}`,
       why:`Booking agents feed passengers to every line calling at ${AGENCY[a].ports.slice(0,4).map(p=>PN[p]).join(', ')}${AGENCY[a].ports.length>4?' and more':''}. About ${money(save)} a month more for ${money(cost)} and £300 a month.`,act:[['Appoint them','shorebuy','agency',a],['Shore','tabgo','shore']]});}
+  // spare berths at a pier or a yard cost the fleet nothing to sell; hostels and agents help rivals on your own routes, so they are left to you
+  for(const key of outKeys()){const k=key.split(':')[0];if((k!=='pier'&&k!=='yard')||outSelling(key))continue;const e=(S.shore.est||{})[key];if(!e||e.gross<400*PX())continue;
+    add({id:'sell:'+key,scope:'co',sev:'tip',gain:e.gross,title:`Sell spare ${k==='pier'?'berths at your '+PN[key.split(':')[1]]+' pier':'berths at your yard on '+YARD_PORTS[key.split(':')[1]]}`,
+      why:`Other lines would pay about ${money(e.gross)} a month for what your own ships do not use. It helps them a little: ${k==='pier'?'they save on dues':'their repairs cost them a little less'}.`,act:[['Sell spare','shoresell',key,1],['Shore','tabgo','shore']]});}
   const fuelLast=LM?-(LM.cat.fuel||0):0;
   if(fuelLast>6000&&!(S.shore.bunker&&S.shore.bunker.until>=S.m)&&canSpend(shoreCost('bunker')))add({id:'bunker',scope:'co',sev:'tip',gain:fuelLast*0.12-10000/24,title:'Sign a bunker contract',
     why:`You spent ${money(fuelLast)} on coal and oil last month. A two-year contract with a bunkering firm takes 12% off for ${money(shoreCost('bunker'))} down.`,act:[['Sign it','shorebuy','bunker'],['Shore','tabgo','shore']]});
@@ -326,6 +330,7 @@ function doAction(act,d){
       else if(kind==='dept'){if(S.depts[key])return false;S.depts[key]={auto:false,since:S.m,head:makeHead(key)};book('office',-c);news(`The ${DEPTS[key].name} opens at head office.`,'good');return true;}
       else return false;
       S.cash-=c;return true;}
+    case 'shoresell':{const [key,on]=d;if(!outKeys().includes(key))return false;(S.shore.sell=S.shore.sell||{})[key]=!!on;if(!on)delete S.shore.sell[key];return true;}
     case 'deptmode':{const [k,auto]=d;if(!S.depts[k])return false;S.depts[k].auto=!!auto;return true;}
     case 'openmove':{const [id,rk]=d;const x=ship(id);if(!x)return false;if(!S.lines[rk]){const fee=Math.round(2500*PX());if(S.cash<fee||!routeOpen(rk,S.m))return false;book('office',-fee,rk);S.lines[rk]={fares:defaultFares(rk),service:1,adv:1,last:[null,null]};news(`The Morven Line opens a ${ROUTES[rk].name} service.`,'good');}
       return doAction('moveship',[id,rk]);}
