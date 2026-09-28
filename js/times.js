@@ -32,8 +32,14 @@ function timesConditions(m,rk){
       `Steerage on ${R.name} ${pctTxt(q-1)} on the old emigrant trade${rk==='nap'?'':`; from Italy it is ${pctTxt((late?0.14:0.45)-1)}`}.${late?' Only those with a visa may sail.':''}`,'bad');}
   if(k>=42&&g==='Canada')add('canada','Canada wants settlers','With the United States all but closed, steerage to Canada is up 20%.','good');
   if(rk==='rpl'&&k>=110)add('argentina','Argentina closes its doors','Steerage to the River Plate is down 40% while the slump lasts.','bad');
+  // the emigrant years before the war: the flood, the lines' wars, the Combine, Ellis Island
+  if(k<0){const t=preDemand('t',rk,m)/preDemand('t',rk,S.m0),f=preDemand('f',rk,m)/preDemand('f',rk,S.m0),y=Math.floor(yearOfM(m));
+    if(!R.cruise&&R.group!=='Trades'||rk==='rpl')add('flood','The steerage flood',`Emigrants are leaving Europe in huge numbers: steerage on ${R.name} is ${t>=1.05?`${pctTxt(t-1)} on 1900`:'about as it was in 1900'}, first class ${pctTxt(f-1)}.`,t>1.3?'good':'');
+    if(m<CONF_FROM)add('noconf','No conference','The lines price as they like. Wars between them break out on the busy trades and can halve steerage fares for months, until they agree a pool.','');
+    if(S.trust)add('trust',`The ${TRUST_NAME}`,`American money holds ${trustMembers().map(o=>RIVALS[o].name).join(', ')}. It buys what lines it can, and answers any line that will not sell with a rate war.`,'bad');
+    if(g==='North Atlantic'||rk==='nap')add('ellis','Ellis Island',`America taxes each immigrant $${m>=ym(1907,0)?4:m>=ym(1903,0)?2:1}, paid by the line, and refuses about 2 in 100; the line carries them home at its own cost. A hostel at the port of sailing halves the refusals.`,'');}
   // the recovery of the early twenties and the growth that follows, for the cabin classes
-  if(k<106){const f=k<12?0.85:k>=24?1+0.035*(Math.min(k,105)-24)/12:1;
+  if(k>=0&&k<106){const f=k<12?0.85:k>=24?1+0.035*(Math.min(k,105)-24)/12:1;
     if(f<0.97)add('postwar','After the post-war crash',`Cabin passengers are ${pctTxt(f-1)} on a normal year: the boom has collapsed and people are nervous of spending.`,'bad');
     else if(f>1.03)add('growth','Prosperous times',`Wealthier Americans are crossing to Europe in growing numbers: first and second class ${pctTxt(f-1)} on 1922.`,'good');}
   const dep=['f','s','t'].map(c=>depression(c,m));
@@ -43,16 +49,19 @@ function timesConditions(m,rk){
   const e=eraMod('f',rk,m);if(Math.abs(e-1)>0.02){const y=yearOfM(m);add('era',y>=1937.7&&y<1938.8?'A recession in America':'The long boom',`First class ${pctTxt(e-1)} on the underlying trade.`,e<1?'bad':'good');}
   const a=airShare(rk,'f',m);if(a>0.005)add('air','Competition from the air',`About ${Math.round(a*100)}% of first class ${a>0.1?'now flies':'goes by air'} on this route.`,'bad');
   if(k>=64&&k<=70)add('strike','The coal dispute','Bunker coal is up about 90% until the miners go back.','bad');
-  else{const cp=coalPrice(m)/(1+0.04*Math.sin(k*1.3))/1.6-1;if(cp>0.12)add('coal','Dear coal',`Bunker coal ${pctTxt(cp)} on the mid-twenties price${k>=258?': the mines cannot keep up, and oil is the fuel of the future':''}.`,'bad');}
-  const px=PX();if(Math.abs(px-1)>0.03)add('prices','The cost of living',`Prices are ${Math.abs(Math.round((px-1)*100))}% ${px>1?'above':'below'} 1921: wages, coal, yard work, ships and fares all follow them.`,'');
-  for(const w in S.wars)if(S.lines[w])add('war:'+w,`A rate war on ${ROUTES[w].name}`,'Fares are being cut to the bone on this line until one side gives way.','bad');
-  if(k<156)add('dry','Prohibition','American ports are dry: nothing sold at the bar in New York, and fines when crew are caught smuggling. The cruises to nowhere sell drink beyond the limit.','');
+  else{const ref=k<0?1.9:1.6,cp=coalPrice(m)/(1+0.04*Math.sin(k*1.3))/ref-1;if(cp>0.12)add('coal','Dear coal',`Bunker coal ${pctTxt(cp)} on ${k<0?'its usual price':'the mid-twenties price'}${k>=258?': the mines cannot keep up, and oil is the fuel of the future':''}.`,'bad');}
+  const px=PX();if(k>=0&&Math.abs(px-1)>0.03)add('prices','The cost of living',`Prices are ${Math.abs(Math.round((px-1)*100))}% ${px>1?'above':'below'} 1921: wages, coal, yard work, ships and fares all follow them.`,'');
+  for(const w in S.wars)if(S.lines[w]){const W=S.wars[w];add('war:'+w,`A rate war on ${ROUTES[w].name}`,W.lines?`${W.by.map(o=>RIVALS[o].name).join(' and ')} are fighting over the trade: steerage at about ${Math.round(W.multT*100)}% of the usual fare and cabins ${Math.round(W.mult*100)}%, the other lines following part of the way, for about ${W.left} more month${W.left>1?'s':''}.`:W.trust?`The Combine's lines are carrying at a loss to punish your refusal, for about ${W.left} more month${W.left>1?'s':''}.`:'Fares are being cut to the bone on this line until one side gives way.','bad');}
+  if(k>=-12&&k<156)add('dry','Prohibition','American ports are dry: nothing sold at the bar in New York, and fines when crew are caught smuggling. The cruises to nowhere sell drink beyond the limit.','');
   return out;
 }
 /* what a real owner would know is coming */
 function timesComing(m){
   const k=m-M21,out=[];let n=m+1;while(SEASON_NAME(n)===SEASON_NAME(m))n++;
   const sn=SEASON_NAME(n);out.push(`${sn} from ${MONTHS[n%12]}. ${capF(SEASON_NOTE[sn])}.`);
+  if(m>=ym(1902,3)&&m<TRUST_FROM)out.push('An American banker is quietly buying Atlantic lines. The talk is of a trust to rule the ocean, and of what it would do to lines that will not sell.');
+  if(m>=ym(1902,9)&&m<ym(1903,2))out.push('Congress is set to double the head tax on immigrants to $2 from March, paid by the lines.');
+  if(m>=ym(1906,9)&&m<ym(1907,0))out.push('The head tax on immigrants rises to $4 in January.');
   if(k>=36&&k<42)out.push('A far tighter immigration law is before Congress. If it passes, steerage to New York will fall much further.');
   if(k>=150&&k<155)out.push('Prohibition looks likely to be repealed by the end of 1933: New York will sell drink again, and the cruises to nowhere will lose their point.');
   if(k>=213&&k<228)out.push('The Ocean Aid Convention comes into force in January 1940: from then, ships without wireless may carry no passengers.');
@@ -61,7 +70,7 @@ function timesComing(m){
 }
 function timesHTML(){
   const m=S.m,rk=timesRef(),C=timesConditions(m,rk),act=new Set(C.map(c=>c.key)),soon=timesComing(m);
-  const hist=HIST.filter(h=>h.m<=m).slice().reverse();
+  const hist=histNow().filter(h=>h.m<=m&&h.m>=(S.m0??M21)).slice().reverse();
   const inForce=h=>{const t=TIMES_TAG[h.m];return t&&(act.has(t)||t==='dep'&&act.has('dep'));};
   return `<section class="sec times"><h2>The times · ${MONTHS[m%12]} ${YEAR0+Math.floor(m/12)}</h2>
     <ul class="tlist">${C.map(c=>`<li class="${c.k}"><strong>${c.name}.</strong> ${c.txt}</li>`).join('')}</ul>

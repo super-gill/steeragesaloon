@@ -28,7 +28,7 @@ function dzSet(k,v){
   else if(['grt','knots','pax','quality','funnels'].includes(k))d[k]=+v;
   else d[k]=v;
   if(k==='grt')d.funnels=clamp(d.funnels,1,4);
-  if(k==='mach'&&!MACHINES[v].fuels.includes(d.fuel))d.fuel=MACHINES[v].fuels[0];
+  if(k==='mach'&&(!MACHINES[v].fuels.includes(d.fuel)||!fuelOK(d.fuel,yNow())))d.fuel=MACHINES[v].fuels.find(f=>fuelOK(f,yNow()))||MACHINES[v].fuels[0];
 }
 const DZ_CACHE={};
 function dzForecast(d){const key=JSON.stringify(d)+'|'+S.m;if(DZ_CACHE.k!==key){DZ_CACHE.k=key;DZ_CACHE.v=designForecast(d);}return DZ_CACHE.v;}
@@ -57,7 +57,7 @@ function renderDesigner(){
   const y=yNow(),P=PURPOSES[d.purpose],f=dzForecast(d),st=f.st,M=MACHINES[d.mach],B=builderOf(d)||BUILDERS.clyde,rec=recommend(d);
   const sh=designShip(d,st);
   const free=slipFreeAt(d.builder),start=Math.max(S.m+2,free),deliv=start+st.months+1;
-  const g0=P.size[0],g1=Math.min(P.size[1],B.max);
+  const g0=Math.min(P.size[0],builderMax(B)),g1=Math.min(P.size[1],builderMax(B));
   const purposes=Object.keys(PURPOSES).filter(k=>techOn(PURPOSES[k].from,y)).map(k=>pick('purpose',k,PURPOSES[k].name,'',d.purpose===k)).join('');
   const lines=`<select data-dzline="1" aria-label="The line she is for"><option value="">No particular line</option>${ROUTE_GROUPS.map(g=>`<optgroup label="${g}">${Object.keys(ROUTES).filter(rk=>ROUTES[rk].group===g).map(rk=>`<option value="${rk}" ${d.line===rk?'selected':''}>${ROUTES[rk].name}${S.lines[rk]?' (yours)':''}</option>`).join('')}</optgroup>`).join('')}</select>`;
   const tag=(on)=>on?' · recommended':'';
@@ -118,7 +118,7 @@ function renderDesigner(){
       <section><h3>5 · Engineering</h3>
         <p class="note">${d.auto.mach&&d.auto.form?'The engineers are choosing her engines and lines.':'You have overruled the engineers.'} ${!(d.auto.mach&&d.auto.form)?'<button class="btn quiet" data-act="dzauto">Leave it to the engineers</button>':''}</p>
         <div class="picks">${machs}</div>
-        <div class="ctl"><span class="lbl">Fuel</span><div class="seg">${['coal','oil'].map(k=>`<button data-act="dz" data-k="fuel" data-v="${k}" aria-pressed="${d.fuel===k}" ${M.fuels.includes(k)?'':'disabled'}>${k==='coal'?'Coal':'Oil'}</button>`).join('')}</div></div>
+        <div class="ctl"><span class="lbl">Fuel</span><div class="seg">${['coal','oil'].map(k=>`<button data-act="dz" data-k="fuel" data-v="${k}" aria-pressed="${d.fuel===k}" ${M.fuels.includes(k)&&fuelOK(k,yNow())?'':'disabled'}>${k==='coal'?'Coal':'Oil'}</button>`).join('')}</div></div>
         <div class="picks">${forms}</div>
         <div class="ctl"><span class="lbl">Subdivision</span><div class="seg">${Object.keys(SUBDIV).map(k=>`<button data-act="dz" data-k="subdiv" data-v="${k}" aria-pressed="${d.subdiv===k}">${SUBDIV[k].name}</button>`).join('')}</div><span class="note">${SUBDIV[d.subdiv].blurb}</span></div>
         <div class="ctl"><span class="lbl">Funnels</span><div class="seg">${[1,2,3,4].map(n=>`<button data-act="dz" data-k="funnels" data-v="${n}" aria-pressed="${d.funnels===n}">${n}</button>`).join('')}</div><span class="note">Passengers judge a ship by her funnels. Dummies cost nothing much.</span></div></section>

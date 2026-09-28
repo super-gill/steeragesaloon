@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /* Steerage & Saloon balance harness.
-   Loads the real game simulation (no screen), fixes the dice to a seed, and plays 1921-1935
-   under scripted strategies. Usage:
+   Loads the real game simulation (no screen), fixes the dice to a seed, and plays the first
+   fifteen years (1900 to 1914) under scripted strategies. Usage:
      node tools/harness.js                 all strategies, 20 seeds each
      node tools/harness.js advisor 50      one strategy, 50 seeds
    Prints survival, net worth by year, first-year profit, rate wars and profit by route. */
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const ROOT = path.join(__dirname, '..');
-const FILES = ['chart-data', 'data', 'helpers', 'economy', 'lanes', 'wireless', 'silent', 'emergency', 'ledger', 'sim', 'rivals', 'companies', 'outside', 'yard', 'naval', 'facilities', 'crew', 'state', 'clock', 'advice', 'times'].map(f => path.join(ROOT, 'js', f + '.js'));
+const FILES = ['chart-data', 'data', 'helpers', 'economy', 'lanes', 'wireless', 'silent', 'emergency', 'ledger', 'sim', 'rivals', 'companies', 'outside', 'trust', 'yard', 'naval', 'facilities', 'crew', 'state', 'clock', 'advice', 'times'].map(f => path.join(ROOT, 'js', f + '.js'));
 const SRC = FILES.map(f => [f, fs.readFileSync(f, 'utf8')]).map(([f, s]) => [f, process.env.PATCH ? s.replace(/^const /gm, 'var ') : s]);
 
 const PRELUDE = `
@@ -16,7 +16,7 @@ const H={
   openLine(rk){if(S.lines[rk]||S.cash<2500)return false;book('office',-2500,rk);S.lines[rk]={fares:defaultFares(rk),service:1,adv:1,last:[null,null]};return true;},
   assign(sh,rk){sh.line=rk||null;if(sh.line&&sh.state==='laid'){sh.state='port';sh.portLeft=1;}},
   buy(m){const dep=Math.round(m.price*0.4);if(S.cash<dep)return null;S.cash-=dep;S.debt+=m.price-dep;delete m.price;S.ships.push(m);S.market=S.market.filter(x=>x!==m);return m;},
-  bestRoute(sh){let b=null;for(const rk of Object.keys(ROUTES)){const q=econ(sh,rk);if(!b||q.pm>b.pm)b={rk,pm:q.pm};}return b;},
+  bestRoute(sh){let b=null;for(const rk of Object.keys(ROUTES)){if(!routeOpen(rk,S.m))continue;const q=econYear(sh,rk);/* a sensible buyer looks at the year ahead, not one month */if(!b||q.pm>b.pm)b={rk,pm:q.pm};}return b;},
   apply(h){const a=h.act[0];if(!a)return;const [l,act,...d]=a;
     if(['setfare','setfares','setlineopt','setship','moveship','setyard','sellship','hire','buyship','openmove','shorebuy'].includes(act))doAction(act,d);
     else if(act==='build'){const dz=JSON.parse(JSON.stringify(d[0]));dz.name='Harness '+(S.yardNext||534);placeOrder(dz);}
@@ -36,6 +36,14 @@ const STRATS={
   advisor(){for(let i=0;i<4;i++){const A=advice().filter(h=>h.act.length);if(!A.length)break;H.apply(A[0]);S.dismiss[A[0].id]=S.m;}},
   expander(){H.expand(8000);},
   prudent(){H.expand(12000,true);},
+  /* the sensible owner the 1900 targets are set for: keeps six months' running costs in hand, borrows no more than half
+     the fleet's value, buys only ships that should earn a sixth of their price a year, and lays up a ship that loses money */
+  careful(){const run=runningCost();
+    if(S.debt<0.5*fleetValue())for(const m of S.market.slice()){const dep=Math.round(m.price*0.4);if(S.cash-dep<Math.max(12000*PX(),5*run))continue;
+      const b=H.bestRoute(m);if(!b||b.pm*12<m.price/8)continue;const sh=H.buy(m);if(!sh)continue;if(!S.lines[b.rk])H.openLine(b.rk);if(S.lines[b.rk])H.assign(sh,b.rk);break;}
+    // twice a year: a ship that lost money over the year goes where she would pay, or is sold; a worn-out one is sold
+    if(S.m%6===0)for(const x of S.ships.slice()){if(S.ships.length<2)break;const loss=(x.pl||[]).length>=12&&x.pl.reduce((a,v)=>a+v,0)<0;
+      if(fatOf(x)>=85||(loss||!x.line)&&(()=>{const b=H.bestRoute(x);if(b&&b.pm>0&&x.line!==b.rk){if(!S.lines[b.rk])H.openLine(b.rk);if(S.lines[b.rk]){H.assign(x,b.rk);return false;}}return loss||!x.line;})())doAction('sellship',[x.id]);}},
   office(){for(const k of ['fares','marine','traffic','crew'])if(S.ships.length>=3&&!S.depts[k]&&canSpend(DEPTS[k].cost)){doAction('shorebuy',['dept',k]);doAction('deptmode',[k,true]);}
     H.expand(12000,true);},
   undercutter(){for(const rk in S.lines){const L=S.lines[rk],r=ROUTES[rk];L.fares.t=Math.round(r.ref.t*0.75);L.fares.s=Math.round(r.ref.s*0.85);}H.expand(10000);},
@@ -55,7 +63,7 @@ function runGame(strategy, seed) {
     newGame();UI.autoPause=false;UI.speed=1;UI.rev=0;
     const strat=STRATS['${strategy}'];
     const byYear={},routes={},first=[];let wars=0,lastM=-1,lost=0,emerg=0;
-    const origNews=news;news=function(t,k,p){if(/leads a rate war/.test(t))wars++;if(/ is lost|constructive total loss/.test(t))lost++;return origNews(t,k,p);};
+    const origNews=news;news=function(t,k,p){if(/leads a rate war|fall out on|answers with a rate war/.test(t))wars++;if(/ is lost|constructive total loss/.test(t))lost++;return origNews(t,k,p);};
     while(!S.over&&S.t-S.t0<5480){
       if(S.m!==lastM){lastM=S.m;
         if(S.lastMonth){for(const k in S.lastMonth.lines)if(ROUTES[k])routes[k]=(routes[k]||0)+S.lastMonth.lines[k];if(S.lastMonth.m-S.m0<12)first.push(S.lastMonth.net);}
@@ -72,7 +80,7 @@ const k = v => (v < 0 ? '-' : '') + '£' + (Math.abs(v) >= 1e6 ? (Math.abs(v) / 
 function report(strategy, n) {
   const R = []; for (let i = 0; i < n; i++) R.push(runGame(strategy, i + 1));
   const busts = R.filter(r => r.bust !== null);
-  const yrs = [1922, 1924, 1926, 1928, 1930, 1932, 1935];
+  const y0 = Math.min(...R.flatMap(r => Object.keys(r.byYear).map(Number))), yrs = [1, 2, 4, 6, 8, 10, 14].map(d => y0 + d);
   const med = y => { const v = R.map(r => r.byYear[y]).filter(v => v !== undefined); return v.length ? k(pct(v, 0.5)) : '-'; };
   const routes = {}; R.forEach(r => { for (const q in r.routes) routes[q] = (routes[q] || 0) + r.routes[q] / n; });
   console.log(`\n${strategy.toUpperCase()}  (${n} runs)`);
@@ -86,5 +94,5 @@ function report(strategy, n) {
 const [, , only, nArg] = process.argv;
 const n = +nArg || 20;
 const t0 = Date.now();
-for (const s of only ? [only] : ['idle', 'cautious', 'advisor', 'expander', 'prudent', 'office', 'undercutter', 'liverpool']) report(s, n);
+for (const s of only ? [only] : ['idle', 'cautious', 'careful', 'advisor', 'expander', 'prudent', 'office', 'undercutter', 'liverpool']) report(s, n);
 console.log(`\n(${((Date.now() - t0) / 1000).toFixed(1)}s)`);

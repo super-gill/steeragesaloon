@@ -45,7 +45,7 @@ The research notes behind the data tab are in `research/`.
 | 0.19.0 | Calendar moved to a 1900 base, date code in one place; saves break (done: identical results confirmed) |
 | 0.20.0 | Rivals as real companies (R1) (done: accounts, failures, new lines; `tools/companies.js`) |
 | 0.21.0 | Shore services that earn (done: `js/outside.js`, `tools/outside.js`) |
-| 0.22.0 | 1900 to 1906, 1900 becomes the start |
+| 0.22.0 | 1900 to 1906, 1900 becomes the start (done: `js/trust.js`, pre-war curves in `helpers.js`) |
 | 0.23.0 | 1907 to 1913 |
 | 0.24.0 | The 1912 disaster, Convention, negligence ending |
 | 0.25.0 | Liveries and ship variety |

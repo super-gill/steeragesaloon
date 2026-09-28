@@ -44,10 +44,11 @@ function legCalc(sh,rk,dir,R,gk){
   const fuelT=fuelRate(sh,sm)*seaDays*(1+0.1*(sh.foul||0));
   const endPort=dir===0?geoEnds(gk)[1]:geoEnds(gk)[0];
   // cruise ships lie off and land their passengers by launch: lighter dues, and none at all out at sea
-  let dues=endPort==='OFF'?0:duesAt(sh,endPort,cr?(dir===0?0.03:0.06):0.08);for(const [p] of stopsFor(gk,dir))dues+=duesAt(sh,p,cr?0.02:0.04);
+  const insp=dir===0&&endPort==='NYC'&&pax.t?usInspection(pax.t.n,pax.t.fare,r.calls[0],m):0;
+  let dues=insp+(endPort==='OFF'?0:duesAt(sh,endPort,cr?(dir===0?0.03:0.06):0.08));for(const [p] of stopsFor(gk,dir))dues+=duesAt(sh,p,cr?0.02:0.04);
   const fm=facMods(sh);let onboard=0;for(const c in pax)onboard+=pax[c].n*(seaDays+calls*CALL_DAYS)*((fm.spend[c]||0)*(cr?cr.spend:1)+(cr?(cr.bar?cr.bar[c]:CRUISE_SPEND[c]*cr.spend/2):0))*PX();onboard*=crewMods(sh).spend;
   return {cruiseOut:!!cr&&dir===0,onboard,pax,paxRev,prov,cargoT,comm:cd.c,cargoRev:cargoT*cm.rate*cargoMod(m)*(sh.up&&sh.up.heavy&&(cd.c==='general'||cd.c==='manuf')?1.12:1)*(sh.up&&sh.up.deep&&cd.c==='palm'?1.3:1)*(['grain','cotton','palm'].includes(cd.c)?1:clamp(1+(S.rep-30)/150,0.85,1.3)),fuelT,fuelC:fuelT*fuelPrice(sh,m),
-    seaDays:seaDays+calls*CALL_DAYS,geo:gk,mail:S.mail[rk]&&sh.speed>0&&sh.up&&sh.up.wireless?S.mail[rk].pay/2:0,
+    seaDays:seaDays+calls*CALL_DAYS,geo:gk,mail:S.mail[rk]&&sh.speed>0&&mailShip(sh)?S.mail[rk].pay/2:0,
     agents:0.08*paxRev,port:dues+0.35*cargoT*PX()*((sh.up&&sh.up.hatch)?0.75:1)*(S.shore&&S.shore.sheds&&S.shore.sheds[endPort]?0.6:1)};
 }
 /* cruise programmes: a ship may have several cruises. In each cruise's months she sails it from its home port, finishing the cruise
@@ -314,7 +315,8 @@ function monthRoll(pm){
     else S.mail[rk].strikes=0;
     if(S.mail[rk])S.mail[rk].ok=false;
   }
-  for(const rk of Object.keys(S.wars)){S.wars[rk].left--;if(S.wars[rk].left<=0){delete S.wars[rk];S.tension[rk]=20;news(`The rate war on ${ROUTES[rk].name} has burned out. Fares recover.`,'good');}}
+  for(const rk of Object.keys(S.wars)){const w=S.wars[rk];w.left--;if(w.left<=0){delete S.wars[rk];S.tension[rk]=20;if(!w.quiet)news(warEndText(rk,w),S.lines[rk]?'good':'');}}
+  lineWarsMonth();trustMonth(); // the early years: lines at war with each other, and the Combine (trust.js)
   for(const rk of Object.keys(ROUTES)){
     const n=shipsOn(rk).filter(x=>ACTIVE.includes(x.state)).length;
     if(S.conf||!S.lines[rk]||!n||isCruise(rk)){S.tension[rk]=(S.tension[rk]||0)*0.6;continue;} // no conference on cruises
@@ -323,7 +325,7 @@ function monthRoll(pm){
     if(prev<40&&t>=40)news(`${RIVALS[topRival(rk)].name} is complaining about your fares on ${ROUTES[rk].name}. Tension ${Math.round(t)}.`,'bad');
     if(!S.wars[rk]&&t>=40&&Math.random()<(t-40)/100*0.9){
       S.wars[rk]={left:4+Math.floor(Math.random()*4),mult:0.72};
-      news(`${RIVALS[topRival(rk)].name} leads a rate war on ${ROUTES[rk].name}. Conference fares are down a quarter to drive you off.`,'bad',true);}
+      news(`${RIVALS[topRival(rk)].name} leads a rate war on ${ROUTES[rk].name}. ${confOpen()?'Conference fares':'Fares'} are down a quarter to drive you off.`,'bad',true);}
   }
   rivalsMonth();
   // crew morale drifts toward what pay and captain earn
@@ -347,9 +349,9 @@ function monthRoll(pm){
   // seasonal cruising: a laid-up ship with a cruise season comes out for it
   for(const x of S.ships)if(x.state==='laid'&&cruiseFor(x,S.m)){x.state='port';x.portLeft=1;}
   // the mails: from reputation 40 the Post Office invites tenders, on lines where one of our ships carries wireless
-  if(S.rep>=40&&!S.mailOk){S.mailOk=true;news('The Line\'s standing now qualifies it for Post Office mail contracts. Tenders come up every few months for lines where your ships carry wireless.','good',true);}
+  if(S.rep>=40&&!S.mailOk){S.mailOk=true;news(`The Line's standing now qualifies it for Post Office mail contracts. Tenders come up every few months${wirelessRule()?' for lines where your ships carry wireless':''}.`,'good',true);}
   if(!S.offer&&S.rep>=40){
-    const c=Object.keys(S.lines).filter(rk=>!S.mail[rk]&&!isCruise(rk)&&ROUTES[rk].group!=='Trades'&&shipsOn(rk).some(x=>x.up&&x.up.wireless&&ACTIVE.includes(x.state)));
+    const c=Object.keys(S.lines).filter(rk=>!S.mail[rk]&&!isCruise(rk)&&ROUTES[rk].group!=='Trades'&&shipsOn(rk).some(x=>mailShip(x)&&ACTIVE.includes(x.state)));
     if(c.length&&Math.random()<0.25){const rk=c[Math.floor(Math.random()*c.length)];
       S.offer={route:rk,pay:Math.round((1200+Math.random()*600)*ROUTES[rk].dist/3100*(S.m>=ym(1952,3)?0.8:1)*PX()/50)*50,exp:S.m+2};
       news(`The Post Office is inviting tenders for the ${ROUTES[rk].name} mail. See Needs attention.`,'good',true);}
@@ -358,16 +360,16 @@ function monthRoll(pm){
   runDepartments();
   ordersMonth();
   for(const [id,label,test] of MILESTONES)if(!S.miles[id]&&test()){S.miles[id]=S.m;news(`Milestone: ${label}.`,'good');}
-  HIST.filter(h=>h.m===S.m).forEach(h=>news(h.t,'hist',true));
+  histNow().filter(h=>h.m===S.m).forEach(h=>news(h.t,'hist',true));
   eraEvents();
   save();
 }
 function refreshMarket(){
   const ports=['GLA','LIV','NAP','SOU','HAM','AVO'];
   const keep=S.market.filter(x=>x.bargain&&x.listed>=S.m-3);
-  const y=yearNow(),old=TEMPL.filter(t=>y-t.built<34&&!S.ships.some(s=>s.name===t.name)&&!keep.some(k=>k.name===t.name)).sort(()=>Math.random()-0.5);
+  const y=yearNow(),old=TEMPL.filter(t=>t.built<=y-1&&(!t.from||y>=t.from)&&y-t.built<34&&!S.ships.some(s=>s.name===t.name)&&!keep.some(k=>k.name===t.name)).sort(()=>Math.random()-0.5);
   // as the old list ages, the brokers offer ships built in the years since
-  const nNew=Math.min(4,Math.max(0,Math.round((y-1924)/4)));const pool=old.slice(0,4-nNew);for(let i=pool.length;i<4;i++)pool.push(genMarketShip());
+  const nNew=Math.min(4,Math.max(0,Math.round((y-1924)/4),old.length<4?4-old.length:0,newCal()?Math.round((y-yearOfM(S.m0)-2)/3):0));const pool=old.slice(0,4-nNew);for(let i=pool.length;i<4;i++)pool.push(genMarketShip());
   S.market=keep.concat(pool.map(t=>{const sh=makeShip(t,45+Math.random()*35,ports[Math.floor(Math.random()*ports.length)]);if(t.gen)Object.assign(sh,t.gen);sh.price=Math.round(shipValue(sh)*(1.25+Math.random()*0.25)/100)*100;return sh;}));
 }
 /* the monthly bill for keeping the fleet and office going, before fuel and port costs */

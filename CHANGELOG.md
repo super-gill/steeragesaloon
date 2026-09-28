@@ -2,6 +2,27 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.22.0 (28 September 2026)
+The steerage flood: the game starts in 1900.
+- A new game starts in January 1900. The Morven Line opens in Glasgow with one elderly emigrant ship, the 1881 SS Morven (4,600 tons, 12.5 knots, over a thousand steerage berths), £7,000 in the bank and a £16,000 mortgage.
+- Money follows the real price level year by year, from about two-fifths of 1921 prices in 1900. Fares, wages, coal, ships and yard work all follow it; money in the bank does not. The Finance tab measures prices against the year the Line was founded.
+- Emigration follows the real figures: steerage to New York more than doubles by 1906, to Canada it climbs far faster, and the River Plate booms. First and second class grow steadily; cargo with world trade. Coal is dear in the 1900 boom and cheap by 1910. The dip in 1908 is real, and hard.
+- The rival lines of 1900 sail smaller, slower ships with far more steerage to the ton. Their new ships take a year or more to build, and before the war they add tonnage only when their ships run well above their usual loads, so a boom leaves the trades short of berths for a while.
+- The brokers offer ships of the period: 1880s and 1890s emigrant ships, cargo steamers, a frozen-meat ship and a West Africa steamer, and later the ships built in the years since. Nothing is offered before it was built.
+- No conference until 1908. The lines fight over the trades: a war between two of them can halve steerage fares for months until they agree a pool. The great New York rate war of 1904 runs from February to November. Undercutting the other lines can still bring a war on you.
+- The International Ocean Combine forms in October 1902: American money over Imperial Atlantic and Columbia, which keep their names. It buys weaker lines now and then. Once the Morven Line has three ships it may offer to buy it for well over its worth: selling ends the game; refusing, or letting the offer lapse, brings a rate war on your two busiest trades. It never forces a sale. The Company tab shows the Combine and its members.
+- Ellis Island: a head tax on every immigrant landed at New York ($1, $2 from 1903, $4 from 1907), and about 2 in 100 refused and carried home at the Line's cost. A hostel at the port of sailing halves the refusals.
+- Booking agents matter more in the emigrant years: steerage up 12% on the routes they serve until the war.
+- Technology arrives on its dates: turbines in 1905, geared turbines in 1911, oil firing in 1919 (for new ships, conversions and head office's advice). The biggest slip grows from 20,000 tons in 1900 to 50,000 by 1911. Wireless is a dear novelty at first; ships built before 1911 do not come with it, and the mails need it only from July 1911. The cruises to nowhere wait for Prohibition in 1920.
+- The times shows the steerage flood, the absence of a conference, the Combine and Ellis Island, with what is coming (the trust, the head tax). New history headlines for 1900 to 1906.
+- The office no longer posts a silent ship overdue because she is a day or two late: it allows for her schedule, a foul bottom and a coaling stop, and waits three days (a quarter of the passage on a long one). With few ships carrying wireless before 1911, this matters.
+- Lighterage off a port a ship is too big for is charged at the day's prices and counted in the forecasts, so head office no longer overrates big ships in the West Africa trade.
+- No rival line is allowed to swallow the rest: the biggest grow more slowly, answer interlopers less readily and are kept off the receivers' sales.
+- The conference fee and dues are shown at the day's prices. The tutorial says the clock slows on big events, and that undercutting angers the other lines.
+- From 1907 to 1920 the game runs on the pre-war curves for now: the 1907 panic, the conference, the 1912 disaster, the war and the bubble come in the next releases. From January 1921 it carries on as the 1921 game, joined to the pre-war curves.
+- Games begun in 1921 with 0.19 to 0.21 still load and keep their own rules.
+- The harness plays 1900 to 1914 and has a new `careful` strategy, the sensible owner the 1914 targets are set for.
+
 ## 0.21.0 (28 September 2026)
 Shore services that earn.
 - Piers, repair yards, emigrant hostels, booking agents and freight canvassers can sell what your own fleet does not use to the other lines. Each has a switch on the Shore tab: own use (the default) or sell spare.

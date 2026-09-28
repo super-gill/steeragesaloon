@@ -25,10 +25,12 @@ function applyPrices(){
 /* monthly: prices creep up, faster as the century goes on, and fall in a slump or a panic */
 function inflate(){
   const m=S.m,f=crashF(m);
-  // flat in the twenties, falling in the slump, two per cent in the thirties, three in the long post-war boom
-  const k=m-M21,base=k<12?-0.04:k<108?0.008:k<300?0.02:0.03;
-  const r=base-0.06*slump(m)-0.05*f+(Math.random()-0.5)*0.01;
-  S.pi=(S.pi||1)*(1+r/12);applyPrices();
+  if(newCal())S.pi=piAt(m)*(1-0.03*f); // the real price level, year by year; a panic knocks a little off
+  else{ // games begun in 1921 before 0.22: flat in the twenties, falling in the slump, two per cent in the thirties, three after
+    const k=m-M21,base=k<12?-0.04:k<108?0.008:k<300?0.02:0.03;
+    const r=base-0.06*slump(m)-0.05*f+(Math.random()-0.5)*0.01;
+    S.pi=(S.pi||1)*(1+r/12);}
+  applyPrices();
   // each January the lines revise their tariffs to the price level, and the Morven Line's fares follow
   if(m%12===0&&m>0){const k=S.pi/(S.fareIdx||1);S.fareIdx=S.pi;
     if(Math.abs(k-1)>0.004){for(const rk in S.lines){const f=S.lines[rk].fares;for(const c in f)f[c]=Math.max(1,Math.round(f[c]*k*10)/10);}
@@ -100,7 +102,7 @@ const HOME_PORTS=['GLA','LIV','SOU','AVO'];
 function unionMonth(){
   const m=S.m,n=S.ships.length;
   if(S.union&&m>=S.union.until){unionAnswer(false,true);return;}
-  if(S.union||S.strike||m<ym(1923,6)||n<3||m-(S.lastUnion||M21)<24)return;
+  if(S.union||S.strike||m<ym(1923,6)||n<3||m-(S.lastUnion??S.m0??M21)<24)return;
   const rich=S.lastMonth&&S.lastMonth.net>30000*PX()?1.6:S.lastMonth&&S.lastMonth.net>0?1:0.5;
   if(Math.random()<0.004*Math.pow(n,0.75)*rich){
     const pct=[5,8,10,12][Math.floor(Math.random()*4)];S.union={pct,until:m+1};S.lastUnion=m;
@@ -125,7 +127,7 @@ function strikeDaily(){
 function combineMonth(){
   const m=S.m;
   if(S.combine&&m>=S.combine.until){S.combine=null;S.lastCombine=m;news('The combine against the Morven Line has broken up over the division of the spoils.','good',true);return;}
-  if(S.combine||m<ym(1929,0)||S.ships.length<10||m-(S.lastCombine||M21)<60)return;
+  if(S.combine||m<ym(1929,0)||S.ships.length<10||m-(S.lastCombine??S.m0??M21)<60)return;
   const ours=S.ships.reduce((a,x)=>a+x.grt,0),theirs={};for(const x of S.rships||[])theirs[x.owner]=(theirs[x.owner]||0)+x.grt;
   const big=Math.max(0,...Object.values(theirs));
   if(ours<0.8*big||Math.random()>0.06)return;

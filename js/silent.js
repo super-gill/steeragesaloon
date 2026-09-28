@@ -6,7 +6,10 @@ const radioOf=sh=>!!(sh.up&&sh.up.wireless);
 const isSilent=sh=>(sh.state==='sea'||sh.state==='lost')&&!radioOf(sh);
 /* nautical miles per chart pixel at a chart position (Mercator) */
 function nmBetween(a,b){const q=latLon((a.x+b.x)/2,(a.y+b.y)/2);return Math.hypot(a.x-b.x,a.y-b.y)*6*Math.cos(q.lat*Math.PI/180);}
-function plannedSpeed(sh){return knotsOf(sh)*SPD[sh.speed]*shipMods(sh).speed*24;}
+/* the speed the office plans on: the passage her schedule allows (a foul bottom, a coaling stop), or her speed if none */
+function plannedSpeed(sh){const lg=sh.load;
+  if(lg&&lg.geo===sh.geo&&lg.seaDays>0){const g=GEO(sh.geo),calls=stopsFor(sh.geo,sh.dir).length,days=lg.seaDays-calls*CALL_DAYS;if(days>0.5)return g.dist/days;}
+  return knotsOf(sh)*SPD[sh.speed]*shipMods(sh).speed*foulF(sh)*24;}
 /* where the office thinks a silent ship is: from her last report, at her planned speed */
 function estimateOf(sh){
   const g=GEO(sh.geo),base=sh.seen||{t:sh.sailedAt||S.t,pos:0,stopped:false},v=base.v||plannedSpeed(sh);
@@ -85,8 +88,11 @@ function silentDaily(){
     if(sh.brk&&sh.brk.o==='fail'&&!sh.towed&&!sh.em&&sh.state==='sea'&&Math.random()<sinkRisk(sh)*3)startEmergency(sh,'seam');
     if(!isSilent(sh))continue;
     const e=estimateOf(sh),to=PN[destOf(sh)];
-    if(e.over>=1&&!sh.overdue){sh.overdue=1;news(`SS ${sh.name} is overdue at ${to}. There has been no word of her since she sailed.`,'bad');}
-    if(e.over>=7&&sh.overdue===1){sh.overdue=2;news(`Grave anxiety for SS ${sh.name}, now a week overdue at ${to}. Ships on her track are asked to keep a lookout.`,'bad');}
+    // a ship is posted overdue only when she is well past her time: gales and fog make a day or two late ordinary,
+    // so the office waits three days, or a quarter of the passage on a long one
+    const grace=Math.max(3,0.25*GEO(sh.geo).dist/Math.max(1,plannedSpeed(sh)));
+    if(e.over>=grace&&!sh.overdue){sh.overdue=1;news(`SS ${sh.name} is overdue at ${to}. There has been no word of her since she sailed.`,'bad');}
+    if(e.over>=grace+6&&sh.overdue===1){sh.overdue=2;news(`Grave anxiety for SS ${sh.name}, now a week overdue at ${to}. Ships on her track are asked to keep a lookout.`,'bad');}
     if(sh.state==='lost'&&e.over>=14){
       news(`SS ${sh.name} is posted missing at Lloyd's. The bell is rung once. Nothing is known of her fate.`,'bad',true);loseShip(sh);}
   }

@@ -89,7 +89,9 @@ document.addEventListener('click',e=>{
     case 'buy':{const s2=S.market.find(x=>x.id===+b.dataset.id);if(s2){const dep=Math.round(s2.price*0.4);if(S.cash>=dep){S.cash-=dep;S.debt+=s2.price-dep;delete s2.price;s2.acq=S.m;S.ships.push(s2);S.market=S.market.filter(x=>x!==s2);S.selShip=s2.id;news(`Bought SS ${s2.name}, lying at ${PN[s2.port]}. Assign her to a line.`,'good');}}break;}
     case 'borrow':{const v=+b.dataset.id||10000;if(headroom()>=v&&!(S.noLend>S.m)){S.debt+=v;S.cash+=v;}break;}
     case 'repay':{const x=Math.min(+b.dataset.id||10000,S.debt);if(S.cash>=x){S.debt-=x;S.cash-=x;}break;}
-    case 'join':if(S.cash>=3000*PX()){S.cash-=3000*PX();S.conf=true;S.wars={};S.tension={};news('The Morven Line has joined the North Atlantic conference.','good');}break;
+    case 'trustyes':trustAccept();break;
+    case 'trustno':trustRefuse(false);break;
+    case 'join':if(confOpen()&&S.cash>=3000*PX()){S.cash-=3000*PX();S.conf=true;S.wars={};S.tension={};news('The Morven Line has joined the North Atlantic conference.','good');}break;
     case 'leave':if(UI.confirm!=='leave')UI.confirm='leave';else{S.conf=false;UI.confirm=null;news('The Morven Line has left the conference. Expect retaliation if you undercut.','bad');}break;
     case 'accept':if(S.offer){S.mail[S.offer.route]={pay:S.offer.pay,strikes:0,ok:false};news(`Mail contract won on ${ROUTES[S.offer.route].name}: ${fmt(S.offer.pay)} per round trip.`,'good');S.offer=null;}break;
     case 'decline':S.offer=null;break;

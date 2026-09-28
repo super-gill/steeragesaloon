@@ -85,14 +85,14 @@ function engineer(d){
 function recommend(d){
   const y=yNow(),opts=Object.keys(MACHINES).filter(k=>techOn(MACHINES[k].from,y)&&k!=='atomic');
   let best=null;
-  for(const k of opts){const fuel=MACHINES[k].fuels.includes('oil')&&y>=1923?'oil':MACHINES[k].fuels[0];
+  for(const k of opts){const fuel=MACHINES[k].fuels.includes('oil')&&y>=1923?'oil':MACHINES[k].fuels.find(f=>fuelOK(f,y));if(!fuel)continue;
     const e=engineer({...d,mach:k,fuel});if(e.problems.length)continue;
     // capital plus ten years of fuel at today's prices, less the value of the space the engines leave free
     const cost=e.shp*MACH_DATA[k].pps+e.fuelDay*250*10*(fuel==='coal'?coalPrice(S.m):oilPrice(S.m))-e.usable*12;
     if(!best||cost<best.cost)best={mach:k,fuel,cost};}
   const forms=Object.keys(HULLFORMS).filter(k=>techOn(HULLFORMS[k].from,y));
   const form=d.knots<14?(forms.includes('cruiser')?'cruiser':'trad'):forms.reduce((a,k)=>HULLFORMS[k].eff<HULLFORMS[a].eff?k:a,forms[0]);
-  return {mach:best?best.mach:'geared',fuel:best?best.fuel:'oil',form};
+  return {mach:best?best.mach:(y>=1911?'geared':'quad'),fuel:best?best.fuel:(fuelOK('oil',y)?'oil':'coal'),form};
 }
 /* the speed-power curve, for the drawing office */
 function powerCurveSVG(d,e){
@@ -136,10 +136,15 @@ function foulDaily(sh){
   if(before<0.85&&sh.foul>=0.85)remark(sh,'foul3',`Master to owners. She is badly foul and slow. I cannot keep the schedule.`,`She is a floating reef and I cannot keep time with her. For God's sake dock her.`,'bad',60);
 }
 /* a port she is too big for: she lies off and works into lighters, and if she draws too much she may touch */
+/* working into lighters off a port she is too big for, in the pounds of the day */
+const lighterFee=(cargoT,souls)=>(250+cargoT*0.4+souls*0.3)*PX();
+/* the same, for the forecasts: every port on a leg she cannot enter, with that leg's cargo and passengers */
+function lighterLeg(sh,l,dir){if(!l||!l.geo)return 0;const ports=stopsFor(l.geo,dir).map(q=>q[0]).concat([dir===0?geoEnds(l.geo)[1]:geoEnds(l.geo)[0]]);
+  const souls=CL.reduce((a,c)=>a+(l.pax[c]?l.pax[c].n:0),0);let c=0;for(const p of ports){const f=portFit(sh,p);if(!f.ok&&!f.tender)c+=lighterFee(l.cargoT,souls);}return c;}
 function portCall(sh,p,terminal){
   const f=portFit(sh,p);if(f.ok||f.tender)return 0;
   const lg=sh.load||sh.lastLoad,rk=sh.legRoute,souls=lg?CL.reduce((a,c)=>a+(lg.pax[c]?lg.pax[c].n:0),0):0;
-  book('port',-Math.round(250+(lg?lg.cargoT:0)*0.4+souls*0.3),rk,sh);
+  book('port',-Math.round(lighterFee(lg?lg.cargoT:0,souls)),rk,sh);
   let extra=terminal?2:1;
   if(f.drOver>1.5&&Math.random()<Math.min(0.5,0.12*f.drOver/2)){
     const c=Math.round(sh.grt*0.4);book('yard',-c,rk,sh);sh.cond=clamp(sh.cond-8,5,95);extra+=2;

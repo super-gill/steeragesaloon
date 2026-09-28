@@ -1,11 +1,21 @@
 /* ================= DATA ================= */
-const GAME_VERSION='0.21.0',GAME_BUILT='28 September 2026'; // bump on every release; see CHANGELOG.md
+const GAME_VERSION='0.22.0',GAME_BUILT='28 September 2026'; // bump on every release; see CHANGELOG.md
 /* ---------- the calendar ----------
    Month 0 is January 1900 and day 0 is 1 January 1900. ym(year,month) names a month (month 0 = January), so every date
    the game cares about reads as a date. History written for the 1921 game is kept exact by counting from M21. */
 const YEAR0=1900,M21=(1921-YEAR0)*12;
 const ym=(y,mo)=>(y-YEAR0)*12+(mo||0);
 const yearOfM=m=>1921+(m-M21)/12; // the year, fractional, as the 1921 game counted it
+const START=ym(1900,0); // every new game starts here; games begun in 1921 (0.19 to 0.21 saves) keep their own rules
+/* is this game on the 1900 calendar? Games started in January 1921 before 0.22 keep the old invented history */
+const newCal=()=>typeof S!=='undefined'&&!!S&&S.m0!==undefined&&S.m0<M21;
+/* the UK price level, 1921 = 1 (ONS long-run RPI, rebased), for each year 1900 to 1940; prices follow it year by year */
+const PI_YEAR=[.398,.398,.398,.403,.403,.403,.403,.407,.407,.411,.416,.416,.429,.424,.424,.476,.563,.706,.861,.948,1.095,
+  1.000,.861,.810,.805,.805,.801,.779,.779,.771,.749,.719,.701,.684,.684,.688,.693,.719,.727,.749,.874];
+/* the price level in a month: each year's figure at mid-year, straight lines between; after 1940, three per cent a year */
+function piAt(m){const y=YEAR0+m/12-0.5,i=Math.floor(y-YEAR0),n=PI_YEAR.length;
+  if(i<0)return PI_YEAR[0];if(i>=n-1)return PI_YEAR[n-1]*Math.pow(1.03,y-(YEAR0+n-1));
+  const f=y-YEAR0-i;return PI_YEAR[i]+(PI_YEAR[i+1]-PI_YEAR[i])*f;}
 const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 const CL=['f','s','t','tt'];
 const CL_NAME={f:'First',s:'Second',t:'Third',tt:'Tourist Third'};
@@ -64,7 +74,7 @@ const ROUTES={
        dirw:{f:1,s:1,t:1,tt:1},season:[1,1,.95,.75,.4,.25,.2,.2,.3,.55,.85,1],cruise:{cname:'the West Indies',turn:1,spend:2,months:[11,0,1,2]},
        blurb:'Ten days from New York to Nassau and Havana and back, for Americans escaping the winter. Rum is legal in Havana.'},
   cnw:{group:'Cruises',prestige:0.8,ref:{f:10,s:6,t:3,tt:4},base:{f:40,s:60,t:150,tt:0},cargo:{out:{c:'general',t:0},home:{c:'general',t:0}},war:0,
-       dirw:{f:1,s:1,t:1,tt:1},season:[.35,.35,.45,.6,.85,1,1,1,.85,.6,.45,.4],cruise:{cname:'cruises to nowhere',turn:0.4,home:1,spend:2,bar:{f:3.5,s:2.5,t:1.6,tt:2},steerage:true,months:[4,5,6,7,8],until:ym(1934,0)},
+       dirw:{f:1,s:1,t:1,tt:1},season:[.35,.35,.45,.6,.85,1,1,1,.85,.6,.45,.4],cruise:{cname:'cruises to nowhere',turn:0.4,home:1,spend:2,bar:{f:3.5,s:2.5,t:1.6,tt:2},steerage:true,months:[4,5,6,7,8],from:ym(1920,0),until:ym(1934,0)},
        blurb:'Two nights from New York to beyond the limit, where the bar can open, and back. Cheap, crowded and very profitable, until Prohibition ends in December 1933.'}
 };
 /* geography: a route (or its winter variant) as sailed in a given month */
@@ -75,7 +85,7 @@ for(const [k,r] of Object.entries(ROUTES)){const g=GEO(k);r.dist=g.dist;r.calls=
   r.name=r.cruise?PN[r.a]+' · '+r.cruise.cname:r.calls.length>2?PN[r.a]+' → '+PN[r.b]:PN[r.a]+' ↔ '+PN[r.b];r.via=r.calls.slice(1,-1).map(c=>PN[c]);}
 /* cruises: open to book in a given month (the cruise to nowhere dies with Prohibition), and demand by month */
 const isCruise=rk=>!!(ROUTES[rk]&&ROUTES[rk].cruise);
-const routeOpen=(rk,m)=>{const c=ROUTES[rk].cruise;return !(c&&c.until!==undefined&&m>=c.until);};
+const routeOpen=(rk,m)=>{const c=ROUTES[rk].cruise;return !(c&&((c.until!==undefined&&m>=c.until)||(c.from!==undefined&&m<c.from)));}; // the cruises to nowhere run only while America is dry
 const seasonOf=(rk,c,m)=>{const r=ROUTES[rk];return r.season?r.season[((m%12)+12)%12]:SEASON[c][((m%12)+12)%12];};
 const cruiseMonthsText=rk=>{const ms=ROUTES[rk].cruise.months;return ms.map(i=>MONTHS[i].slice(0,3)).join(', ');};
 const DIRW={f:.5,s:.5,t:.8,tt:.5}; // share of round-trip demand travelling westbound
@@ -110,7 +120,7 @@ const DOCK_TH=[0,40,50,60,70];
 const RIVALS={
   imperial:{name:'Imperial Atlantic Line',flag:'British'},
   nordmark:{name:'Nordmark Line',flag:'German'},
-  columbia:{name:'Columbia Steamship Co.',flag:'American, dry'},
+  columbia:{name:'Columbia Steamship Co.',flag:'American'},
   meridian:{name:'Meridian Cruising Co.',flag:'British, cruises only'},
   dominion:{name:'Dominion Pacific Line',flag:'Canadian'},
   partenope:{name:'Navigazione Partenope',flag:'Italian'},
@@ -124,19 +134,28 @@ const SPEEDS=[0,0.3,0.9,2.1,4.2]; // game days per real second at Pause, 1×, 3�
 const SPEED_LABELS=['Pause','1×','3×','7×','14×'];
 /* a big event slows the clock rather than stopping it: a quarter of 1× for 20 seconds, a tenth for 30 after the worst news */
 const SLOW_EVENT={rate:0.075,ms:20000},SLOW_GRAVE={rate:0.03,ms:30000};
+/* the ship the Line starts with in 1900: an elderly emigrant steamer, iron-hulled, single screw */
+const START_SHIP={name:'Morven',built:1881,grt:4600,knots:12.5,berths:{f:36,s:80,t:1050,tt:0},cargo:2200,fuel:'coal',base:150000,note:'Built for the emigrant trade in 1881: iron hull, single screw, plain and sturdy.'};
 const TEMPL=[
   {name:'Morven',built:1899,grt:8000,knots:14,berths:{f:60,s:180,t:900,tt:0},cargo:3000,fuel:'coal',base:200000},
   {name:'Tay Castle',built:1895,grt:5500,knots:13,berths:{f:30,s:110,t:700,tt:0},cargo:2400,fuel:'coal',base:140000},
   {name:'Arcadian Queen',built:1902,grt:10500,knots:15,berths:{f:120,s:250,t:1100,tt:0},cargo:3400,fuel:'coal',base:280000},
   {name:'Clydesdale',built:1912,grt:9000,knots:15,berths:{f:90,s:220,t:950,tt:0},cargo:3200,fuel:'coal',base:260000},
   {name:'Principessa Elena',built:1907,grt:12000,knots:16,berths:{f:150,s:300,t:1400,tt:0},cargo:3000,fuel:'coal',base:330000},
-  {name:'Kronberg',built:1911,grt:15000,knots:17,berths:{f:250,s:350,t:1500,tt:0},cargo:4000,fuel:'coal',base:420000,note:'Ex-German, handed over under the peace treaty.'},
+  {name:'Kronberg',built:1911,from:1921,grt:15000,knots:17,berths:{f:250,s:350,t:1500,tt:0},cargo:4000,fuel:'coal',base:420000,note:'Ex-German, handed over under the peace treaty.'},
   {name:'Alcyone',built:1920,grt:7000,knots:15,berths:{f:80,s:200,t:600,tt:0},cargo:2800,fuel:'oil',base:230000,note:'Nearly new and oil-fired.'},
   {name:'Lady Ailsa',built:1904,grt:6500,knots:13.5,berths:{f:40,s:150,t:850,tt:0},cargo:2600,fuel:'coal',base:160000},
   {name:'Ardmore',built:1910,grt:5800,knots:11.5,berths:{f:12,s:0,t:0,tt:0},cargo:8500,fuel:'coal',base:120000,note:'A plain cargo liner: big holds, a dozen cabins.'},
   {name:'Kinross',built:1906,grt:4800,knots:10.5,berths:{f:6,s:0,t:0,tt:0},cargo:7500,fuel:'coal',base:80000,note:'A slow, cheap cargo steamer.'},
   {name:'Rio Negro',built:1911,grt:9500,knots:14,berths:{f:70,s:80,t:500,tt:0},cargo:5500,fuel:'coal',base:260000,reefer:true,note:'Built for the River Plate, with refrigerated holds.'},
   {name:'Golden Hind',built:1913,grt:4600,knots:15,berths:{f:50,s:30,t:0,tt:0},cargo:2600,fuel:'coal',base:150000,reefer:true,note:'A fast refrigerated fruit ship.'},
+  // on the market in the early years of a 1900 game
+  {name:'Caledonian',built:1886,grt:5200,knots:13.5,berths:{f:50,s:100,t:1000,tt:0},cargo:2400,fuel:'coal',base:130000,note:'A Clyde-built emigrant ship, steady and plain.'},
+  {name:'Hesperia',built:1890,grt:6800,knots:14,berths:{f:80,s:150,t:1300,tt:0},cargo:2800,fuel:'coal',base:180000,note:'Twin screws and a big steerage.'},
+  {name:'Silver Wave',built:1897,grt:7500,knots:15,berths:{f:120,s:180,t:1200,tt:0},cargo:3000,fuel:'coal',base:210000,note:'A modern intermediate liner, nearly new.'},
+  {name:'Ben Lomond',built:1884,grt:3200,knots:9.5,berths:{f:4,s:0,t:0,tt:0},cargo:5000,fuel:'coal',base:60000,note:'An old cargo steamer.'},
+  {name:'Invercargill',built:1889,grt:5500,knots:12.5,berths:{f:40,s:40,t:400,tt:0},cargo:3500,fuel:'coal',base:140000,reefer:true,note:'Built for the frozen-meat trade, with refrigerated holds.'},
+  {name:'Galway Bay',built:1892,grt:3800,knots:11,berths:{f:40,s:30,t:60,tt:0},cargo:3200,fuel:'coal',base:95000,note:'A passenger-cargo steamer for the West Africa trade.'},
   {name:'Montrose Castle',built:1909,grt:6500,knots:12.5,berths:{f:60,s:50,t:80,tt:0},cargo:5000,fuel:'coal',base:150000,note:'A passenger-cargo ship built for the West Africa trade.'}
 ];
 /* Captains' traits and their effects (used in sim). */
@@ -183,7 +202,15 @@ const FAGENCY={
 const SHED_COST=18000,COLD_COST=30000,COLD_PORTS=['BUE','MVD','KIN','LIV','SOU','GLA','NYC'];
 const YARD_PORTS={GLA:'the Clyde',LIV:'the Mersey'};
 const HIST=[
-  {m:ym(1921,0),t:'The Morven Line opens its Glasgow office with one elderly ship, the SS Morven, and a £40,000 mortgage. The post-war freight boom has collapsed and coal is dear.'},
+  {m:ym(1900,0),t:'The Morven Line opens its Glasgow office with one elderly emigrant ship, the SS Morven, and a £16,000 mortgage. Emigrants are pouring out of Europe, and there is no conference to hold the fares up.'},
+  {m:ym(1900,1),t:'A German express liner is the first to carry wireless telegraphy. It is dear, and only the great lines can afford it for now.'},
+  {m:ym(1902,3),t:'An American banker is buying up Atlantic lines. The talk in Liverpool is of a trust to rule the ocean.'},
+  {m:ym(1903,2),t:'The United States doubles its head tax on immigrants to $2 each, paid by the line that lands them.'},
+  {m:ym(1904,1),t:'The British and Continental lines fall out over the emigrant pool. A rate war breaks out on the New York routes, and steerage is sold for as little as £2.'},
+  {m:ym(1904,10),t:'The New York lines patch up their pool. Steerage fares climb back.'},
+  {m:ym(1905,2),t:'The first turbine liner crosses the Atlantic. Turbines are on offer at the yards: smooth, fast and dear.'},
+  {m:ym(1906,3),t:'Immigration to the United States passes a million a year. Every steerage berth to New York is full in the spring.'},
+  {m:ym(1921,0),only:'1921',t:'The Morven Line opens its Glasgow office with one elderly ship, the SS Morven, and a £40,000 mortgage. The post-war freight boom has collapsed and coal is dear.'},
   {m:ym(1921,5),t:'The US Emergency Quota Act caps immigration by nationality. Southern European steerage to New York falls sharply.'},
   {m:ym(1923,0),t:'Trade is recovering. Wealthier Americans are crossing to Europe in growing numbers.'},
   {m:ym(1924,6),t:'The Johnson-Reed Act slashes US immigration again. Italian emigration to New York all but stops. Canada still wants settlers.'},

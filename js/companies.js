@@ -11,7 +11,8 @@ const CO_RATE=0.05;    // interest on a line's borrowing, a year
 const CO_PRICE=17;     // a new rival ship, pounds per gross ton in 1921 money (they build in series, and cheaper than we do)
 const CO_VAR=0.3;      // costs that move with the trade: agents' commission, provisions, cargo handling, as a share of takings
 const CO_MARGIN=0.08;  // what a line keeps of its takings in the reference year, after all running costs
-const CO_REF=ym(1922,0);  // the reference year: the post-war crash over, the quotas in force, coal still a little dear
+/* the reference year: the game's first (1900 on the new calendar); games begun in 1921 used 1922, the post-war crash over */
+const coRef=()=>newCal()?S.m0:ym(1922,0);
 const coAlive=o=>!!(S.rivals[o]&&!S.rivals[o].dead);  // dead: true once failed; deadM: the month
 const coLive=()=>Object.keys(RIVAL_P).filter(coAlive);
 function coAll(){return coLive().map(o=>S.rivals[o]);}
@@ -22,6 +23,8 @@ const coShipVal=x=>x.grt*CO_PRICE*PX()*Math.max(0.1,1-coAge(x)/35)*shipMkt();
 const coNewPrice=x=>Math.round(x.grt*CO_PRICE*PX()/1000)*1000;
 const coScrap=x=>x.grt*2*PX();
 const coFleet=o=>S.rships.filter(x=>x.owner===o);
+/* a line's share of all rival tonnage */
+const coShare=o=>coFleet(o).reduce((a,x)=>a+x.grt,0)/Math.max(1,S.rships.reduce((a,x)=>a+x.grt,0));
 const coValue=o=>coFleet(o).reduce((a,x)=>a+coShipVal(x),0);
 /* what the line is worth: cash plus ships less borrowing */
 const coWorth=o=>{const co=S.rivals[o];return co.cash+coValue(o)-co.debt;};
@@ -43,7 +46,7 @@ function coPay(o,price){const co=S.rivals[o],own=clamp(co.cash-coReserve(o),0,pr
 /* each route's fixed running costs per gross ton, set so its rival fleet keeps CO_MARGIN of its takings in the reference year */
 function coCalibrate(rk){
   let rev=0,grt=0,k=0;
-  for(let i=0;i<12;i++){const st=routeStats(rk,CO_REF+i);for(const o in st.owners){rev+=st.owners[o].rev;grt+=st.owners[o].grt;}k+=coCostIdx(CO_REF+i);}
+  const r0=coRef();for(let i=0;i<12;i++){const st=routeStats(rk,r0+i);for(const o in st.owners){rev+=st.owners[o].rev;grt+=st.owners[o].grt;}k+=coCostIdx(r0+i);}
   if(grt<=0)return;const rpg=rev/grt,idx=k/12;
   S.rcost[rk]=rpg*(1-CO_VAR-CO_MARGIN)/idx;
 }
@@ -88,7 +91,7 @@ function coYearEnd(o){
   const div=Math.max(0,Math.min(p*(P.lev>=0.45?0.7:0.5),co.cash-2*res));co.div=Math.round(div);co.cash-=div;
   const old=coFleet(o).sort((a,b)=>a.built-b.built)[0];
   if(old&&coAge(old)>=22&&p>0&&Math.random()<0.35*P.aggr){const x=makeRivalShip(o,old.route,Math.floor(yearOfM(S.m))),era=Math.max(0,(S.m-ym(1930,0))/12);
-    x.knots=+(P.knots[1]-Math.random()+Math.min(5,era*0.15)).toFixed(1);if(era>0)x.grt=Math.round(x.grt*(1+Math.min(0.5,era*0.02))/100)*100;
+    x.knots=+(P.knots[1]-Math.random()+Math.min(5,era*0.15)+shipEraKnots(x.built)).toFixed(1);if(era>0)x.grt=Math.round(x.grt*(1+Math.min(0.5,era*0.02))/100)*100;
     const price=coNewPrice(x);if(coCanPay(o,price)){coPay(o,price);dropRival(old);co.cash+=coScrap(old);S.rships.push(x);newRivalVis(x);
       S.rmoves.unshift({m:S.m,o,rk:old.route,kind:'renew',ship:x.name,old:old.name});if(S.rmoves.length>40)S.rmoves.length=40;
       if(S.lines[old.route])news(`${RIVALS[o].name} replaces the old SS ${old.name} on ${ROUTES[old.route].name} with the new SS ${x.name}, ${x.knots} knots.`,'bad');}}
@@ -96,7 +99,7 @@ function coYearEnd(o){
 /* a line with money and room to borrow that sails the ship's route, or failing that any line of the same kind */
 function coBuyer(x,seller){
   const kind=RIVAL_P[seller].kind||'liner',price=coShipVal(x)*0.8;
-  const c=coLive().filter(o=>o!==seller&&(RIVAL_P[o].kind||'liner')===kind&&coCanPay(o,price)&&coProfit(o)>0);
+  const c=coLive().filter(o=>o!==seller&&(RIVAL_P[o].kind||'liner')===kind&&coCanPay(o,price)&&coProfit(o)>0&&coShare(o)<0.3); // the biggest lines are kept off the auction by their bankers
   c.sort((a,b)=>(coFleet(b).some(y=>y.route===x.route)?1:0)-(coFleet(a).some(y=>y.route===x.route)?1:0)||coWorth(b)-coWorth(a));
   return c[0]||null;
 }

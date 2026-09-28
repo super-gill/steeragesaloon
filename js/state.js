@@ -3,12 +3,14 @@ const KEY='steerage-saloon-v3',OLD_KEYS=['steerage-saloon-v2']; // v3: the calen
 let S=null;
 const UI={speed:0,tab:'overview',confirm:null,banner:'Paused. Press 1× to start the clock.',eventMode:(()=>{try{return localStorage.getItem('ss_eventmode')||'slow';}catch(e){return 'slow';}})(),view:'ext',dirty:true};
 function newGame(){
-  S={v:3,t:D21,m:M21,t0:D21,m0:M21,cash:18000,debt:40000,rep:30,conf:false,ships:[],lines:{},wars:{},mail:{},offer:null,market:[],news:[],hist:[18000],
+  const m0=START,t0=tOfM(m0,1),pi=piAt(m0);
+  S={v:3,t:t0,m:m0,t0,m0,cash:Math.round(18000*pi/500)*500,debt:Math.round(40000*pi/1000)*1000,rep:30,conf:false,ships:[],lines:{},wars:{},mail:{},offer:null,market:[],news:[],hist:[18000],
      mtd:blankLedger(),lastMonth:null,nextId:1,over:false,selShip:1,selLine:'hal',odWarn:false,tension:{},pax:{},lastPax:{},rivalIdx:{},dismiss:{},
      shore:{piers:{},agents:{},hostels:{},yards:{},bunker:null,fagents:{},sheds:{},cold:{},sell:{},earn:{},est:{}},miles:{},capPool:[],capNext:1,depts:{},tut:{},tutSeen:{},orders:[],bslips:{},yardNext:534,wire:[],wireQ:[],wireNext:0,ghosts:[]};
   S.lines.hal={fares:defaultFares('hal'),service:1,adv:1,last:[null,null]};
-  const mv=makeShip(TEMPL[0],58,'GLA');mv.line='hal';mv.state='port';mv.portLeft=2;S.ships.push(mv);
-  S.pi=1;applyPrices();initRivals();refreshMarket();S.capPool=[0,1,2,3].map(()=>makeCaptain());news(HIST[0].t,'hist');
+  S.pi=pi;S.fareIdx=pi;applyPrices();S.lines.hal.fares=defaultFares('hal'); // the tables at the day's prices before anything is priced
+  const mv=makeShip(START_SHIP,58,'GLA');mv.line='hal';mv.state='port';mv.portLeft=2;S.ships.push(mv);
+  initRivals();refreshMarket();S.capPool=[0,1,2,3].map(()=>makeCaptain());news(histNow().find(h=>h.m===m0).t,'hist');
   UI.speed=0;UI.banner='Paused. Press 1× to start the clock.';UI.confirm=null;
   save();UI.dirty=true;
 }

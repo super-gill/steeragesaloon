@@ -14,11 +14,11 @@ const turnFor=(sh,rk)=>{if(ROUTES[rk].cruise)return turnPair(rk);const [a,b]=geo
 function econ(sh,rk,patch,shPatch){
   return withTemp(sh,rk,patch,shPatch,()=>{
     const L=S.lines[rk],w=legCalc(sh,rk,0,null),e=legCalc(sh,rk,1,null),rt=w.seaDays+e.seaDays+turnFor(sh,rk);
-    const legNet=l=>l.paxRev+(l.onboard||0)+l.cargoRev+l.mail-l.fuelC-l.prov-l.agents-l.port;
+    const legNet=(l,dir)=>l.paxRev+(l.onboard||0)+l.cargoRev+l.mail-l.fuelC-l.prov-l.agents-l.port-lighterLeg(sh,l,dir);
     const n=Math.max(1,shipsOn(rk).length);
     const fixed=(crewCost(sh)+(sh.captain?sh.captain.wage:0)+insCost(sh)+MAINT_COST[sh.maint]*sh.grt/8000+(sh.fac?facMods(sh).staff*PX():0))*rt/30;
     const pax=CL.reduce((a,c)=>a+(w.pax[c]?w.pax[c].n:0)+(e.pax[c]?e.pax[c].n:0),0)*30/rt;
-    return {pm:(legNet(w)+legNet(e)-fixed)*30/rt-ADV_COST[L.adv]/n,rev:(w.paxRev+e.paxRev+w.cargoRev+e.cargoRev+w.mail+e.mail)*30/rt,
+    return {pm:(legNet(w,0)+legNet(e,1)-fixed)*30/rt-ADV_COST[L.adv]/n,rev:(w.paxRev+e.paxRev+w.cargoRev+e.cargoRev+w.mail+e.mail)*30/rt,
       fuel:(w.fuelC+e.fuelC)*30/rt,rt,w,e,pax};
   });
 }
@@ -204,12 +204,12 @@ function advice(){
         why:`The surveyors find her plating wasting and her frames tired. New plate and frames (${money(refitCost(sh,'replate'))}, ${yardDays(sh,'replate')} days) buy her years of safe service${n?', though less than last time':''}. Left alone she gets more dangerous every crossing and loses her steerage certificate.`,act:[['Book it','setyard',sh.id,'replate']]});
       if(f>=88&&S.ships.length>1)add({id:`scrap:${sh.id}`,scope:'ship',ref:sh.id,sev:'warn',gain:600,title:`Send SS ${sh.name} to the breakers`,
         why:`She is worn out: ${f>=90?'no steerage certificate, double insurance, and':''} a far higher chance of a serious emergency every crossing. A loss now would go badly at the inquiry.`,act:[['Send her to the breakers','scrapship',sh.id],['View her','selship',sh.id]]}); }
-    if(sh.fuel==='coal'&&yearNow()-sh.built<28)yard('oil',{fuel:'oil'},`Convert SS ${sh.name} to oil`,'Oil firing cuts her stokehold crew and her bunker bill.');
+    if(sh.fuel==='coal'&&yearNow()>=OIL_FROM&&yearNow()-sh.built<28)yard('oil',{fuel:'oil'},`Convert SS ${sh.name} to oil`,'Oil firing cuts her stokehold crew and her bunker bill.');
     if((sh.berths.f+sh.berths.s)>0&&(sh.fit||0)<50)yard('refurb',{fit:100},`Refurbish SS ${sh.name}`,`Her saloons are tired (fittings ${Math.round(sh.fit||0)}%), and first and second class notice.`);
     if(!(sh.up&&sh.up.reefer)&&COMM[ROUTES[r0].cargo.home.c].reefer)yard('reefer',{up:{...sh.up,reefer:true}},`Fit refrigerated holds to SS ${sh.name}`,`Her route's homeward cargo, ${COMM[ROUTES[r0].cargo.home.c].name.toLowerCase()}, needs cold holds; without them she takes only a sliver of it.`);
-    if(!(sh.up&&sh.up.wireless)&&(S.mail[r0]||S.rep>=35||S.m>=ym(1937,8))&&canSpend(refitCost(sh,'wireless'))&&!inVisit('wireless'))
+    if(!(sh.up&&sh.up.wireless)&&S.m>=ym(1909,0)&&(S.mail[r0]&&wirelessRule()||S.rep>=35||S.m>=ym(1937,8))&&canSpend(refitCost(sh,'wireless'))&&!inVisit('wireless'))
       add({id:`wireless:${sh.id}`,scope:'ship',ref:sh.id,sev:'tip',gain:150,title:`Fit wireless to SS ${sh.name}`,
-        why:`${S.m>=ym(1937,8)?(S.m>=ym(1940,0)?'Under the Ocean Aid Convention she may carry no passengers without it. ':'From 1940 the Ocean Aid Convention bars passenger ships without wireless. '):''}Only ships with wireless can carry the mails${S.m<ym(1940,0)?' or tell you when she is in trouble':''}${S.mail[r0]?', and this route has a contract':''}. Without it, nothing is heard of her at sea unless a passing ship sees her lamps. ${money(refitCost(sh,'wireless'))} and a week in the yard.`,
+        why:`${S.m>=ym(1937,8)?(S.m>=ym(1940,0)?'Under the Ocean Aid Convention she may carry no passengers without it. ':'From 1940 the Ocean Aid Convention bars passenger ships without wireless. '):''}${wirelessRule()?`Only ships with wireless can carry the mails${S.m<ym(1940,0)?' or tell you when she is in trouble':''}${S.mail[r0]?', and this route has a contract':''}.`:'From July 1911 American law will require wireless on any ship leaving an American port with fifty or more aboard, and only ships with it will carry the mails. Meanwhile it lets her report from sea and call for help.'} Without it, nothing is heard of her at sea unless a passing ship sees her lamps. ${money(refitCost(sh,'wireless'))} and a week in the yard.`,
         act:[[sh.pendingYard?'Add it to her yard visit':'Book it','setyard',sh.id,'wireless']]});
     // crew by department: pay where morale is low, drills where skill is poor, better officers when the pool has them
     {const cw=cwOf(sh),off=offOf(sh);
@@ -257,7 +257,7 @@ function advice(){
   // piers where your ships call often enough to repay one within four years
   const calls={};for(const sh of S.ships)if(sh.line&&ACTIVE.includes(sh.state)){const r=ROUTES[sh.line],rt=sailings(knotsOf(sh),sh.line);
     r.calls.forEach((p,i)=>{const end=i===0||i===r.calls.length-1;calls[p]=(calls[p]||0)+rt*(end?1:2)*sh.grt*(end?0.08:0.04);});}
-  const early=S.m-(S.m0||M21)<12&&S.ships.length<2;
+  const early=S.m-(S.m0??M21)<12&&S.ships.length<2;
   if(!early)for(const p in calls){if(S.shore.piers[p]||!PIER_COST[p])continue;const save=calls[p]*0.6-350,cost=PIER_COST[p];
     if(save>0&&cost/save<=48&&canSpend(cost))add({id:`pier:${p}`,scope:'co',sev:'tip',gain:save,title:`Build a pier at ${PN[p]}`,
       why:`Your ships pay about ${money(calls[p])} a month in dues there. Your own pier cuts that by 60% and takes a day off each turnaround. ${money(cost)}, repaid in about ${Math.ceil(cost/save)} months.`,act:[['Build it','shorebuy','pier',p],['Shore','tabgo','shore']]});}
@@ -360,7 +360,7 @@ function bestLine(sh,exclude){
 }
 /* every six months the traffic figures are run for a new ship; only when the line could pay for one */
 function buildIdea(){
-  if(S.ships.length<3||(S.orders||[]).length||yearNow()<yearOfM(S.m0||M21)+2)return null;
+  if(S.ships.length<3||(S.orders||[]).length||yearNow()<yearOfM(S.m0??M21)+2)return null;
   if(S.buildIdea&&S.m-S.buildIdea.m<6)return S.buildIdea.v;
   let best=null;const reach=S.cash+headroom();
   for(const pk of ['inter','emig','mixed','cargo','reefer','tourist','express','cruise']){if(!techOn(PURPOSES[pk].from,yearNow()))continue;

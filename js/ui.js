@@ -87,11 +87,12 @@ function alerts(){
     else if(!sh.autoDock&&sh.cond<50&&sh.state!=='yard'&&!sh.pendingYard)A.push({id:'nothresh'+sh.id,k:'warn',t:`SS ${sh.name} is at ${Math.round(sh.cond)}% and has no service threshold.`,b:[['Review','selship',sh.id]]});
     if(sh.dockWarn&&sh.state!=='yard')A.push({id:'dockwarn'+sh.id,k:'warn',t:`SS ${sh.name} is due a drydock the account cannot cover.`,b:[['Bank','tabgo','finance']]});
   }
-  if(S.offer)A.push({id:'offer',noNote:true,k:'good',t:`The Post Office offers ${fmt(S.offer.pay)} per round trip for the ${ROUTES[S.offer.route].name} mail. Only ships with wireless carry it: miss a month and you are warned; miss two and it goes.`,b:[['Accept','accept'],['Decline','decline']]});
+  if(S.trustOffer)A.push({id:'trustoffer',noNote:true,k:'warn',t:`The ${TRUST_NAME} offers ${fmt(S.trustOffer.amt)} for the Morven Line, about ${Math.round(S.trustOffer.amt/Math.max(1,netWorth())*10)/10} times what it is worth. Selling ends the game. Refusing, or letting the offer lapse at the end of ${MONTHS[S.trustOffer.exp%12]}, brings a rate war on your busiest trades.`,b:[['Sell the Line','trustyes'],['Refuse','trustno']]});
+  if(S.offer)A.push({id:'offer',noNote:true,k:'good',t:`The Post Office offers ${fmt(S.offer.pay)} per round trip for the ${ROUTES[S.offer.route].name} mail.${wirelessRule()?' Only ships with wireless carry it.':''} Miss a month and you are warned; miss two and it goes.`,b:[['Accept','accept'],['Decline','decline']]});
   for(const rk of Object.keys(S.lines)){
     const r=ROUTES[rk],t=S.tension[rk]||0;
     if(S.wars[rk])A.push({id:'war'+rk,k:'bad',t:`Rate war on ${r.name}, ${S.wars[rk].left} more month${S.wars[rk].left>1?'s':''}.`,b:[['View line','selline',rk]]});
-    else if(t>=40&&!S.conf)A.push({id:'tension'+rk,k:'warn',t:`Conference tension is ${tensionWord(t).toLowerCase()} on ${r.name} (${Math.round(t)}).`,b:[['Review fares','selline',rk]]});
+    else if(t>=40&&!S.conf)A.push({id:'tension'+rk,k:'warn',t:`${confOpen()?'Conference tension':'Tension with the other lines'} is ${tensionWord(t).toLowerCase()} on ${r.name} (${Math.round(t)}).`,b:[['Review fares','selline',rk]]});
     if(!shipsOn(rk).length)A.push({id:'empty'+rk,k:'warn',t:`${r.name} is open but has no ships assigned.`,b:[['View line','selline',rk]]});
   }
   if(S.union)A.push({id:'union',noNote:true,k:'bad',t:`The seamen's union claims ${S.union.pct}% more pay. Refusing risks a strike in the home ports; silence counts as refusal.`,b:[['Agree','union','yes'],['Refuse','union','no']]});
@@ -391,9 +392,9 @@ function renderLineDetail(rk){
     <div><div class="row"><h3>${r.name}</h3>${war?'<span class="chip bad">Rate war</span>':''}</div><div class="meta">${callsText(rk)} · ${int(r.dist)} nm · ${ships.length} ship${ships.length===1?'':'s'} · month to date ${fmt(S.mtd.lines[rk]||0)}</div></div>
     <p class="note">${r.blurb} ${cargoText(rk)}${r.winter?(r.winter.months.includes(S.m%12)?' The St Lawrence is frozen: sailings run to Saint John until May.':' From December to April the St Lawrence freezes and sailings run to Saint John.'):''}</p>
     ${advRow('line'+rk,shownAdvice().filter(h=>h.scope==='line'&&h.ref===rk),'this line')}
-    ${war?`<p class="badline">The conference lines have cut fares to ${Math.round(war.mult*100)}% of the line rate for ${war.left} more month${war.left>1?'s':''}.</p>`:''}
-    ${S.mail[rk]?`<p class="note">Mail contract: ${fmt(S.mail[rk].pay)} per round trip. Only ships with wireless carry it; ships at economical speed or broken down do not earn it.${ships.some(x=>x.up&&x.up.wireless)?'':' <strong>None of her ships has wireless: the contract will be lost.</strong>'}</p>`
-      :r.cruise||r.group==='Trades'?'':`<p class="note">Mail: ${S.rep<40?`the Post Office tenders for the mails from reputation 40 (you are at ${Math.round(S.rep)}).`:ships.some(x=>x.up&&x.up.wireless)?'the Post Office invites tenders for this mail every few months; the offer comes to Needs attention.':'tenders need a ship with wireless on the line.'}</p>`}
+    ${war?`<p class="badline">${war.lines?`${war.by.map(o=>RIVALS[o].name).join(' and ')} are at war here: steerage at about ${Math.round(war.multT*100)}% of the line rate, cabins ${Math.round(war.mult*100)}%, the other lines following part of the way`:war.trust?`The Combine's lines have cut steerage to ${Math.round(war.multT*100)}% of the line rate and cabins to ${Math.round(war.mult*100)}% to punish your refusal`:`The ${confOpen()?'conference ':''}lines have cut fares to ${Math.round(war.mult*100)}% of the line rate`}, for ${war.left} more month${war.left>1?'s':''}.</p>`:''}
+    ${S.mail[rk]?`<p class="note">Mail contract: ${fmt(S.mail[rk].pay)} per round trip. ${wirelessRule()?'Only ships with wireless carry it; ships':'Ships'} at economical speed or broken down do not earn it.${ships.some(mailShip)?'':' <strong>None of her ships has wireless: the contract will be lost.</strong>'}</p>`
+      :r.cruise||r.group==='Trades'?'':`<p class="note">Mail: ${S.rep<40?`the Post Office tenders for the mails from reputation 40 (you are at ${Math.round(S.rep)}).`:ships.some(mailShip)?'the Post Office invites tenders for this mail every few months; the offer comes to Needs attention.':'tenders need a ship with wireless on the line.'}</p>`}
     <div class="tablewrap"><table><thead><tr><th>Class</th><th>Fare £</th><th class="r">Line rate</th><th class="r">Last out</th><th class="r">Last home</th></tr></thead><tbody>${rows}</tbody></table></div>
     ${L.last[0]||L.last[1]?`<p class="note">Last out: ${L.last[0]?'SS '+L.last[0].name:'none yet'}. Last home: ${L.last[1]?'SS '+L.last[1].name:'none yet'}.</p>`:''}
     <div class="grid2">
@@ -442,8 +443,8 @@ function marketHTML(rk,estPax,n){
   const r=ROUTES[rk],m=S.m,L=S.lines[rk],st=routeStats(rk,m),tot=Math.max(1,st.total);
   const f=v=>'£'+Math.round(v);
   const owners=Object.keys(st.owners).sort((a,b)=>st.owners[b].pax-st.owners[a].pax);
-  const rows=owners.map(o=>{const x=RIVALS[o],q=st.owners[o],rf=rivalFare(o,rk);
-    return `<tr data-key="mo${o}"><td><span class="rdot" style="background:${RIVAL_P[o].col}"></span>${x.name}<div class="meta">${x.flag} · ${q.ships} ship${q.ships>1?'s':''}</div></td><td class="r num">${Math.round(q.pax/tot*100)}%</td><td class="r num">${f(r.ref.f*rf)}</td><td class="r num">${f(r.ref.s*rf)}</td><td class="r num">${f(r.ref.t*rf)}</td></tr>`;}).join('');
+  const rows=owners.map(o=>{const x=RIVALS[o],q=st.owners[o],rf=rivalFare(o,rk,'f'),rt=rivalFare(o,rk,'t');
+    return `<tr data-key="mo${o}"><td><span class="rdot" style="background:${RIVAL_P[o].col}"></span>${x.name}<div class="meta">${x.flag} · ${q.ships} ship${q.ships>1?'s':''}</div></td><td class="r num">${Math.round(q.pax/tot*100)}%</td><td class="r num">${f(r.ref.f*rf)}</td><td class="r num">${f(r.ref.s*rivalFare(o,rk,"s"))}</td><td class="r num">${f(r.ref.t*rt)}</td></tr>`;}).join('');
   const mine=S.ships.filter(x=>x.line===rk).length;
   const me=L?`<tr data-key="mome"><td><strong>Morven Line</strong><div class="meta">${mine} ship${mine===1?'':'s'}</div></td><td class="r num"><strong>${Math.round(st.ours.pax/tot*100)}%</strong></td><td class="r num">${f(effFare(rk,'f'))}</td><td class="r num">${f(effFare(rk,'s'))}</td><td class="r num">${f(effFare(rk,'t'))}</td></tr>`:'';
   let rl=0,rc=0;for(const o in st.owners){rl+=st.owners[o].pax;rc+=st.owners[o].cap;}
@@ -455,7 +456,7 @@ function marketHTML(rk,estPax,n){
   let tens='';
   if(L&&!S.conf){
     const t=S.tension[rk]||0,pr=pressure(rk,L.fares,estPax||S.lastPax[rk]||0,n||1,m),next=t+(pr.p-t)*0.35;
-    tens=`<div class="ctl"><div class="row"><span class="lbl">Conference tension</span><span class="tier ${t>=65?'neg':t>=40?'':'pos'}" style="${t>=40&&t<65?'color:var(--warn)':''}">${tensionWord(t)} · ${Math.round(t)}</span></div>
+    tens=`<div class="ctl"><div class="row"><span class="lbl">${confOpen()?'Conference tension':'Tension with the other lines'}</span><span class="tier ${t>=65?'neg':t>=40?'':'pos'}" style="${t>=40&&t<65?'color:var(--warn)':''}">${tensionWord(t)} · ${Math.round(t)}</span></div>
       <div class="gauge" role="img" aria-label="Tension ${Math.round(t)} of 100"><b style="left:${t}%"></b><b class="proj" style="left:${clamp(next,0,100)}%"></b></div>
       <p class="note">At these fares, about <strong>${Math.round(next)}</strong> next month (dashed). Rate wars start above 40 and grow likely above 65; ${RIVALS[topRival(rk)].name} would lead one here. Tension rises with fares below the line rate, a large market share and extra ships. Rivals here are ${routeAggr(rk)>=1?'aggressive':routeAggr(rk)>=0.8?'watchful':'fairly relaxed'}.</p></div>`;
   } else if(L&&S.conf&&!r.cruise)tens=`<div class="ctl"><span class="lbl">Conference</span><p class="note" style="margin:0">Member: no rate wars while you keep to the fare floor (95% of the line rate) and the steerage quota.</p>${confBtn()}</div>`;
@@ -496,7 +497,7 @@ function renderShore(){
   const bk=sh.bunker&&sh.bunker.until>=S.m;
   setHTML($('pane-shore'),`
     <section class="sec"><h2>Piers</h2><p class="note">Your own pier cuts port dues there by 60% and takes a day off each turnaround. ${fmt(350*PX())} a month each to run.</p><div class="stack" style="gap:6px">${piers}</div></section>
-    <section class="sec"><h2>Booking agencies</h2><p class="note">Agents in a region book passengers for every line calling there: steerage up about 7%, cabin classes 3%. ${fmt(300*PX())} a month each.</p><div class="stack" style="gap:6px">${agents}</div></section>
+    <section class="sec"><h2>Booking agencies</h2><p class="note">Agents in a region book passengers for every line calling there: steerage up about ${Math.round((agentSteer()-1)*100)}%, cabin classes 3%. ${fmt(300*PX())} a month each.</p><div class="stack" style="gap:6px">${agents}</div></section>
     <section class="sec"><h2>Emigrant hostels</h2><p class="note">Clean beds and a medical check before sailing. Steerage up 12% on lines calling there, fewer quarantine scares, and a little reputation. ${fmt(250*PX())} a month each.</p><div class="stack" style="gap:6px">${hostels}</div></section>
     <section class="sec"><h2>Repair yards</h2><p class="note">Refits, overhauls and upgrades at your own yard cost 30% less and take 30% less time. A yard can take a building slip (${fmt(shoreCost('slip'))}, ${fmt(1500*PX())} a month more): your own ships at 80% of a builder's price, slow at first and better with every hull. ${fmt(800*PX())} a month each.</p><div class="stack" style="gap:6px">${yards}</div></section>
     <section class="sec"><h2>Freight</h2><p class="note">Freight canvassers win cargo for every one of your ships calling in their region, about 8% more of what is on offer. ${fmt(500*PX())} a month each.</p><div class="stack" style="gap:6px">${fag}</div>
@@ -513,7 +514,7 @@ function chart(){
   const W2=320,H2=80,P=6,mn=Math.min(0,...h),mx=Math.max(1,...h);
   const x=i=>P+i*(W2-2*P)/(h.length-1),y=v=>H2-P-(v-mn)/(mx-mn)*(H2-2*P);
   const pts=h.map((v,i)=>`${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
-  return `<div><div class="row"><span class="lbl">Cash since ${monthName(S.m0||M21)}</span><span class="meta num">high ${fmt(mx)}</span></div>
+  return `<div><div class="row"><span class="lbl">Cash since ${monthName(S.m0??M21)}</span><span class="meta num">high ${fmt(mx)}</span></div>
     <svg class="chart" viewBox="0 0 ${W2} ${H2}" role="img" aria-label="Cash over time"><polygon points="${x(0)},${y(mn)} ${pts} ${x(h.length-1)},${y(mn)}" style="fill:var(--brass-soft)" opacity=".6"/>
     ${mn<0?`<line x1="${P}" x2="${W2-P}" y1="${y(0)}" y2="${y(0)}" style="stroke:var(--muted)" stroke-dasharray="3 3"/>`:''}
     <polyline points="${pts}" style="fill:none;stroke:var(--brass)" stroke-width="1.8"/><circle cx="${x(h.length-1)}" cy="${y(h[h.length-1])}" r="3.5" style="fill:${h[h.length-1]<0?'var(--bad)':'var(--brass)'}"/></svg></div>`;
@@ -606,27 +607,27 @@ function renderFinance(){
       <div class="btns">${[10000,100000,1000000].filter(v=>v<=Math.max(10000,S.cash)).map(v=>`<button class="btn" data-act="giltbuy" data-id="${v}" ${S.cash<v||S.over?'disabled':''}>Buy ${fmt(v)}</button>`).join('')}</div>
       ${S.gilts>0?`<div class="btns">${[10000,100000,1000000].filter(v=>v<=S.gilts).map(v=>`<button class="btn" data-act="giltsell" data-id="${v}">Sell ${fmt(v)}</button>`).join('')}<button class="btn" data-act="giltsell" data-id="all">Sell all</button></div>`:''}</section>
     <section class="sec"><h2>Prices</h2>
-      <p class="note">Prices are ${Math.abs(Math.round((PX()-1)*100))}% ${PX()>=1?'higher':'lower'} than in 1921: wages, coal, yard work, ships and fares all follow them, but money in the bank does not. What cost ${fmt(10000)} in 1921 costs ${fmt(10000*PX())} now.${S.wageK>1.001?` Union agreements have put crew pay ${Math.round((S.wageK-1)*100)}% above the going rate.`:''}</p>
+      ${(()=>{const b=newCal()?piAt(S.m0):1,y=newCal()?YEAR0+Math.floor(S.m0/12):1921,r=PX()/b;return Math.abs(r-1)<0.005?`<p class="note">Prices are where they were in ${y}. Wages, coal, yard work, ships and fares all follow them year by year, but money in the bank does not.`:`<p class="note">Prices are ${Math.abs(Math.round((r-1)*100))}% ${r>=1?'higher':'lower'} than in ${y}: wages, coal, yard work, ships and fares all follow them, but money in the bank does not. What cost ${fmt(10000)} in ${y} costs ${fmt(10000*r)} now.`;})()}${S.wageK>1.001?` Union agreements have put crew pay ${Math.round((S.wageK-1)*100)}% above the going rate.`:''}</p>
       ${S.crash&&S.crash.stage==='panic'?`<p class="badline">The panic of ${monthName(S.crash.panicAt)} is ${crashF(S.m)>0.7?'at its worst':'easing'}: trade is down and ships sell for little.</p>`:''}</section>`);
 }
 
 /* ---------- Company ---------- */
 function ownersByRoute(o){const c={};for(const y of S.rships)if(y.owner===o)c[y.route]=(c[y.route]||0)+1;return Object.keys(c).map(rk=>`${ROUTES[rk].name} ${c[rk]}`).join(' · ');}
 const confBtn=()=>S.conf?(UI.confirm==='leave'?`<div class="btns"><button class="btn danger" data-act="leave">Confirm: leave</button><button class="btn" data-act="cancel">Stay</button></div>`:`<button class="btn" data-act="leave" style="width:fit-content">Leave the conference</button>`)
-  :`<div class="row"><button class="btn" data-act="join" ${S.cash<3000||S.over?'disabled':''} style="width:fit-content">Join the conference · £3,000</button><span class="meta">then £350 a month; fare floor and steerage quota, no rate wars</span></div>`;
+  :!confOpen()?`<p class="note" style="margin:0">There is no conference on the North Atlantic yet: the lines fight over every trade, and pools form and fall apart.</p>`:`<div class="row"><button class="btn" data-act="join" ${S.cash<3000*PX()||S.over?'disabled':''} style="width:fit-content">Join the conference · ${fmt(3000*PX())}</button><span class="meta">then ${fmt(350*PX())} a month; fare floor and steerage quota, no rate wars</span></div>`;
 /* the rival companies: what each is worth, what it made in the last year, how it is run, and the lines that have come and gone */
 function rivalsHTML(){
   const live=coLive().sort((a,b)=>coWorth(b)-coWorth(a));
   const card=o=>{const x=RIVALS[o],P=RIVAL_P[o],co=S.rivals[o],fleet=coFleet(o),grt=fleet.reduce((a,y)=>a+y.grt,0),[hw,hk]=coHealth(o),h=co.h||[];
     const kf=v=>fmt(Math.round(v/1000)*1000),rev=coYear(o,'rev'),net=coYear(o,'net'),g=(lbl,v,cls)=>`<div><span class="lbl">${lbl}</span><span class="num ${cls||''}">${v}</span></div>`;
     return `<div class="card" data-key="rv${o}"><div class="row"><strong><span class="rdot" style="background:${P.col}"></span>${x.name}</strong><span class="chip ${hk}">${hw}</span></div>
-      <div class="meta">${x.flag} · ${fleet.length} ship${fleet.length===1?'':'s'}, ${int(grt)} tons · ${coCharacter(o).join(', ')}${co.born!==undefined&&co.born!==null?` · founded ${monthName(co.born)}`:''}</div>
+      <div class="meta">${x.flag} · ${fleet.length} ship${fleet.length===1?'':'s'}, ${int(grt)} tons · ${coCharacter(o).join(', ')}${co.born!==undefined&&co.born!==null?` · founded ${monthName(co.born)}`:''}${trustMember(o)?` · <strong>in the Combine</strong>`:''}</div>
       <div class="cogrid">${g('Cash',kf(co.cash),co.cash<0?'neg':'')}${g('Borrowed',kf(co.debt))}${g('Fleet worth',kf(coValue(o)))}${g('Net worth',kf(coWorth(o)),coWorth(o)<0?'neg':'')}
         ${g(h.length<12?`Takings, ${h.length} mo`:'Takings, 12 mo',kf(rev))}${g(h.length<12?`Profit, ${h.length} mo`:'Profit, 12 mo',kf(net),net<0?'neg':'pos')}${co.div?g('Last dividend',kf(co.div)):''}</div>
       <div class="meta">${ownersByRoute(o)||'No ships at sea'}</div></div>`;};
   const gone=(S.coFails||[]).map(q=>`<li>${monthName(q.m)}: <strong>${RIVALS[q.o]?RIVALS[q.o].name:q.o}</strong> failed with ${q.ships} ship${q.ships===1?'':'s'}${q.routes.length?`, on ${q.routes.map(rk=>ROUTES[rk]?ROUTES[rk].name:rk).join(', ')}`:''}.</li>`);
   const born=(S.coNew||[]).map(q=>`<li>${monthName(q.m)}: <strong>${RIVALS[q.o].name}</strong> (${RIVALS[q.o].flag.split(',')[0]}) started on ${q.routes.map(rk=>ROUTES[rk].name).join(' and ')}.</li>`);
-  return `<section class="sec"><h2>Rival lines</h2><p class="note">Each rival is a company: it earns from the same passengers and cargo as your ships, pays its running costs and interest, builds when trade is good and the money is there, and sells ships when it is short. One that cannot pay its way fails, and the receivers sell its ships, some cheaply through your brokers. New lines come in behind. Their moves on each route are on that line's panel.</p>
+  return `<section class="sec"><h2>Rival lines</h2>${trustHTML()}<p class="note">Each rival is a company: it earns from the same passengers and cargo as your ships, pays its running costs and interest, builds when trade is good and the money is there, and sells ships when it is short. One that cannot pay its way fails, and the receivers sell its ships, some cheaply through your brokers. New lines come in behind. Their moves on each route are on that line's panel.</p>
     <div class="stack">${live.map(card).join('')}</div>
     ${gone.length||born.length?`<details class="thist"><summary>Lines come and gone (${gone.length+born.length})</summary>${gone.length?`<span class="lbl">Failed</span><ul class="note" style="padding-left:18px;margin:0">${gone.join('')}</ul>`:''}${born.length?`<span class="lbl">Founded</span><ul class="note" style="padding-left:18px;margin:0">${born.join('')}</ul>`:''}</details>`:''}</section>`;
 }
@@ -642,11 +643,12 @@ function renderCompany(){
         <span class="meta">${o.auto?'Works through its advice every week. Big decisions come to you as proposals':'Advice only; you decide'}</span></div>`:buy('dept',k,'Open')}</div>`;}).join('');
 
   const conf=S.conf?`<p style="margin:0"><strong>Member of the North Atlantic conference.</strong></p>
-      <ul class="note" style="padding-left:18px;margin:0"><li>Fares may not go below 95% of the line rate.</li><li>Third class limited to 80% of berths.</li><li>Pooled agents add 4% to third class demand.</li><li>No rate wars. Dues £350 a month.</li></ul>
+      <ul class="note" style="padding-left:18px;margin:0"><li>Fares may not go below 95% of the line rate.</li><li>Third class limited to 80% of berths.</li><li>Pooled agents add 4% to third class demand.</li><li>No rate wars. Dues ${fmt(350*PX())} a month.</li></ul>
       ${UI.confirm==='leave'?`<div class="btns"><button class="btn danger" data-act="leave">Confirm: leave</button><button class="btn" data-act="cancel">Stay</button></div>`:`<button class="btn" data-act="leave" style="width:fit-content">Leave the conference</button>`}`
+    :!confOpen()?`<p style="margin:0">There is <strong>no conference</strong> on the North Atlantic yet. Every line prices as it likes; the lines fight rate wars over the trades, patch up pools and fall out again. Undercutting the others still invites a war on you.</p>`
     :`<p style="margin:0">You sail as an <strong>independent</strong>. Price as you like, but undercutting the line rate raises conference tension and invites rate wars.</p>
-      <p class="note">Joining costs £3,000 plus £350 a month. Members accept a fare floor and a steerage quota in exchange for peace.</p>
-      <button class="btn" data-act="join" ${S.cash<3000||S.over?'disabled':''} style="width:fit-content">Join for £3,000</button>`;
+      <p class="note">Joining costs ${fmt(3000*PX())} plus ${fmt(350*PX())} a month. Members accept a fare floor and a steerage quota in exchange for peace.</p>
+      <button class="btn" data-act="join" ${S.cash<3000*PX()||S.over?'disabled':''} style="width:fit-content">Join for ${fmt(3000*PX())}</button>`;
   const sp=S.safety===undefined?1:S.safety;
   const safety=`<section class="sec"><h2>Safety and training</h2><p class="note">One policy for the whole fleet. It decides how well crews fight a fire or a flood, how many people live when a ship is lost, and what a court of inquiry makes of it.</p>
     <div class="seg" role="group">${SAFETY.map((x,i)=>`<button data-act="safety" data-id="${i}" aria-pressed="${sp===i}">${x.name}</button>`).join('')}</div>
@@ -675,10 +677,10 @@ function renderModal(){
   const el=$('modal');
   if(!S.over&&UI.menu){setHTML(el,MENU_HTML());return;}
   if(!S.over){el.innerHTML='';return;}
-  const nw=netWorth();
-  const v='The bank has foreclosed. The Morven Line is finished.';
-  setHTML(el,`<div class="modal" role="dialog" aria-modal="true" aria-labelledby="mt"><div class="panel"><h3 id="mt">Foreclosed</h3><p style="margin:0">${v}</p>
-    <dl class="kv"><dt>Net worth</dt><dd>${fmt(nw)}</dd><dt>Fleet</dt><dd>${S.ships.length}</dd><dt>Reputation</dt><dd>${Math.round(S.rep)}</dd><dt>Reached</dt><dd>${dateLong(S.t)}</dd></dl>
+  const nw=netWorth(),sold=S.over==='sold';
+  const v=sold?`The Morven Line now belongs to the ${TRUST_NAME}. Its ships keep their names and sail under the Combine's orders; you leave with ${fmt(S.soldFor)} for the shareholders.`:'The bank has foreclosed. The Morven Line is finished.';
+  setHTML(el,`<div class="modal" role="dialog" aria-modal="true" aria-labelledby="mt"><div class="panel"><h3 id="mt">${sold?'Sold to the Combine':'Foreclosed'}</h3><p style="margin:0">${v}</p>
+    <dl class="kv">${sold?`<dt>Sale price</dt><dd>${fmt(S.soldFor)}</dd>`:''}<dt>Net worth</dt><dd>${fmt(nw)}</dd><dt>Fleet</dt><dd>${S.ships.length}</dd><dt>Reputation</dt><dd>${Math.round(S.rep)}</dd><dt>Reached</dt><dd>${dateLong(S.t)}</dd></dl>
     <button class="btn primary" data-act="newnow">Start a new line</button>
     <label class="lbl" for="loadCode2">Or load a save code</label><textarea id="loadCode2" data-keep="1" class="code" rows="2" placeholder="Paste a code here"></textarea>
     <button class="btn" data-act="loadcode" data-src="loadCode2" style="width:fit-content">Load code</button>${UI.loadMsg&&!UI.loadMsg.ok?`<p class="badline">${UI.loadMsg.t}</p>`:''}</div></div>`);

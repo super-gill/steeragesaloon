@@ -33,8 +33,8 @@ const SUBDIV={
 const MACHINES={
   recip:{name:'Triple-expansion engines',fuels:['coal','oil'],max:y=>17,eff:1.05,crew:1,cost:0.85,rel:1,blurb:'Simple, sturdy reciprocating engines. Slow and thirsty, but any engineer can mend them.'},
   quad:{name:'Quadruple-expansion engines',fuels:['coal','oil'],max:y=>18,eff:0.97,crew:1,cost:0.95,rel:1,blurb:'A fourth stage wrings more work from the steam.'},
-  turb:{name:'Direct-drive turbines',fuels:['coal','oil'],max:y=>30,eff:1.08,crew:1,cost:1.05,rel:1.05,blurb:'Smooth and powerful at full speed, wasteful when slowed.'},
-  geared:{name:'Geared turbines',fuels:['oil','coal'],max:y=>32,eff:0.92,crew:0.95,cost:1.12,rel:1,blurb:'Turbines geared down to slower propellers. The modern choice.'},
+  turb:{name:'Direct-drive turbines',from:1905,fuels:['coal','oil'],max:y=>30,eff:1.08,crew:1,cost:1.05,rel:1.05,blurb:'Smooth and powerful at full speed, wasteful when slowed.'},
+  geared:{name:'Geared turbines',from:1911,fuels:['oil','coal'],max:y=>32,eff:0.92,crew:0.95,cost:1.12,rel:1,blurb:'Turbines geared down to slower propellers. The modern choice.'},
   turbel:{name:'Turbo-electric drive',from:1928,fuels:['oil'],max:y=>31,eff:0.9,crew:0.95,cost:1.25,rel:0.9,appeal:1.03,blurb:'Turbines drive generators, motors turn the shafts. Quiet, smooth and reliable.'},
   motor:{name:'Diesel motor engines',from:1924,fuels:['oil'],max:y=>Math.min(26,17+Math.max(0,y-1926)*0.4),eff:0.6,crew:0.8,cost:1.22,rel:1.05,appeal:y=>y<1938?0.97:1,
     blurb:'Burns a third of the fuel of steam and needs no stokers. Early motors shake the saloons.'},
@@ -109,6 +109,12 @@ const BUILDERS={
 };
 const OWN_SLIP_COST=250000;
 const techOn=(from,y)=>!from||y>=from;
+/* oil firing comes in with the post-war conversions; before 1919 every new ship burns coal */
+const OIL_FROM=1919;
+const fuelOK=(f,y)=>f!=='oil'||y>=OIL_FROM;
+/* the biggest ship any slip could take, year by year: 20,000 tons in 1900, the 50,000-ton giants of 1911, 90,000 by 1930 */
+const slipMaxYear=y=>y<1900?18000:y<1907?20000+(y-1900)*1000:y<1911?27000+(y-1907)*6000:y<1921?50000+(y-1911)*1000:y<1930?60000+(y-1921)*3400:90000;
+const builderMax=B=>Math.min(B.max,Math.round(slipMaxYear(yNow())/1000)*1000);
 const yNow=()=>yearNow();
 
 /* the public rooms the architects pencil in for each kind of ship, within what her size allows */
@@ -122,9 +128,9 @@ function defaultFac(pk,g,y){
 /* ---------- the design: everything the drawing office works out from the owner's choices ---------- */
 function defaultDesign(pk){
   const P=PURPOSES[pk||'inter'],y=yNow();
-  const g=Math.round((P.size[0]*0.65+P.size[1]*0.35)/500)*500,kn=Math.round(P.speed[0]+(P.speed[1]-P.speed[0])*0.35);
-  return {purpose:pk||'inter',grt:g,knots:kn,form:y>=1929?'bulb':'cruiser',subdiv:'std',mach:kn>18?'geared':'quad',fuel:'oil',
-    mix:{...P.mix},pax:P.pax,quality:1,style:y>=1933?'moderne':y>=1925?'deco':'edw',extras:{wireless:true,reefer:!!P.reefer,hatch:pk==='cargo'||pk==='reefer'},
+  const g=Math.round(Math.min(P.size[0]*0.65+P.size[1]*0.35,slipMaxYear(y)*0.8)/500)*500,kn=Math.round(P.speed[0]+(P.speed[1]-P.speed[0])*0.35+shipEraKnots(Math.floor(y)));
+  return {purpose:pk||'inter',grt:g,knots:kn,form:y>=1929?'bulb':'cruiser',subdiv:'std',mach:kn>18&&y>=1911?'geared':kn>18&&y>=1905?'turb':'quad',fuel:fuelOK('oil',y)?'oil':'coal',
+    mix:{...P.mix},pax:P.pax,quality:1,style:y>=1933?'moderne':y>=1925?'deco':'edw',extras:{wireless:y>=1908,reefer:!!P.reefer,hatch:pk==='cargo'||pk==='reefer'},
     layout:defaultLayout(pk||'inter',y),fac:defaultFac(pk||'inter',g,y),funnels:g>=30000?3:g>=12000?2:1,builder:'clyde',contract:'fixed',name:'',line:'',auto:{mach:true,form:true}};
 }
 function builderOf(d){return d.builder==='own'?ownBuilder():BUILDERS[d.builder];}
@@ -134,7 +140,8 @@ function designStats(d){
   if(d.auto&&(d.auto.mach||d.auto.form)){const r=recommend(d);if(d.auto.mach){d.mach=r.mach;d.fuel=r.fuel;}if(d.auto.form)d.form=r.form;}
   const y=yNow(),P=PURPOSES[d.purpose],M=MACHINES[d.mach],H=HULLFORMS[d.form],Q=QUALITY[d.quality],B=builderOf(d)||BUILDERS.clyde;
   const g=d.grt,kn=d.knots,e=engineer(d),w=e.problems.slice();
-  if(g>B.max)w.push(`${B.name} has no slip long enough for ${int(g)} tons (their limit is ${int(B.max)}).`);
+  if(g>builderMax(B))w.push(`${B.name} has no slip long enough for ${int(g)} tons (their limit is ${int(builderMax(B))} this year).`);
+  if(!fuelOK(d.fuel,yNow()))w.push('No yard will build an oil-fired ship before '+OIL_FROM+'.');
   if(!M.fuels.includes(d.fuel))w.push(`${M.name} burn oil only.`);
   // what is left once engines and bunkers are in is shared between passengers and cargo
   const fc=facChange({fac:{},grt:g,facPlan:null},d.fac||{}),facRoom=FAC_KEYS.reduce((a,k)=>a+((FAC[k].levels[(d.fac||{})[k]||0]||{}).room||0),0);
@@ -284,18 +291,18 @@ function deliver(o,st,kn,B){
   wire(sh,`SS ${d.name} handed over at ${PN[B.port]}. Trials ${kn} knots. Ready for service.`,'good');
 }
 
-/* a second-hand ship built in the years since 1921, for the brokers' lists */
+/* a second-hand ship built in the last twenty years or so, for the brokers' lists */
 const GEN_A=['Ard','Glen','Strath','Loch','Ben','Inver','Kil','Dun','Bal','Craig','Auch','Fin'],GEN_B=['garry','nevis','allan','more','dee','tay','ness','bride','rannoch','shiel','lomond','orchy','carron','spey'];
 function genMarketShip(){
   const y=yNow(),pk=['inter','inter','emig','mixed','cargo','cargo','reefer','tourist'][Math.floor(Math.random()*8)];
   const P=PURPOSES[pk];if(!techOn(P.from,y))return genMarketShip();
-  const built=Math.max(1919,Math.floor(y-3-Math.random()*20)),d=defaultDesign(pk);d.auto={mach:false,form:false};
-  d.grt=Math.round((P.size[0]+(P.size[1]-P.size[0])*Math.random()*0.45)/100)*100;
-  d.knots=+Math.min(P.speed[1],P.speed[0]+(P.speed[1]-P.speed[0])*Math.random()*0.5+Math.max(0,built-1920)*0.06).toFixed(1);
-  d.mach=built>=1930&&d.knots>17?'geared':built>=1926&&Math.random()<0.3?'motor':'quad';if(d.mach==='motor')d.knots=Math.min(d.knots,MACHINES.motor.max(built));
+  const built=Math.max(newCal()?yearOfM(S.m0)-25:1919,Math.floor(y-3-Math.random()*20)),d=defaultDesign(pk);d.auto={mach:false,form:false};
+  d.grt=Math.round((P.size[0]+(P.size[1]-P.size[0])*Math.random()*0.45)*shipEraGrt(built)/100)*100; // smaller and slower the older she is
+  d.knots=+Math.min(P.speed[1],P.speed[0]+(P.speed[1]-P.speed[0])*Math.random()*0.5+Math.max(0,built-1920)*0.06+shipEraKnots(built)).toFixed(1);
+  d.mach=built>=1930&&d.knots>17?'geared':built>=1926&&Math.random()<0.3?'motor':built<1895?'recip':'quad';if(d.mach==='motor')d.knots=Math.min(d.knots,MACHINES.motor.max(built));
   d.fuel=built>=1925||d.mach==='motor'?'oil':'coal';d.style=built>=1950?'contemp':built>=1933?'moderne':built>=1925?'deco':'edw';d.quality=Math.random()<0.2?2:1;
   let name=GEN_A[Math.floor(Math.random()*GEN_A.length)]+GEN_B[Math.floor(Math.random()*GEN_B.length)];name=name[0]+name.slice(1);
   const st=designStats(d);
   return {name,built,grt:d.grt,knots:d.knots,berths:{...st.berths},cargo:st.cargo,fuel:d.fuel,base:Math.round(st.price*0.8),pi0:PX(),reefer:!!d.extras.reefer,
-    note:`A ${PURPOSES[pk].name.toLowerCase()}, ${MACHINES[d.mach].name.toLowerCase()}, ${STYLES[d.style].name} interiors.`,gen:{fuelK:st.fuelK,crewK:st.crewK,appFS:st.fs,style:d.style,design:{form:d.form,funnels:d.funnels,purpose:pk},len:st.eng.len,beam:st.eng.beam,draught:st.eng.draught,shp:st.eng.shp,range:st.eng.range}};
+    note:`A ${PURPOSES[pk].name.toLowerCase()}, ${MACHINES[d.mach].name.toLowerCase()}, ${built<1901&&d.style==='edw'?'Victorian':STYLES[d.style].name} interiors.`,gen:{fuelK:st.fuelK,crewK:st.crewK,appFS:st.fs,style:d.style,design:{form:d.form,funnels:d.funnels,purpose:pk},len:st.eng.len,beam:st.eng.beam,draught:st.eng.draught,shp:st.eng.shp,range:st.eng.range}};
 }
