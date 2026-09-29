@@ -35,6 +35,8 @@ The research notes behind the data tab are in `research/`.
 - Rivals become real companies; the Trust is the International Ocean
   Combine; the share market is safely ignorable through a broker.
 
+Settled in 0.29 (open questions on the design doc's markets tab): every rival line is listed, in London, including the foreign lines; the market is the rival lines plus eight companies next to shipping; the Line's own price waits for floating (R4).
+
 ## Build order
 
 Balance issues left open by each release are listed in [BALANCE.md](BALANCE.md), for the final pass before 1.0.0.
@@ -54,7 +56,8 @@ Balance issues left open by each release are listed in [BALANCE.md](BALANCE.md),
 | 0.26.0 | The war economy (done: `js/war.js`) |
 | 0.27.0 | War risk (done: the war at sea in `js/war.js`) |
 | 0.28.0 | The bubble and handover (done: the 1919 and 1920 section of `js/war.js`) |
-| 0.29.0 to 0.32.0 | The markets (R2 to R5) |
+| 0.29.0 | The market and the broker, R2 (done: `js/market.js`, `tools/market.js`) |
+| 0.30.0 to 0.32.0 | Stakes and control (R3), floating the Line (R4), advanced moves (R5) |
 | 1.0.0 | 1900 to 1940 complete and balanced |
 
 ## The 0.16.0 balance pass

@@ -5,7 +5,7 @@ document.addEventListener('click',e=>{
   const b=e.target.closest('[data-act]');if(!b||b.disabled)return;const prevTab=UI.tab;
   {const al=b.closest('.alert[data-aid]:not([data-sticky])');if(al)(S.attnSeen=S.attnSeen||{})[al.dataset.aid]=true;}
   const a=b.dataset.act,sh=S.ships.find(x=>x.id===S.selShip),L=S.lines[S.selLine];
-  if(a!=='cancel'&&!a.startsWith('ask')&&!['exit','closeline','leave','new','loadcode'].includes(a))UI.confirm=null;
+  if(a!=='cancel'&&!a.startsWith('ask')&&!['exit','closeline','leave','new','loadcode','fundclose','officeclose'].includes(a))UI.confirm=null;
   if(UI.slow&&!['zoom','zoomfit'].includes(a))UI.slow=null; // the owner is dealing with it: back to full speed
   switch(a){
     case 'eventmode':UI.eventMode=b.dataset.v;try{localStorage.setItem('ss_eventmode',UI.eventMode);}catch(e){}break;
@@ -117,6 +117,19 @@ document.addEventListener('click',e=>{
     case 'rfclose':closeRefit();break;
     case 'rflevel':case 'rfpicks':case 'rfbook':rfAct(a,b);break;
     case 'union':unionAnswer(b.dataset.id==='yes');break;
+    case 'mksel':UI.mkSel=UI.mkSel===b.dataset.id?null:b.dataset.id;UI.tab='finance';UI.finSub='shares';break;
+    case 'finsub':UI.tab='finance';UI.finSub=b.dataset.id;break;
+    case 'mkbuy':{const d=JSON.parse(b.dataset.d);mkBuy(d[0],+d[1],!!d[2]);break;}
+    case 'mksell':{const d=JSON.parse(b.dataset.d);mkSell(d[0],+d[1]);break;}
+    case 'mkrepay':mkRepay(+b.dataset.id);break;
+    case 'fundopen':mkFundOpen(b.dataset.id);break;
+    case 'funddep':mkFundPay(+b.dataset.id);break;
+    case 'fundwd':mkFundTake(+b.dataset.id,false);break;
+    case 'fundclose':if(UI.confirm!=='fundclose')UI.confirm='fundclose';else{UI.confirm=null;mkFundTake(0,true);}break;
+    case 'fundbrief':if(S.ex&&S.ex.fund&&MK_BRIEF[b.dataset.id]){S.ex.fund.brief=b.dataset.id;S.ex.fund.due=S.m;}break;
+    case 'fundmgr':if(S.ex&&S.ex.fund&&(b.dataset.id==='broker'||S.ex.office)){S.ex.fund.mgr=b.dataset.id;S.ex.fund.due=S.m;}break;
+    case 'officeopen':mkOfficeOpen();break;
+    case 'officeclose':if(UI.confirm!=='officeclose')UI.confirm='officeclose';else{UI.confirm=null;mkOfficeClose();}break;
     case 'giltbuy':gilts(true,+b.dataset.id);break;
     case 'giltsell':gilts(false,b.dataset.id==='all'?S.gilts:+b.dataset.id);break;
     case 'new':if(UI.confirm!=='new')UI.confirm='new';else{UI.confirm=null;newGame();}break;

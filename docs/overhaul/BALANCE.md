@@ -55,4 +55,9 @@ cash, which the crash does not touch).
 | Repainting at dock costs silently | No line in the news | Show the cost | 0.25.0 |
 | Boom trap for the player | A careful owner who buys at boom prices is ruined (net worth 0.13 of 1920 by 1921 in a test run) | Intended, but head office should say why it gives no buy advice | 0.28.0 |
 | Reparations auction values | Weltmeer (52,000 tons) about £1.4m at boom prices | Check against the 1921 value of a giant | 0.28.0 |
+| Broker beats stock by more than "a little" | Balanced 2.0x stock over 1901 to 1940 (range 1.4 to 2.7), about 1.7% a year; growth 2.2x | About 1.3x to 1.6x | 0.29.0 |
+| Most of the broker's gain is in the war years | Balanced goes from 1.1x to 2.1x stock between 1913 and 1919: share prices follow the doubling of prices, stock does not | Shares roughly level with stock in the war | 0.29.0 |
+| Dividends are notional | Rival lines keep all their earnings; dividends to the Line are not charged to them, and dilution stands in for the difference | Rival lines pay real dividends (R3, when stakes matter) | 0.29.0 |
+| Buy-and-hold only matches stock | Every company bought in 1901 and held ends at 0.96x stock, because failed lines are written off and new ones are never bought | A little over stock | 0.29.0 |
+| Investment Office heads are fixed | No candidates or replacement, unlike the other departments | Candidates each quarter, as the other departments | 0.29.0 |
 | 20-seed noise | About 2 games in 20 | Use 40 seeds for the final pass | 0.16.0 |

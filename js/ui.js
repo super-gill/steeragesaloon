@@ -103,6 +103,7 @@ function alerts(){
   for(const sh of S.ships)if(fatOf(sh)>=90&&sh.state!=='yard')A.push({id:'worn'+sh.id,k:'warn',t:`SS ${sh.name} is worn out and should go to the breakers.`,b:[['View','selship',sh.id]]});
   if(S.war&&S.war.ask)A.push({id:'reqask'+S.war.ask.due,noNote:true,k:'bad',t:`The Admiralty needs ${S.war.ask.n===1?'another ship':S.war.ask.n+' more ships'} for war service. Offer the ones you would rather lose, or it chooses by ${monthName(S.war.ask.due)}.`,b:[['Choose','tabgo','company']]});
   if(S.war&&S.war.offers)for(const o of S.war.offers){const x=S.ships.find(q=>q.id===o.sid);if(x&&!x.pendingExit)A.push({id:'offer'+o.sid+'_'+o.exp,noNote:true,k:'good',t:`A buyer offers ${fmt(o.amt)} for SS ${x.name} (worth about ${fmt(shipValue(x))} on the market), open until ${monthName(o.exp)}.`,b:[['Sell','offeryes',o.sid],['Decline','offerno',o.sid]]});}
+  if(S.ex&&S.ex.call)A.push({id:'mkcall'+S.ex.call.due,noNote:true,k:'bad',t:`Margin call: pay the broker ${fmt(S.ex.call.amt)} or sell shares by ${monthName(S.ex.call.due)}, or he sells at the market.`,b:[['Shares','finsub','shares']]});
   if(S.cash<0)A.push({id:'od',noNote:true,k:'bad',t:`The account is overdrawn. The bank forecloses below ${fmt(-odLimit())}.`,b:[['Bank','tabgo','finance']]});
   // an item the owner has noted or acted on stays away until the situation passes; decisions and the bank's demands stay put
   const seen=S.attnSeen=S.attnSeen||{};for(const id in seen)if(!A.some(a=>a.id===id))delete seen[id];
@@ -591,10 +592,12 @@ function ledgerHTML(){
     ${hd('By line')}${lines}</tbody></table></div>
     <p class="note">A line's figures include its ships and its advertising. The average is over the last ${H.length>1?H.length+' months':'twelve months'}.</p>`;
 }
+const finSeg=()=>`<div class="seg" role="group" aria-label="Finance"><button data-act="finsub" data-id="bank" aria-pressed="${UI.finSub!=='shares'}">Bank and accounts</button><button data-act="finsub" data-id="shares" aria-pressed="${UI.finSub==='shares'}">Shares</button></div>`;
 function renderFinance(){
+  if(UI.finSub==='shares'){setHTML($('pane-finance'),finSeg()+exchangeHTML());return;}
   const c=S.mtd.cat;
   const LM=S.lastMonth,hr=headroom();
-  setHTML($('pane-finance'),`
+  setHTML($('pane-finance'),finSeg()+`
     <section class="sec"><h2>Profit and loss by ship</h2>${plHTML()}</section>
     <section class="sec"><h2>Ledger</h2>${ledgerHTML()}
       ${LM?`<p class="note">${monthName(LM.m)} closed at <span class="num ${LM.net<0?'neg':'pos'}">${fmt(LM.net)}</span>, with ${fmt(LM.repay)} repaid to the bank.</p>`:''}

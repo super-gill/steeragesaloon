@@ -322,7 +322,7 @@ function monthRoll(pm){
     if(S.mail[rk])S.mail[rk].ok=false;
   }
   for(const rk of Object.keys(S.wars)){const w=S.wars[rk];w.left--;if(w.left<=0){delete S.wars[rk];S.tension[rk]=20;if(!w.quiet)news(warEndText(rk,w),S.lines[rk]?'good':'');}}
-  lineWarsMonth();trustMonth();prewarMonth();admMonth();disasterMonth();warMonth();bubbleMonth(); // the early years (trust.js, prewar.js)
+  lineWarsMonth();trustMonth();prewarMonth();admMonth();disasterMonth();warMonth();bubbleMonth();if(!(typeof MKT_OFF!=='undefined'&&MKT_OFF))marketMonth(); // the early years (trust.js, prewar.js)
   for(const rk of Object.keys(ROUTES)){
     const n=shipsOn(rk).filter(x=>ACTIVE.includes(x.state)).length;
     if(S.conf||!S.lines[rk]||!n||isCruise(rk)){S.tension[rk]=(S.tension[rk]||0)*0.6;continue;} // no conference on cruises
@@ -382,8 +382,8 @@ function refreshMarket(){
 const runningCost=()=>S.ships.reduce((a,x)=>a+crewCost(x)+(x.captain?x.captain.wage:0)+insCost(x)+MAINT_COST[x.maint]*x.grt/8000,0)+600+250*S.ships.length+shoreUpkeep();
 const fleetValue=()=>S.ships.reduce((a,s)=>a+shipValue(s),0);
 const shoreValue=()=>{const s=S.shore;let v=0;for(const p in s.piers)v+=PIER_COST[p]*0.6;for(const y in s.yards)v+=120000*0.6;if(s.slip)v+=OWN_SLIP_COST*0.5;for(const h in s.hostels)v+=35000*0.5;for(const p in s.sheds||{})v+=SHED_COST*0.5;for(const p in s.cold||{})v+=COLD_COST*0.5;return v;};
-const netWorth=()=>S.cash+(S.gilts||0)+fleetValue()+shoreValue()-S.debt-admDebt();
-const headroom=()=>Math.max(0,0.7*(fleetValue()+shoreValue())+0.9*(S.gilts||0)-S.debt-admDebt()); // government stock is the best security a bank can hold
+const netWorth=()=>S.cash+(S.gilts||0)+fleetValue()+shoreValue()-S.debt-admDebt()+mkWorth(); // shares at the market, less the margin loan
+const headroom=()=>Math.max(0,0.7*(fleetValue()+shoreValue())+0.9*(S.gilts||0)+0.5*Math.max(0,mkWorth())-S.debt-admDebt()); // government stock is the best security a bank can hold
 const odLimit=()=>8000+0.5*headroom(); // the bank forecloses when cash falls below minus this
 function news(t,k,pauseIt){
   S.news.unshift({d:Math.floor(S.t),t,k:k||''});if(S.news.length>80)S.news.length=80;

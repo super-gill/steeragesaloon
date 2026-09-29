@@ -2,6 +2,17 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.29.0 (29 September 2026)
+The share market and the broker (stage R2).
+- A small London market on the Finance tab, under Shares: every rival line, and eight companies next to shipping (two shipbuilders, coal, oil from 1909, docks, the boat-train railway, a marine insurer, and an aircraft maker from 1919). Prices follow what each company owns and earns, the news and the mood of the City, which overshoots both ways.
+- The mood falls in the 1907 panic, the war, the 1921 slump and the Depression, with the Wall Street crash in October 1929; it rises in the 1919 and 1920 boom and the late twenties. The 1912 disaster, the outbreak of war, the Combine's buying, bank reconstructions, rate wars and the Blue Riband move the companies they touch. A line that fails is struck off. The Stock Exchange closes from July 1914 to January 1915.
+- Buy and sell (1% to buy, 0.5% to sell, and a big order moves the price against you), on margin if you like: the broker lends half at 5.5% and calls for money when the loan passes three quarters of the shares' value. Dividends each quarter.
+- An investment account run by a City broker (1% a year) or by your own Investment Office, with a brief: preserve, balanced or growth. It rebalances each quarter and reports.
+- The Investment Office shows each company's price against its worth, advises each quarter, and can run the account; how well depends on its head.
+- Shares count in net worth, and half towards what the bank will lend.
+- The market keeps its own dice: a game that never uses it plays out exactly as before. The harness can switch it off (`MKT=0`) to prove it.
+- New check `tools/market.js`: broker accounts and a buy-and-hold against government stock from 1901 to 1940, falls in the slumps, and shares against worth.
+
 ## 0.28.0 (29 September 2026)
 The bubble and the handover, 1919 and 1920.
 - From the armistice the world wants ships. Second-hand prices climb to about two and a half times their normal level by the spring of 1920; the yards take orders again, at up to three fifths over normal; freight still pays well and, in 1920, emigrants rush to cross the North Atlantic before America closes the door.
