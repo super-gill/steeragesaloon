@@ -384,7 +384,7 @@ const runningCost=()=>S.ships.reduce((a,x)=>a+crewCost(x)+(x.captain?x.captain.w
 const fleetValue=()=>S.ships.reduce((a,s)=>a+shipValue(s),0);
 const shoreValue=()=>{const s=S.shore;let v=0;for(const p in s.piers)v+=PIER_COST[p]*0.6;for(const y in s.yards)v+=120000*0.6;if(s.slip)v+=OWN_SLIP_COST*0.5;for(const h in s.hostels)v+=35000*0.5;for(const p in s.sheds||{})v+=SHED_COST*0.5;for(const p in s.cold||{})v+=COLD_COST*0.5;return v;};
 const netWorth=()=>S.cash+(S.gilts||0)+fleetValue()+shoreValue()-S.debt-admDebt()+mkWorth(); // shares at the market, less the margin loan
-const headroom=()=>Math.max(0,0.7*(fleetValue()+shoreValue())+0.9*(S.gilts||0)+0.5*Math.max(0,mkWorth())-S.debt-admDebt()); // government stock is the best security a bank can hold
+const headroom=()=>Math.max(0,0.7*(fleetValue()/(newCal()&&S.m>ARMISTICE&&S.m<M21?Math.max(1,warShips(S.m)):1)+shoreValue())+0.9*(S.gilts||0)+0.5*Math.max(0,mkWorth())-S.debt-admDebt()); // in the 1919 and 1920 boom the bank lends on ships at their normal worth, not the boom's // government stock is the best security a bank can hold
 const odLimit=()=>8000+0.5*headroom(); // the bank forecloses when cash falls below minus this
 function news(t,k,pauseIt){
   S.news.unshift({d:Math.floor(S.t),t,k:k||''});if(S.news.length>80)S.news.length=80;

@@ -66,6 +66,8 @@ function coAccounts(o,stats){
   for(const rk in stats){const q=stats[rk].owners[o];if(!q)continue;rev+=q.rev;if(S.wars[rk])wars+=q.ships*1000*PX();}
   // in the war the state carries the ships it has taken (and pays their hire); a German line's ships lie idle in neutral ports
   const wf=warRivalF(o,m),held=atWar(m)&&wf<1?1-wf:0,hire=wf>0&&held?coFleet(o).reduce((a,x)=>a+x.grt,0)*held*0.34*PX():0;rev+=hire;
+  // the ships a line keeps in the war carry cargo for whoever will pay, as the Morven Line's do (0.33)
+  if(atWar(m)&&wf>0)rev+=coCosts(o,m)*Math.min(1,1-held)*1.1*warFreight(m);
   const run=coCosts(o,m)*(wf===0&&pre21(m)?0.1:1-held)+CO_VAR*rev+wars,int=co.debt*CO_RATE/12,net=rev-run-int;
   co.cash+=net;co.h=co.h||[];co.h.push({rev:Math.round(rev),cost:Math.round(run+int),net:Math.round(net)});if(co.h.length>12)co.h.shift();
 }
@@ -89,8 +91,9 @@ function coFinance(o,stats){
 }
 /* January: the directors pay the shareholders a share of last year's profit, and a flush line renews its oldest ship */
 function coYearEnd(o){
+  // a board the Line controls pays the dividend the Line decides (co.divPol, 0.30)
   const co=S.rivals[o],P=RIVAL_P[o],res=coReserve(o),p=coYear(o,'net');
-  const div=Math.max(0,Math.min(p*(co.divPol&&typeof MK_DIV!=='undefined'?MK_DIV[co.divPol].pay:P.lev>=0.45?0.7:0.5),co.cash-2*res)); // a board the Line controls pays what the Line decidesco.div=Math.round(div);co.cash-=div;
+  const div=Math.max(0,Math.min(p*(co.divPol&&typeof MK_DIV!=='undefined'?MK_DIV[co.divPol].pay:P.lev>=0.45?0.7:0.5),co.cash-2*res));co.div=Math.round(div);co.cash-=div;
   const old=coFleet(o).sort((a,b)=>a.built-b.built)[0];
   if(old&&coAge(old)>=22&&p>0&&!atWar()&&Math.random()<0.35*P.aggr){const x=makeRivalShip(o,old.route,Math.floor(yearOfM(S.m))),era=Math.max(0,(S.m-ym(1930,0))/12);
     x.knots=+(P.knots[1]-Math.random()+Math.min(5,era*0.15)+shipEraKnots(x.built)).toFixed(1);if(era>0)x.grt=Math.round(x.grt*(1+Math.min(0.5,era*0.02))/100)*100;

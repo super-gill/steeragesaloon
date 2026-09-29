@@ -2,6 +2,18 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.33.0 (29 September 2026)
+The final balance pass, part one: the economy, the war and the rival lines.
+- Fixed: since 0.30 rival lines paid no dividends. A comment swallowed the line that paid them, so the rivals hoarded cash and grew stronger, and more careful owners went bust in the 1907 panic (5 in 20 against 2 in 20). The market's dividends from lines were zero too. Games now match 0.28 exactly up to the war.
+- The war and the boom paid about twice what they should: net worth in January 1921 was about 5 times January 1914 at 1914 prices. Wartime freight is now up to 1.2 times its pre-war worth over prices (was 1.3) with a quarter more cargo (was a third), and the 1920 peak is 1.3 (was 1.6). It is now about 2.6 times.
+- Rival lines earn wartime freight on the ships they keep, as yours do, and no longer sell their ships abroad when passengers vanish. They come through the war richer instead of halving their fleets, and fewer fail at the armistice.
+- Steerage in the war holds at a quarter of the pre-war trade until America enters it, then a tenth (it was a tenth from the start), following US immigration in 1915 and 1916.
+- In the 1919 and 1920 boom the bank lends on ships at their normal worth, not the boom's.
+- Head office tells you why it gives no advice to buy or build at boom prices.
+- A ship's war risk now reads per crossing first, then for a year at this month's danger.
+- The market marks a company's worth down faster than up, so shares fall below worth in the 1921 slump. A line's worth counts its earnings at eight years' purchase again (the lighter dilution of 0.30 was compensating for the missing dividends).
+- The balance note (`docs/overhaul/BALANCE.md`) records what 0.33 closed, what it accepts and why, and what is left for 0.34.
+
 ## 0.32.0 (29 September 2026)
 Advanced moves (stage R5), the last of the market stages.
 - Dawn raid: buy a fifth of a rival line in a day at a tenth over the market, before the price moves.

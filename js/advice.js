@@ -264,6 +264,9 @@ function advice(){MOD_EPOCH++;
     why:`You hold ${money(S.cash)} against running costs of about ${money(rc)} a month, before coal and port bills. One bad month could put you in the bank's hands. Borrow while you can, lay up a loss-making ship, or hold off on buying.`,act:[['Bank','tabgo','finance']]});
   const deps=S.market.map(m=>Math.round(m.price*0.4));
   const fleetV=S.ships.reduce((a,x)=>a+shipValue(x),0);
+  // at the top of the boom head office says why it will not advise buying or building
+  if(shipMkt()>1.3&&newCal()&&S.m<M21)add({id:'boomwait',scope:'co',sev:'tip',gain:1,title:'Hold off buying and building until the boom breaks',
+    why:`Second-hand ships fetch ${Math.round((shipMkt()-1)*100)}% over their normal price and new ones cost ${Math.round((warBuild(S.m)-1)*100)}% more. When the boom ends, as booms do, a ship bought now will be worth a third to a half of what you paid, while the loan on her stays the same. If a buyer offers for one of yours, that is the time to sell.`,act:[]});
   // not at the top of the 1919 and 1920 boom: ships bought at two and a half times their worth lose most of it in the crash
   if(S.market.length&&shipMkt()<=1.3&&S.cash-reserve>Math.min(...deps)&&(!S.ships.length||S.debt<0.6*fleetV)){
     let best=null;

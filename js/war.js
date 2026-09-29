@@ -18,7 +18,7 @@ const WAR_FROM=ym(1914,7),ARMISTICE=ym(1918,10),US_WAR=ym(1917,3),RESERVE_FROM=y
 const atWar=m=>{m=m===undefined?S.m:m;return newCal()&&m>=WAR_FROM&&m<=ARMISTICE;};
 /* a curve of [month, value] points, straight lines between, flat beyond the ends */
 function curveAt(P,m){if(m<=P[0][0])return P[0][1];for(let i=1;i<P.length;i++)if(m<=P[i][0]){const [a,x]=P[i-1],[b,y]=P[i];return x+(y-x)*(m-a)/Math.max(1,b-a);}return P[P.length-1][1];}
-const WAR_FREIGHT=[[ym(1914,6),1],[ym(1914,7),1.1],[ym(1915,0),1.2],[ym(1916,0),1.3],[ym(1917,0),1.15],[ym(1918,10),1.1],[ym(1919,0),1.4],[ym(1919,6),1.5],[ym(1920,3),1.6],[ym(1920,7),1.3],[ym(1920,10),1.05],[ym(1920,11),1]];
+const WAR_FREIGHT=[[ym(1914,6),1],[ym(1914,7),1.1],[ym(1915,0),1.15],[ym(1916,0),1.2],[ym(1917,0),1.1],[ym(1918,10),1.05],[ym(1919,0),1.2],[ym(1919,6),1.3],[ym(1920,3),1.3],[ym(1920,7),1.15],[ym(1920,10),1.05],[ym(1920,11),1]]; // 0.33: trimmed, war growth was twice the target
 const WAR_COAL=[[ym(1914,6),1],[ym(1914,7),1.2],[ym(1916,0),1.55],[ym(1918,0),1.8],[ym(1919,0),1.6],[ym(1920,11),1.1]];
 const WAR_WAGE=[[ym(1914,6),1],[ym(1914,9),1.1],[ym(1916,0),1.25],[ym(1918,0),1.4],[ym(1919,6),1.3],[ym(1920,11),1.1]];
 const WAR_SHIPS=[[ym(1914,6),1],[ym(1914,7),1.05],[ym(1915,0),1.2],[ym(1916,0),1.4],[ym(1917,0),1.6],[ym(1919,0),1.8],[ym(1919,9),2.3],[ym(1920,3),2.6],[ym(1920,8),2.3],[ym(1920,10),1.8],[ym(1920,11),1.3]]; // over and above prices, which themselves more than double; the bubble tops out in the spring of 1920 and the crash comes that winter
@@ -35,12 +35,12 @@ const warCoal=m=>pre21(m)?curveAt(WAR_COAL,m):1;
 const warWage=m=>pre21(m)?curveAt(WAR_WAGE,m):1;
 const warShips=m=>pre21(m)?curveAt(WAR_SHIPS,m):1;
 /* in wartime there is cargo for every hold */
-const warCargoVol=m=>atWar(m)?1.35:pre21(m)?1.2:1;
+const warCargoVol=m=>atWar(m)?1.25:pre21(m)?1.1:1;
 const reqShare=m=>atWar(m)?curveAt(REQ_SHARE,m):0;
 /* passengers in wartime, as a multiple of what they would have been: the collapse takes two or three months */
 function warPax(c,rk,m){
   if(!pre21(m))return 1;const r=ROUTES[rk];
-  let w=c==='t'||c==='tt'?0.1:m<US_WAR?0.3:0.18;
+  let w=c==='t'||c==='tt'?(m<US_WAR?0.25:0.1):m<US_WAR?0.3:0.18; // steerage: a quarter of the pre-war trade until America is in the war (US immigration 1915-16), a tenth after
   if(r.group!=='North Atlantic'&&r.group!=='Canada'&&c!=='t')w*=1.6; // colonial and business travel to the south holds up better
   w=Math.min(1,w);
   if(c!=='t'&&c!=='tt'&&m>=LUSITANIA&&m<LUSITANIA+6&&(r.group==='North Atlantic'||r.group==='Canada'))w*=0.8; // after the liner is sunk off Ireland
@@ -281,7 +281,7 @@ function warSeaHTML(sh){
   if(!atWar()||sh.state==='req')return '';
   const pm=warLossPM(sh),yr=1-Math.pow(1-pm,12);
   const fit=(k,lab,ok,note)=>sh[k]?`<span class="chip sea">${lab}</span>`:ok?`<button class="btn" data-act="refit" data-d='[${sh.id},"${k}"]' style="width:fit-content">${lab} · ${fmt(refitCost(sh,k))}, ${yardDays(sh,k)} days</button>`:`<span class="note">${note}</span>`;
-  return `<div class="ctl"><span class="lbl">Her risk</span><span class="note">${sh.line?`At this month's rate, on ${ROUTES[sh.line].name}, about ${Math.max(1,Math.round(yr*100))}% chance of losing her in a year.`:'Laid up, she is safe.'} ${knotsOf(sh)>=20?'At her speed a submarine can rarely catch her.':''}</span></div>
+  return `<div class="ctl"><span class="lbl">Her risk</span><span class="note">${sh.line?(()=>{const d=GEO(geoKey(sh.line,S.m)).dist,cr=warAttackP(sh,sh.line,d)*0.75*warHitP(sh)*0.8;return `On ${ROUTES[sh.line].name}, about ${cr<0.01?'1 in '+Math.max(100,Math.round(1/Math.max(cr,1e-4)/10)*10):Math.round(cr*100)+' in 100'} crossings like hers end in her loss${warThreat(S.m)>=1.5?', at the worst of the danger':''}.${isFinite(yr)?` Kept on this trade for a year at this month's danger, about ${Math.max(1,Math.round(yr*100))}%.`:''}`;})():'Laid up, she is safe.'} ${knotsOf(sh)>=20?'At her speed a submarine can rarely catch her.':''}</span></div>
     <div class="ctl"><span class="lbl">Zigzag</span>${seg('shipset','zigzag',sh.zigzag?1:0,['Straight','Zigzag'])}<span class="note">Fewer hits; passages about 7% longer and more coal.</span></div>
     <div class="ctl"><span class="lbl">Convoy</span>${convoyOK()?(knotsOf(sh)>=20?'<span class="note">Too fast for the convoys: she sails alone.</span>':seg('shipset','convoy',sh.convoy?1:0,['Alone','In convoy'])+'<span class="note">Far fewer attacks, and escorts; passages about a fifth longer.</span>'):'<span class="note">No convoys yet.</span>'}</div>
     <div class="ctl"><span class="lbl">Fittings</span><div class="btns">${fit('dazzle','Dazzle paint',S.m>=DAZZLE_FROM,'Dazzle paint comes in 1917.')}${fit('gun','A gun and naval gunners',warGoodwill(),'A gun needs the Admiralty\'s goodwill: put ships on its list or on war service.')}</div></div>

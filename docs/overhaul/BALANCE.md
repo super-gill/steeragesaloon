@@ -5,69 +5,81 @@ before 1.0.0. Each entry gives the measure, the target and where it
 stands. Figures come from `tools/harness.js` over 20 to 40 seeds, so a
 difference of about 2 games in 20 is noise.
 
-Update this file with every release: add what the release leaves open,
-strike out what it closes.
+The final pass runs over 0.33.0 and 0.34.0. Each item is now one of:
+**closed** (fixed and measured), **accepted** (the figure stands, for the
+reason given), or **open** (for 0.34.0, or after 1.0.0 where marked).
+
+## A bug found in the pass
+
+Since 0.30.0 rival lines paid no dividends: an inline comment in
+`coYearEnd` swallowed the statement that paid them. The rivals hoarded
+cash, and careful owners went bust in the 1907 panic 5 times in 20
+instead of 2. Fixed in 0.33.0; the same seeds now match 0.28.0 exactly up
+to the war. The 0.30.0 to 0.32.0 market figures were measured with it.
 
 ## Money and growth
 
-| Issue | Measure now | Target | Since |
+| Issue | Status | Measure now (0.33.0) | Target |
 | --- | --- | --- | --- |
-| War growth too high, and the crash does not take it back | 1914 to 1919: 6.4x nominal, 2.9x at 1914 prices. 1914 to January 1921 (after the boom): about 12x nominal, 5x at 1914 prices. 1920 profits (freight 1.6x, the steerage rush) add more than the crash removes | About 2x real by 1921 | 0.26.0, measured again 0.28.0 |
-| Advisor strategy far ahead of careful | About 9x careful net worth (small sample) | Within about 3x | 0.26.0 |
-| Careful fleet a little large | Median 7 ships in 1914, 8 in 1920, 9 in 1921, 15 by 1922 (cheap ships after the crash) | 3 to 6 in 1914, 3 to 8 at the handover | 0.23.0 |
-| Rival wealth after the war | Rival cash £2.6m in 1914, £3.2m in 1919, £7.5m in 1921 (new lines' capital included); debt £1.8m to £7.1m in 1921 | Rivals end the war with gains like the player's | 0.26.0 |
-| Rival fleets halve in the war | 92 ships in 1914, 42 in 1919, 68 in 1921, 84 in 1924 | Losses and requisition, but more back by 1920 | 0.28.0 |
-| Cruise lines churn | Four cruise lines founded in 1919 when the cruises reopen, most wound up by 1922 | One or two, from 1920 | 0.28.0 |
-| Speculative lines | 2 to 3 floated per game, all "in trouble" or failed by 1923 | Most fail in 1921 and 1922 (fine, keep watching) | 0.28.0 |
-
-Levers for the war growth: EPD rates, 1919 and 1920 freight, the
-requisition hire, the careful owner's cash (it holds most of its gains as
-cash, which the crash does not touch).
+| War growth too high | Closed | 1914 to January 1921: 6.4x nominal, 2.6x at 1914 prices (was 5x); 1914 to 1919: 2.5x | About 2x real by 1921 |
+| Advisor strategy far ahead of careful | Accepted | 7.7x careful net worth in 1914 (8 seeds). It comes from building new tonnage for the emigrant boom, which is what head office advises and what the great lines did | Within about 3x |
+| Careful fleet a little large | Accepted | 7 ships in 1914, 8 at the handover: the harness's buying rule, not the game | 3 to 6, 3 to 8 |
+| Rival wealth after the war | Closed | Rivals earn wartime freight on the ships they keep: cash £2.6m in 1914 to £7.8m in 1918, debt £1.8m to £0.1m | Gains like the player's |
+| Rival fleets halve in the war | Closed | They no longer sell ships abroad in the war: 91 in 1914, 87 in 1918, 94 by 1924 | More back by 1920 |
+| Cruise lines churn | Accepted | Small cruise trades cannot keep a line and promoters keep trying; holding them back would leave trades empty over two years, which the companies check forbids | One or two, from 1920 |
+| Speculative lines | Accepted | 2 to 3 floated per game, nearly all failed by 1923 | Most fail in 1921 and 1922 |
 
 ## Risk
 
-| Issue | Measure now | Target | Since |
+| Issue | Status | Measure now | Target |
 | --- | --- | --- | --- |
-| Protected war losses high | About 1 ship in 9 (1 in 6 counting war service); 1 in 14 in a 20-seed run at 0.28.0 | About 1 in 12 | 0.27.0 |
-| Unprotected war losses | About 1 in 4 | 1 in 4 to 1 in 5 (fine, keep watching) | 0.27.0 |
-| Ship panel war risk alarming | Shown at the month's rate | Show per voyage or per year | 0.27.0 |
+| Protected war losses | Closed | 1 ship in 11 with every protection, counting war service (20 seeds) | About 1 in 12 |
+| Unprotected war losses | Accepted | About 1 in 4 (`PROT=0`) | 1 in 4 to 1 in 5 |
+| Ship panel war risk alarming | Closed | Now per crossing first (about 5 in 100 on Liverpool to New York at the worst of 1917), then for a year at this month's danger | Per voyage |
 
 ## Passengers
 
-| Issue | Measure now | Target | Since |
+| Issue | Status | Measure now | Target |
 | --- | --- | --- | --- |
-| Autumn 1914 passenger fall too deep | 84% | 60 to 80% | 0.26.0 |
+| Autumn 1914 passenger fall too deep | Closed, not measured directly | Steerage holds at a quarter of the pre-war trade until April 1917, a tenth after, as US immigration did; first class at three tenths. Expected fall about 75% | 60 to 80% |
 
 ## Weak strategies
 
-| Issue | Measure now | Target | Since |
+| Issue | Status | Measure now | Target |
 | --- | --- | --- | --- |
-| Idle and cautious owners go bust in the war | Most of them | Survive poorly, not fail | 0.26.0 |
-| Idle owners hurt by the 1913 boats law | Boats cost pushes them under | A small cost | 0.24.0 |
-| Idle owners foreclosed in mid-1920 | 9 in 10 by 1922, most in July 1920: an overdraft carried on the Morven's boom value is called when ship prices fall | Some do, not nearly all | 0.28.0 |
+| Idle and cautious owners go bust in the war | Accepted | By 1922 idle 17 in 20, cautious 9 in 20, nearly all in 1916 with a steerage ship and no cargo, after months of head office advising them to clear the steerage. Ignoring the Great War should be fatal | Survive poorly, not fail |
+| Idle owners hurt by the 1913 boats law | Accepted | The boats law is announced nine months ahead and advised on | A small cost |
+| Idle owners foreclosed in mid-1920 | Closed | The bank lends on ships at their normal worth in the boom; idle owners now fail in the war instead | Some do, not nearly all |
 
 ## Other
 
-| Issue | Measure now | Target | Since |
+| Issue | Status | Measure now | Target |
 | --- | --- | --- | --- |
-| Legacy 1921 games unchecked | Last checked in 0.22.0; the claims cap now reaches them | Old targets hold | 0.24.0 |
-| Harness careful behaviours shape the targets | Sells when overdrawn, takes war protections, does not buy at boom prices (0.28.0) | Document or split into two strategies | 0.27.0 |
-| Repainting at dock costs silently | No line in the news | Show the cost | 0.25.0 |
-| Boom trap for the player | A careful owner who buys at boom prices is ruined (net worth 0.13 of 1920 by 1921 in a test run) | Intended, but head office should say why it gives no buy advice | 0.28.0 |
-| Reparations auction values | Weltmeer (52,000 tons) about £1.4m at boom prices | Check against the 1921 value of a giant | 0.28.0 |
-| Broker beats stock by more than "a little" | ~~Balanced 2.0x stock over 1901 to 1940~~; at 0.30.0 balanced 1.6x (range 1.5 to 1.9), preserve 1.6x, growth 1.8x | About 1.3x to 1.6x (now at the top of it) | 0.29.0 |
-| Most of the broker's gain is in the war years | Balanced goes from 1.1x to 2.1x stock between 1913 and 1919: share prices follow the doubling of prices, stock does not | Shares roughly level with stock in the war | 0.29.0 |
-| ~~Dividends are notional~~ | Closed in 0.30.0: line dividends are the ones rivals vote each January from their own cash | | 0.29.0 |
-| Buy-and-hold falls short of stock | Every company bought in 1901 and held ends at 0.77x stock (0.96x in 0.29.0 before real dividends), because failed lines are written off and new ones are never bought | A little over stock | 0.29.0 |
-| Small lines fail under control | A line the Line holds 90% of failed before 1930 in 3 of 4 test seeds; control does not help a weak line survive | A controlled line that the Line supports should last; consider letting the Line lend to it | 0.30.0 |
-| Takeover prices uneven | In 1906, Dominion Pacific (14 ships, £411k fleet, £211k cash, no debt) cost £310k net of its cash to take to 90% and merge, 0.75 of its fleet's worth, since a cash-rich line trades well under its net worth; Nordmark (13 ships, £408k fleet, £185k debt) cost £768k, 1.9 times | A takeover about as dear as the fleet it brings in normal times, cheap in a crash | 0.30.0 |
-| Seat and control effects unmeasured | The halved and stopped fare pressure are checked as rules, not as outcomes (fewer rate wars in a game) | Measure rate wars per game with a controlled leader | 0.30.0 |
-| Investment Office heads are fixed | No candidates or replacement, unlike the other departments | Candidates each quarter, as the other departments | 0.29.0 |
-| Takeovers of an undefended floated Line | 1 in 10 careful owners floating 60% in 1906 taken over by 1925, 1.7 bids per game (the harness never defends) | Rare for an owner who defends; test a defending strategy | 0.31.0 |
-| Float proceeds may be generous | 49% raises about 0.75 of the Line's worth and 75% about twice it, all as new capital to the Line | Check against the real returns of floating; maybe part goes to the owner, not the Line | 0.31.0 |
-| Board targets unmeasured over the long run | No removals in 10 careful games; the board ends between 42 and 99 | Some removals for a careless owner; test a careless strategy | 0.31.0 |
-| Proxy fights may be easy | A tenth of a line and ordinary standing wins about three times in five | Harder against a well-run line; a fight should be a gamble | 0.32.0 |
-| Bear raids roughly break even | Short plus bear raid against the short alone: better in 3 of 6 games, from -£6k to +£3k over 8 months | Pays when well timed; check a bigger short and a longer war | 0.32.0 |
-| Rival moves among themselves | Rivals raid, fight and bear raid only the Line, not each other | Rivals taking each other over (after 1.0) | 0.32.0 |
-| Long and short at once | The Line can hold and short the same company | Allowed as a hedge; check it cannot dodge a buy-in | 0.32.0 |
-| 20-seed noise | About 2 games in 20 | Use 40 seeds for the final pass | 0.16.0 |
+| Legacy 1921 games | Closed | Only old saves start in 1921; they load and run to 1926. The 1921-start targets retired with that start | Old saves work |
+| Harness careful behaviours shape the targets | Accepted | Documented in the README's tools table | Documented |
+| Repainting at dock costs silently | Closed | It never was: the yard's news gives the repaint's cost | Show the cost |
+| Boom trap for the player | Closed | Head office explains why it gives no advice to buy or build at boom prices | Explained |
+| Reparations auction values | Closed | The Weltmeer at about £1.4m in 1919 is about 1.6 times a new ship's cost at boom prices, and about £0.66m after the crash: consistent | Consistent |
+
+## The markets (for 0.34.0)
+
+| Issue | Status | Measure now | Target |
+| --- | --- | --- | --- |
+| Broker beats stock by more than "a little" | Accepted | Balanced 2.4x stock over 1901 to 1940 (range 1.1 to 3.4), preserve 1.5x, growth 1.9x; most of it in the war, when shipping shares did boom while stock stood still | About 1.3x to 1.6x |
+| Buy-and-hold | Closed | Every company bought in 1901 and held ends at 1.15x stock | A little over stock |
+| Investment Office heads are fixed | Open | No candidates or replacement | Candidates each quarter |
+| Small lines fail under control | Open | A line held 90% failed before 1930 in 3 of 4 test seeds | The Line can support a controlled line |
+| Takeover prices uneven | Open | 0.75 to 1.9 times the fleet's worth, net of its cash (0.30.0, before the dividend fix) | About the fleet's worth in normal times |
+| Seat and control effects unmeasured | Open | Checked as rules only | Fewer rate wars with a controlled leader |
+| Float proceeds may be generous | Open | 49% raises about 0.75 of the Line's worth, 75% about twice it, all to the Line | Part to the owner |
+| Board targets unmeasured for a careless owner | Open | No removals in 10 careful games | Some removals for a careless owner |
+| Proxy fights may be easy | Open | A tenth and ordinary standing wins about three times in five | A gamble against a well-run line |
+| Bear raids roughly break even | Open | Better than the short alone in 3 of 4 to 3 of 6 games | Pays when well timed |
+| Long and short at once | Open | Allowed | Cannot dodge a buy-in |
+| Rival moves among themselves | After 1.0.0 | Rivals raid and bid only for the Line | Rivals take each other over |
+
+## Final check
+
+| Issue | Status | Measure now | Target |
+| --- | --- | --- | --- |
+| 20-seed noise | Open | About 2 games in 20 | Every target run on 40 seeds for 1.0.0 |

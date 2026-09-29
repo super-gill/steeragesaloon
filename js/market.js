@@ -93,9 +93,9 @@ function marketMonth(){
     if(mkShut(m)){c.hist.push(c.px);if(c.hist.length>120)c.hist.shift();continue;}
     // the price: the company's worth (smoothed, since the market looks through a month's accounts), the mood, the
     // news, and a drift of its own that fades slowly (so a gap from worth is no sure thing to trade on)
-    const R=MK_REL_BY[id],sd=R?R.sd:0.045;c.f=c.f===undefined?mkFund(id,m):c.f+0.2*(mkFund(id,m)-c.f);
+    const R=MK_REL_BY[id],sd=R?R.sd:0.045;{const F0=mkFund(id,m);c.f=c.f===undefined?F0:c.f+(F0<c.f?0.45:0.2)*(F0-c.f);} // the City marks a company down faster than up
     // growth beyond the rise in prices is paid for in part with new shares, so a holder keeps only part of it
-    const fr=c.f/PX();if(c.fr0===undefined)c.fr0=fr;if(fr>c.fr0){if(mkStake(id)<0.5&&id!=='morven')c.n*=Math.pow(fr/c.fr0,0.4);c.fr0=fr;}else c.fr0=Math.max(fr,c.fr0*0.995); // a board the Line controls issues no shares over its head
+    const fr=c.f/PX();if(c.fr0===undefined)c.fr0=fr;if(fr>c.fr0){if(mkStake(id)<0.5&&id!=='morven')c.n*=Math.pow(fr/c.fr0,0.6);c.fr0=fr;}else c.fr0=Math.max(fr,c.fr0*0.995); // a board the Line controls issues no shares over its head
     // two drifts: a quick one that fades in months, and a slow one (fashion, reputation) that takes a decade
     c.e=0.9*(c.e||0)+0.6*sd*mnorm();c.w=0.995*(c.w||0)+0.6*sd*mnorm();c.sh=1+(c.sh-1)*0.85;
     c.px=Math.max(0.004,c.f/c.n*M.mood*c.sh*Math.exp(c.e+(c.w||0))*(warring.has(id)?0.94:1)*(id==='morven'&&S.fl&&S.fl.founders?FL_FOUNDERS:1));
