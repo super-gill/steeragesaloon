@@ -68,7 +68,8 @@ function coAccounts(o,stats){
   const wf=warRivalF(o,m),held=atWar(m)&&wf<1?1-wf:0,hire=wf>0&&held?coFleet(o).reduce((a,x)=>a+x.grt,0)*held*0.34*PX():0;rev+=hire;
   // the ships a line keeps in the war carry cargo for whoever will pay, as the Morven Line's do (0.33)
   if(atWar(m)&&wf>0)rev+=coCosts(o,m)*Math.min(1,1-held)*1.1*warFreight(m);
-  const run=coCosts(o,m)*(wf===0&&pre21(m)?0.1:1-held)+CO_VAR*rev+wars,int=co.debt*CO_RATE/12,net=rev-run-int;
+  const run=coCosts(o,m)*(wf===0&&pre21(m)?0.1:1-held)+CO_VAR*rev+wars,int=co.debt*CO_RATE/12;
+  let net=rev-run-int;if(newCal()&&m>=WAR_FROM+5&&m<M21&&net>0)net*=0.45; // Excess Profits Duty takes a rival's war and boom profits too, about the Line's rate (0.34)
   co.cash+=net;co.h=co.h||[];co.h.push({rev:Math.round(rev),cost:Math.round(run+int),net:Math.round(net)});if(co.h.length>12)co.h.shift();
 }
 /* borrow when short, repay when flush, sell when the bank says no, and fail when nothing is left to sell */
@@ -129,7 +130,9 @@ function coFail(o){
   const mine=routes.some(rk=>S.lines[rk]);
   if(n<=2)news(`${name} has sold ${n===1?'its last ship':'its last two ships'} and been wound up, its capital lost.${mine?' Its trade on '+routes.map(rk=>ROUTES[rk].name).join(' and ')+' is up for grabs.':''}`,mine?'good':'',mine);
   else news(`${name} has failed and is in the hands of the receivers. Of its ${n} ship${n===1?'':'s'}, ${[sold?`${sold} ${sold===1?'goes':'go'} to ${sold===1?'another line':'other lines'}`:'',ours?`${ours} ${ours===1?'is':'are'} offered through the brokers`:'',broken?`${broken} ${broken===1?'goes':'go'} for scrap or abroad`:''].filter(Boolean).join(', ')}.${mine?' Its trade is up for grabs.':''}`,mine?'good':'',true);
-  S.coQueue.push({at:m+4+Math.floor(R()*9),kind:RIVAL_P[o].kind||'liner',routes,flag:RIVALS[o].flag});
+  // promoters come back to a failed line's trades within a year, but where lines keep failing they wait longer (0.34)
+  const again=S.coFails.filter(q=>m-q.m<120&&q.routes.some(rk=>routes.includes(rk))).length*(routes.some(rk=>S.rships.some(x=>x.route===rk&&x.owner!==o))?1:0); // an empty trade is never kept waiting
+  S.coQueue.push({at:m+(again>=2?12+Math.floor(R()*18):4+Math.floor(R()*9)),kind:RIVAL_P[o].kind||'liner',routes,flag:RIVALS[o].flag});
 }
 /* a failed line's ship, offered cheaply to the Morven Line by the receivers */
 function coToMarket(x,o){
@@ -177,7 +180,7 @@ function coFound(q){
   // the promoters raise enough for the ships and about four months' running costs
   // a speculative line of 1919 and 1920 buys at bubble prices on borrowed money and keeps little in hand
   if(q.spec){P.lev=0.75;P.spec=true;const c2=cost*warShips(m);S.rivals[d.id]={cash:Math.round((c2*0.08+40000*PX())/1000)*1000,debt:Math.round(c2*0.75/1000)*1000,h:[],born:m,spec:true};}
-  else S.rivals[d.id]={cash:Math.round((cost*0.3+80000*PX())/1000)*1000,debt:Math.round(cost*Math.min(0.5,P.lev)/1000)*1000,h:[],born:m};
+  else S.rivals[d.id]={cash:Math.round((cost*0.5+80000*PX())/1000)*1000,debt:Math.round(cost*Math.min(0.35,P.lev)/1000)*1000,h:[],born:m}; // new capital: half the fleet's cost in hand, a third at most borrowed (0.34)
   for(const x of ships){S.rships.push(x);newRivalVis(x);}
   S.coNew.unshift({o:d.id,m,routes});if(S.coNew.length>30)S.coNew.length=30;
   S.rmoves.unshift({m,o:d.id,rk:routes[0],kind:'enter'});if(S.rmoves.length>40)S.rmoves.length=40;

@@ -2,6 +2,19 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.34.0 (29 September 2026)
+The final balance pass, part two: the markets, the rival lines' long run, and every target on 40 seeds.
+- A controlled line can be lent money at 5% to carry it through a bad patch. It repays when it has cash to spare, the loan counts in your net worth, and it is lost if the line fails.
+- The Investment Office offers two candidates for its head each quarter.
+- Floating: half the shares sold are new, for capital to the Line; half are your own, for money to you. The Line used to get it all, which made floating too generous.
+- A seat on a rival's board softens it (about two fifths fewer rate wars on its trade) instead of all but ending them; control still stops them.
+- Proxy fights are a gamble against a well-run line (about 1 in 8 with a tenth) and likelier against a failing one.
+- You can no longer hold and short the same company: sell first, or buy back the short first.
+- A line's worth counts cash over a normal reserve at seven tenths, so a cash-rich line is not a bargain to raid.
+- Rival lines pay Excess Profits Duty on their war and boom profits, break up their worn-out ships after the armistice, and new lines start with more capital; promoters wait longer before trying again on trades where lines keep failing. Rival failures over 1900 to 1940 fall back to about five a decade.
+- In the 1919 and 1920 boom the bank lends on ships at no more than their worth at the armistice (0.33 cut it off suddenly).
+- Every target was run on 40 seeds (20 for the slow ones); see the README and `docs/overhaul/BALANCE.md`.
+
 ## 0.33.0 (29 September 2026)
 The final balance pass, part one: the economy, the war and the rival lines.
 - Fixed: since 0.30 rival lines paid no dividends. A comment swallowed the line that paid them, so the rivals hoarded cash and grew stronger, and more careful owners went bust in the 1907 panic (5 in 20 against 2 in 20). The market's dividends from lines were zero too. Games now match 0.28 exactly up to the war.

@@ -36,7 +36,7 @@ function game(seed, scenario) {
 }
 const SC = {
   'private': `let bids=0;to(ym(1912,0));ok('a private Line is never bid for',!S.fl);ok('and cannot be',!(S.fl&&flBid(pick())));`,
-  'minority': `const est=flRaise(0.49,false),c0=S.cash;ok('a minority float goes through',flFloat(0.49,false));quiet();ok('it raises what was shown',Math.abs(S.cash-c0-est)<2,Math.round(S.cash-c0)+' vs '+est);
+  'minority': `const est=Math.round(flRaise(0.49,false)/2),c0=S.cash;ok('a minority float goes through',flFloat(0.49,false));quiet();ok('it raises what was shown',Math.abs(S.cash-c0-est)<2,Math.round(S.cash-c0)+' vs '+est);
     ok('the public holds 49%',Math.abs(S.fl.pub/S.fl.n-0.49)<0.001);ok('no bid on a minority float',!flBid(pick()));
     S.fl.conf=0;to(ym(1908,2));ok('the owner stays',!S.over&&S.fl.conf<30,'confidence '+Math.round(S.fl.conf));`,
   'removal': `flFloat(0.75,false);quiet();S.fl.conf=5;S.fl.lastConf=10;S.fl.targets=null;to(ym(1907,2));ok('a majority board removes the owner under 20',S.over==='removed',S.over||'still in charge, '+Math.round(S.fl.conf));`,

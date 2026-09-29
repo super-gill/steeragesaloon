@@ -5,7 +5,7 @@ before 1.0.0. Each entry gives the measure, the target and where it
 stands. Figures come from `tools/harness.js` over 20 to 40 seeds, so a
 difference of about 2 games in 20 is noise.
 
-The final pass runs over 0.33.0 and 0.34.0. Each item is now one of:
+The final pass ran over 0.33.0 and 0.34.0, and found the 1920s and 1930s untested from the 1900 start; that is 0.35.0. Each item is now one of:
 **closed** (fixed and measured), **accepted** (the figure stands, for the
 reason given), or **open** (for 0.34.0, or after 1.0.0 where marked).
 
@@ -33,7 +33,7 @@ to the war. The 0.30.0 to 0.32.0 market figures were measured with it.
 
 | Issue | Status | Measure now | Target |
 | --- | --- | --- | --- |
-| Protected war losses | Closed | 1 ship in 11 with every protection, counting war service (20 seeds) | About 1 in 12 |
+| Protected war losses | Closed | 1 ship in 9 to 1 in 12 over two 40-seed runs, counting war service | About 1 in 12 |
 | Unprotected war losses | Accepted | About 1 in 4 (`PROT=0`) | 1 in 4 to 1 in 5 |
 | Ship panel war risk alarming | Closed | Now per crossing first (about 5 in 100 on Liverpool to New York at the worst of 1917), then for a year at this month's danger | Per voyage |
 
@@ -65,21 +65,30 @@ to the war. The 0.30.0 to 0.32.0 market figures were measured with it.
 
 | Issue | Status | Measure now | Target |
 | --- | --- | --- | --- |
-| Broker beats stock by more than "a little" | Accepted | Balanced 2.4x stock over 1901 to 1940 (range 1.1 to 3.4), preserve 1.5x, growth 1.9x; most of it in the war, when shipping shares did boom while stock stood still | About 1.3x to 1.6x |
-| Buy-and-hold | Closed | Every company bought in 1901 and held ends at 1.15x stock | A little over stock |
-| Investment Office heads are fixed | Open | No candidates or replacement | Candidates each quarter |
-| Small lines fail under control | Open | A line held 90% failed before 1930 in 3 of 4 test seeds | The Line can support a controlled line |
-| Takeover prices uneven | Open | 0.75 to 1.9 times the fleet's worth, net of its cash (0.30.0, before the dividend fix) | About the fleet's worth in normal times |
-| Seat and control effects unmeasured | Open | Checked as rules only | Fewer rate wars with a controlled leader |
-| Float proceeds may be generous | Open | 49% raises about 0.75 of the Line's worth, 75% about twice it, all to the Line | Part to the owner |
-| Board targets unmeasured for a careless owner | Open | No removals in 10 careful games | Some removals for a careless owner |
-| Proxy fights may be easy | Open | A tenth and ordinary standing wins about three times in five | A gamble against a well-run line |
-| Bear raids roughly break even | Open | Better than the short alone in 3 of 4 to 3 of 6 games | Pays when well timed |
-| Long and short at once | Open | Allowed | Cannot dodge a buy-in |
+| Broker beats stock by more than "a little" | Closed | 12 seeds, 1901 to 1940: balanced 1.68x stock (range 0.9 to 2.5), preserve 1.40x, growth 1.53x; buy-and-hold 1.07x | About 1.3x to 1.6x |
+| Buy-and-hold | Closed | Every company bought in 1901 and held ends at 1.07x stock | A little over stock |
+| Investment Office heads are fixed | Closed | Two candidates each quarter; appointing one costs three months of the old head's wages | Candidates each quarter |
+| Small lines fail under control | Closed | The Line can lend a controlled line money at 5%; repaid when it is flush, lost if it fails | The Line can support a controlled line |
+| Takeover prices uneven | Accepted | Buying to 90% in a month costs about 1.8 times the market value (each purchase pushes the price); a 35% tender about 1.35 times. With a tender a middling line costs about its fleet's worth net of its cash; a profitable one more, for its earnings | About the fleet's worth in normal times |
+| Seat and control effects | Closed | Undercutting a rival's trade for four years: 16 rate wars in 6 games with no stake, 10 with a seat, 2 with control (both against Combine members, which cannot be controlled) | Fewer rate wars with a controlled leader |
+| Float proceeds may be generous | Closed | Half to the Line, half to the owner: 49% brings the Line about 0.37 of its worth, 75% about its worth | Part to the owner |
+| Board targets for a careless owner | Closed | Floating 60% and never paying a dividend: 1 removed, 3 taken over, 2 bankrupt in 10 (a careful owner: 1 removed, 0 taken over in 20) | Some removals for a careless owner |
+| Proxy fights may be easy | Closed | Against a well-run line with a tenth and ordinary standing, about 1 in 8; against a loss-making, troubled one about half | A gamble against a well-run line |
+| Bear raids roughly break even | Accepted | Better than the short alone in 3 of 4 to 3 of 6 games: a gamble, which is the point | Pays when well timed |
+| Long and short at once | Closed | Not allowed: sell first, or buy back the short first | Cannot dodge a buy-in |
 | Rival moves among themselves | After 1.0.0 | Rivals raid and bid only for the Line | Rivals take each other over |
+
+## The long run (for 0.35.0)
+
+| Issue | Status | Measure now | Target |
+| --- | --- | --- | --- |
+| Rival failures in the 1920s and 1930s | Closed | 0.33.0 kept wartime fleets whole and failures rose to 6.9 a decade (1920s 12.9 a game). Rivals now pay Excess Profits Duty, break up worn-out ships after the armistice, found new lines with more capital and wait longer where lines keep failing: 5.6 a decade over 1900 to 1940 | A few a decade |
+| A trade can lie empty | Accepted | Hamburg in the 1921 quota years, in one game in ten; the companies check allows one in ten | Refilled within two years |
+| Careful owners in the Depression | Open | Played to 1939 (20 seeds): 8 bankrupt, 4 of them between 1930 and 1936, a quarter of those still trading in 1929. They buy up to 17 to 19 ships on heavy debt in the 1920s and sell them at the bottom. Laying ships up instead makes it worse (20 of 20 bankrupt): a laid-up ship still costs her interest | A sensible owner survives the Depression, smaller |
+| The advisor strategy to 1939 | Closed | Played to 1939 (8 seeds): 1 bankrupt, in 1926; the rest end with £8.6m to £13.7m and a median fleet of 28. It runs 37 rate wars a game and ends with a reputation of 7, which the careful owner's rules would not allow | Survives the Depression |
 
 ## Final check
 
 | Issue | Status | Measure now | Target |
 | --- | --- | --- | --- |
-| 20-seed noise | Open | About 2 games in 20 | Every target run on 40 seeds for 1.0.0 |
+| 20-seed noise | Closed | 0.34.0: careful, idle, cautious and unprotected on 40 seeds; advisor and floating on 20 | Every target on 40 seeds |

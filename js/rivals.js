@@ -238,6 +238,8 @@ function rivalsMonth(){
         break;}}
     // old ships go to the breakers
     for(const x of S.rships.filter(y=>y.owner===o&&yearOfM(m)-y.built>32)){if(R()<0.08){dropRival(x);co.cash+=coScrap(x);rivalMove(o,x.route,'retire',x.name);}}
+    // after the armistice the lines break up the worn-out tonnage the war kept at sea (0.34)
+    if(newCal()&&m>ARMISTICE&&m<M21&&!/German/.test((RIVALS[o]||{}).flag||''))for(const x of S.rships.filter(y=>y.owner===o&&yearOfM(m)-y.built>25)){if(R()<0.05){dropRival(x);co.cash+=coScrap(x);rivalMove(o,x.route,'retire',x.name);}}
     if(m%12===0&&coAlive(o))coYearEnd(o);
     coFinance(o,stats);
   }

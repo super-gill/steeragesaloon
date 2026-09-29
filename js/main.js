@@ -130,6 +130,8 @@ document.addEventListener('click',e=>{
     case 'flcrown':if(UI.confirm!=='flcrown')UI.confirm='flcrown';else{UI.confirm=null;flCrown();}break;
     case 'flappeal':flAppeal();break;
     case 'mvraid':mvRaid(b.dataset.id);break;
+    case 'mklend':{const d=JSON.parse(b.dataset.d);mkLend(d[0],+d[1]);break;}
+    case 'officehire':mkOfficeHire(+b.dataset.id);break;
     case 'mvtender':{const d=JSON.parse(b.dataset.d);mvTender(d[0],+d[1]);break;}
     case 'mvproxy':mvProxy(b.dataset.id);break;
     case 'mvshort':{const d=JSON.parse(b.dataset.d);mvShort(d[0],+d[1]);break;}

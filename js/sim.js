@@ -327,8 +327,8 @@ function monthRoll(pm){
     const n=shipsOn(rk).filter(x=>ACTIVE.includes(x.state)).length;
     if(S.conf||!S.lines[rk]||!n||isCruise(rk)){S.tension[rk]=(S.tension[rk]||0)*0.6;continue;} // no conference on cruises
     const pr=pressure(rk,S.lines[rk].fares,S.lastPax[rk]||0,n,S.m);
-    const inf=typeof mkInflOn==='function'?mkInflOn(rk):0; // a seat on the leading rival's board takes half the heat; control takes it all
-    const prev=S.tension[rk]||0,t=prev+(pr.p*(inf===2?0:inf===1?0.5:1)+(combineOn(rk)?45:0)-prev)*0.35;S.tension[rk]=t;
+    const inf=typeof mkInflOn==='function'?mkInflOn(rk):0; // a seat on the leading rival's board softens it (about two fifths fewer rate wars); control stops them (0.34)
+    const prev=S.tension[rk]||0,t=prev+(pr.p*(inf===2?0:inf===1?0.88:1)+(combineOn(rk)?45:0)-prev)*0.35;S.tension[rk]=t;
     if(prev<40&&t>=40)news(`${RIVALS[topRival(rk)].name} is complaining about your fares on ${ROUTES[rk].name}. Tension ${Math.round(t)}.`,'bad');
     if(!S.wars[rk]&&t>=40&&inf<2&&Math.random()<(t-40)/100*0.9){
       S.wars[rk]={left:4+Math.floor(Math.random()*4),mult:0.72};
@@ -384,7 +384,7 @@ const runningCost=()=>S.ships.reduce((a,x)=>a+crewCost(x)+(x.captain?x.captain.w
 const fleetValue=()=>S.ships.reduce((a,s)=>a+shipValue(s),0);
 const shoreValue=()=>{const s=S.shore;let v=0;for(const p in s.piers)v+=PIER_COST[p]*0.6;for(const y in s.yards)v+=120000*0.6;if(s.slip)v+=OWN_SLIP_COST*0.5;for(const h in s.hostels)v+=35000*0.5;for(const p in s.sheds||{})v+=SHED_COST*0.5;for(const p in s.cold||{})v+=COLD_COST*0.5;return v;};
 const netWorth=()=>S.cash+(S.gilts||0)+fleetValue()+shoreValue()-S.debt-admDebt()+mkWorth(); // shares at the market, less the margin loan
-const headroom=()=>Math.max(0,0.7*(fleetValue()/(newCal()&&S.m>ARMISTICE&&S.m<M21?Math.max(1,warShips(S.m)):1)+shoreValue())+0.9*(S.gilts||0)+0.5*Math.max(0,mkWorth())-S.debt-admDebt()); // in the 1919 and 1920 boom the bank lends on ships at their normal worth, not the boom's // government stock is the best security a bank can hold
+const headroom=()=>Math.max(0,0.7*(fleetValue()/(newCal()&&S.m>ARMISTICE&&S.m<M21?Math.max(1,warShips(S.m)/warShips(ARMISTICE)):1)+shoreValue())+0.9*(S.gilts||0)+0.5*Math.max(0,mkWorth())-S.debt-admDebt()); // in the 1919 and 1920 boom the bank lends on ships at no more than their worth at the armistice // government stock is the best security a bank can hold
 const odLimit=()=>8000+0.5*headroom(); // the bank forecloses when cash falls below minus this
 function news(t,k,pauseIt){
   S.news.unshift({d:Math.floor(S.t),t,k:k||''});if(S.news.length>80)S.news.length=80;

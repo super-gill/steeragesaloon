@@ -45,7 +45,7 @@ const STRATS={
   prudent(){H.expand(12000,true);},
   /* the sensible owner the 1900 targets are set for: keeps six months' running costs in hand, borrows no more than half
      the fleet's value, buys only ships that should earn a sixth of their price a year, and lays up a ship that loses money */
-  careful(){const run=runningCost();H.boats();if(typeof FLOAT!=='undefined'&&FLOAT&&!S.fl&&S.m>=ym(1906,0)&&!flCanFloat())flFloat(FLOAT,false); // FLOAT=0.6: float that share once it can, from 1906
+  careful(){const run=runningCost();H.boats();if(typeof FLOAT!=='undefined'&&FLOAT&&!S.fl&&S.m>=ym(1906,0)&&!flCanFloat()){flFloat(FLOAT,false);if(S.fl&&typeof FLDIV!=='undefined'&&FLDIV)S.fl.pay=FLDIV;} // FLOAT=0.6: float that share once it can, from 1906
 if(typeof PROT==='undefined'||PROT!=='0')H.warProt();
     // on rumours of a panic a careful owner puts spare cash into government stock, safe from a failing bank; after it, back
     if(S.crash&&S.crash.stage==='rumour'){const spare=Math.floor((S.cash-3*run)/1000)*1000;if(spare>0)gilts(true,spare);return;}
@@ -68,7 +68,7 @@ if(typeof PROT==='undefined'||PROT!=='0')H.warProt();
 `;
 
 function runGame(strategy, seed) {
-  const ctx = { console, PROT: process.env.PROT, MKT_OFF: process.env.MKT === '0', FLOAT: +(process.env.FLOAT || 0), performance: { now: () => 0 }, localStorage: { getItem() { return null; }, setItem() {} } };
+  const ctx = { console, PROT: process.env.PROT, MKT_OFF: process.env.MKT === '0', FLOAT: +(process.env.FLOAT || 0), FLDIV: process.env.FLDIV || '', performance: { now: () => 0 }, localStorage: { getItem() { return null; }, setItem() {} } };
   vm.createContext(ctx);
   vm.runInContext(PRELUDE.replace('SEED', String(seed * 7919 + 13)).split('const H=')[0], ctx);
   for (const [f, s] of SRC) vm.runInContext(s, ctx, { filename: f });

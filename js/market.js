@@ -54,7 +54,8 @@ function mkFund(id,m){
   // a line: half on its ships less its debts (cash counts up to a normal reserve: a hoard never reaches the shareholders),
   // half on eight years' earnings; never below a quarter of its ships, which a buyer could always sell
   const co=S.rivals[id];if(!co||co.dead)return 0;const val=coValue(id),e=coProfit(id),fl=0.25*val+1000*PX();
-  return 0.5*Math.max(fl,val-co.debt+clamp(co.cash,-val,0.3*val))+0.5*Math.max(fl,e*8);}
+  const cash=co.cash<0?Math.max(co.cash,-val):Math.min(co.cash,0.3*val)+0.7*Math.max(0,co.cash-0.3*val)-(co.lineLoan||0); // cash over a normal reserve counts at seven tenths: it is the shareholders' in the end (0.34)
+  return 0.5*Math.max(fl,val-co.debt+cash)+0.5*Math.max(fl,e*8);}
 const mkListable=(id,m)=>{if(id==='morven')return typeof flOn==='function'&&flOn();const R=MK_REL_BY[id];if(R)return !R.from||m>=R.from;return !!(S.rivals[id]&&!S.rivals[id].dead);};
 const mkName=id=>id==='morven'?'The Morven Line':MK_REL_BY[id]?MK_REL_BY[id].name:RIVALS[id]?RIVALS[id].name:id;
 const mkRival=id=>!MK_REL_BY[id]&&id!=='morven';
@@ -114,7 +115,7 @@ function marketMonth(){
 function mkShock(id,f,why){const c=S.ex.cos[id];if(!c||c.gone)return;c.sh*=f;
   if(why&&mkHeld(id))news(`${mkName(id)} ${why}: its shares fall sharply. The Line holds ${int(mkHeld(id))}.`,'bad');}
 const mkHeld=id=>{const M=S.ex;return ((M.me.pos[id]||{}).n||0)+(M.fund?((M.fund.pos[id]||{}).n||0):0);};
-function mkDelist(id){const M=S.ex,c=M.cos[id];c.gone=S.m;c.px=0;const mine=M.me.pos[id],fund=M.fund&&M.fund.pos[id];
+function mkDelist(id){const M=S.ex,c=M.cos[id];c.gone=S.m;c.px=0;const co=S.rivals[id];if(co&&co.lineLoan>0&&!co.merged){book('shares',-co.lineLoan);S.cash+=co.lineLoan;news(`The Line's loan of ${fmt(co.lineLoan)} to ${mkName(id)} is lost with it.`,'bad');co.lineLoan=0;}const mine=M.me.pos[id],fund=M.fund&&M.fund.pos[id];
   if(mine){book('shares',-mine.cost);S.cash+=mine.cost;delete M.me.pos[id];} // the purchase was paid for already: the loss goes through the books
   if(fund)delete M.fund.pos[id];
   if(mine||fund)news(`${mkName(id)} has failed. Its shares are worthless; the Line's ${int((mine?mine.n:0)+(fund?fund.n:0))} are written off.`,'bad',true);}
@@ -134,7 +135,7 @@ function mkDeal(A,id,q){const c=S.ex.cos[id];if(!c||c.gone||!q||mkShut())return 
   return {cash:gross-fee,gain:gross-fee-basis};}
 const mkPosVal=A=>Object.keys(A.pos).reduce((a,id)=>a+A.pos[id].n*(S.ex.cos[id]?S.ex.cos[id].px:0),0);
 /* the Line's own dealing, from the Market tab */
-function mkBuy(id,amt,margin){const M=mkEnsure(),c=M.cos[id];if(!c||c.gone||mkShut()||!(amt>0))return false;
+function mkBuy(id,amt,margin){const M=mkEnsure(),c=M.cos[id];if(!c||c.gone||mkShut()||!(amt>0)||(M.me.short&&M.me.short[id]))return false; // buy back the short first
   const own=margin?amt*(1-MK_MARGIN):amt;if(S.cash<own)return false;
   const q=Math.floor(amt/(c.px*(1+MK_FEE_BUY+0.3*amt/Math.max(1,c.n*c.px))));if(q<1)return false;
   const r=mkDeal(M.me,id,q);if(!r)return false;S.cash+=r.cash;
@@ -161,7 +162,8 @@ function mkLoanMonth(){const M=S.ex,A=M.me;if(!(A.loan>0)){M.call=null;return;}
 
 /* ---------- the managed account: a City broker, or the Line's own Investment Office ---------- */
 const mkFundVal=F=>F?F.cash+F.gilts+mkPosVal(F):0;
-const mkWorth=()=>{if(!S.ex)return 0;const M=S.ex;return mkPosVal(M.me)-M.me.loan+mkFundVal(M.fund)+(typeof mvShortsVal==='function'?mvShortsVal():0);};
+const mkLoans=()=>{let v=0;for(const o in S.rivals){const co=S.rivals[o];if(co.lineLoan>0&&!co.dead)v+=co.lineLoan;}return v;};
+const mkWorth=()=>{if(!S.ex)return 0;const M=S.ex;return mkPosVal(M.me)-M.me.loan+mkFundVal(M.fund)+(typeof mvShortsVal==='function'?mvShortsVal():0)+mkLoans();};
 const mkSkill=()=>{const M=S.ex,F=M.fund;if(!F)return 0;return F.mgr==='office'&&M.office?M.office.head.comp/100:F.skill;};
 function mkFundOpen(mgr){const M=mkEnsure();if(M.fund)return false;if(mgr==='office'&&!M.office)return false;
   M.fund={mgr,brief:'balanced',cash:0,gilts:0,pos:{},paidIn:0,giltEq:0,since:S.m,due:S.m,skill:0.3+0.3*mrand(),broker:`${['Cazenove','Rowe','Panmure','Grieveson','Laurie'][Math.floor(mrand()*5)]} & Co.`,rep:null,q0:0};
@@ -217,7 +219,10 @@ function mkOfficeOpen(){const M=mkEnsure();if(M.office)return false;const c=Math
   book('office',-c);M.office={head:makeHead('invest',mrand),since:S.m,adv:[]};mkOfficeAdvice();
   news(`The Investment Office opens at head office, under ${M.office.head.name}.`,'good');return true;}
 function mkOfficeClose(){const M=S.ex;if(!M||!M.office)return false;M.office=null;if(M.fund&&M.fund.mgr==='office')M.fund.mgr='broker';news('The Investment Office is closed. The investment account goes to the brokers.');return true;}
-function mkOfficeMonth(){const M=S.ex,O=M.office;if(!O)return;book('office',-mkOfficeRun());if(S.m%3===0||!O.adv)mkOfficeAdvice();}
+function mkOfficeMonth(){const M=S.ex,O=M.office;if(!O)return;book('office',-mkOfficeRun());if(S.m%3===0||!O.adv)mkOfficeAdvice();if(S.m%3===0||!O.cands)O.cands=[makeHead('invest',mrand),makeHead('invest',mrand)];}
+/* a new head for the Office, from the quarter's candidates: the old one is paid three months' wages to go */
+function mkOfficeHire(i){const O=S.ex&&S.ex.office;if(!O||!O.cands||!O.cands[i])return false;const sev=O.head.wage*3;if(S.cash<sev)return false;
+  book('office',-sev);const old=O.head.name;O.head=O.cands[i];O.cands.splice(i,1);mkOfficeAdvice();news(`${O.head.name} takes over the Investment Office from ${old}.`);return true;}
 /* its advice, each quarter: a weaker head reads a company's worth less truly */
 function mkOfficeAdvice(){const M=S.ex,O=M.office,sk=O.head.comp/100,out=[];
   const est=id=>mkVal(id)/M.cos[id].px*Math.exp((0.15+(1-sk)*0.4)*mnorm());
@@ -248,7 +253,7 @@ const mkInflOn=rk=>S.ex?mkInfl(topRival(rk)):0;
 const MK_DIV={none:{name:'None',pay:0},normal:{name:'Normal',pay:0.5},generous:{name:'Generous',pay:0.9}};
 const MK_STRAT={retrench:{name:'Retrench',aggr:0.6},steady:{name:'Steady',aggr:1},expand:{name:'Expand',aggr:1.35}};
 /* buy a share of the company outright, from what is on the market */
-function mkBuyPct(id,pct){const M=mkEnsure(),c=M.cos[id];if(!c||c.gone||mkShut()||MK_REL_BY[id])return false;
+function mkBuyPct(id,pct){const M=mkEnsure(),c=M.cos[id];if(!c||c.gone||mkShut()||MK_REL_BY[id]||(M.me.short&&M.me.short[id]))return false;
   const q=Math.floor(Math.min(pct*c.n,mkFree(id)));if(q<1)return false;
   const est=q*c.px*(1+MK_FEE_BUY+0.3*q/Math.max(1,mkFree(id)));if(S.cash<est)return false;
   const before=mkStake(id),r=mkDeal(M.me,id,q);if(!r)return false;S.cash+=r.cash;
@@ -264,6 +269,7 @@ function mkControlMonth(){const M=S.ex;
   for(const o of Object.keys(M.cos)){if(MK_REL_BY[o]||M.cos[o].gone||!coAlive(o))continue;const co=S.rivals[o];
     if(mkInfl(o)<2){if(co.aggr0){RIVAL_P[o].aggr=co.aggr0;co.aggr0=null;co.divPol=null;co.keepOff=false;}continue;}
     co.aggr0=co.aggr0||RIVAL_P[o].aggr;RIVAL_P[o].aggr=co.aggr0*MK_STRAT[co.strat||'steady'].aggr;
+    if(co.lineLoan>0){const i=co.lineLoan*0.05/12;co.cash-=i;book('shares',i);const spare=co.cash-2*coReserve(o);if(spare>0){const r=Math.min(co.lineLoan,spare);co.cash-=r;co.lineLoan-=r;S.cash+=r;if(co.lineLoan<1){co.lineLoan=0;news(`${mkName(o)} has repaid the Line's loan.`,'good');}}}
     if(co.keepOff)for(const x of coFleet(o)){if(!S.lines[x.route])continue;
       const cr=isCruise(x.route),ok=k=>k!==x.route&&!S.lines[k]&&routeOpen(k,S.m)&&isCruise(k)===cr,own=coFleet(o).map(y=>y.route).filter(ok);
       const to=own[0]||Object.keys(ROUTES).filter(ok).sort((a,b)=>S.rships.filter(y=>y.route===a).length-S.rships.filter(y=>y.route===b).length)[0];
@@ -302,8 +308,12 @@ function mkMerge(o){const M=S.ex,c=M.cos[o],co=S.rivals[o];if(!c||c.gone||mkStak
   S.rmoves.unshift({m:S.m,o,rk:routes[0]||'liv',kind:'merged'});RW_CACHE.k=null;
   news(`${n} is merged into the Morven Line. Its ${fleet.length} ship${fleet.length===1?'':'s'} fly the Line's flag${opened?`, and ${opened} new trade${opened===1?'':'s'} open${opened===1?'s':''}`:''}; its debts become the Line's. The other shareholders are paid ${fmt(cost)}.`,'good',true);return true;}
 /* special resolution: wind it up. Its ships are sold, its debts paid, and what is left goes to the shareholders */
-const mkWindValue=o=>{const co=S.rivals[o];return co.cash+coFleet(o).reduce((a,x)=>a+0.7*coShipVal(x),0)-co.debt;};
+const mkWindValue=o=>{const co=S.rivals[o];return co.cash+coFleet(o).reduce((a,x)=>a+0.7*coShipVal(x),0)-co.debt-(co.lineLoan||0);};
+/* lend to a controlled line to carry it through a bad patch: 5% a year, repaid when it is flush, lost if it fails */
+function mkLend(o,amt){if(mkInfl(o)<2||!(amt>0)||S.cash<amt)return false;const co=S.rivals[o];S.cash-=amt;co.cash+=amt;co.lineLoan=(co.lineLoan||0)+amt;
+  news(`The Line lends ${mkName(o)} ${fmt(amt)} at 5%, to be repaid when it can.`);return true;}
 function mkWindUp(o){const M=S.ex,c=M.cos[o],co=S.rivals[o];if(!c||c.gone||mkStake(o)<MK_SPECIAL)return false;
+  const loan=Math.min(co.lineLoan||0,Math.max(0,mkWindValue(o)+(co.lineLoan||0)));if(loan>0){S.cash+=loan;co.lineLoan=0;}
   const net=Math.max(0,mkWindValue(o)),perSh=net/c.n,k=mkStake(o),n=mkName(o),fleet=coFleet(o),routes=[...new Set(fleet.map(x=>x.route))];
   for(const x of fleet)dropRival(x);S.rorders=(S.rorders||[]).filter(q=>q.o!==o);
   const h=M.me.pos[o],got=h.n*perSh;S.cash+=h.cost;book('shares',got-h.cost);delete M.me.pos[o]; // the proceeds, with the gain or loss on what the shares cost through the books
@@ -323,7 +333,7 @@ function stakeHTML(o){const M=S.ex,c=M.cos[o],co=S.rivals[o],k=mkStake(o),inf=mk
   const cost=p=>Math.round(Math.min(p*c.n,mkFree(o))*c.px*(1+MK_FEE_BUY+0.3*p));
   const step=(t,lbl,on)=>`<li class="${on?'pos':''}">${on?'✓ ':''}${Math.round(t*100)}%: ${lbl}</li>`;
   let h=`<div class="ctl"><span class="lbl">The Line's stake: ${Math.round(k*1000)/10}%${k>0?` (${int(M.me.pos[o].n)} shares)`:''}</span>
-    <ul class="note" style="padding-left:18px;margin:0">${step(MK_SEAT,'a seat on the board: it leads no rate war against you without a fight in the boardroom, and pushes half as hard on fares',k>=MK_SEAT)}
+    <ul class="note" style="padding-left:18px;margin:0">${step(MK_SEAT,'a seat on the board: on a trade it leads it pushes less hard on your fares, and leads fewer rate wars against you',k>=MK_SEAT)}
       ${step(MK_CTRL,'control: set its dividend and strategy, keep it off your trades, end its rate wars, buy its ships at a fair price',k>=MK_CTRL)}
       ${step(MK_SPECIAL,'special resolutions: merge it into the Line, or wind it up',k>=MK_SPECIAL)}
       ${step(MK_BUYOUT,`buy out the rest${S.m>=MK_ACT1929?' at the market, under the Companies Act':', by negotiation at a quarter over the market'}`,k>=MK_BUYOUT)}</ul>
@@ -341,6 +351,8 @@ function stakeHTML(o){const M=S.ex,c=M.cos[o],co=S.rivals[o],k=mkStake(o),inf=mk
       ${wars.length?`<button class="btn" data-act="ctrlpeace" data-id="${o}">End its rate war${wars.length>1?'s':''} on ${wars.map(rk=>ROUTES[rk].name).join(', ')}</button>`:''}
       <details class="thist"><summary>Buy its ships at a fair price (${ships.length})</summary><div class="stack" style="margin-top:6px">${ships.map(x=>{const pr=Math.round(coShipVal(x)/100)*100;
         return `<div class="uprow"><div><strong>SS ${esc(x.name)}</strong><div class="meta">Built ${x.built} · ${int(x.grt)} grt · ${x.knots} knots · ${ROUTES[x.route].name}</div></div><button class="btn" data-act="ctrlship" data-d='${JSON.stringify([o,x.id])}' ${S.cash<pr||S.over?'disabled':''}>Buy · ${fmt(pr)}</button></div>`;}).join('')}</div></details>
+      <div class="ctl"><span class="lbl">Support it</span><div class="btns">${[10000,50000].map(v=>Math.round(v*PX()/1000)*1000).map(v=>`<button class="btn" data-act="mklend" data-d='${JSON.stringify([o,v])}' ${S.cash<v||S.over?'disabled':''}>Lend ${fmt(v)}</button>`).join('')}</div>
+        <p class="note">${co.lineLoan>0?`It owes the Line ${fmt(co.lineLoan)}. `:''}A loan at 5% carries it through a bad patch; it repays when it has cash to spare, and the loan is lost if it fails anyway.</p></div>
       <p class="note">It stays a company of its own, under its own name and flag; its profits reach the Line only as dividends.</p></div>`;}
   if(k>=MK_SPECIAL){const mc=mkMergeCost(o),wv=Math.max(0,mkWindValue(o))*k;
     h+=`<div class="ctl"><span class="lbl">Special resolutions</span>
@@ -413,6 +425,7 @@ function exchangeHTML(){
   const office=`<section class="sec"><h2>The Investment Office</h2>
     ${O?`<p class="note">${esc(O.head.name)}, a ${compWord(O.head.comp)} head, with three clerks: ${fmt(mkOfficeRun())} a month. The Office tells you what each company is worth against its price, advises each quarter, and can run the investment account with no broker's fee.</p>
       ${(O.adv||[]).length?O.adv.map(a=>`<div class="advice ${a.k==='bad'?'bad':a.k==='warn'?'warn':''}"><span class="note">${esc(a.t)}</span>${a.id?`<div class="btns"><button class="btn" data-act="mksel" data-id="${a.id}">${a.act==='buy'?'Look at it':'See the holding'}</button></div>`:''}</div>`).join(''):'<p class="note">Nothing to report this quarter.</p>'}
+      ${(O.cands||[]).length?`<details class="thist"><summary>Candidates for its head this quarter</summary><div class="stack" style="margin-top:6px">${O.cands.map((h,i)=>`<div class="uprow"><div><strong>${esc(h.name)}</strong><div class="meta">${compWord(h.comp)} · ${fmt(h.wage)} a month</div></div><button class="btn" data-act="officehire" data-id="${i}" ${S.cash<O.head.wage*3||S.over?'disabled':''}>Appoint · ${fmt(O.head.wage*3)} to let ${esc(O.head.name)} go</button></div>`).join('')}</div></details>`:''}
       <button class="btn quiet" data-act="officeclose">${UI.confirm==='officeclose'?'Confirm: close the Office':'Close the Office'}</button>`
     :`<p class="note">A department of your own, instead of a broker: ${fmt(oc)} to set up and about ${fmt(Math.round((65*PX()+3*CLERK_WAGE+50*PX())))} a month and up, by its head. It advises on every company and can run the investment account itself. A good head beats a broker; a poor one does worse.</p>
       <button class="btn" data-act="officeopen" ${S.cash<oc||S.over?'disabled':''}>Open the Investment Office · ${fmt(oc)}</button>`}</section>`;

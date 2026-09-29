@@ -3,7 +3,7 @@
    Plays the game with no screen (the Morven Line kept in cash by a benefactor) and, for each seed, takes over a rival
    line step by step, checking at each stake that it gives exactly its powers:
      - under 20%: no influence; at 20%: a seat (influence 1); over 50%: control (influence 2);
-     - control: the dividend, strategy and keep-off settings take, a controlled line leaves the Line's trades within a
+     - control: the dividend, strategy and keep-off settings take, a loan to it leaves net worth unchanged, a controlled line leaves the Line's trades within a
        year and puts no new ship on them, its rate wars end, and a ship bought from it arrives valued as its books had her;
      - at 75%: a merger brings in every ship, opens its trades, and the Line's net worth moves by exactly what the
        accounts say (its cash, ships and debts, less the minority's payment and the market value of the stake);
@@ -45,11 +45,12 @@ function run(seed) {
     S.wars[rk]={left:6,mult:0.72,multT:0.6,lines:true,by:[o,coLive().find(q=>q!==o)]};ok('its rate war ends on the Line\\'s word',mkPeace(o)&&!S.wars[rk]);
     const x=coFleet(o)[0],val=coShipVal(x),n0=S.ships.length,c0=S.rivals[o].cash;
     ok('a ship bought at a fair price',mkTakeShip(o,x.id)&&S.ships.length===n0+1&&Math.abs(shipValue(S.ships[S.ships.length-1])-val)<0.02*val&&Math.abs(S.rivals[o].cash-c0-Math.round(val/100)*100)<1,Math.round(shipValue(S.ships[S.ships.length-1]))+' vs '+Math.round(val));
+    {const nw0=netWorth(),c0=S.cash,lend=Math.round(20000*PX());ok('a loan to a controlled line',mkLend(o,lend)&&S.rivals[o].lineLoan>=lend&&Math.abs(netWorth()-nw0)<1,'net worth moved '+Math.round(netWorth()-nw0));}
     ok('no merger under three quarters',!mkMerge(o));
     buyTo(o,0.76);ok('special resolutions at three quarters',mkStake(o)>=0.75);
     const co=S.rivals[o],fleet=coFleet(o).length,ships=S.ships.length,cost=mkMergeCost(o),stakeV=mkPosVal(S.ex.me)-(S.ex.me.pos[o]?0:0),mine=S.ex.me.pos[o].n*S.ex.cos[o].px;
     const shipV=coFleet(o).reduce((a,y)=>a+coShipVal(y),0),refund=(S.rorders||[]).filter(q=>q.o===o).reduce((a,q)=>a+Math.round(coNewPrice(q.sh)*0.8),0);
-    const expect=co.cash+shipV-co.debt-cost-mine+refund,nw0=netWorth();
+    const expect=co.cash+shipV-co.debt-cost-mine+refund-(co.lineLoan||0),nw0=netWorth(); // the Line's own loan to it merges away
     ok('the merger goes through',mkMerge(o));
     const d=netWorth()-nw0;
     ok('every ship joins the Line',S.ships.length===ships+fleet,fleet+' ships');
