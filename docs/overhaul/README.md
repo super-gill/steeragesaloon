@@ -59,7 +59,7 @@ Balance issues left open by each release are listed in [BALANCE.md](BALANCE.md),
 | 0.29.0 | The market and the broker, R2 (done: `js/market.js`, `tools/market.js`) |
 | 0.30.0 | Stakes and control, R3 (done: in `js/market.js`, `tools/stakes.js`) |
 | 0.31.0 | Floating the Line, R4 (done: `js/float.js`, `tools/float.js`) |
-| 0.32.0 | Advanced moves (R5) |
+| 0.32.0 | Advanced moves, R5 (done: `js/moves.js`, `tools/moves.js`); the markets are complete |
 | 1.0.0 | 1900 to 1940 complete and balanced |
 
 ## The 0.16.0 balance pass

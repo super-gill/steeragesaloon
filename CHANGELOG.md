@@ -2,6 +2,17 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.32.0 (29 September 2026)
+Advanced moves (stage R5), the last of the market stages.
+- Dawn raid: buy a fifth of a rival line in a day at a tenth over the market, before the price moves.
+- Tender offer: offer every holder 20%, 35% or 50% over the market for their shares; it goes through only if you end with over half. A failed offer costs fees and standing.
+- Proxy fight: with a tenth or more of a line, campaign for its shareholders' votes; win and you control its board on a tenth, lose and your standing suffers.
+- Short selling: sell borrowed shares and buy them back later. Half the sale goes up as margin, the lender takes a fee, you pay the dividends, the broker buys you in if the price climbs, and big shorts get squeezed.
+- Bear raid: with a short open, start a rate war with the line on a trade you share. It costs you too, a conference member is fined, and the target may answer with a war of its own.
+- Targets fight back: a friendly line takes a blocking stake, the target sells its best ships, or (if the public holds your majority) it bids for the Line.
+- Against a floated Line, rivals raid its shares, force a vote at the annual meeting when the board is unhappy (and can remove you), and bear raid it.
+- New check `tools/moves.js`.
+
 ## 0.31.0 (29 September 2026)
 Floating the Line (stage R4).
 - Float the Line on the Stock Exchange from the Shares view, once it has three ships, three years of accounts and a solid net worth: sell 25%, 49%, 60% or 75% as new shares for capital. The more you sell, the more you raise. The 1919 and 1920 boom is the best time.

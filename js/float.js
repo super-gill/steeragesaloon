@@ -57,6 +57,7 @@ function floatJanuary(profit){const F=S.fl;if(!F||!flOn())return;const c=flC();F
     if(T.safe){d+=3;}else{d-=12;res.push('ships and lives were lost');}}
   F.conf=clamp(F.conf+d,0,100);
   const maj=flMajority();
+  if(typeof mvProxyAgainst==='function'&&mvProxyAgainst())return; // a raider with a stake forces a vote
   const warned=F.lastConf!==undefined&&F.lastConf<35;F.lastConf=F.conf; // the board warns a year before it acts
   if(maj&&F.conf<20&&warned){S.over='removed';S.removed={t:S.t,conf:F.conf,stake:flOwn(),worth:Math.round(F.own*c.px)};UI.speed=0;
     news(`At the annual meeting the shareholders vote the board's resolution: you are removed as managing director of the Morven Line. You keep your ${Math.round(flOwn()*100)}%.`,'bad',true);save();return;}
@@ -85,6 +86,7 @@ function flBidMonth(){const F=S.fl,m=S.m;if(!flOn())return;const b=F.bid;
     const c=flC(),cheap=c.px<0.8*flWorth()/F.n;
     // the knight who saved the Line may come back for it
     if(F.knight&&coAlive(F.knight.o)&&mrand()<0.006){flBid(F.knight.o,0.2+0.2*mrand());return;}
+    if(F.raider&&coAlive(F.raider.o)&&mrand()<0.015){flBid(F.raider.o,0.25+0.2*mrand());return;} // a raider with a stake comes back with a bid
     if(mrand()<(cheap?0.012:0.003)){const o=flBidders()[0];if(o)flBid(o);}return;}
   // the defences that end a bid
   if(b.by!=='combine'&&!coAlive(b.by))return flEndBid('lapses: the bidder has failed.',true);
@@ -95,7 +97,7 @@ function flBidMonth(){const F=S.fl,m=S.m;if(!flOn())return;const b=F.bid;
   if(m<b.due)return;
   // the shareholders decide: the premium, the board's confidence and the mood
   const prem=b.price/b.pre-1,a=clamp(0.25+1.5*(prem-0.2)+(55-F.conf)/80+(mkMood()-1)*0.5,0.05,0.95);
-  const kn=F.knight&&F.knight.o===b.by?F.knight.n:0,votes=a*F.pub+kn,total=F.n+(F.founders?(FL_VOTES-1)*F.own:0);
+  const kn=(F.knight&&F.knight.o===b.by?F.knight.n:0)+(F.raider&&F.raider.o===b.by?F.raider.n:0),votes=a*F.pub+kn,total=F.n+(F.founders?(FL_VOTES-1)*F.own:0);
   if(votes>0.5*total){S.over='taken';S.taken={by:b.by,t:S.t,price:b.price,worth:Math.round(F.own*b.price),pct:a};UI.speed=0;
     news(`Holders of ${Math.round(a*100)}% of the public's shares accept. The Morven Line passes to ${flBidName(b)}; your ${Math.round(flOwn()*100)}% is bought at the bid, ${fmt(S.taken.worth)}.`,'bad',true);save();return;}
   flEndBid(`fails: only ${Math.round(a*100)}% of the public's shares were offered${F.founders?', and your founders\' shares outvote them':''}.`,true);}
@@ -142,7 +144,7 @@ function flHTML(){const F=S.fl,c=flC();
   return `<section class="sec"><h2>The Morven Line's own shares</h2>${bid}
     <div class="row"><strong>${pxTxt(c.px)} a share</strong><span class="num">worth ${fmt(F.n*c.px)} at the market</span></div>${mkSpark(c.hist.slice(-60))}
     <dl class="kv"><dt>Your holding</dt><dd>${Math.round(own*1000)/10}% · ${fmt(F.own*c.px)}</dd><dt>The public</dt><dd>${Math.round(F.pub/F.n*1000)/10}%</dd><dt>Raised at the float</dt><dd>${fmt(F.raised)} (${monthName(F.floated)})</dd>${F.founders?'<dt>Founders\' shares</dt><dd>three votes each</dd>':''}${F.british?'<dt>Pledged</dt><dd>British, ships at the Admiralty\'s call</dd>':''}</dl>
-    ${kn}
+    ${kn}${F.raider?`<p class="badline">${RIVALS[F.raider.o]?RIVALS[F.raider.o].name:'A raider'} holds ${Math.round(F.raider.n/F.n*100)}% from a dawn raid. With the board unhappy it can force a vote at the annual meeting, or bid.</p>`:''}
     <p class="${F.conf<35?'badline':'note'}">The board is ${confWord(F.conf)} (${Math.round(F.conf)} of 100).${maj?' The public holds the majority: below 20 at an annual meeting, after a year under 35, the board removes you.':' You hold the majority: the board cannot remove you.'}</p>
     ${T?`<ul class="note" style="padding-left:18px;margin:0"><li>Targets for ${T.y}: a dividend of at least ${Math.round(T.div*100)}% on the share price;</li><li>${T.profit>0?`a profit of at least ${fmt(T.profit)}`:'to make a profit'};</li><li>the shares no more than a tenth behind shipping shares as a whole (from ${pxTxt(T.px0)});</li><li>no ship lost with lives, and no gross negligence${T.safe?'':' (already missed)'}.</li></ul>`:''}
     <div class="ctl"><span class="lbl">Dividend policy</span><div class="seg" role="group">${Object.keys(MK_DIV).map(v=>`<button data-act="fldiv" data-id="${v}" aria-pressed="${F.pay===v}">${MK_DIV[v].name}</button>`).join('')}</div>

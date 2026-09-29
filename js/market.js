@@ -109,7 +109,7 @@ function marketMonth(){
   // (coYearEnd, out of its own cash), reaching the shareholders in February
   if(m%3===2)for(const id in M.cos){const c=M.cos[id],R=MK_REL_BY[id];if(c.gone||!R)continue;const e=0.5*R.e0*PX()*R.drv(m);c.dy=e/c.n;mkPayDiv(id,e/4/c.n);}
   if(m%12===1)for(const id in M.cos){const c=M.cos[id],co=S.rivals[id];if(c.gone||MK_REL_BY[id]||!co)continue;c.dy=(co.div||0)/c.n;mkPayDiv(id,c.dy);}
-  mkControlMonth();if(typeof floatMonth==='function')floatMonth();mkLoanMonth();mkFundMonth();mkOfficeMonth();
+  mkControlMonth();if(typeof floatMonth==='function')floatMonth();if(typeof movesMonth==='function')movesMonth();mkLoanMonth();mkFundMonth();mkOfficeMonth();
 }
 function mkShock(id,f,why){const c=S.ex.cos[id];if(!c||c.gone)return;c.sh*=f;
   if(why&&mkHeld(id))news(`${mkName(id)} ${why}: its shares fall sharply. The Line holds ${int(mkHeld(id))}.`,'bad');}
@@ -118,7 +118,7 @@ function mkDelist(id){const M=S.ex,c=M.cos[id];c.gone=S.m;c.px=0;const mine=M.me
   if(mine){book('shares',-mine.cost);S.cash+=mine.cost;delete M.me.pos[id];} // the purchase was paid for already: the loss goes through the books
   if(fund)delete M.fund.pos[id];
   if(mine||fund)news(`${mkName(id)} has failed. Its shares are worthless; the Line's ${int((mine?mine.n:0)+(fund?fund.n:0))} are written off.`,'bad',true);}
-function mkPayDiv(id,d){const M=S.ex;if(!(d>0))return;
+function mkPayDiv(id,d){const M=S.ex;if(!(d>0))return;if(typeof mvShortDiv==='function')mvShortDiv(id,d);
   const mine=M.me.pos[id];if(mine&&mine.n)book('shares',mine.n*d);
   const f=M.fund&&M.fund.pos[id];if(f&&f.n)M.fund.cash+=f.n*d;}
 
@@ -161,7 +161,7 @@ function mkLoanMonth(){const M=S.ex,A=M.me;if(!(A.loan>0)){M.call=null;return;}
 
 /* ---------- the managed account: a City broker, or the Line's own Investment Office ---------- */
 const mkFundVal=F=>F?F.cash+F.gilts+mkPosVal(F):0;
-const mkWorth=()=>{if(!S.ex)return 0;const M=S.ex;return mkPosVal(M.me)-M.me.loan+mkFundVal(M.fund);};
+const mkWorth=()=>{if(!S.ex)return 0;const M=S.ex;return mkPosVal(M.me)-M.me.loan+mkFundVal(M.fund)+(typeof mvShortsVal==='function'?mvShortsVal():0);};
 const mkSkill=()=>{const M=S.ex,F=M.fund;if(!F)return 0;return F.mgr==='office'&&M.office?M.office.head.comp/100:F.skill;};
 function mkFundOpen(mgr){const M=mkEnsure();if(M.fund)return false;if(mgr==='office'&&!M.office)return false;
   M.fund={mgr,brief:'balanced',cash:0,gilts:0,pos:{},paidIn:0,giltEq:0,since:S.m,due:S.m,skill:0.3+0.3*mrand(),broker:`${['Cazenove','Rowe','Panmure','Grieveson','Laurie'][Math.floor(mrand()*5)]} & Co.`,rep:null,q0:0};
@@ -239,11 +239,11 @@ function mkOfficeAdvice(){const M=S.ex,O=M.office,sk=O.head.comp/100,out=[];
    price, and takes its profits as dividends. Only the Line's own holding counts, not the investment account's. The
    Combine holds three fifths of each of its members, so no outsider can control one. */
 const MK_SEAT=0.2,MK_CTRL=0.5,MK_SPECIAL=0.75,MK_BUYOUT=0.9,MK_ACT1929=ym(1929,10); // the Companies Act 1929: compulsory purchase at nine tenths
-const mkLock=id=>typeof trustMember==='function'&&trustMember(id)?0.6:0;
+const mkLock=id=>(typeof trustMember==='function'&&trustMember(id)?0.6:0)+((S.ex&&S.ex.cos[id]&&S.ex.cos[id].block)?S.ex.cos[id].block.f:0); // the Combine's three fifths, and a friend's blocking stake
 const mkStake=id=>{const M=S.ex,c=M&&M.cos[id];return c&&!c.gone?((M.me.pos[id]||{}).n||0)/c.n:0;};
 const mkFree=id=>{const c=S.ex.cos[id];return Math.max(0,c.n*(1-mkLock(id))-((S.ex.me.pos[id]||{}).n||0));};
 /* 0 none, 1 a seat on the board, 2 control */
-const mkInfl=o=>{if(!S.ex||!o)return 0;const k=mkStake(o);return k>=MK_CTRL?2:k>=MK_SEAT?1:0;};
+const mkInfl=o=>{if(!S.ex||!o)return 0;const k=mkStake(o),c=S.ex.cos[o];return k>=MK_CTRL||(c&&c.proxy&&k>=0.1)?2:k>=MK_SEAT?1:0;}; // a proxy fight won gives control with a tenth
 const mkInflOn=rk=>S.ex?mkInfl(topRival(rk)):0;
 const MK_DIV={none:{name:'None',pay:0},normal:{name:'Normal',pay:0.5},generous:{name:'Generous',pay:0.9}};
 const MK_STRAT={retrench:{name:'Retrench',aggr:0.6},steady:{name:'Steady',aggr:1},expand:{name:'Expand',aggr:1.35}};
@@ -392,7 +392,7 @@ function exchangeHTML(){
       <div class="btns">${amts.map(v=>`<button class="btn" data-act="mkbuy" data-d='${JSON.stringify([sel,v,0])}' ${shut||S.cash<v||S.over?'disabled':''}>Buy ${fmt(v)}</button>`).join('')}</div>
       <div class="btns">${amts.map(v=>`<button class="btn" data-act="mkbuy" data-d='${JSON.stringify([sel,v,1])}' ${shut||S.cash<v*(1-MK_MARGIN)||S.over?'disabled':''}>Buy ${fmt(v)} on margin</button>`).join('')}</div>
       ${h?`<div class="btns"><button class="btn" data-act="mksell" data-d='${JSON.stringify([sel,0.5])}' ${shut||S.over?'disabled':''}>Sell half</button><button class="btn" data-act="mksell" data-d='${JSON.stringify([sel,1])}' ${shut||S.over?'disabled':''}>Sell all ${int(h.n)}</button></div>`:''}
-      ${MK_REL_BY[sel]?'':stakeHTML(sel)}
+      ${MK_REL_BY[sel]?'':stakeHTML(sel)}${typeof movesHTML==='function'?movesHTML(sel):''}
       <p class="note">On margin the broker lends half, at ${Math.round(MK_LOAN_RATE*1000)/10}% a year. If the shares fall until the loan passes three quarters of their value he calls for money, and sells at the market if it does not come within a month.</p></div>`;}
   const list=`<section class="sec"><h2>Listed companies</h2>${detail}
     <div class="tablewrap"><table class="mkt"><tr><th>Company</th><th class="r">Price</th><th class="r">Month</th><th class="r">Yield</th><th class="r" title="Price against what the Investment Office thinks it is worth">Price to worth</th><th class="r">Held</th></tr>${rows}</table></div>

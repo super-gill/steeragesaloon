@@ -129,6 +129,12 @@ document.addEventListener('click',e=>{
     case 'flknight':flKnight(b.dataset.id);break;
     case 'flcrown':if(UI.confirm!=='flcrown')UI.confirm='flcrown';else{UI.confirm=null;flCrown();}break;
     case 'flappeal':flAppeal();break;
+    case 'mvraid':mvRaid(b.dataset.id);break;
+    case 'mvtender':{const d=JSON.parse(b.dataset.d);mvTender(d[0],+d[1]);break;}
+    case 'mvproxy':mvProxy(b.dataset.id);break;
+    case 'mvshort':{const d=JSON.parse(b.dataset.d);mvShort(d[0],+d[1]);break;}
+    case 'mvcover':mvCover(b.dataset.id,false);break;
+    case 'mvbear':{const d=JSON.parse(b.dataset.d);mvBear(d[0],d[1]);break;}
     case 'mkpct':{const d=JSON.parse(b.dataset.d);mkBuyPct(d[0],+d[1]);break;}
     case 'ctrlset':{const d=JSON.parse(b.dataset.d);mkCtrlSet(d[0],d[1],d[2]);break;}
     case 'ctrlpeace':mkPeace(b.dataset.id);break;

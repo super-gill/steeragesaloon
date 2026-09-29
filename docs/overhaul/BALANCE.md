@@ -66,4 +66,8 @@ cash, which the crash does not touch).
 | Takeovers of an undefended floated Line | 1 in 10 careful owners floating 60% in 1906 taken over by 1925, 1.7 bids per game (the harness never defends) | Rare for an owner who defends; test a defending strategy | 0.31.0 |
 | Float proceeds may be generous | 49% raises about 0.75 of the Line's worth and 75% about twice it, all as new capital to the Line | Check against the real returns of floating; maybe part goes to the owner, not the Line | 0.31.0 |
 | Board targets unmeasured over the long run | No removals in 10 careful games; the board ends between 42 and 99 | Some removals for a careless owner; test a careless strategy | 0.31.0 |
+| Proxy fights may be easy | A tenth of a line and ordinary standing wins about three times in five | Harder against a well-run line; a fight should be a gamble | 0.32.0 |
+| Bear raids roughly break even | Short plus bear raid against the short alone: better in 3 of 6 games, from -£6k to +£3k over 8 months | Pays when well timed; check a bigger short and a longer war | 0.32.0 |
+| Rival moves among themselves | Rivals raid, fight and bear raid only the Line, not each other | Rivals taking each other over (after 1.0) | 0.32.0 |
+| Long and short at once | The Line can hold and short the same company | Allowed as a hedge; check it cannot dodge a buy-in | 0.32.0 |
 | 20-seed noise | About 2 games in 20 | Use 40 seeds for the final pass | 0.16.0 |
