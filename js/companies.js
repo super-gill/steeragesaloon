@@ -90,7 +90,7 @@ function coFinance(o,stats){
 /* January: the directors pay the shareholders a share of last year's profit, and a flush line renews its oldest ship */
 function coYearEnd(o){
   const co=S.rivals[o],P=RIVAL_P[o],res=coReserve(o),p=coYear(o,'net');
-  const div=Math.max(0,Math.min(p*(P.lev>=0.45?0.7:0.5),co.cash-2*res));co.div=Math.round(div);co.cash-=div;
+  const div=Math.max(0,Math.min(p*(co.divPol&&typeof MK_DIV!=='undefined'?MK_DIV[co.divPol].pay:P.lev>=0.45?0.7:0.5),co.cash-2*res)); // a board the Line controls pays what the Line decidesco.div=Math.round(div);co.cash-=div;
   const old=coFleet(o).sort((a,b)=>a.built-b.built)[0];
   if(old&&coAge(old)>=22&&p>0&&!atWar()&&Math.random()<0.35*P.aggr){const x=makeRivalShip(o,old.route,Math.floor(yearOfM(S.m))),era=Math.max(0,(S.m-ym(1930,0))/12);
     x.knots=+(P.knots[1]-Math.random()+Math.min(5,era*0.15)+shipEraKnots(x.built)).toFixed(1);if(era>0)x.grt=Math.round(x.grt*(1+Math.min(0.5,era*0.02))/100)*100;

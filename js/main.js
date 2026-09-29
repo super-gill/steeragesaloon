@@ -5,7 +5,7 @@ document.addEventListener('click',e=>{
   const b=e.target.closest('[data-act]');if(!b||b.disabled)return;const prevTab=UI.tab;
   {const al=b.closest('.alert[data-aid]:not([data-sticky])');if(al)(S.attnSeen=S.attnSeen||{})[al.dataset.aid]=true;}
   const a=b.dataset.act,sh=S.ships.find(x=>x.id===S.selShip),L=S.lines[S.selLine];
-  if(a!=='cancel'&&!a.startsWith('ask')&&!['exit','closeline','leave','new','loadcode','fundclose','officeclose'].includes(a))UI.confirm=null;
+  if(a!=='cancel'&&!a.startsWith('ask')&&!['exit','closeline','leave','new','loadcode','fundclose','officeclose','mkmerge','mkwind'].includes(a))UI.confirm=null;
   if(UI.slow&&!['zoom','zoomfit'].includes(a))UI.slow=null; // the owner is dealing with it: back to full speed
   switch(a){
     case 'eventmode':UI.eventMode=b.dataset.v;try{localStorage.setItem('ss_eventmode',UI.eventMode);}catch(e){}break;
@@ -122,6 +122,13 @@ document.addEventListener('click',e=>{
     case 'mkbuy':{const d=JSON.parse(b.dataset.d);mkBuy(d[0],+d[1],!!d[2]);break;}
     case 'mksell':{const d=JSON.parse(b.dataset.d);mkSell(d[0],+d[1]);break;}
     case 'mkrepay':mkRepay(+b.dataset.id);break;
+    case 'mkpct':{const d=JSON.parse(b.dataset.d);mkBuyPct(d[0],+d[1]);break;}
+    case 'ctrlset':{const d=JSON.parse(b.dataset.d);mkCtrlSet(d[0],d[1],d[2]);break;}
+    case 'ctrlpeace':mkPeace(b.dataset.id);break;
+    case 'ctrlship':{const d=JSON.parse(b.dataset.d);mkTakeShip(d[0],+d[1]);break;}
+    case 'mkmerge':if(UI.confirm!=='mkmerge'+b.dataset.id)UI.confirm='mkmerge'+b.dataset.id;else{UI.confirm=null;mkMerge(b.dataset.id);}break;
+    case 'mkwind':if(UI.confirm!=='mkwind'+b.dataset.id)UI.confirm='mkwind'+b.dataset.id;else{UI.confirm=null;mkWindUp(b.dataset.id);}break;
+    case 'mkbuyout':mkBuyout(b.dataset.id);break;
     case 'fundopen':mkFundOpen(b.dataset.id);break;
     case 'funddep':mkFundPay(+b.dataset.id);break;
     case 'fundwd':mkFundTake(+b.dataset.id,false);break;

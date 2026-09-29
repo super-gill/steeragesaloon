@@ -2,6 +2,18 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.30.0 (29 September 2026)
+Stakes and control (stage R3).
+- A stake in a rival line brings powers, shown under its card on the Shares view: a seat on its board at 20%, control over 50%, special resolutions at 75%, and a buy-out of the rest at 90%.
+- A seat: on a trade it leads, pressure over your fares builds half as fast. Crossing a fifth is noticed in the City and its shares rise.
+- Control: set its dividend and its strategy, keep it off your trades, end its rate wars, and buy its ships at book value. It stays a company of its own, under its own name and flag, and pays you dividends. On a trade it leads, no rate war starts against you.
+- Merge it into the Line at 75%: its ships, trades, cash and debts become yours, and the other shareholders are paid their share of what it is worth. Or wind it up and take your share of what is left; a new line comes for its trades.
+- At 90%, buy out the rest: at a quarter over the market until the Companies Act of November 1929, at the market after.
+- Buy 1%, 5% or 10% of a line at a time. The more of what is left on the market you buy, the more the price moves. The Combine holds three fifths of each member and will not sell.
+- Dividends from lines are now the real ones their directors vote each January out of their own cash, instead of a notional quarterly figure. The dilution that stood in for them is lighter.
+- The Company tab's card for each rival shows your stake.
+- New check `tools/stakes.js`: every threshold gives exactly its powers, and a merger's accounts add up.
+
 ## 0.29.0 (29 September 2026)
 The share market and the broker (stage R2).
 - A small London market on the Finance tab, under Shares: every rival line, and eight companies next to shipping (two shipbuilders, coal, oil from 1909, docks, the boat-train railway, a marine insurer, and an aircraft maker from 1919). Prices follow what each company owns and earns, the news and the mood of the City, which overshoots both ways.

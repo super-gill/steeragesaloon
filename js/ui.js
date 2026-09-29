@@ -444,6 +444,7 @@ function rmoveText(q,rk){switch(q.kind){
   case 'sold':return 'sold SS '+q.ship+(q.to&&RIVALS[q.to]?' to '+RIVALS[q.to].name:'');
   case 'renew':return 'replaced SS '+q.old+' with the new SS '+q.ship;
   case 'fail':return 'failed';
+  case 'merged':return 'merged into the Morven Line';
   case 'enter':return 'started sailing here';
   default:return 'scrapped SS '+q.ship;}}
 function marketHTML(rk,estPax,n){
@@ -633,6 +634,7 @@ function rivalsHTML(){
       <div class="meta">${x.flag} · ${fleet.length} ship${fleet.length===1?'':'s'}, ${int(grt)} tons · ${coCharacter(o).join(', ')}${co.born!==undefined&&co.born!==null?` · founded ${monthName(co.born)}`:''}${trustMember(o)?` · <strong>in the Combine</strong>`:''}</div>
       <div class="cogrid">${g('Cash',kf(co.cash),co.cash<0?'neg':'')}${g('Borrowed',kf(co.debt))}${g('Fleet worth',kf(coValue(o)))}${g('Net worth',kf(coWorth(o)),coWorth(o)<0?'neg':'')}
         ${g(h.length<12?`Takings, ${h.length} mo`:'Takings, 12 mo',kf(rev))}${g(h.length<12?`Profit, ${h.length} mo`:'Profit, 12 mo',kf(net),net<0?'neg':'pos')}${co.div?g('Last dividend',kf(co.div)):''}</div>
+      ${typeof mkStake==='function'&&mkStake(o)>0?`<div class="meta">The Morven Line holds ${Math.round(mkStake(o)*1000)/10}%${mkInfl(o)===2?': it controls the board':mkInfl(o)===1?': a seat on the board':''}. <button class="btn quiet" data-act="mksel" data-id="${o}">Shares</button></div>`:''}
       <div class="meta">${ownersByRoute(o)||'No ships at sea'}</div></div>`;};
   const gone=(S.coFails||[]).map(q=>`<li>${monthName(q.m)}: <strong>${RIVALS[q.o]?RIVALS[q.o].name:q.o}</strong> failed with ${q.ships} ship${q.ships===1?'':'s'}${q.routes.length?`, on ${q.routes.map(rk=>ROUTES[rk]?ROUTES[rk].name:rk).join(', ')}`:''}.</li>`);
   const born=(S.coNew||[]).map(q=>`<li>${monthName(q.m)}: <strong>${RIVALS[q.o].name}</strong> (${RIVALS[q.o].flag.split(',')[0]}) started on ${q.routes.map(rk=>ROUTES[rk].name).join(' and ')}.</li>`);

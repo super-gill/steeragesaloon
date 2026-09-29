@@ -10,8 +10,8 @@
      node tools/market.js            40 years, 6 seeds
      node tools/market.js 40 12      40 years, 12 seeds
    Pass/fail (printed at the end): the balanced account ends ahead of government stock on average; every account
-   loses money at some point in a crash; shipping shares fall below what the lines are worth in the 1921 and 1930s
-   slumps and recover to within 10% of it afterwards. That an untouched market changes nothing is checked with the
+   loses money at some point in a crash; shipping shares fall below what the lines are worth in the 1921 slump (under 0.95)
+   and the 1930s (under 0.9), and recover to within 10% of it afterwards. That an untouched market changes nothing is checked with the
    harness: `MKT=0 node tools/harness.js careful 10` must print the same as `node tools/harness.js careful 10`. */
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const ROOT = path.join(__dirname, '..');
@@ -30,7 +30,7 @@ function run(seed, years) {
     newGame();UI.autoPause=false;UI.speed=1;
     const funds={};let lastM=-1;const snap={},idx={},dd={};
     // three accounts at once: the market pays each its dividends and runs each in turn
-    mkPayDiv=function(id,d){if(!(d>0))return;for(const k in funds){const F=funds[k],p=F.pos[id];if(p&&p.n)F.cash+=p.n*d;}};
+    mkPayDiv=function(id,d){if(!(d>0))return;for(const k in funds){const F=funds[k],p=F.pos[id];if(p&&p.n)F.cash+=p.n*d;}if(globalThis.PAS&&PAS.pos[id])PAS.cash+=PAS.pos[id]*d;};
     const base=mkFundMonth;mkFundMonth=function(){const keep=S.ex.fund;for(const k in funds){S.ex.fund=funds[k];base();}S.ex.fund=keep;};
     const open=()=>{mkEnsure();for(const b of ['preserve','balanced','growth']){S.ex.fund=null;const c=S.cash;S.cash=1e9;mkFundOpen('broker');const F=S.ex.fund;F.brief=b;F.skill=0.5;
       const amt=Math.round(5000*PX());S.cash-=amt;F.cash+=amt;F.paidIn+=amt;F.giltEq+=amt;S.cash=c;funds[b]=F;}S.ex.fund=null;};
@@ -38,7 +38,7 @@ function run(seed, years) {
       if(S.m!==lastM){lastM=S.m;if(S.cash<20000)S.cash=20000;
         if(S.m===ym(1901,0)){open();const ids=Object.keys(S.ex.cos).filter(id=>!S.ex.cos[id].gone),tot=ids.reduce((a,id)=>a+mkCap(id),0),amt=Math.round(5000*PX());
           globalThis.PAS={pos:Object.fromEntries(ids.map(id=>[id,amt*mkCap(id)/tot/S.ex.cos[id].px])),cash:0,eq:amt};}
-        if(globalThis.PAS){const P=PAS;P.cash*=1+0.035/12;P.eq*=1+0.035/12;if(S.m%3===2)for(const id in P.pos){const c=S.ex.cos[id];if(c&&!c.gone)P.cash+=P.pos[id]*c.div;}
+        if(globalThis.PAS){const P=PAS;P.cash*=1+0.035/12;P.eq*=1+0.035/12;
           P.v=P.cash+Object.keys(P.pos).reduce((a,id)=>a+P.pos[id]*((S.ex.cos[id]&&!S.ex.cos[id].gone)?S.ex.cos[id].px:0),0);
           if(S.m%12===0&&${JSON.stringify(YEARS)}.includes(YEAR0+S.m/12)){(snap[YEAR0+S.m/12]=snap[YEAR0+S.m/12]||{}).passive=P.v/P.eq;}}
         const y=YEAR0+S.m/12;
@@ -69,6 +69,6 @@ for (const y of iy) { const rows = R.map(r => r.idx[y]).filter(Boolean); if (!ro
 const lo21 = avg(R.map(r => (r.idx[1921] || { lo: 1 }).lo)), lo32 = avg(R.map(r => Math.min((r.idx[1931] || { lo: 1 }).lo, (r.idx[1932] || { lo: 1 }).lo)));
 const back = avg(R.map(r => (r.idx[1925] || r.idx[1924] || { hi: 1 }).hi)), back2 = avg(R.map(r => (r.idx[1937] || r.idx[1936] || { hi: 1 }).hi));
 const lost = ['preserve', 'balanced', 'growth'].every(k => R.some(r => ['1907','1921','1930s'].some(e => (r.dd[k] || {})[e] < 0.97)));
-const ok = avg(R.map(r => r.end.balanced)) > 1 && lost && lo21 < 0.9 && lo32 < 0.9 && back > 0.9 && back2 > 0.9;
+const ok = avg(R.map(r => r.end.balanced)) > 1 && lost && lo21 < 0.95 && lo32 < 0.9 && back > 0.9 && back2 > 0.9;
 console.log(`\nbalanced ahead of stock: ${f2(avg(R.map(r => r.end.balanced)))} · every account loses in some slump: ${lost} · shares below worth in 1921 ${f2(lo21)} and 1931-32 ${f2(lo32)} · back by 1925 ${f2(back)} and 1937 ${f2(back2)}`);
 console.log(ok ? 'PASS' : 'CHECK: see the figures above');

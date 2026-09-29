@@ -327,9 +327,10 @@ function monthRoll(pm){
     const n=shipsOn(rk).filter(x=>ACTIVE.includes(x.state)).length;
     if(S.conf||!S.lines[rk]||!n||isCruise(rk)){S.tension[rk]=(S.tension[rk]||0)*0.6;continue;} // no conference on cruises
     const pr=pressure(rk,S.lines[rk].fares,S.lastPax[rk]||0,n,S.m);
-    const prev=S.tension[rk]||0,t=prev+(pr.p+(combineOn(rk)?45:0)-prev)*0.35;S.tension[rk]=t;
+    const inf=typeof mkInflOn==='function'?mkInflOn(rk):0; // a seat on the leading rival's board takes half the heat; control takes it all
+    const prev=S.tension[rk]||0,t=prev+(pr.p*(inf===2?0:inf===1?0.5:1)+(combineOn(rk)?45:0)-prev)*0.35;S.tension[rk]=t;
     if(prev<40&&t>=40)news(`${RIVALS[topRival(rk)].name} is complaining about your fares on ${ROUTES[rk].name}. Tension ${Math.round(t)}.`,'bad');
-    if(!S.wars[rk]&&t>=40&&Math.random()<(t-40)/100*0.9){
+    if(!S.wars[rk]&&t>=40&&inf<2&&Math.random()<(t-40)/100*0.9){
       S.wars[rk]={left:4+Math.floor(Math.random()*4),mult:0.72};
       news(`${RIVALS[topRival(rk)].name} leads a rate war on ${ROUTES[rk].name}. ${confOpen()?'Conference fares':'Fares'} are down a quarter to drive you off.`,'bad',true);}
   }

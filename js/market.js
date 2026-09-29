@@ -68,7 +68,7 @@ function mkEnsure(){
   mkList(S.m);return S.ex;}
 function mkList(m){const M=S.ex;
   for(const id of MK_REL.map(d=>d.id).concat(Object.keys(RIVAL_P)))if(!M.cos[id]&&mkListable(id,m)){
-    const F=mkFund(id,m),px0=(0.8+1.6*mrand())*PX()*2.5;const n=Math.max(2000,Math.round(F/px0));M.cos[id]={n,px:F/n,sh:1,div:0,hist:[],since:m};}}
+    const F=mkFund(id,m),px0=(0.8+1.6*mrand())*PX()*2.5;const n=Math.max(2000,Math.round(F/px0));M.cos[id]={n,px:F/n,sh:1,dy:0,hist:[],since:m};}}
 const mkVal=id=>{const c=S.ex.cos[id];return c&&!c.gone?(c.f===undefined?mkFund(id,S.m):c.f)/c.n:0;};    // worth a share, without the mood
 const mkCap=id=>{const c=S.ex.cos[id];return c?c.n*c.px:0;};
 
@@ -93,7 +93,7 @@ function marketMonth(){
     // news, and a drift of its own that fades slowly (so a gap from worth is no sure thing to trade on)
     const R=MK_REL_BY[id],sd=R?R.sd:0.045;c.f=c.f===undefined?mkFund(id,m):c.f+0.2*(mkFund(id,m)-c.f);
     // growth beyond the rise in prices is paid for in part with new shares, so a holder keeps only part of it
-    const fr=c.f/PX();if(c.fr0===undefined)c.fr0=fr;if(fr>c.fr0){c.n*=Math.pow(fr/c.fr0,0.6);c.fr0=fr;}else c.fr0=Math.max(fr,c.fr0*0.995);
+    const fr=c.f/PX();if(c.fr0===undefined)c.fr0=fr;if(fr>c.fr0){if(mkStake(id)<0.5)c.n*=Math.pow(fr/c.fr0,0.4);c.fr0=fr;}else c.fr0=Math.max(fr,c.fr0*0.995); // a board the Line controls issues no shares over its head
     // two drifts: a quick one that fades in months, and a slow one (fashion, reputation) that takes a decade
     c.e=0.9*(c.e||0)+0.6*sd*mnorm();c.w=0.995*(c.w||0)+0.6*sd*mnorm();c.sh=1+(c.sh-1)*0.85;
     c.px=Math.max(0.004,c.f/c.n*M.mood*c.sh*Math.exp(c.e+(c.w||0))*(warring.has(id)?0.94:1));
@@ -103,10 +103,11 @@ function marketMonth(){
   if(!M.idx0&&cap>0)M.idx0={cap,fnd};
   if(M.idx0){M.idx.push([m,Math.round(cap/M.idx0.cap*1000)/10,Math.round(fnd/M.idx0.fnd*1000)/10]);if(M.idx.length>600)M.idx.shift();}
   // dividends each quarter, at the end of March, June, September and December
-  if(m%3===2)for(const id in M.cos){const c=M.cos[id];if(c.gone)continue;const R=MK_REL_BY[id];let e;
-    if(R)e=0.5*R.e0*PX()*R.drv(m);else{const co=S.rivals[id];e=coShort(id)||co.cash<coReserve(id)?0:Math.min(0.5*Math.max(0,coProfit(id)),0.06*(c.f||0));}
-    c.div=e/4/c.n;mkPayDiv(id,c.div);}
-  mkLoanMonth();mkFundMonth();mkOfficeMonth();
+  // the companies next to shipping pay each quarter; a line pays once a year, the dividend its directors vote in January
+  // (coYearEnd, out of its own cash), reaching the shareholders in February
+  if(m%3===2)for(const id in M.cos){const c=M.cos[id],R=MK_REL_BY[id];if(c.gone||!R)continue;const e=0.5*R.e0*PX()*R.drv(m);c.dy=e/c.n;mkPayDiv(id,e/4/c.n);}
+  if(m%12===1)for(const id in M.cos){const c=M.cos[id],co=S.rivals[id];if(c.gone||MK_REL_BY[id]||!co)continue;c.dy=(co.div||0)/c.n;mkPayDiv(id,c.dy);}
+  mkControlMonth();mkLoanMonth();mkFundMonth();mkOfficeMonth();
 }
 function mkShock(id,f,why){const c=S.ex.cos[id];if(!c||c.gone)return;c.sh*=f;
   if(why&&mkHeld(id))news(`${mkName(id)} ${why}: its shares fall sharply. The Line holds ${int(mkHeld(id))}.`,'bad');}
@@ -124,7 +125,7 @@ function mkPayDiv(id,d){const M=S.ex;if(!(d>0))return;
    paid (negative) or received, and on a sale the gain over what the shares cost */
 function mkDeal(A,id,q){const c=S.ex.cos[id];if(!c||c.gone||!q||mkShut())return null;
   const h=A.pos[id]||{n:0,cost:0};if(q<0)q=-Math.min(-q,h.n);if(!q)return null;
-  const imp=Math.min(0.3,0.6*Math.abs(q)/c.n),p=c.px*(q>0?1+imp/2:1-imp/2),gross=Math.abs(q)*p,fee=gross*(q>0?MK_FEE_BUY:MK_FEE_SELL);
+  const imp=Math.min(0.5,0.6*Math.abs(q)/Math.max(1,mkFree(id)+(q<0?-q:0))),p=c.px*(q>0?1+imp/2:1-imp/2),gross=Math.abs(q)*p,fee=gross*(q>0?MK_FEE_BUY:MK_FEE_SELL);
   c.px*=q>0?1+imp:1-imp;c.e=(c.e||0)+Math.log(q>0?1+imp:1-imp);A.pos[id]=h;
   if(q>0){h.n+=q;h.cost+=gross+fee;return {cash:-(gross+fee),gain:0};}
   const basis=h.cost*(-q)/h.n;h.n+=q;h.cost-=basis;if(h.n<=0)delete A.pos[id];
@@ -194,7 +195,7 @@ function mkRebalance(F){const M=S.ex,sk=mkSkill(),B=MK_BRIEF[F.brief];
     const hl=coHealth(id)[0];return S.m-c.since>=24&&hl!=='In trouble'&&hl!=='Failed'&&!(hl==='Stretched'&&mrand()<sk);});
   const score=id=>{const c=M.cos[id],r=mkVal(id)/c.px,noise=(0.2+(1-sk)*0.4)*mnorm(),k=mkKind(id);
     const pref=F.brief==='preserve'?(MK_STEADY.includes(k)?0.25:-0.15):F.brief==='growth'?(MK_STEADY.includes(k)?-0.1:0.1):0;
-    return Math.log(Math.max(0.05,r))+noise+pref+(F.brief==='preserve'?4*c.div*4/c.px:0);};
+    return Math.log(Math.max(0.05,r))+noise+pref+(F.brief==='preserve'?4*(c.dy||0)/c.px:0);};
   const nP=F.brief==='growth'?8:7,ranked=ids.map(id=>[id,score(id)]).sort((a,b)=>b[1]-a[1]),pick=ranked.slice(0,nP).map(x=>x[0]),keep=new Set(ranked.slice(0,nP+3).map(x=>x[0]));
   const each=tot*w/pick.length;
   // sell what has fallen out of favour, then trim and top up
@@ -227,6 +228,125 @@ function mkOfficeAdvice(){const M=S.ex,O=M.office,sk=O.head.comp/100,out=[];
   if(M.me.loan>0.6*mkPosVal(M.me))out.push({k:'bad',t:'The margin loan is close to a call. Pay some of it off, or sell, before the broker does it for you.'});
   O.adv=out;}
 
+
+/* ================= STAKES AND CONTROL (0.30, stage R3) =================
+   A stake in a rival line brings powers, as under the company law of the period: a seat on its board at a fifth, control
+   of the board over half, special resolutions (merge it into the Line, or wind it up) at three quarters, and at nine
+   tenths the rest can be bought out. A controlled line stays a separate company under its own name and flag: the Line
+   sets its dividend and its strategy, can keep it off the Line's trades, end its rate wars and buy its ships at a fair
+   price, and takes its profits as dividends. Only the Line's own holding counts, not the investment account's. The
+   Combine holds three fifths of each of its members, so no outsider can control one. */
+const MK_SEAT=0.2,MK_CTRL=0.5,MK_SPECIAL=0.75,MK_BUYOUT=0.9,MK_ACT1929=ym(1929,10); // the Companies Act 1929: compulsory purchase at nine tenths
+const mkLock=id=>typeof trustMember==='function'&&trustMember(id)?0.6:0;
+const mkStake=id=>{const M=S.ex,c=M&&M.cos[id];return c&&!c.gone?((M.me.pos[id]||{}).n||0)/c.n:0;};
+const mkFree=id=>{const c=S.ex.cos[id];return Math.max(0,c.n*(1-mkLock(id))-((S.ex.me.pos[id]||{}).n||0));};
+/* 0 none, 1 a seat on the board, 2 control */
+const mkInfl=o=>{if(!S.ex||!o)return 0;const k=mkStake(o);return k>=MK_CTRL?2:k>=MK_SEAT?1:0;};
+const mkInflOn=rk=>S.ex?mkInfl(topRival(rk)):0;
+const MK_DIV={none:{name:'None',pay:0},normal:{name:'Normal',pay:0.5},generous:{name:'Generous',pay:0.9}};
+const MK_STRAT={retrench:{name:'Retrench',aggr:0.6},steady:{name:'Steady',aggr:1},expand:{name:'Expand',aggr:1.35}};
+/* buy a share of the company outright, from what is on the market */
+function mkBuyPct(id,pct){const M=mkEnsure(),c=M.cos[id];if(!c||c.gone||mkShut()||MK_REL_BY[id])return false;
+  const q=Math.floor(Math.min(pct*c.n,mkFree(id)));if(q<1)return false;
+  const est=q*c.px*(1+MK_FEE_BUY+0.3*q/Math.max(1,mkFree(id)));if(S.cash<est)return false;
+  const before=mkStake(id),r=mkDeal(M.me,id,q);if(!r)return false;S.cash+=r.cash;
+  news(`Bought ${int(q)} shares in ${mkName(id)}, ${Math.round(q/c.n*1000)/10}% of it, for ${fmt(-r.cash)}.`);mkThresholds(id,before);return true;}
+/* crossing a threshold is public: the City reads a bid into it */
+function mkThresholds(id,before){const k=mkStake(id),M=S.ex,n=mkName(id);
+  if(before<MK_SEAT&&k>=MK_SEAT&&!M.seen['s'+id]){M.seen['s'+id]=1;mkShock(id,1.08);news(`The Morven Line now holds ${Math.round(k*100)}% of ${n} and takes a seat on its board. The City expects a bid: its shares rise.`,'good',true);}
+  if(before<MK_CTRL&&k>=MK_CTRL){const co=S.rivals[id];co.aggr0=co.aggr0||RIVAL_P[id].aggr;news(`The Morven Line controls ${n}: over half its shares. Its board now answers to you (Finance, Shares).`,'good',true);}
+  if(before<MK_SPECIAL&&k>=MK_SPECIAL)news(`With ${Math.round(k*100)}% of ${n} the Line can pass special resolutions: merge it into the Line, or wind it up.`,'good');
+  if(before<MK_BUYOUT&&k>=MK_BUYOUT)news(`The Line holds ${Math.round(k*100)}% of ${n}. The rest can be bought out${S.m>=MK_ACT1929?' at the market price, under the Companies Act':', by negotiation at a premium'}.`,'good');}
+/* each month: a controlled line's strategy, and keeping it off the Line's trades */
+function mkControlMonth(){const M=S.ex;
+  for(const o of Object.keys(M.cos)){if(MK_REL_BY[o]||M.cos[o].gone||!coAlive(o))continue;const co=S.rivals[o];
+    if(mkInfl(o)<2){if(co.aggr0){RIVAL_P[o].aggr=co.aggr0;co.aggr0=null;co.divPol=null;co.keepOff=false;}continue;}
+    co.aggr0=co.aggr0||RIVAL_P[o].aggr;RIVAL_P[o].aggr=co.aggr0*MK_STRAT[co.strat||'steady'].aggr;
+    if(co.keepOff)for(const x of coFleet(o)){if(!S.lines[x.route])continue;
+      const cr=isCruise(x.route),ok=k=>k!==x.route&&!S.lines[k]&&routeOpen(k,S.m)&&isCruise(k)===cr,own=coFleet(o).map(y=>y.route).filter(ok);
+      const to=own[0]||Object.keys(ROUTES).filter(ok).sort((a,b)=>S.rships.filter(y=>y.route===a).length-S.rships.filter(y=>y.route===b).length)[0];
+      if(to){rivalMove(o,x.route,'move',x.name,to);x.route=to;RW_CACHE.k=null;}}}}
+function mkCtrlSet(o,k,v){if(mkInfl(o)<2)return false;const co=S.rivals[o];
+  if(k==='div'&&MK_DIV[v])co.divPol=v;else if(k==='strat'&&MK_STRAT[v])co.strat=v;else if(k==='keep')co.keepOff=!co.keepOff;else return false;return true;}
+/* end the rate wars it is fighting */
+function mkPeace(o){if(mkInfl(o)<2)return false;let n=0;
+  for(const rk of Object.keys(S.wars||{})){const w=S.wars[rk];if((w.by&&w.by.includes(o))||(!w.by&&!w.trust&&topRival(rk)===o)){delete S.wars[rk];S.tension[rk]=20;n++;}}
+  if(n)news(`On the Line's instructions ${mkName(o)} ends its rate war${n>1?'s':''}. Fares recover.`,'good');return n>0;}
+/* a rival ship becomes the Line's: valued as the rival's books value her, in her old owner's colours */
+function mkAdopt(x,o){const age=Math.max(0,yearOfM(S.m)-x.built),fat=clamp(age*1.8,0,95),cond=75;
+  const base=Math.round(coShipVal(x)/(PX()*Math.pow(cond/100,0.7)*Math.max(0.15,1-fat*0.0085)*shipMkt()));
+  const port=(x.v&&x.v.port)||ROUTES[x.route].calls[0];
+  const sh=makeShip({name:S.ships.some(y=>y.name===x.name)?x.name+' II':x.name,built:x.built,grt:x.grt,knots:x.knots,berths:{f:0,s:0,t:0,tt:0,...x.berths},cargo:x.cargo||0,fuel:x.fuel||(x.built>=1925?'oil':'coal'),base,note:`Late of ${mkName(o)}.`},cond,port);
+  if(typeof rivalLiv==='function')sh.paint={...rivalLiv(o),name:`${mkName(o)}'s colours`};
+  sh.acq=S.m;if(S.lines[x.route]&&routeOpen(x.route,S.m)){sh.line=x.route;sh.state='port';sh.portLeft=2;}
+  S.ships.push(sh);dropRival(x);return sh;}
+function mkTakeShip(o,sid){if(mkInfl(o)<2)return false;const x=S.rships.find(y=>y.id===sid&&y.owner===o);if(!x)return false;
+  const price=Math.round(coShipVal(x)/100)*100;if(S.cash<price)return false;
+  S.cash-=price;S.rivals[o].cash+=price;const sh=mkAdopt(x,o);RW_CACHE.k=null;
+  news(`SS ${sh.name} passes from ${mkName(o)} to the Morven Line at a fair price, ${fmt(price)}.${sh.line?'':' She lies laid up until you give her a line.'}`,'good');return true;}
+/* special resolution: merge. The other shareholders are paid their share of what it is worth; its ships, trades, cash
+   and debts become the Line's */
+const mkMergeCost=o=>Math.round((1-mkStake(o))*S.ex.cos[o].n*Math.max(mkVal(o),0));
+function mkMerge(o){const M=S.ex,c=M.cos[o],co=S.rivals[o];if(!c||c.gone||mkStake(o)<MK_SPECIAL)return false;
+  const cost=mkMergeCost(o);if(S.cash+co.cash<cost)return false;
+  const n=mkName(o),fleet=coFleet(o),routes=[...new Set(fleet.map(x=>x.route))];let opened=0;
+  for(const rk of routes)if(!S.lines[rk]&&routeOpen(rk,S.m)){S.lines[rk]={fares:defaultFares(rk),service:1,adv:1,last:[null,null]};opened++;}
+  for(const x of fleet)mkAdopt(x,o);
+  for(const q of (S.rorders||[]).filter(q=>q.o===o))S.cash+=Math.round(coNewPrice(q.sh)*0.8); // orders on the stocks are sold back to the builders
+  S.rorders=(S.rorders||[]).filter(q=>q.o!==o);
+  const F=M.fund;if(F&&F.pos[o]){F.cash+=F.pos[o].n*Math.max(mkVal(o),0);delete F.pos[o];}
+  S.cash+=co.cash-cost;S.debt+=co.debt;delete M.me.pos[o];
+  Object.assign(co,{dead:true,deadM:S.m,merged:true,cash:0,debt:0,h:[]});c.gone=S.m;c.px=0;if(co.aggr0)RIVAL_P[o].aggr=co.aggr0;
+  S.rmoves.unshift({m:S.m,o,rk:routes[0]||'liv',kind:'merged'});RW_CACHE.k=null;
+  news(`${n} is merged into the Morven Line. Its ${fleet.length} ship${fleet.length===1?'':'s'} fly the Line's flag${opened?`, and ${opened} new trade${opened===1?'':'s'} open${opened===1?'s':''}`:''}; its debts become the Line's. The other shareholders are paid ${fmt(cost)}.`,'good',true);return true;}
+/* special resolution: wind it up. Its ships are sold, its debts paid, and what is left goes to the shareholders */
+const mkWindValue=o=>{const co=S.rivals[o];return co.cash+coFleet(o).reduce((a,x)=>a+0.7*coShipVal(x),0)-co.debt;};
+function mkWindUp(o){const M=S.ex,c=M.cos[o],co=S.rivals[o];if(!c||c.gone||mkStake(o)<MK_SPECIAL)return false;
+  const net=Math.max(0,mkWindValue(o)),perSh=net/c.n,k=mkStake(o),n=mkName(o),fleet=coFleet(o),routes=[...new Set(fleet.map(x=>x.route))];
+  for(const x of fleet)dropRival(x);S.rorders=(S.rorders||[]).filter(q=>q.o!==o);
+  const h=M.me.pos[o],got=h.n*perSh;S.cash+=h.cost;book('shares',got-h.cost);delete M.me.pos[o]; // the proceeds, with the gain or loss on what the shares cost through the books
+  const F=M.fund;if(F&&F.pos[o]){F.cash+=F.pos[o].n*perSh;delete F.pos[o];}
+  Object.assign(co,{dead:true,deadM:S.m,wound:true,cash:0,debt:0,h:[]});c.gone=S.m;c.px=0;if(co.aggr0)RIVAL_P[o].aggr=co.aggr0;
+  S.rmoves.unshift({m:S.m,o,rk:routes[0]||'liv',kind:'fail'});RW_CACHE.k=null;
+  S.coQueue=S.coQueue||[];S.coQueue.push({at:S.m+6+Math.floor(mrand()*9),kind:RIVAL_P[o].kind||'liner',routes,flag:RIVALS[o].flag});
+  news(`${n} is wound up on the Line's resolution. Its ${fleet.length} ships are sold and its debts paid; the Line's ${Math.round(k*100)}% brings ${fmt(got)}.`,'good',true);return true;}
+/* at nine tenths: the rest bought out, at the market under the 1929 Act, before it at a quarter over */
+const mkBuyoutCost=o=>{const c=S.ex.cos[o];return Math.round((c.n-((S.ex.me.pos[o]||{}).n||0))*c.px*(S.m>=MK_ACT1929?1:1.25));};
+function mkBuyout(o){const M=S.ex,c=M.cos[o];if(!c||c.gone||mkStake(o)<MK_BUYOUT)return false;const cost=mkBuyoutCost(o);if(S.cash<cost)return false;
+  const h=M.me.pos[o],rest=c.n-h.n;S.cash-=cost;h.n=c.n;h.cost+=cost;const F=M.fund;if(F&&F.pos[o]){F.cash+=F.pos[o].n*c.px*(S.m>=MK_ACT1929?1:1.25);delete F.pos[o];}
+  news(`The Line buys the last ${int(rest)} shares in ${mkName(o)} for ${fmt(cost)}. It is wholly owned.`,'good');return true;}
+
+/* a line's stake panel, under its card on the Shares view */
+function stakeHTML(o){const M=S.ex,c=M.cos[o],co=S.rivals[o],k=mkStake(o),inf=mkInfl(o),shut=mkShut(),lock=mkLock(o),n=mkName(o);
+  const cost=p=>Math.round(Math.min(p*c.n,mkFree(o))*c.px*(1+MK_FEE_BUY+0.3*p));
+  const step=(t,lbl,on)=>`<li class="${on?'pos':''}">${on?'✓ ':''}${Math.round(t*100)}%: ${lbl}</li>`;
+  let h=`<div class="ctl"><span class="lbl">The Line's stake: ${Math.round(k*1000)/10}%${k>0?` (${int(M.me.pos[o].n)} shares)`:''}</span>
+    <ul class="note" style="padding-left:18px;margin:0">${step(MK_SEAT,'a seat on the board: it leads no rate war against you without a fight in the boardroom, and pushes half as hard on fares',k>=MK_SEAT)}
+      ${step(MK_CTRL,'control: set its dividend and strategy, keep it off your trades, end its rate wars, buy its ships at a fair price',k>=MK_CTRL)}
+      ${step(MK_SPECIAL,'special resolutions: merge it into the Line, or wind it up',k>=MK_SPECIAL)}
+      ${step(MK_BUYOUT,`buy out the rest${S.m>=MK_ACT1929?' at the market, under the Companies Act':', by negotiation at a quarter over the market'}`,k>=MK_BUYOUT)}</ul>
+    ${lock?`<p class="note">The Combine holds ${Math.round(lock*100)}% and will not sell: the Line can hold no more than ${Math.round((1-lock)*100)}%.</p>`:''}
+    <div class="btns">${[0.01,0.05,0.1].filter(p=>mkFree(o)>=1).map(p=>`<button class="btn" data-act="mkpct" data-d='${JSON.stringify([o,p])}' ${shut||S.cash<cost(p)||S.over?'disabled':''}>Buy ${Math.round(p*100)}% · ${fmt(cost(p))}</button>`).join('')}</div>
+    <p class="note">Big purchases move the price: the more of what is left on the market you buy, the more it costs. Crossing a fifth is noticed in the City.</p></div>`;
+  if(inf===2){const wars=Object.keys(S.wars||{}).filter(rk=>{const w=S.wars[rk];return (w.by&&w.by.includes(o))||(!w.by&&!w.trust&&topRival(rk)===o);});
+    const ships=coFleet(o).sort((a,b)=>b.built-a.built);
+    h+=`<div class="ctl"><span class="lbl">Its board, under your control</span>
+      <div class="ctl"><span class="lbl">Dividend</span><div class="seg" role="group">${Object.keys(MK_DIV).map(v=>`<button data-act="ctrlset" data-d='${JSON.stringify([o,'div',v])}' aria-pressed="${(co.divPol||'normal')===v}">${MK_DIV[v].name}</button>`).join('')}</div>
+        <p class="note">Paid each January from last year's profit: ${Math.round(MK_DIV[co.divPol||'normal'].pay*100)}% of it, while it keeps two reserves in hand. The Line gets its ${Math.round(k*100)}%.</p></div>
+      <div class="ctl"><span class="lbl">Strategy</span><div class="seg" role="group">${Object.keys(MK_STRAT).map(v=>`<button data-act="ctrlset" data-d='${JSON.stringify([o,'strat',v])}' aria-pressed="${(co.strat||'steady')===v}">${MK_STRAT[v].name}</button>`).join('')}</div>
+        <p class="note">How hard it grows, fights for trade and cuts fares.</p></div>
+      <button class="btn" data-act="ctrlset" data-d='${JSON.stringify([o,'keep',1])}' aria-pressed="${!!co.keepOff}">${co.keepOff?'✓ Keeping off your trades':'Keep it off your trades'}</button>
+      ${wars.length?`<button class="btn" data-act="ctrlpeace" data-id="${o}">End its rate war${wars.length>1?'s':''} on ${wars.map(rk=>ROUTES[rk].name).join(', ')}</button>`:''}
+      <details class="thist"><summary>Buy its ships at a fair price (${ships.length})</summary><div class="stack" style="margin-top:6px">${ships.map(x=>{const pr=Math.round(coShipVal(x)/100)*100;
+        return `<div class="uprow"><div><strong>SS ${esc(x.name)}</strong><div class="meta">Built ${x.built} · ${int(x.grt)} grt · ${x.knots} knots · ${ROUTES[x.route].name}</div></div><button class="btn" data-act="ctrlship" data-d='${JSON.stringify([o,x.id])}' ${S.cash<pr||S.over?'disabled':''}>Buy · ${fmt(pr)}</button></div>`;}).join('')}</div></details>
+      <p class="note">It stays a company of its own, under its own name and flag; its profits reach the Line only as dividends.</p></div>`;}
+  if(k>=MK_SPECIAL){const mc=mkMergeCost(o),wv=Math.max(0,mkWindValue(o))*k;
+    h+=`<div class="ctl"><span class="lbl">Special resolutions</span>
+      <p class="note">Merge: its ${coFleet(o).length} ships, its trades, its ${fmt(co.cash)} in cash and ${fmt(co.debt)} of debt become the Line's; the other shareholders are paid ${fmt(mc)} for their share of what it is worth. Wind up: its ships are sold and its debts paid; the Line's share of what is left is about ${fmt(wv)}.</p>
+      <div class="btns"><button class="btn primary" data-act="mkmerge" data-id="${o}" ${S.cash+co.cash<mc||S.over?'disabled':''}>${UI.confirm==='mkmerge'+o?'Confirm the merger':`Merge it into the Line${mc?' · '+fmt(mc):''}`}</button>
+        <button class="btn danger" data-act="mkwind" data-id="${o}" ${S.over?'disabled':''}>${UI.confirm==='mkwind'+o?'Confirm: wind it up':'Wind it up'}</button></div></div>`;}
+  if(k>=MK_BUYOUT&&k<1){const bc=mkBuyoutCost(o);h+=`<button class="btn" data-act="mkbuyout" data-id="${o}" ${S.cash<bc||S.over?'disabled':''}>Buy out the rest · ${fmt(bc)}</button>`;}
+  return h;}
 /* ---------- the Market tab ---------- */
 const pxTxt=p=>{if(!(p>0))return '–';let L=Math.floor(p),s=Math.floor((p-L)*20),d=Math.round(((p-L)*20-s)*12);if(d===12){d=0;s++;}if(s===20){s=0;L++;}
   return (L?`£${L} `:'')+`${s}s`+(d?` ${d}d`:'');};
@@ -259,17 +379,18 @@ function exchangeHTML(){
     <dl class="kv"><dt>Shares at market</dt><dd>${fmt(pv)}</dd><dt>Broker's loan (margin)</dt><dd>${fmt(A.loan)}</dd>${A.loan>0?`<dt>Interest</dt><dd>${fmt(A.loan*MK_LOAN_RATE/12)}/mo</dd><dt>Loan to value</dt><dd>${Math.round(A.loan/Math.max(1,pv)*100)}%</dd>`:''}</dl>
     ${M.call?`<p class="badline">Margin call: pay in ${fmt(M.call.amt)} or sell by ${monthName(M.call.due)}.</p>`:''}
     ${A.loan>0?`<div class="btns">${[...amts,A.loan].filter((v,i,a)=>v<=A.loan&&a.indexOf(v)===i).map(v=>`<button class="btn" data-act="mkrepay" data-id="${Math.round(v)}" ${S.cash<v||S.over?'disabled':''}>Repay ${v===A.loan?'all':fmt(v)}</button>`).join('')}</div>`:''}</section>`;
-  const rows=live.map(id=>{const c=M.cos[id],h=c.hist,chg=h.length>1?c.px/h[h.length-2]-1:0,yld=4*c.div/c.px,val=mkVal(id);
+  const rows=live.map(id=>{const c=M.cos[id],h=c.hist,chg=h.length>1?c.px/h[h.length-2]-1:0,yld=(c.dy||0)/c.px,val=mkVal(id);
     return `<tr data-act="mksel" data-id="${id}"${sel===id?' aria-selected="true" class="cur"':''}><td><strong>${esc(mkName(id))}</strong><div class="meta">${mkKind(id)}${!MK_REL_BY[id]&&RIVALS[id]?' · '+esc(RIVALS[id].flag.split(',')[0]):''}</div></td>
       <td class="r num">${pxTxt(c.px)}</td><td class="r num ${chg>=0?'pos':'neg'}">${pctS(chg)}</td><td class="r num">${yld>0?(yld*100).toFixed(1)+'%':'–'}</td><td class="r num">${O?Math.round(c.px/Math.max(1e-6,val)*100)+'%':'–'}</td><td class="r num">${A.pos[id]?int(A.pos[id].n):''}</td></tr>`;}).join('');
   let detail='';
   if(sel&&M.cos[sel]&&!M.cos[sel].gone){const c=M.cos[sel],h=A.pos[sel];
     detail=`<div class="card"><div class="row"><strong>${esc(mkName(sel))}</strong><span class="num">${pxTxt(c.px)}</span></div>
-      <div class="meta">${mkKind(sel)} · ${int(c.n)} shares · worth ${fmt(mkCap(sel))} at the market${!MK_REL_BY[sel]&&S.rivals[sel]?` · ${coFleet(sel).length} ships, ${coHealth(sel)[0].toLowerCase()}`:''} · last dividend ${c.div>0?pxTxt(c.div)+' a share':'none'}</div>
+      <div class="meta">${mkKind(sel)} · ${int(c.n)} shares · worth ${fmt(mkCap(sel))} at the market${!MK_REL_BY[sel]&&S.rivals[sel]?` · ${coFleet(sel).length} ships, ${coHealth(sel)[0].toLowerCase()}`:''} · dividend ${c.dy>0?pxTxt(c.dy)+' a share a year':'none'}</div>
       ${mkSpark(c.hist.slice(-60))}<p class="note">Five years of prices.</p>
       <div class="btns">${amts.map(v=>`<button class="btn" data-act="mkbuy" data-d='${JSON.stringify([sel,v,0])}' ${shut||S.cash<v||S.over?'disabled':''}>Buy ${fmt(v)}</button>`).join('')}</div>
       <div class="btns">${amts.map(v=>`<button class="btn" data-act="mkbuy" data-d='${JSON.stringify([sel,v,1])}' ${shut||S.cash<v*(1-MK_MARGIN)||S.over?'disabled':''}>Buy ${fmt(v)} on margin</button>`).join('')}</div>
       ${h?`<div class="btns"><button class="btn" data-act="mksell" data-d='${JSON.stringify([sel,0.5])}' ${shut||S.over?'disabled':''}>Sell half</button><button class="btn" data-act="mksell" data-d='${JSON.stringify([sel,1])}' ${shut||S.over?'disabled':''}>Sell all ${int(h.n)}</button></div>`:''}
+      ${MK_REL_BY[sel]?'':stakeHTML(sel)}
       <p class="note">On margin the broker lends half, at ${Math.round(MK_LOAN_RATE*1000)/10}% a year. If the shares fall until the loan passes three quarters of their value he calls for money, and sells at the market if it does not come within a month.</p></div>`;}
   const list=`<section class="sec"><h2>Listed companies</h2>${detail}
     <div class="tablewrap"><table class="mkt"><tr><th>Company</th><th class="r">Price</th><th class="r">Month</th><th class="r">Yield</th><th class="r" title="Price against what the Investment Office thinks it is worth">Price to worth</th><th class="r">Held</th></tr>${rows}</table></div>

@@ -214,6 +214,7 @@ function rivalsMonth(){
       const fight=ourShare>0.3&&R()<0.08*P.aggr*(coShare(o)>0.35?0.3:1); // answer an interloper with tonnage (a giant leaves it to its smaller lines)
       const sh0=coFleet(o).reduce((a,x)=>a+x.grt,0)/Math.max(1,S.rships.reduce((a,x)=>a+x.grt,0)),big=sh0<=0.2?1:Math.max(0.05,1-(sh0-0.2)*5); // the biggest lines grow more slowly: their bankers and the conference hold them back
       if((S.rorders||[]).some(q=>q.o===o&&q.rk===rk)||atWar(m))continue; // one ship on order for a trade at a time; none in the war
+      if(co.keepOff&&S.lines[rk])continue; // a line the Morven Line controls keeps off its trades
       // in the emigrant years the lines add tonnage later: they wait for the ships to run well above their usual loads
       const grow=newCal()&&m<ym(1914,7)?1.2:1.12;
       if(fight||(st.rel>grow&&coProfit(o)>0&&R()<(0.16*P.aggr+(ourShare>0.25?0.1:0))*big)){
