@@ -15,7 +15,7 @@ const trustMembers=()=>S.trust?S.trust.members.filter(coAlive):[];
 /* ---------- wars between the lines ---------- */
 /* a line-against-line war on a passenger trade: frequent before the conference, rare after it */
 function lineWarsMonth(){
-  if(!newCal())return;
+  if(!newCal()||atWar())return;
   const m=S.m,R=Math.random;
   // the great New York rate war of 1904, between the British and Continental lines
   if(m===ym(1904,1))for(const rk of ['liv','gny','ham','nap','exp'])if(!S.wars[rk]){const o=ownersOn(rk),by=Object.keys(o).sort((a,b)=>o[b]-o[a]).slice(0,2);
@@ -45,7 +45,7 @@ function trustMonth(){
     for(const o of pick){const k=Math.round(400000*PX()/1000)*1000;S.rivals[o].debt+=k;S.rivals[o].cash+=k;}
     news(`American bankers form the ${TRUST_NAME}, a holding company over ${dotEnd(pick.map(o=>RIVALS[o].name).join(' and '))} The lines keep their names; ${TRUST_SHORT} sets their policy, and it is buying more.`,'bad',true);
     return;}
-  if(!S.trust)return;
+  if(!S.trust||atWar())return;
   const T=S.trust,members=trustMembers();if(!members.length)return;
   // buying lines: a weak independent now and then, while the Combine's members can pay; it stops growing after 1907
   if(m<ym(1908,0)&&members.length<5&&R()<0.03){

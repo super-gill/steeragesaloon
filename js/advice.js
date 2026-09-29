@@ -70,7 +70,7 @@ const idleCost=sh=>0.25*crewCost(sh)+(sh.captain?sh.captain.wage:0)+insCost(sh);
 const DEPT_OF={wcr:'traffic',cpay:'crew',ctrain:'crew',off:'crew',review:'sec',reserve:'sec',buy:'traffic',build:'traffic','rep-mail':'sec','rep-low':'sec','conf-war':'sec',pier:'sec',agency:'sec',bunker:'sec',dept:'sec',
   fare:'fares',tension:'fares',adv:'fares',service:'fares',match:'fares',
   move:'traffic',unlay:'traffic',layup:'traffic',sell:'traffic',rin:'traffic',
-  speed:'marine',maint:'marine',thresh:'marine',dock:'marine',scrape:'marine',oil:'marine',refurb:'marine',reefer:'marine',wireless:'marine',replate:'marine',boats:'marine',watch:'marine',gross:'marine',censure:'marine',scrap:'marine',
+  speed:'marine',maint:'marine',thresh:'marine',dock:'marine',scrape:'marine',oil:'marine',refurb:'marine',reefer:'marine',wireless:'marine',warcargo:'marine',replate:'marine',boats:'marine',watch:'marine',gross:'marine',censure:'marine',scrap:'marine',
   pay:'crew',captain:'crew'};
 const deptOf=h=>DEPT_OF[h.id.split(/[:0-9]/)[0]]||'sec';
 let ADV_CACHE={key:null,list:[]};
@@ -204,6 +204,8 @@ function advice(){MOD_EPOCH++;
         why:`The surveyors find her plating wasting and her frames tired. New plate and frames (${money(refitCost(sh,'replate'))}, ${yardDays(sh,'replate')} days) buy her years of safe service${n?', though less than last time':''}. Left alone she gets more dangerous every crossing and loses her steerage certificate.`,act:[['Book it','setyard',sh.id,'replate']]});
       if(f>=88&&S.ships.length>1)add({id:`scrap:${sh.id}`,scope:'ship',ref:sh.id,sev:'warn',gain:600,title:`Send SS ${sh.name} to the breakers`,
         why:`She is worn out: ${f>=90?'no steerage certificate, double insurance, and':''} a far higher chance of a serious emergency every crossing. A loss now would go badly at the inquiry.`,act:[['Send her to the breakers','scrapship',sh.id],['View her','selship',sh.id]]}); }
+    if(atWar()&&!sh.wcSave&&(sh.berths.t||0)+(sh.berths.tt||0)>=100){const t=sh.berths.t||0,tt=sh.berths.tt||0;
+      yard('warcargo',{berths:{...sh.berths,t:0,tt:0},cargo:Math.round(sh.cargo+t*WC_T+tt*WC_TT)},`Clear SS ${sh.name}'s steerage for cargo`,`The emigrants have stopped coming and every hold fills at war rates. Her steerage decks would take about ${int(t*WC_T+tt*WC_TT)} more tons; they can be put back after the war for the same price.`);}
     if(sh.fuel==='coal'&&yearNow()>=OIL_FROM&&yearNow()-sh.built<28)yard('oil',{fuel:'oil'},`Convert SS ${sh.name} to oil`,'Oil firing cuts her stokehold crew and her bunker bill.');
     if((sh.berths.f+sh.berths.s)>0&&(sh.fit||0)<50)yard('refurb',{fit:100},`Refurbish SS ${sh.name}`,`Her saloons are tired (fittings ${Math.round(sh.fit||0)}%), and first and second class notice.`);
     if(!(sh.up&&sh.up.reefer)&&COMM[ROUTES[r0].cargo.home.c].reefer)yard('reefer',{up:{...sh.up,reefer:true}},`Fit refrigerated holds to SS ${sh.name}`,`Her route's homeward cargo, ${COMM[ROUTES[r0].cargo.home.c].name.toLowerCase()}, needs cold holds; without them she takes only a sliver of it.`);
@@ -260,7 +262,7 @@ function advice(){MOD_EPOCH++;
       act:[['Buy her','buyship',best.m.name,best.rk],['See brokers','tabgo','brokers']]});
   }
   // a new ship, when the line can carry the cost
-  const bi=buildIdea();
+  const bi=warNoBuild()?null:buildIdea();
   if(bi)add({id:'build',scope:'co',sev:'tip',gain:bi.pm,title:`Build ${/^[aeiou]/i.test(PURPOSES[bi.d.purpose].name)?'an':'a'} ${PURPOSES[bi.d.purpose].name.toLowerCase()} for ${ROUTES[bi.rk].name}`,
     why:`The traffic figures suggest a ${int(bi.d.grt)}-ton, ${bi.d.knots}-knot ${PURPOSES[bi.d.purpose].name.toLowerCase()} would clear about ${money(bi.pm)} a month there at today's trade: about ${fmt(bi.price)}, paying for herself in ${Math.round(bi.price/(bi.pm*12))} years. Open the drawing office to work it up.`,
     act:[['Open the drawing office','build',bi.d]]});
@@ -331,7 +333,7 @@ function doAction(act,d){MOD_EPOCH++;
     case 'crewset':{const [id,dp,k,v]=d;const x=ship(id);if(!x||!CDEPT[dp]||!['man','pay','train'].includes(k))return false;cwOf(x)[dp][k]=clamp(v|0,0,2);if(k==='pay')x.pay=cwOf(x).deck.pay;return true;}
     case 'appoint':{const [id,r,cid]=d;const x=ship(id);if(!x)return false;return appointOfficer(x,r,cid);}
     case 'scrapship':{const [id]=d;const x=ship(id);if(!x||S.ships.length<2)return false;if(x.state==='sea'||x.state==='repo')x.pendingExit='scrap';else exitShip(x,'scrap');return true;}
-    case 'sellship':{const [id]=d;const x=ship(id);if(!x||S.ships.length<2)return false;if(x.state==='sea'||x.state==='repo')x.pendingExit='sell';else exitShip(x,'sell');return true;}
+    case 'sellship':{const [id]=d;const x=ship(id);if(!x||S.ships.length<2||x.state==='req')return false;if(x.state==='sea'||x.state==='repo')x.pendingExit='sell';else exitShip(x,'sell');return true;}
     case 'hire':{const [id,cid]=d;const x=ship(id),c=(S.capPool||[]).find(q=>q.id===cid);if(!x||!c)return false;
       const old=x.captain;x.captain=c;S.capPool=S.capPool.filter(q=>q!==c);if(old&&old.age<63)S.capPool.push(old);news(`${c.name} takes command of SS ${x.name}.`);return true;}
     case 'shorebuy':{const [kind,key]=d,c=shoreCost(kind,key),sh=S.shore;if(!c||S.cash<c)return false;

@@ -7,7 +7,7 @@
    Prints survival, net worth by year, first-year profit, rate wars and profit by route. */
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const ROOT = path.join(__dirname, '..');
-const FILES = ['chart-data', 'data', 'helpers', 'economy', 'lanes', 'wireless', 'silent', 'emergency', 'disaster', 'livery', 'ledger', 'sim', 'rivals', 'companies', 'outside', 'trust', 'prewar', 'yard', 'naval', 'facilities', 'crew', 'state', 'clock', 'advice', 'times'].map(f => path.join(ROOT, 'js', f + '.js'));
+const FILES = ['chart-data', 'data', 'helpers', 'economy', 'lanes', 'wireless', 'silent', 'emergency', 'disaster', 'livery', 'war', 'ledger', 'sim', 'rivals', 'companies', 'outside', 'trust', 'prewar', 'yard', 'naval', 'facilities', 'crew', 'state', 'clock', 'advice', 'times'].map(f => path.join(ROOT, 'js', f + '.js'));
 const SRC = FILES.map(f => [f, fs.readFileSync(f, 'utf8')]).map(([f, s]) => [f, process.env.PATCH ? s.replace(/^const /gm, 'var ') : s]);
 
 const PRELUDE = `
@@ -71,17 +71,17 @@ function runGame(strategy, seed) {
   return vm.runInContext(`(function(){
     newGame();UI.autoPause=false;UI.speed=1;UI.rev=0;
     const strat=STRATS['${strategy}'];
-    const byYear={},routes={},first=[],trace=[],keyN=[];let wars=0,lastM=-1,lost=0,emerg=0;
+    const byYear={},routes={},first=[],trace=[],keyN=[],cats={};let wars=0,lastM=-1,lost=0,emerg=0;
     const origNews=news;news=function(t,k,p){if(k==='bad'&&p){keyN.push(monthName(S.m)+': '+t.slice(0,150));if(keyN.length>14)keyN.shift();}if(/leads a rate war|fall out on|answers with a rate war/.test(t))wars++;if(/ is lost|constructive total loss/.test(t))lost++;return origNews(t,k,p);};
-    while(!S.over&&S.t-S.t0<5480){
+    while(!S.over&&S.t-S.t0<(${+(process.env.END||1915)}-1900)*365.25){
       if(S.m!==lastM){lastM=S.m;
-        if(S.lastMonth){for(const k in S.lastMonth.lines)if(ROUTES[k])routes[k]=(routes[k]||0)+S.lastMonth.lines[k];if(S.lastMonth.m-S.m0<12)first.push(S.lastMonth.net);}
+        if(S.lastMonth){const yy=YEAR0+Math.floor(S.lastMonth.m/12);cats[yy]=cats[yy]||{};for(const k in S.lastMonth.cat)cats[yy][k]=(cats[yy][k]||0)+Math.round(S.lastMonth.cat[k]);}if(S.lastMonth){for(const k in S.lastMonth.lines)if(ROUTES[k])routes[k]=(routes[k]||0)+S.lastMonth.lines[k];if(S.lastMonth.m-S.m0<12)first.push(S.lastMonth.net);}
         if(S.m%12===0)byYear[YEAR0+S.m/12]=Math.round(netWorth());
         if(S.m%6===0)trace.push(\`\${monthName(S.m)} cash \${Math.round(S.cash/1000)}k debt \${Math.round(S.debt/1000)}k gilts \${Math.round((S.gilts||0)/1000)}k fleet \${S.ships.length} val \${Math.round(fleetValue()/1000)}k nw \${Math.round(netWorth()/1000)}k\`);
         strat();}
       advance(1);
     }
-    return {bust:S.over==='bust'||S.over==='wound'?S.m-S.m0:null,wound:S.over==='wound',last:S.over?S.news.slice(0,8).map(n=>n.t):null,trace,keyN,final:Math.round(netWorth()),ships:S.ships.length,wars,byYear,routes,firstYear:Math.round(first.reduce((a,b)=>a+b,0)),rep:Math.round(S.rep),lost,emerg:(S.emerg||[]).filter(e=>e.k!=='quar').length};
+    return {bust:S.over==='bust'||S.over==='wound'?S.m-S.m0:null,wound:S.over==='wound',last:S.over?S.news.slice(0,8).map(n=>n.t):null,trace,keyN,cats,ships:S.ships.length,final:Math.round(netWorth()),ships:S.ships.length,wars,byYear,routes,firstYear:Math.round(first.reduce((a,b)=>a+b,0)),rep:Math.round(S.rep),lost,emerg:(S.emerg||[]).filter(e=>e.k!=='quar').length};
   })()`, ctx);
 }
 
@@ -90,14 +90,17 @@ const k = v => (v < 0 ? '-' : '') + '£' + (Math.abs(v) >= 1e6 ? (Math.abs(v) / 
 function report(strategy, n) {
   const R = []; for (let i = 0; i < n; i++) R.push(runGame(strategy, i + 1));
   const busts = R.filter(r => r.bust !== null);
+  if (process.env.DEBUG === '3') { const q = (R.find(r => r.bust === null) || R[0]); console.log(q.trace.slice(26).join('\n')); const c = q.cats; for (const y in c) console.log(y, Object.entries(c[y]).filter(([k, v]) => Math.abs(v) > 500).map(([k, v]) => k + ' ' + Math.round(v / 1000) + 'k').join(' · ')); }
   if (process.env.DEBUG) busts.forEach(b => console.log('BUST', b.bust, b.wound ? 'wound' : '', '\n  ' + (process.env.DEBUG === '2' ? b.trace.join('\n  ') + '\n  --\n  ' + b.keyN.join('\n  ') : b.last.join('\n  '))));
-  const y0 = Math.min(...R.flatMap(r => Object.keys(r.byYear).map(Number))), yrs = [1, 2, 4, 6, 8, 10, 14].map(d => y0 + d);
+  const y0 = Math.min(...R.flatMap(r => Object.keys(r.byYear).map(Number))), yrs = [1, 2, 4, 6, 8, 10, 14, 15, 16, 17, 18, 19, 20].map(d => y0 + d).filter(y => y <= +(process.env.END || 1915));
   const med = y => { const v = R.map(r => r.byYear[y]).filter(v => v !== undefined); return v.length ? k(pct(v, 0.5)) : '-'; };
   const routes = {}; R.forEach(r => { for (const q in r.routes) routes[q] = (routes[q] || 0) + r.routes[q] / n; });
   console.log(`\n${strategy.toUpperCase()}  (${n} runs)`);
   console.log(`  bankrupt: ${busts.length}/${n}${busts.length ? ' (median month ' + pct(busts.map(b => b.bust), 0.5) + ')' : ''}`);
   console.log(`  first-year profit: median ${k(pct(R.map(r => r.firstYear), 0.5))}, range ${k(pct(R.map(r => r.firstYear), 0))} to ${k(pct(R.map(r => r.firstYear), 1))}`);
   console.log(`  median net worth: ` + yrs.map(y => `${y} ${med(y)}`).join(' · '));
+  if (process.env.DEBUG === '4') R.forEach(r => console.log('game', r.byYear[1914], r.byYear[1919], r.ships, r.trace.filter(t => /January 19(14|16|18|19)/.test(t)).join(' | ')));
+  if (+(process.env.END || 1915) >= 1919) { const g = R.filter(r => r.byYear[1914] > 0 && r.byYear[1919] !== undefined).map(r => r.byYear[1919] / r.byYear[1914]); if (g.length) console.log(`  war growth, net worth January 1919 over January 1914: median ${pct(g, 0.5).toFixed(1)}x in the money of the day, ${(pct(g, 0.5) / 2.24).toFixed(1)}x at 1914 prices`); }
   console.log(`  final net worth: p10 ${k(pct(R.map(r => r.final), 0.1))} · median ${k(pct(R.map(r => r.final), 0.5))} · p90 ${k(pct(R.map(r => r.final), 0.9))}`);
   console.log(`  fleet at end (median): ${pct(R.map(r => r.ships), 0.5)} · rate wars per game: ${(R.reduce((a, r) => a + r.wars, 0) / n).toFixed(1)} · reputation ${pct(R.map(r => r.rep), 0.5)} · emergencies per game ${(R.reduce((a, r) => a + r.emerg, 0) / n).toFixed(1)}, ships lost ${(R.reduce((a, r) => a + r.lost, 0) / n).toFixed(2)}`);
   console.log(`  avg profit by route over game: ` + Object.entries(routes).sort((a, b) => b[1] - a[1]).map(([q, v]) => `${q} ${k(v)}`).join(' · '));

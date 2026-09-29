@@ -217,6 +217,7 @@ function slipsMonth(){
 /* ---------- orders ---------- */
 const STAGES={drawing:'In the drawing office',waiting:'Waiting for a slip',framing:'Keel laid, framing',plating:'Plating the hull',fitting:'Launched, fitting out',trials:'On trials',done:'Delivered'};
 function placeOrder(d){
+  if(warNoBuild())return {ok:false,why:'The yards are working for the Admiralty. No new orders until the war is over.'};
   const st=designStats(d);if(st.warn.length)return {ok:false,why:st.warn[0]};
   const adm=!!(d.adm&&admEligible(d)),dep=Math.round(st.price*0.1),own=adm?Math.round(dep/3):dep;if(S.cash<own)return {ok:false,why:`The yard wants ${fmt(own)} with the order${adm?' (the Admiralty pays the rest)':''}.`};
   S.orders=S.orders||[];S.yardNext=S.yardNext||534;
@@ -249,14 +250,14 @@ function ordersMonth(){
         continue;}
     }
     if(o.stage==='drawing'){o.left--;if(o.left<=0){o.stage='waiting';logOrder(o,'Drawings approved.');}}
-    if(o.stage==='waiting'){
+    if(o.stage==='waiting'){if(warNoBuild())continue; // no keel for a merchant ship while the war lasts
       const L=slipsOf(o.d.builder),x=L.find(s=>s.who===null&&s.until<=S.m&&!(S.orders||[]).some(q=>q.slip===s));
       if(x){x.who='us';o.slip=x;if(!bill(o,0.2,'at the keel laying')){x.who=null;o.slip=null;continue;}
         o.stage='framing';o.keel=S.m;logOrder(o,`Keel laid on slip ${L.indexOf(x)+1}.`);news(`The keel of SS ${o.d.name} is laid at ${B.name}.`);}
       continue;}
     if(['framing','plating','fitting'].includes(o.stage)){
       // strikes, steel shortages and a good month on the yard
-      let step=1/o.months;const R=Math.random();
+      let step=1/o.months*(warNoBuild()?0.25:1);const R=Math.random(); // Admiralty work comes first in the war
       if(R<0.03){o.late+=2;step=0;logOrder(o,'A strike in the yard. No work this month.');news(`Riveters at ${B.name} are on strike. SS ${o.d.name} is delayed.`,'bad');}
       else if(R<0.07){step*=0.5;logOrder(o,'Steel deliveries late.');}
       else if(R>0.95){step*=1.4;}

@@ -66,6 +66,8 @@ document.addEventListener('click',e=>{
     case 'wread':{const m=(S.wire||[]).find(x=>x.id===+b.dataset.id);if(m&&m.read===false){m.read=true;UI.wa={id:m.id,txt:m.txt,mode:'decode',made:performance.now()};UI._tray=null;}break;}
     case 'wreadall':{for(const m of S.wire||[])if(m.read===false){m.read=true;const e=document.querySelector(`[data-hold="${m.id}"] .tg-an`);if(e)e.textContent=m.txt;}if(UI.wa)UI.wa.done=true;UI._tray=null;break;}
     case 'emmin':UI.emMin=true;break;
+    case 'warclose':warClose();break;
+    case 'reqpick':reqChoose(+b.dataset.id);break;
     case 'rcard':UI.rcard=b.dataset.id;break;
     case 'rclose':UI.rcard=null;break;
     case 'livopen':livPickOpen('change');break;
@@ -129,6 +131,7 @@ document.addEventListener('change',e=>{
   if(t.dataset.dzx&&UI.dz){UI.dz.extras[t.dataset.dzx]=t.checked;}
   if(t.dataset.dzline&&UI.dz){UI.dz.line=t.value;}
   if(t.dataset.rfjob&&UI.rf){UI.rf.jobs[t.dataset.rfjob]=t.checked;}
+  if(t.dataset.reserve){const x=S.ships.find(y=>y.id===+t.dataset.reserve);if(x&&!atWar())x.reserve=t.checked;}
   if((t.dataset.livc||t.dataset.livon||t.dataset.livem||t.dataset.livdock)&&UI.liv)livInput(t);
   t.blur();UI.rev=(UI.rev||0)+1;save();UI.dirty=true;
 });

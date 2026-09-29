@@ -49,7 +49,8 @@ The research notes behind the data tab are in `research/`.
 | 0.23.0 | 1907 to 1913 (done: `js/prewar.js`) |
 | 0.24.0 | The 1912 disaster, Convention, negligence ending (done: `js/disaster.js`) |
 | 0.25.0 | Liveries and ship variety (done: `js/livery.js`) |
-| 0.26.0 to 0.28.0 | War economy, war risk, the bubble and handover |
+| 0.26.0 | The war economy (done: `js/war.js`) |
+| 0.27.0 to 0.28.0 | War risk, the bubble and handover |
 | 0.29.0 to 0.32.0 | The markets (R2 to R5) |
 | 1.0.0 | 1900 to 1940 complete and balanced |
 

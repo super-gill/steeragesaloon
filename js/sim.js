@@ -40,7 +40,7 @@ function legCalc(sh,rk,dir,R,gk){
   const cd=dir===0?r.cargo.out:r.cargo.home,cm=COMM[cd.c];
   const myCap=Math.max(0,sh.cargo*(cm.reefer&&!(sh.up&&sh.up.reefer)?0.15:1)-(short?fuelRate(sh,sm)*Math.min(short,range*0.5)/(kn*24)*1.2:0));
   const cw=cargoWeight(rk,sh,cm.reefer)+myCap*sailings(kn,rk,sm);
-  const offer=S.cmkt[rk]*cd.t*cargoSeason(cd.c,m);
+  const offer=S.cmkt[rk]*cd.t*cargoSeason(cd.c,m)*warCargoVol(m);
   const cargoT=Math.round(Math.min(myCap,offer*myCap*cargoPull(rk,cm.reefer)/Math.max(1,cw)*(R?0.8+R()*0.4:1)));
   const fuelT=fuelRate(sh,sm)*seaDays*(1+0.1*(sh.foul||0));
   const endPort=dir===0?geoEnds(gk)[1]:geoEnds(gk)[0];
@@ -75,6 +75,7 @@ function cruiseSeason(sh){
 }
 function depart(sh){
   const P=sh.port;
+  if(sh.reqDue){reqStart(sh);return;}
   if(sh.pendingExit){exitShip(sh,sh.pendingExit);return;}
   if(sh.pendingYard){const k=sh.pendingYard;sh.pendingYard=null;enterYard(sh,k);return;}
   cruiseSeason(sh);
@@ -235,6 +236,7 @@ function yardJobDone(sh,k){
   if(k==='repair'){sh.cond=Math.min(condCap(sh),sh.cond+15);news(`SS ${sh.name} has been repaired and returns to service.`);}
   if(k==='engine'){sh.cond=Math.min(condCap(sh),sh.cond+8);news(`SS ${sh.name}'s engines are repaired.`);}
   if(k==='refurb'){sh.fit=100;const ns=currentStyle();const re=ns!==(sh.style||'edw');sh.style=ns;news(`SS ${sh.name} returns freshly refurbished${re?', her public rooms redone in the '+STYLES[ns].name+' style':', her saloons like new'}.`,'good');}
+  if(k==='warcargo')warCargoOn(sh);if(k==='uncargo')warCargoOff(sh);
   if(k==='paint'){sh.paint=livFill(lineLiv());news(`SS ${sh.name} comes out of dry dock in the Line's colours.`);}
   if(k==='lux'){sh.up.lux=true;sh.fit=100;news(`SS ${sh.name} returns with luxury first-class suites.`,'good');}
   if(k==='fac')applyFacPlan(sh);
@@ -280,12 +282,12 @@ const shoreUpkeep=()=>{const s=S.shore;return Object.keys(s.fagents||{}).length*
 function dailyTick(){
   wireTick();silentDaily();if(Math.floor(S.t-D21)%7===0)deptWeek(); // Saturdays, counted as the 1921 game did
   for(const sh of S.ships){
-    if(sh.state==='lost')continue;
+    if(sh.state==='lost'||sh.state==='req')continue; // on war service the state pays her way
     const act=ACTIVE.includes(sh.state),f=act?1:sh.state==='yard'?0.5:0.25;
     const key=act?(sh.state==='sea'?sh.legRoute:sh.line):'_idle';
     book('crew',-(crewCost(sh)*f+(sh.captain?sh.captain.wage:0))/30,key,sh);
     if(act&&sh.fac)book('crew',-facMods(sh).staff*PX()/30,key,sh);
-    book('ins',-insCost(sh)/30,key,sh);if(act)book('upkeep',-MAINT_COST[sh.maint]*sh.grt/8000/30,key,sh);
+    book('ins',-(insCost(sh)+(act?warInsCost(sh):0))/30,key,sh);if(act)book('upkeep',-MAINT_COST[sh.maint]*sh.grt/8000/30,key,sh);
     if(act&&sh.cond<condCap(sh))sh.cond=clamp(sh.cond+MAINT_GAIN[sh.maint]/30,5,condCap(sh));
     else if(sh.state==='laid')sh.cond=clamp(sh.cond-0.02,5,95);
     foulDaily(sh);
@@ -319,7 +321,7 @@ function monthRoll(pm){
     if(S.mail[rk])S.mail[rk].ok=false;
   }
   for(const rk of Object.keys(S.wars)){const w=S.wars[rk];w.left--;if(w.left<=0){delete S.wars[rk];S.tension[rk]=20;if(!w.quiet)news(warEndText(rk,w),S.lines[rk]?'good':'');}}
-  lineWarsMonth();trustMonth();prewarMonth();admMonth();disasterMonth(); // the early years (trust.js, prewar.js)
+  lineWarsMonth();trustMonth();prewarMonth();admMonth();disasterMonth();warMonth(); // the early years (trust.js, prewar.js)
   for(const rk of Object.keys(ROUTES)){
     const n=shipsOn(rk).filter(x=>ACTIVE.includes(x.state)).length;
     if(S.conf||!S.lines[rk]||!n||isCruise(rk)){S.tension[rk]=(S.tension[rk]||0)*0.6;continue;} // no conference on cruises
@@ -348,7 +350,7 @@ function monthRoll(pm){
   if(S.offer&&S.offer.exp<=S.m)S.offer=null;
   // a cruise that has ended (Prohibition's repeal ends the cruises to nowhere): its ships are laid up and the line closes
   for(const rk of Object.keys(S.lines))if(!routeOpen(rk,S.m)){delete S.lines[rk];for(const x of S.ships){if(x.line===rk){x.line=null;delete x.homeLine;}if(x.cp)x.cp=x.cp.filter(k=>k!==rk);}
-    news(`Prohibition is over, and so are the ${ROUTES[rk].cruise.cname}: nobody need go to sea for a drink. The ${ROUTES[rk].name} service is closed and its ships laid up.`,'bad',true);}
+    news(warClosed(rk,S.m)?`The ${ROUTES[rk].name} service is closed for the duration of the war. Its ships are laid up; move them to another line.`:`Prohibition is over, and so are the ${ROUTES[rk].cruise.cname}: nobody need go to sea for a drink. The ${ROUTES[rk].name} service is closed and its ships laid up.`,'bad',true);}
   // seasonal cruising: a laid-up ship with a cruise season comes out for it
   for(const x of S.ships)if(x.state==='laid'&&cruiseFor(x,S.m)){x.state='port';x.portLeft=1;}
   // the mails: from reputation 40 the Post Office invites tenders, on lines where one of our ships carries wireless
@@ -372,7 +374,7 @@ function refreshMarket(){
   const keep=S.market.filter(x=>x.bargain&&x.listed>=S.m-3);
   const y=yearNow(),old=TEMPL.filter(t=>t.built<=y-1&&(!t.from||y>=t.from)&&y-t.built<34&&!S.ships.some(s=>s.name===t.name)&&!keep.some(k=>k.name===t.name)).sort(()=>Math.random()-0.5);
   // as the old list ages, the brokers offer ships built in the years since
-  const nNew=Math.min(4,Math.max(0,Math.round((y-1924)/4),old.length<4?4-old.length:0,newCal()?Math.round((y-yearOfM(S.m0)-2)/3):0));const pool=old.slice(0,4-nNew);for(let i=pool.length;i<4;i++)pool.push(genMarketShip());
+  const nNew=Math.min(atWar()?1:4,Math.max(0,Math.round((y-1924)/4),old.length<4?4-old.length:0,newCal()?Math.round((y-yearOfM(S.m0)-2)/3):0));const nMk=atWar()?(S.m>=ym(1917,0)||Math.random()>0.35?0:1):4,pool=old.slice(0,Math.max(0,nMk-nNew));for(let i=pool.length;i<nMk;i++)pool.push(genMarketShip());
   S.market=keep.concat(pool.map(t=>{const sh=makeShip(t,45+Math.random()*35,ports[Math.floor(Math.random()*ports.length)]);if(t.gen)Object.assign(sh,t.gen);sh.paint=oldOwnerPaint(sh);sh.price=Math.round(shipValue(sh)*(1.25+Math.random()*0.25)/100)*100;return sh;}));
 }
 /* the monthly bill for keeping the fleet and office going, before fuel and port costs */

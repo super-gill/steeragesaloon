@@ -61,6 +61,7 @@ function shipStatus(sh){
   if(sh.state==='port')return {chip:'<span class="chip inport">In port</span>',short:`Loading at ${PN[sh.port]}`,text:`Loading at ${PN[sh.port]}. Sails in ${Math.max(1,Math.ceil(sh.portLeft))} day${Math.ceil(sh.portLeft)>1?'s':''}.`};
   if(sh.state==='repo')return {chip:'<span class="chip sea">Positioning</span>',short:`Sailing light to ${PN[sh.repoTo]}`,text:`Sailing light to ${PN[sh.repoTo]}, ${Math.max(1,Math.ceil(sh.repoLeft))} days out.`};
   if(sh.state==='yard')return {chip:'<span class="chip yard">In yard</span>',short:`In yard, ${Math.ceil(sh.yardLeft)} days`,text:`${YARD_NAME[sh.yardKind][0].toUpperCase()+YARD_NAME[sh.yardKind].slice(1)} at ${PN[sh.port]}, ${Math.ceil(sh.yardLeft)} days left.`};
+  if(sh.state==='req')return {chip:'<span class="chip bad">War service</span>',short:`On war service as ${REQ_NAME[sh.req.role]}`,text:`On war service as ${REQ_NAME[sh.req.role]} since ${monthName(sh.req.since)}. The Admiralty pays ${fmt(reqHire(sh))} a month and carries her crew and coal. She comes back when the war is over.`};
   return {chip:'<span class="chip idle">Laid up</span>',short:`Laid up at ${PN[sh.port]}`,text:`Laid up at ${PN[sh.port]} on a skeleton crew. Assign her to a line to sail.`};
 }
 function renderHeader(){
@@ -100,6 +101,7 @@ function alerts(){
   if(S.crash&&S.crash.stage==='rumour')A.push({id:'rumour'+S.crash.m0,k:'bad',t:S.crash.bank?`Rumours about ${BANK_NAME}, where the Line keeps its cash.`:'The markets are nervous and the banks are calling in loans.',b:[['Bank and stock','tabgo','finance']]});
   if(S.call)A.push({id:'call',noNote:true,k:'bad',t:`The bank has called in ${fmt(S.call.amt)}, due by ${monthName(S.call.due)}. Unpaid, it will seize ships.`,b:[['Bank','tabgo','finance']]});
   for(const sh of S.ships)if(fatOf(sh)>=90&&sh.state!=='yard')A.push({id:'worn'+sh.id,k:'warn',t:`SS ${sh.name} is worn out and should go to the breakers.`,b:[['View','selship',sh.id]]});
+  if(S.war&&S.war.ask)A.push({id:'reqask'+S.war.ask.due,noNote:true,k:'bad',t:`The Admiralty needs ${S.war.ask.n===1?'another ship':S.war.ask.n+' more ships'} for war service. Offer the ones you would rather lose, or it chooses by ${monthName(S.war.ask.due)}.`,b:[['Choose','tabgo','company']]});
   if(S.cash<0)A.push({id:'od',noNote:true,k:'bad',t:`The account is overdrawn. The bank forecloses below ${fmt(-odLimit())}.`,b:[['Bank','tabgo','finance']]});
   // an item the owner has noted or acted on stays away until the situation passes; decisions and the bank's demands stay put
   const seen=S.attnSeen=S.attnSeen||{};for(const id in seen)if(!A.some(a=>a.id===id))delete seen[id];
@@ -212,6 +214,7 @@ function renderShipDetail(sh){
   const sellV=Math.round(shipValue(sh)*0.9),scrapV=sh.grt*2;
   let exitH='';
   if(sh.pendingExit)exitH=`<p class="warnline">To be ${sh.pendingExit==='scrap'?'scrapped':'sold'} when she next reaches port.</p><button class="btn" data-act="unexit">Cancel</button>`;
+  else if(sh.state==='req')exitH='<span class="note">She cannot be sold while she is on war service.</span>';
   else if(S.ships.length>1){
     if(UI.confirm==='sell'+sh.id)exitH=`<button class="btn danger" data-act="exit" data-k="sell">Confirm sale · ${fmt(sellV)}</button><button class="btn" data-act="cancel">Keep her</button>`;
     else if(UI.confirm==='scrap'+sh.id)exitH=`<button class="btn danger" data-act="exit" data-k="scrap">Confirm scrapping · ${fmt(scrapV)}</button><button class="btn" data-act="cancel">Keep her</button>`;
@@ -262,7 +265,7 @@ function renderShipDetail(sh){
 }
 
 /* her own account and her choice of line, side by side: what she made, and what she would make elsewhere */
-const INCOME=['fares','onboard','cargo','mail','shorein','subsidy'];
+const INCOME=['fares','onboard','cargo','mail','shorein','subsidy','charter'];
 let SHIP_OPTS={key:null};
 function shipOptions(sh){
   const key=S.m+'|'+UI.rev+'|'+sh.id;if(SHIP_OPTS.key===key)return SHIP_OPTS.v;
@@ -521,7 +524,7 @@ function chart(){
     <polyline points="${pts}" style="fill:none;stroke:var(--brass)" stroke-width="1.8"/><circle cx="${x(h.length-1)}" cy="${y(h[h.length-1])}" r="3.5" style="fill:${h[h.length-1]<0?'var(--bad)':'var(--brass)'}"/></svg></div>`;
 }
 /* profit and loss by ship: four figures a ship, and the company's own costs below, adding up to the Line's result */
-const PL_TAKE=['fares','onboard','cargo','mail','subsidy'],PL_RUN=['fuel','port','crew','upkeep','ins'];
+const PL_TAKE=['fares','onboard','cargo','mail','subsidy','charter'],PL_RUN=['fuel','port','crew','upkeep','ins'];
 const avgOf=list=>{const o={};for(const c of list)for(const k in c)o[k]=(o[k]||0)+c[k]/list.length;return o;};
 function plData(){
   const mode=UI.plMonth||'year',LM=S.lastMonth,H=S.plHist||[];
@@ -664,6 +667,7 @@ function renderCompany(){
     <button class="btn" data-act="livopen" style="width:fit-content" ${S.over?'disabled':''}>Change the colours</button></section>`;
   setHTML($('pane-company'),`
     ${colours}
+    ${warHTML()}
     <section class="sec"><h2>Departments</h2>${S.ships.length<4?`<p class="warnline">With ${S.ships.length===1?'one ship':S.ships.length+' ships'} a department costs more than it can save: they start to pay their way at about four ships. Each costs its opening fee plus wages and rent every month.</p>`:''}<p class="note">Each department advises in its own field, and can be told to act on its advice. A department is only as good as its head and staff: a muddled head misses months and misjudges fares, a careful one lets small gains go. Acting departments keep a cash reserve and never open lines, buy, build or sell ships on their own: they bring those to you as proposals.</p><div class="stack">${depts}</div></section>
     ${safety}
     <section class="sec"><h2>North Atlantic conference</h2>${conf}</section>
@@ -685,6 +689,7 @@ function renderModal(){
   const el=$('modal');
   if(!S.over&&UI.menu){setHTML(el,MENU_HTML());return;}
   if(!S.over&&UI.liv){setHTML(el,livPickHTML());return;}
+  if(!S.over&&S.war&&S.war.show){setHTML(el,warModalHTML());return;}
   if(!S.over&&S.dis&&S.dis.show){setHTML(el,disModalHTML());return;}
   if(!S.over){el.innerHTML='';return;}
   const nw=netWorth(),sold=S.over==='sold',wound=S.over==='wound';

@@ -64,7 +64,9 @@ function coEnsure(){
 function coAccounts(o,stats){
   const co=S.rivals[o],m=S.m;let rev=0,wars=0;
   for(const rk in stats){const q=stats[rk].owners[o];if(!q)continue;rev+=q.rev;if(S.wars[rk])wars+=q.ships*1000*PX();}
-  const run=coCosts(o,m)+CO_VAR*rev+wars,int=co.debt*CO_RATE/12,net=rev-run-int;
+  // in the war the state carries the ships it has taken (and pays their hire); a German line's ships lie idle in neutral ports
+  const wf=warRivalF(o,m),held=atWar(m)&&wf<1?1-wf:0,hire=wf>0&&held?coFleet(o).reduce((a,x)=>a+x.grt,0)*held*0.34*PX():0;rev+=hire;
+  const run=coCosts(o,m)*(wf===0&&pre21(m)?0.1:1-held)+CO_VAR*rev+wars,int=co.debt*CO_RATE/12,net=rev-run-int;
   co.cash+=net;co.h=co.h||[];co.h.push({rev:Math.round(rev),cost:Math.round(run+int),net:Math.round(net)});if(co.h.length>12)co.h.shift();
 }
 /* borrow when short, repay when flush, sell when the bank says no, and fail when nothing is left to sell */
@@ -73,7 +75,7 @@ function coFinance(o,stats){
   if(co.cash<0){const b=Math.max(0,Math.min(max-co.debt,-co.cash+res*0.5));co.debt+=b;co.cash+=b;}
   else if(co.cash>2*res&&co.debt>0){const r=Math.min(co.debt,(co.cash-2*res)*(P.lev<=0.3?0.8:0.4));co.debt-=r;co.cash-=r;}
   if(co.debt>max*1.15&&co.cash>res){const r=Math.min(co.debt-max,co.cash-res);co.debt-=r;co.cash-=r;} // the bank calls in what the fleet no longer covers
-  if(co.cash>=0)return;
+  if(co.cash>=0||atWar()||warRivalF(o,S.m)===0)return; // under the state's control in the war nobody sells up
   // short of money and the bank will lend no more: sell the ship that raises most for the least trade, oldest first
   const fleet=coFleet(o).sort((a,b)=>a.built-b.built);
   if(fleet.length>1&&co.cash<-0.25*res){const x=fleet[0],buyer=coBuyer(x,o);
@@ -90,7 +92,7 @@ function coYearEnd(o){
   const co=S.rivals[o],P=RIVAL_P[o],res=coReserve(o),p=coYear(o,'net');
   const div=Math.max(0,Math.min(p*(P.lev>=0.45?0.7:0.5),co.cash-2*res));co.div=Math.round(div);co.cash-=div;
   const old=coFleet(o).sort((a,b)=>a.built-b.built)[0];
-  if(old&&coAge(old)>=22&&p>0&&Math.random()<0.35*P.aggr){const x=makeRivalShip(o,old.route,Math.floor(yearOfM(S.m))),era=Math.max(0,(S.m-ym(1930,0))/12);
+  if(old&&coAge(old)>=22&&p>0&&!atWar()&&Math.random()<0.35*P.aggr){const x=makeRivalShip(o,old.route,Math.floor(yearOfM(S.m))),era=Math.max(0,(S.m-ym(1930,0))/12);
     x.knots=+(P.knots[1]-Math.random()+Math.min(5,era*0.15)+shipEraKnots(x.built)).toFixed(1);if(era>0)x.grt=Math.round(x.grt*(1+Math.min(0.5,era*0.02))/100)*100;
     const price=coNewPrice(x);if(coCanPay(o,price)){coPay(o,price);dropRival(old);co.cash+=coScrap(old);S.rships.push(x);newRivalVis(x);
       S.rmoves.unshift({m:S.m,o,rk:old.route,kind:'renew',ship:x.name,old:old.name});if(S.rmoves.length>40)S.rmoves.length=40;
@@ -179,7 +181,7 @@ function coFound(q){
 }
 /* the queue of lines to come, and fresh capital for any open trade that has been left with no rival ships at all */
 function coEntrants(stats){
-  const m=S.m;S.coQueue=S.coQueue||[];
+  const m=S.m;S.coQueue=S.coQueue||[];if(atWar(m))return; // nobody founds a line in the war
   if(m%12===0)for(const rk in ROUTES){if(!routeOpen(rk,m)||S.coQueue.some(q=>q.routes.includes(rk)))continue;
     const st=RIVAL_START[rk];if(!st&&!S.rcost[rk])continue; // routes that never had rival lines stay the player's own
     const kind=isCruise(rk)?'cruise':(st&&RIVAL_P[st[0][0]]&&RIVAL_P[st[0][0]].kind)||'liner',here=S.rships.filter(x=>x.route===rk);

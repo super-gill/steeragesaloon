@@ -1,5 +1,5 @@
 /* ================= DATA ================= */
-const GAME_VERSION='0.25.1',GAME_BUILT='28 September 2026'; // bump on every release; see CHANGELOG.md
+const GAME_VERSION='0.26.0',GAME_BUILT='28 September 2026'; // bump on every release; see CHANGELOG.md
 /* ---------- the calendar ----------
    Month 0 is January 1900 and day 0 is 1 January 1900. ym(year,month) names a month (month 0 = January), so every date
    the game cares about reads as a date. History written for the 1921 game is kept exact by counting from M21. */
@@ -85,7 +85,7 @@ for(const [k,r] of Object.entries(ROUTES)){const g=GEO(k);r.dist=g.dist;r.calls=
   r.name=r.cruise?PN[r.a]+' · '+r.cruise.cname:r.calls.length>2?PN[r.a]+' → '+PN[r.b]:PN[r.a]+' ↔ '+PN[r.b];r.via=r.calls.slice(1,-1).map(c=>PN[c]);}
 /* cruises: open to book in a given month (the cruise to nowhere dies with Prohibition), and demand by month */
 const isCruise=rk=>!!(ROUTES[rk]&&ROUTES[rk].cruise);
-const routeOpen=(rk,m)=>{const c=ROUTES[rk].cruise;return !(c&&((c.until!==undefined&&m>=c.until)||(c.from!==undefined&&m<c.from)));}; // the cruises to nowhere run only while America is dry
+const routeOpen=(rk,m)=>{const c=ROUTES[rk].cruise;if(typeof warClosed==='function'&&warClosed(rk,m))return false;return !(c&&((c.until!==undefined&&m>=c.until)||(c.from!==undefined&&m<c.from)));}; // the cruises to nowhere run only while America is dry
 const seasonOf=(rk,c,m)=>{const r=ROUTES[rk];return r.season?r.season[((m%12)+12)%12]:SEASON[c][((m%12)+12)%12];};
 const cruiseMonthsText=rk=>{const ms=ROUTES[rk].cruise.months;return ms.map(i=>MONTHS[i].slice(0,3)).join(', ');};
 const DIRW={f:.5,s:.5,t:.8,tt:.5}; // share of round-trip demand travelling westbound
@@ -105,9 +105,9 @@ const SPD=[.85,1,1.1], SPD_REP=[-.3,0,.4], SPD_WEAR=[.8,1,1.7];
 const MAINT_COST=[0,700,1800], MAINT_GAIN=[0,1.4,3.2];
 const ADV_COST=[0,300,800,1500], ADV_MULT=[1,1.06,1.12,1.17];
 /* Yard work: maintenance jobs and upgrades. days are before any repair-yard discount. */
-const YARD_DAYS={scrape:5,cruise:40,hatch:25,heavy:15,deep:30,fac:20,stab:30,rphone:7,aircon:35,radar:10,fins:30,replate:60,dock:25,oil:55,tourist:30,repair:45,engine:10,reefer:40,wireless:7,turbines:70,lux:35,refurb:25,gear:15,boats:7,paint:6};
+const YARD_DAYS={scrape:5,cruise:40,hatch:25,heavy:15,deep:30,fac:20,stab:30,rphone:7,aircon:35,radar:10,fins:30,replate:60,dock:25,oil:55,tourist:30,repair:45,engine:10,reefer:40,wireless:7,turbines:70,lux:35,refurb:25,gear:15,boats:7,paint:6,warcargo:10,uncargo:10};
 const YARD_NAME={scrape:'a hull scrape',cruise:'conversion for cruising',hatch:'more hatches and tween decks',heavy:'heavy-lift derricks',deep:'deep tanks',fac:'new public rooms',stab:'gyro stabilisers',rphone:'a radio-telephone',aircon:'air conditioning',radar:'a radiolocation set',fins:'fin stabilisers',replate:'re-plating and new frames',dock:'overhaul',oil:'oil conversion',tourist:'Tourist Third refit',repair:'fire repairs',engine:'engine repairs',
-  reefer:'refrigerated holds',wireless:'wireless telegraphy',turbines:'new turbines',lux:'luxury first-class refit',refurb:'refurbishment',gear:'new cargo gear',boats:'boats for all',paint:'a repaint in the Line\'s colours'};
+  reefer:'refrigerated holds',wireless:'wireless telegraphy',turbines:'new turbines',lux:'luxury first-class refit',refurb:'refurbishment',gear:'new cargo gear',boats:'boats for all',warcargo:'clearing her steerage for cargo',uncargo:'refitting her steerage',paint:'a repaint in the Line\'s colours'};
 /* Upgrades a ship can have fitted once. */
 const UPGRADES={
   reefer:{name:'Refrigerated holds',desc:'Carries chilled beef and bananas. Without them she can take only a sliver of those cargoes.'},

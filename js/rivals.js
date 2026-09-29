@@ -134,10 +134,10 @@ function rivalWeight(rk,c,owner){
   let v=RW_CACHE.m.get(key);if(v===undefined){v=rivalWeightRaw(rk,c,owner);RW_CACHE.m.set(key,v);}
   return v;
 }
-function rivalWeightRaw(rk,c,owner){let a=0;for(const x of S.rships)if(x.route===rk&&(!owner||x.owner===owner)){const b=rivalBerths(x,c);if(b)a+=b*sailings(x.knots,rk)*rivalAppeal(x.owner,rk,c,x);}return a;}
+function rivalWeightRaw(rk,c,owner){let a=0;for(const x of S.rships)if(x.route===rk&&(!owner||x.owner===owner)){const b=rivalBerths(x,c);if(b)a+=b*sailings(x.knots,rk)*rivalAppeal(x.owner,rk,c,x)*warRivalF(x.owner,S.m);}return a;}
 function ourWeight(rk,c,exclude){let a=0;if(!S.lines[rk])return 0;
   for(const sh of S.ships)if(sh!==exclude&&sh.line===rk&&ACTIVE.includes(sh.state)&&sh.berths[c])a+=sh.berths[c]*sailings(knotsOf(sh),rk,SPD[sh.speed])*ourAppeal(sh,rk,c);return a;}
-function cargoWeight(rk,exclude,reefer){let a=0;for(const x of S.rships)if(x.route===rk)a+=x.cargo*sailings(x.knots,rk)*(reefer&&!x.reefer?0.15:1);a*=outCargo(rk); // shared canvassers help them
+function cargoWeight(rk,exclude,reefer){let a=0;for(const x of S.rships)if(x.route===rk)a+=x.cargo*sailings(x.knots,rk)*(reefer&&!x.reefer?0.15:1)*warRivalF(x.owner,S.m);a*=outCargo(rk); // shared canvassers help them
   for(const sh of S.ships)if(sh!==exclude&&sh.line===rk&&ACTIVE.includes(sh.state))a+=sh.cargo*sailings(knotsOf(sh),rk,SPD[sh.speed])*(reefer&&!(sh.up&&sh.up.reefer)?0.15:1);return a;}
 /* Monthly passengers on a route, split between us and each rival line (estimate for the current month). */
 function routeStats(rk,m){
@@ -157,9 +157,9 @@ function routeStats(rk,m){
     }
   }
   // cargo: each direction's offer, shared by hold space as the ships' own sailings share it
-  if(!r.cruise&&routeOpen(rk,m))for(const dir of [0,1]){const cd=dir===0?r.cargo.out:r.cargo.home,cm=COMM[cd.c],offer=S.cmkt[rk]*cd.t*cargoSeason(cd.c,m),cw=cargoWeight(rk,null,cm.reefer);
+  if(!r.cruise&&routeOpen(rk,m))for(const dir of [0,1]){const cd=dir===0?r.cargo.out:r.cargo.home,cm=COMM[cd.c],offer=S.cmkt[rk]*cd.t*cargoSeason(cd.c,m)*warCargoVol(m),cw=cargoWeight(rk,null,cm.reefer);
     if(offer<=0||cw<=0)continue;
-    for(const o in owners){let w=0;for(const x of S.rships)if(x.route===rk&&x.owner===o)w+=x.cargo*sailings(x.knots,rk)*(cm.reefer&&!x.reefer?0.15:1);
+    for(const o in owners){let w=0;for(const x of S.rships)if(x.route===rk&&x.owner===o)w+=x.cargo*sailings(x.knots,rk)*(cm.reefer&&!x.reefer?0.15:1)*warRivalF(o,m);
       const t=Math.min(w,offer*w/cw),cr=t*cm.rate*cargoMod(m);owners[o].cargoT+=t;owners[o].rev+=cr;owners[o].cargoRev+=cr;}}
   let rivalPax=0;for(const o in owners){owners[o].load=owners[o].cap?owners[o].pax/owners[o].cap:0;rivalPax+=owners[o].pax;}
   return {owners,ours,rivalPax,total:rivalPax+ours.pax};
@@ -213,7 +213,7 @@ function rivalsMonth(){
     for(const rk of routes){const st=stats[rk].owners[o],ourShare=stats[rk].ours.pax/Math.max(1,stats[rk].total);
       const fight=ourShare>0.3&&R()<0.08*P.aggr*(coShare(o)>0.35?0.3:1); // answer an interloper with tonnage (a giant leaves it to its smaller lines)
       const sh0=coFleet(o).reduce((a,x)=>a+x.grt,0)/Math.max(1,S.rships.reduce((a,x)=>a+x.grt,0)),big=sh0<=0.2?1:Math.max(0.05,1-(sh0-0.2)*5); // the biggest lines grow more slowly: their bankers and the conference hold them back
-      if((S.rorders||[]).some(q=>q.o===o&&q.rk===rk))continue; // one ship on order for a trade at a time
+      if((S.rorders||[]).some(q=>q.o===o&&q.rk===rk)||atWar(m))continue; // one ship on order for a trade at a time; none in the war
       // in the emigrant years the lines add tonnage later: they wait for the ships to run well above their usual loads
       const grow=newCal()&&m<ym(1914,7)?1.2:1.12;
       if(fight||(st.rel>grow&&coProfit(o)>0&&R()<(0.16*P.aggr+(ourShare>0.25?0.1:0))*big)){
@@ -267,4 +267,4 @@ function rivalPos(x){const v=x.v||initVis(x);
   if(v.wait>0){const [px,py]=CHART.ports[v.port];return {x:px,y:py,ang:0,inPort:true};}
   if(v.repo)return pointOn(trackBetween(v.port,v.repo.to),v.repo.pos);
   const d=GEO(v.gk).dist;return pointOn(CHART.routes[v.gk],v.dir===0?v.pos:d-v.pos,v.dir===1);}
-function moveRivals(step){for(const x of S.rships)stepVis(x,x.route,step);if(S.ghosts&&S.ghosts.length)S.ghosts=S.ghosts.filter(g=>stepVis(g,null,step));}
+function moveRivals(step){for(const x of S.rships){if(warRivalF(x.owner,S.m)===0&&x.v&&x.v.wait>0){x.v.wait=Math.max(x.v.wait,1);continue;}stepVis(x,x.route,step);}if(S.ghosts&&S.ghosts.length)S.ghosts=S.ghosts.filter(g=>stepVis(g,null,step));}

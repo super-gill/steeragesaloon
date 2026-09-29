@@ -2,6 +2,18 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.26.0 (29 September 2026)
+The Great War, part one: the war economy.
+- War breaks out in August 1914. A page says what changes. Emigration stops and the cabin trade falls to a fifth or less within three months (Americans keep crossing until April 1917); reservists crowd the eastbound steerage home in August and September. Hamburg and the cruises close until 1920. The rate wars end.
+- Freight pays: every hold fills, at rates that climb over the rise in prices until the Ministry of Shipping holds them down in 1917. A liner can clear her steerage decks for cargo in the refit office and put them back after the war; head office advises it when it pays.
+- Coal, wages and second-hand ships climb faster than prices. Every ship still trading pays the state's war-risk insurance each month, dearest in 1917. No yard takes a new order, no keel is laid, and ships on the stocks go at a quarter of the pace. The brokers have a ship only now and then until 1917, and none after.
+- The Admiralty's reserve list opens in October 1912 on the Company tab. In the war the state takes a growing share of the fleet as armed merchant cruisers, hospital ships, troopships and transports, at a fixed hire well below freight: Admiralty-terms ships first, then the list. A line on the list chooses which ships go (under Needs attention) and is paid more; otherwise the state takes the biggest and fastest. War service wears ships hard and earns the Line standing. They come home through 1919 with a sum towards their refit.
+- Excess Profits Duty each January from 1915 to 1921: half the profit above the pre-war standard, rising to four fifths for 1917 and 1918.
+- The German lines' ships lie in neutral ports; other belligerent lines lose ships to their states; the American lines grow while neutral. No rival line builds, founds or fails while the war lasts.
+- The times shows the war, the duty and what the state holds, and warns of the Austrian ultimatum in July 1914.
+- The dangers at sea (raiders, submarines, convoys and war-risk losses) come in 0.27; 1919 and 1920 hold for now and are written in 0.28.
+- The harness plays on to any year (`END=1920`) and reports growth over the war.
+
 ## 0.25.1 (28 September 2026)
 A balance pass on 1900 to 1913: a sensible owner now goes bankrupt in about 1 game in 10 before the war, down from about 3 in 10.
 - A court of inquiry before 1914 no longer calls a ship of four or five thousand tons "too small for the weather" on the North Atlantic: in those years she was an ordinary Atlantic ship. The Morven, on the route the game gives you, was being blamed for it in every winter loss.

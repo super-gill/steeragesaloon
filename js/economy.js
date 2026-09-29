@@ -46,7 +46,7 @@ function crashF(m){ // how hard the panic is biting, 0 to 1
   const k=m-c.panicAt;return k<6?1:Math.max(0,1-(k-6)/Math.max(1,c.rec-6));
 }
 function crashMod(c,m){const f=crashF(m);return f?1-f*S.crash.depth*{f:1.2,s:1,t:0.8,tt:1}[c]:1;}
-const shipMkt=()=>1-(S.crash&&S.crash.y1907?0.25:0.4)*crashF(S.m); // second-hand ship prices in a panic (the 1907 panic was an American one, and milder here)
+const shipMkt=()=>(1-(S.crash&&S.crash.y1907?0.25:0.4)*crashF(S.m))*warShips(S.m); // second-hand ship prices in a panic (the 1907 panic was an American one, and milder here)
 function crashMonth(){
   const m=S.m,c=S.crash;
   if(S.call&&m>=S.call.due)callDue();
@@ -96,7 +96,7 @@ function gilts(buy,amt){
 /* ---------- the tax man: excess profits over a threshold, each January ---------- */
 function taxMonth(net){
   S.yearNet=(S.yearNet||0)+net;
-  if(S.m%12!==0)return;const profit=S.yearNet;S.yearNet=0;
+  if(S.m%12!==0)return;const profit=S.yearNet;S.yearNet=0;epdJanuary(profit);
   const thr=150000*PX();if(S.m<ym(1925,0)||profit<=thr)return;
   const tax=Math.round((profit-thr)*0.3/100)*100;book('tax',-tax);
   news(`Excess profits duty: on ${fmt(profit)} earned last year the Treasury takes ${fmt(tax)}.`,'bad');

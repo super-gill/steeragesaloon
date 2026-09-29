@@ -37,7 +37,7 @@ const PRE_AR=[1,1.06,0.68,0.89,1.48,2.09,2.97,2.46,3.01,2.72,3.41,2.66,3.81,3.56
 /* a yearly series at month m: each year's figure at mid-year, straight lines between */
 function preYear(arr,m){const y=clamp(YEAR0+m/12-0.5,YEAR0,YEAR0+arr.length-1),i=Math.min(arr.length-2,Math.floor(y-YEAR0)),f=y-YEAR0-i;return arr[i]+(arr[i+1]-arr[i])*f;}
 /* going home before the war: in the American slump of 1908 more emigrants went home than came out, and 1909 was still heavy */
-const preReturn=m=>!newCal()||m>=M21?1:m>=ym(1908,0)&&m<ym(1909,0)?1.7:m>=ym(1909,0)&&m<ym(1910,0)?1.2:1;
+const preReturn=m=>!newCal()||m>=M21?1:(m>=ym(1908,0)&&m<ym(1909,0)?1.7:m>=ym(1909,0)&&m<ym(1910,0)?1.2:1)*warReturn(m);
 const preYears=m=>clamp(YEAR0+m/12-YEAR0,0,13.99); // years since 1900, held at the end of 1913
 /* passenger demand before 1921, as a multiple of January 1900 */
 function preDemand(c,rk,m){
@@ -46,7 +46,7 @@ function preDemand(c,rk,m){
   else if(c==='t'||c==='tt'){const us=preYear(PRE_US,m);
     x=rk==='nap'?Math.pow(us,1.1):g==='North Atlantic'?us:g==='Canada'?preYear(PRE_CA,m):rk==='rpl'?preYear(PRE_AR,m):1+0.02*y;}
   else x=c==='f'?1+0.035*y:1+0.05*y;
-  return x*crashMod(c,m);
+  return x*crashMod(c,m)*warPax(c,rk,m);
 }
 /* demand on the 1900 calendar: the pre-war curves, then the 1921 game's history carried on from where they end */
 const H_CACHE={s:null,a:{},d:{}}; // the join at 1921 and the start's level, per class and route, for the game in hand
@@ -105,13 +105,13 @@ const SLUMP_CUT={fuel:0.25,wage:0.10,dues:0.15,ins:0.10};
 const slumpK=(k,m)=>1-SLUMP_CUT[k]*slump(m===undefined?(typeof S!=='undefined'&&S?S.m:0):m);
 /* cargo on the 1900 calendar: world trade grows about 3% a year before the war, then the 1921 game's cargo history */
 const cargoPre=m=>1+0.03*preYears(m);
-const cargoMod=m=>{if(!newCal())return cargoLegacy(m);const a=x=>x<M21?cargoPre(x)*crashMod('s',x):cargoPre(M21-1)/cargoLegacy(M21)*cargoLegacy(x);return a(m)/a(S.m0);};
+const cargoMod=m=>{if(!newCal())return cargoLegacy(m);const a=x=>x<M21?cargoPre(x)*crashMod('s',x)*warFreight(x):cargoPre(M21-1)/cargoLegacy(M21)*cargoLegacy(x);return a(m)/a(S.m0);};
 const cargoLegacy=m=>{const k=m-M21;return crashMod('s',m)*(k>=306?1+Math.min(0.25,(k-306)/12*0.02):1)*(1-0.2*slump(m))*(k<12?0.75:k<24?0.9:k<106?1:k<120?0.75:k<156?0.62:Math.min(1,0.62+0.38*(k-156)/48));};
 const cargoSeason=(c,m)=>COMM[c].season?COMM[c].season[m%12]:1;
 const dirW=(rk,c)=>(ROUTES[rk].dirw&&ROUTES[rk].dirw[c])||DIRW[c];
 /* bunker coal before 1921, against the price level: dear in the 1900 boom, cheap by 1910 (real export prices, rebased) */
 const PRE_COAL=[2.5,2.2,2.0,1.95,1.9,1.85,1.9,2.0,1.9,1.8,1.8,1.85,1.95,2.0];
-function coalPrice(m,held){if(m<M21)return preYear(PRE_COAL,m)*(m>=ym(1914,0)?1.1:1)*(held?1:coalStrike(m))*(1+0.04*Math.sin(m*1.3));m-=M21;let b=(m<12?2.3:m<24?1.75:1.6)*(m>=258?1+Math.min(0.6,(m-258)/12*0.06):1);if(m>=64&&m<=70&&!held)b*=1.9;return b*(1+0.04*Math.sin(m*1.3));} // a bunker contract keeps its coal through a strike
+function coalPrice(m,held){if(m<M21)return preYear(PRE_COAL,m)*(m>=ym(1914,0)?1.1:1)*warCoal(m)*(held?1:coalStrike(m))*(1+0.04*Math.sin(m*1.3));m-=M21;let b=(m<12?2.3:m<24?1.75:1.6)*(m>=258?1+Math.min(0.6,(m-258)/12*0.06):1);if(m>=64&&m<=70&&!held)b*=1.9;return b*(1+0.04*Math.sin(m*1.3));} // a bunker contract keeps its coal through a strike
 /* oil is dear at first; by the mid-twenties it costs about nine-tenths of coal for the same miles, and saves stokers and days in port besides */
 function oilPrice(m){m-=M21;return (m<12?3.6:m<24?3.0:m<48?2.7-0.75*(m-24)/24:1.95)*(m>=354?0.78:1)*(1+0.03*Math.sin(m*0.9));}
 function repF(c,rep,r){const x=rep-30;if(c==='f')return clamp(1+x/(r.prestige>1.2?50:70),0.4,1.8);if(c==='s')return clamp(1+x/150,0.6,1.4);if(c==='t')return clamp(1+x/500,0.85,1.15);return clamp(1+x/100,0.5,1.6);}
@@ -146,7 +146,7 @@ const ACTIVE=['sea','port','repo'];
 const shipsOn=rk=>S.ships.filter(x=>x.line===rk);
 /* wireless is a dear novelty in 1900, four times its later price, and comes down to it by 1911 */
 const wirelessNovelty=()=>{const y=yearNow();return y<1905?4:y<1911?4-3*(y-1905)/6:1;};
-const REFIT_BASE={scrape:g=>g*0.22,cruise:g=>g*2.4+12000,hatch:g=>g*1.2,heavy:()=>9000,deep:g=>g*0.9,stab:g=>g*1.6,rphone:()=>7000,aircon:g=>g*1.3,radar:()=>32000,fins:g=>g*2,replate:g=>g*3,dock:g=>g*1.1,oil:g=>g*3.5,reefer:g=>g*3+5000,wireless:()=>2500*wirelessNovelty(),turbines:g=>g*5,lux:g=>g*2,refurb:g=>g*1.2,gear:g=>g*0.8,boats:g=>g*0.12+1500,paint:g=>g*0.1+300};
+const REFIT_BASE={scrape:g=>g*0.22,cruise:g=>g*2.4+12000,hatch:g=>g*1.2,heavy:()=>9000,deep:g=>g*0.9,stab:g=>g*1.6,rphone:()=>7000,aircon:g=>g*1.3,radar:()=>32000,fins:g=>g*2,replate:g=>g*3,dock:g=>g*1.1,oil:g=>g*3.5,reefer:g=>g*3+5000,wireless:()=>2500*wirelessNovelty(),turbines:g=>g*5,lux:g=>g*2,refurb:g=>g*1.2,gear:g=>g*0.8,boats:g=>g*0.12+1500,paint:g=>g*0.1+300,warcargo:g=>g*0.12+400,uncargo:g=>g*0.12+400};
 /* a cruise conversion: steerage becomes a smaller number of Tourist cabins and a few more in first and second */
 const cruiseBerths=b=>{const t=b.t||0;return {...b,t:0,tt:(b.tt||0)+Math.round(t*0.3),s:(b.s||0)+Math.round(t*0.06),f:(b.f||0)+Math.round(t*0.04)};};
 const atOwnYard=sh=>S.shore&&S.shore.yards[sh.port]&&sh.state!=='sea'&&sh.state!=='repo';

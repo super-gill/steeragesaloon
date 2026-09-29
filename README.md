@@ -2,7 +2,7 @@
 
 A real-time shipping line management sim. You run the Morven Line from its Glasgow head office from January 1900, with one elderly emigrant ship and a mortgage, and no end date (in this world the liner trade never declined, so later decades are invented): open passenger lines and cargo trades, buy, refit and retire ships, hire masters, build up a shore establishment and head-office departments, and survive the rate wars of the emigrant years, the American trust, breakdowns, the US immigration quotas, the 1926 coal strike and the Depression.
 
-The 1900 overhaul is under way (see `docs/overhaul/README.md`): 1900 to 1913 are written, with the 1912 disaster and the safety rules that follow it; from 1914 to 1920 the game holds the 1913 curves until the war and the bubble arrive in later releases; from January 1921 it carries on as the 1921 game.
+The 1900 overhaul is under way (see `docs/overhaul/README.md`): 1900 to 1913 are written, with the 1912 disaster and the safety rules that follow it, and the war economy of 1914 to 1918 (the dangers at sea come in 0.27); from 1919 to 1920 the game holds the 1913 curves until the war and the bubble arrive in later releases; from January 1921 it carries on as the 1921 game.
 
 It is a static browser game with no build step. Open `index.html`, or serve the folder with GitHub Pages (from the repo root; `.nojekyll` is included).
 
@@ -21,6 +21,7 @@ It is a static browser game with no build step. Open `index.html`, or serve the 
 | `js/emergency.js` | Emergencies: collision, ice, flooding, fire, illness, mutiny, piracy; severity; responders and salvage tugs; the master's questions and the owner's orders; diseases and port quarantine; the emergency window |
 | `js/disaster.js` | Lifeboats (the legal scale and boats for all), the night wireless watch, the 1912 disaster (which ship, the strike, the rival's sinking and the wireless room, the aftermath page), the rules that follow it (the boats law of 1913, the London Convention of 1914, the southern track), the Board of Trade's inspections after a censure, and the negligence ending |
 | `js/livery.js` | Liveries: the presets, the rivals' fixed colours, each ship's own paint, repainting, the colour chooser; the variety each ship is drawn with (her seed, or her design for sisters); the house flag; the card for a rival's ship |
+| `js/war.js` | The Great War's economy: the outbreak, wartime passenger and freight curves, coal, wages and ship prices, the state's war-risk insurance, the Admiralty's reserve list and requisition (roles, hire, wear, return in 1919), clearing steerage for cargo, the closed Hamburg trade and interned German lines, Excess Profits Duty, and the outbreak page |
 | `js/silent.js` | Ships without wireless: reckoned positions, overdue notices, sightings and relays by passing ships, foundering, posted missing |
 | `js/ledger.js` | Month-to-date accounts by category and by line |
 | `js/sim.js` | The simulation: bookings and cargo per voyage, departures, calls, arrivals, breakdowns, yards and upgrades, crew morale, daily costs, month roll |
@@ -106,6 +107,20 @@ A new game starts in January 1900 (`START`). Games begun in January 1921 by 0.19
 - **Variety** (`varOf`): every ship is drawn from a seed: funnel height, width and rake, masts (three or four on ships of the 1880s, one or two on the newest), the length of her superstructure, rows of portholes, window spacing, the forecastle and poop, sheer, ventilators and lifeboat spacing. Ships built to one design share a seed, so sisters look alike. A ship with boats for all carries a second row of boats. Cruise ships, fruit ships and post-war liners keep white hulls in their line's funnel colours.
 - **The chart**: the Line's markers take its funnel colour.
 
+## The Great War: the war economy (`js/war.js`)
+
+On the 1900 calendar only; games begun in 1921 never see it.
+
+- **The outbreak** (`WAR_FROM`, August 1914) opens a page that says what changes, ends every rate war, and closes the Hamburg trade and the cruises until 1920 (`warClosed`; lines on a closed trade are closed and their ships laid up).
+- **Passengers** (`warPax`, applied in `preDemand`): steerage to about a tenth of the pre-war trade and first class to about three tenths (less once America is in the war in April 1917), over two or three months; the southern trades keep more cabin travel. Reservists crowd eastbound steerage in August and September 1914 (`warReturn`). Back to the pre-war trade over the year after the armistice.
+- **Freight** (`warFreight` in `cargoMod`, `warCargoVol` on the cargo offered): rates up to about 1.3 times their pre-war worth over and above the rise in prices, held down from 1917 when the Ministry of Shipping controls them; about a third more cargo is offered, so holds fill.
+- **Costs**: coal (`warCoal`) and wages (`warWage`) climb over prices; every ship still trading pays the state's war-risk insurance, 0.8% to 2% of her value a month (`warInsCost`); second-hand ships fetch up to 1.8 times their pre-war worth over prices (`warShips` in `shipMkt`). The brokers have a ship now and then until 1917, and none after.
+- **No building**: no new orders (`warNoBuild`), no keels laid, and ships already on the stocks progress at a quarter of the pace. The rival lines order, renew and found nothing in the war.
+- **Rivals** (`warRivalF`): the German lines' ships lie in neutral ports (no trade, a tenth of their costs, back at half strength from 1920); British, French and Italian lines lose a growing share of their ships to their states, which carry those ships' costs and pay their hire; the American lines grow while neutral. Nobody sells up or fails while the war lasts.
+- **The reserve list and requisition**: from October 1912 the Company tab lets you put ships on the Admiralty's reserve list. In the war the state takes a growing share of the fleet (`REQ_SHARE`: 15% in 1914, 30% in 1915, 45% in 1916, 75% in 1917 under the Liner Requisition Scheme, 85% in 1918). Admiralty-terms ships go first, then ships on the list. A line with ships on the list is asked to choose (it has a month, under Needs attention) and is paid 15% more; otherwise the biggest and fastest are taken. Roles (`reqRole`): armed merchant cruiser, hospital ship, troopship or transport. The state pays her crew, coal and insurance and a net hire of 0.30 to 0.40 a ton a month at the day's prices (`reqHire`, ledger `charter`); she loses about 1.2% condition a month and ages faster, and war service earns the Line standing (more for hospital ships). Ships come home from March 1919, with 0.9 a ton towards their refit.
+- **Clearing the steerage** (`warcargo`, `uncargo` yard jobs): steerage and tourist berths come out for about 1.1 and 1.9 tons of cargo each; they go back after the war for the same price. The Marine Superintendent advises it when it pays.
+- **Excess Profits Duty** (`epdJanuary`): each January the year's profit is recorded (`S.annual`); for 1914 (from August) to 1920 the Treasury takes 50%, 50%, 60%, 80%, 80%, 40% and 60% of the profit above the standard: the average of 1911 to 1913, or 6% of the Line's net worth at the outbreak if more, carried forward at the day's prices.
+
 ## Rival companies
 
 Each rival line (`RIVAL_P` and `RIVALS`, with the company record in `S.rivals[id]`) keeps accounts in `js/companies.js`:
@@ -150,6 +165,7 @@ Run from the repo root with Node (and Python for the bundler).
 |---|---|
 | `node tools/harness.js` | Plays the first fifteen years (1900 to 1914) headless under scripted strategies (idle, cautious, careful, advisor, expander, prudent, office, undercutter, liverpool), many seeds each, and prints survival, net worth by year, first-year profit, rate wars and profit by route. `careful` is the sensible owner the 1914 targets are set for: six months' running costs in hand, keeping its debt, less cash in hand, under a third of the fleet's value, buying only ships that should earn an eighth of their price a year, moving spare cash into government stock on rumours of a panic, moving or selling losers and worn-out ships |
 | `node tools/harness.js advisor 20` | One strategy, 20 seeds |
+| `END=1920 node tools/harness.js careful 20` | Plays on to the given year (default 1915) and prints the growth of net worth over the war |
 | `DEBUG=1 node tools/harness.js careful 40` | Also prints the last news of each bankrupt game; `DEBUG=2` prints a half-yearly trace of its cash, debt and fleet and its big events |
 | `node tools/companies.js [years] [seeds] [verbose]` | Plays the given years (default 40) headless with a plain expanding player who cannot go bust, and prints the rival companies year by year (ships, tonnage, lines, the biggest line's share, cash, debt), failures and new lines per decade, and checks that no line dominates, no trade lies empty and failures stay at a few a decade |
 | `node tools/outside.js [years] [seeds] [sell]` | Gives the Line a full shore establishment, plays the given years (default 15) and prints what each place would earn a month from other lines every January, against its running cost and price; with `sell` every place sells, and it prints what each earned and the Line's own takings, for the trade-off |
@@ -162,6 +178,8 @@ Run from the repo root with Node (and Python for the bundler).
 Checked with the harness after any economic change. For the 1900 start (the overhaul's stage 1, finished in 0.23):
 
 - A sensible owner (`careful`) has 3 to 6 ships in August 1914, and fewer than 1 in 5 such games go bankrupt before the war. At 0.25.1, over 40 seeds (20 swing by two either way): 4 in 40 bankrupt, median fleet 7, median net worth £59,000 in 1914. Before 0.25.1 it was 12 in 40, mostly the starting ship lost in a winter gale and judged too small for her route, and the 1907 panic's called loans.
+- Through the war (`END=1920 node tools/harness.js careful 20`): 2 in 20 bankrupt, net worth in January 1919 about 7.9 times January 1914 in the money of the day, 3.5 times at 1914 prices. The design target is about double at 1914 prices: war losses (0.27) are meant to close most of the gap. Autumn 1914 fares on the Morven are about 84% down on 1913 (target 60% to 80%).
+- Owners who do not adapt to the war go under: `idle` 11 in 20 and `cautious` 7 in 20 by 1920, nearly all in 1915 and 1916 with steerage ships and no cargo. Head office advises clearing the steerage.
 - An owner who does nothing (`idle`): 6 in 30 bankrupt, nearly all in 1914 once the boats law cuts the Morven's steerage. `cautious`: 3 in 30.
 - An owner who does nothing (`idle`) is hurt by the boats law: from July 1913 the Morven carries about a third of her steerage until she has boats for all. Head office and the news warn from October 1912.
 - The first year makes a few thousand pounds with the one ship; margins are good enough through 1906 to add a ship every year or two.
