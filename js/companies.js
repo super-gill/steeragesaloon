@@ -172,12 +172,14 @@ function coFound(q){
   for(let i=0;i<n;i++){const x=makeRivalShip(d.id,routes[i%routes.length],Math.floor(yearOfM(m))-Math.floor(R()*4));ships.push(x);}
   const cost=ships.reduce((a,x)=>a+coNewPrice(x),0);
   // the promoters raise enough for the ships and about four months' running costs
-  S.rivals[d.id]={cash:Math.round((cost*0.3+80000*PX())/1000)*1000,debt:Math.round(cost*Math.min(0.5,P.lev)/1000)*1000,h:[],born:m};
+  // a speculative line of 1919 and 1920 buys at bubble prices on borrowed money and keeps little in hand
+  if(q.spec){P.lev=0.75;P.spec=true;const c2=cost*warShips(m);S.rivals[d.id]={cash:Math.round((c2*0.08+40000*PX())/1000)*1000,debt:Math.round(c2*0.75/1000)*1000,h:[],born:m,spec:true};}
+  else S.rivals[d.id]={cash:Math.round((cost*0.3+80000*PX())/1000)*1000,debt:Math.round(cost*Math.min(0.5,P.lev)/1000)*1000,h:[],born:m};
   for(const x of ships){S.rships.push(x);newRivalVis(x);}
   S.coNew.unshift({o:d.id,m,routes});if(S.coNew.length>30)S.coNew.length=30;
   S.rmoves.unshift({m,o:d.id,rk:routes[0],kind:'enter'});if(S.rmoves.length>40)S.rmoves.length=40;
   const mine=routes.some(rk=>S.lines[rk]);
-  news(`A new line, the ${d.name} (${d.flag.split(',')[0]}), starts sailing on ${routes.map(rk=>ROUTES[rk].name).join(' and ')} with ${n} ships.${mine?' More competition for your ships there.':''}`,mine?'bad':'',mine);
+  news(`${q.spec?'Floated on borrowed money at the top of the market, a':'A'} new line, the ${d.name} (${d.flag.split(',')[0]}), starts sailing on ${routes.map(rk=>ROUTES[rk].name).join(' and ')} with ${n} ships.${mine?' More competition for your ships there.':''}`,mine?'bad':'',mine);
 }
 /* the queue of lines to come, and fresh capital for any open trade that has been left with no rival ships at all */
 function coEntrants(stats){

@@ -37,6 +37,8 @@ The research notes behind the data tab are in `research/`.
 
 ## Build order
 
+Balance issues left open by each release are listed in [BALANCE.md](BALANCE.md), for the final pass before 1.0.0.
+
 | Release | Scope |
 | --- | --- |
 | 0.16.0 | Balance pass: the 12 stacked changes (below) |
@@ -50,7 +52,8 @@ The research notes behind the data tab are in `research/`.
 | 0.24.0 | The 1912 disaster, Convention, negligence ending (done: `js/disaster.js`) |
 | 0.25.0 | Liveries and ship variety (done: `js/livery.js`) |
 | 0.26.0 | The war economy (done: `js/war.js`) |
-| 0.27.0 to 0.28.0 | War risk, the bubble and handover |
+| 0.27.0 | War risk (done: the war at sea in `js/war.js`) |
+| 0.28.0 | The bubble and handover (done: the 1919 and 1920 section of `js/war.js`) |
 | 0.29.0 to 0.32.0 | The markets (R2 to R5) |
 | 1.0.0 | 1900 to 1940 complete and balanced |
 

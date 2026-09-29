@@ -23,7 +23,13 @@ const EMERG={
     first:w=>`Firemen refuse duty over pay and food. Stokehold abandoned. Engines stopped ${w}. Officers armed.`},
   piracy:{name:'Piracy',type:'unrest',rate:[5,11],sos:true,grave:0.1,
     first:w=>`Armed men among the passengers have tried to seize the bridge ${w}. Officers holding the wheelhouse. Require assistance.`},
-  quar:{name:'Quarantine',type:'quar',rate:[0,0],sos:false,grave:0}
+  quar:{name:'Quarantine',type:'quar',rate:[0,0],sos:false,grave:0},
+  // the war at sea (war.js)
+  uboat:{name:'Submarine sighted',type:'war',rate:[0,0],sos:false,grave:0,first:w=>`Submarine sighted on the surface ${w}, about four miles off the starboard bow. She is closing.`},
+  nearby:{name:'Ship torpedoed nearby',type:'war',rate:[0,0],sos:false,grave:0,first:w=>`Steamer ahead of us torpedoed ${w}. She is going down fast. Boats in the water.`},
+  raider:{name:'German raider',type:'war',rate:[0,0],sos:false,grave:0,first:w=>`Cruiser under German colours ${w} has ordered us to stop. She is faster than we are.`},
+  torpedo:{name:'Torpedoed',type:'water',rate:[16,28],sos:true,grave:0.8,war:true,first:w=>`Torpedoed without warning ${w}. Explosion abreast number 2 hold. Settling by the head.`},
+  mine:{name:'Struck a mine',type:'water',rate:[5,11],sos:true,grave:0.3,war:true,first:w=>`Struck a mine ${w}. Holed forward. Water in the forepeak and number 1 hold.`}
 };
 /* the diseases a ship might carry. mort: share of the sick who die. qd: days of quarantine a port health officer imposes */
 const DISEASE={
@@ -101,7 +107,8 @@ function startEmergency(sh,k){
   let oth=null;if(D.other){oth=shipsNear(p,400,sh).find(x=>!x.own);e.other=oth?`SS ${oth.name} (${oth.line})`:'an unknown steamer';
     if(oth)e.resp.push({name:oth.name,line:oth.line,radio:oth.radio,eta:S.t,arrived:true});}
   S.emerg=S.emerg||[];S.emerg.push(e);if(S.emerg.length>40)S.emerg=S.emerg.filter(x=>!x.over||S.t-x.t1<30);sh.em=e.id;
-  if(D.type!=='sick'){sh.stopLeft=Math.max(sh.stopLeft||0,1e6);}
+  if(D.type!=='sick'&&D.type!=='war'){sh.stopLeft=Math.max(sh.stopLeft||0,1e6);}
+  if(D.type==='war'){e.sev=2;e.threat=0;if(k==='uboat')e.close=Math.random()<0.2;}if(D.war)sh.warLoss=true;
   const sevTxt=D.type==='water'?['',' Damage appears slight.','',' Damage heavy. Water coming in fast.'][sev]:D.type==='fire'?['','','',' Fire has a strong hold.'][sev]:'';
   emSay(e,sh,(D.sos&&radio?'SOS. ':'')+`SS ${sh.name}. `+D.first(where,e.other,DISEASE[e.dis],e.crew)+sevTxt,'bad');
   // who hears: by wireless within 250 miles, by rockets and lamps within 20
@@ -110,7 +117,7 @@ function startEmergency(sh,k){
   if(D.type==='unrest'){const nv=NAVY[Math.floor(R()*NAVY.length)];e.resp.push({name:nv,line:'navy',navy:true,radio:true,eta:S.t+(0.8+R()*1.2),arrived:false});}
   if(e.known){emSay(e,null,D.sos?(e.resp.length?`Answering: ${e.resp.filter(r=>!r.arrived).map(r=>`${r.navy?r.name:'SS '+r.name}${r.navy?'':' ('+r.line+')'}, about ${Math.max(1,Math.round((r.eta-S.t)*24))} h away`).join('; ')}.`:'No ship has answered yet.'):'Ship proceeding. Surgeon reports twice daily.',radio?'':'relay',stationFor(sh)+' Radio');
     if(typeof UI!=='undefined'&&emBig(e)){UI.emOpen=e.id;UI.emMin=false;UI.emNormal=false;}}
-  askOrders(e,sh,D.type==='water'?'w1':D.type==='fire'?'f1':D.type==='sick'?'s1':e.k==='piracy'?'p1':'u1');
+  askOrders(e,sh,e.k==='uboat'?'x1':e.k==='nearby'?'x2':e.k==='raider'?'x3':D.type==='water'?'w1':D.type==='fire'?'f1':D.type==='sick'?'s1':e.k==='piracy'?'p1':'u1');
   return e;
 }
 /* a line in the emergency log, and in the wireless room */
@@ -174,6 +181,21 @@ const DECIDE={
       fx:(e,sh)=>{const n=nearestPort(shipXY(sh));e.landed=true;e.rateM*=0.3;sh.stopLeft=Math.max(sh.stopLeft||0,0.5+n.d/(knotsOf(sh)*24));book('port',-Math.round(300+soulsOf(sh)*0.6),sh.legRoute,sh);S.rep=clamp(S.rep+1,0,100);return `Diverting to ${PN[n.k]} to land the sick.`;}},
     quiet:{label:'Say nothing and carry on',hint:()=>'No delay if the port doctor misses it. If he does not, the papers will have it.',fx:e=>{e.quiet=true;e.rateM*=1.2;return 'Understood. Proceeding. Log kept private.';}}
   },dflt:(e,sh)=>has(sh,'driver')||has(sh,'lax')||has(sh,'drinker')?'quiet':'isolate'},
+  x1:{q:'A submarine is closing. How is she to be handled?',opts:{
+    run:{label:'Turn away and run at full speed',hint:(e,sh)=>knotsOf(sh)>=16?'She is fast enough to have a good chance.':'She is slow: a submarine on the surface can keep up with her.',fx:(e,sh)=>{warChoose(e,sh,'run');return 'Turned away. Full speed. Stokers doing all they can.';}},
+    zig:{label:'Zigzag and hold on for port',hint:()=>'Makes her hard to aim at. The standard advice.',fx:(e,sh)=>{warChoose(e,sh,'zig');return 'Zigzagging. Lookouts doubled.';}},
+    hold:{label:'Hold her course',hint:()=>'Keeps her to time. The worst chance if the submarine means it.',fx:(e,sh)=>{warChoose(e,sh,'hold');return 'Holding course and speed.';}},
+    fire:{label:'Open fire with her gun',ok:(e,sh)=>!!sh.gun,hint:()=>'Keeps a surfaced submarine at a distance; she will most likely dive and lose her.',fx:(e,sh)=>{warChoose(e,sh,'fire');return 'Gunners closed up. Opening fire.';}},
+    ram:{label:'Ram her',ok:e=>!!e.close,hint:()=>'She has surfaced close ahead. It has been done: a win brings a reward and fame, a miss a torpedo at point-blank range.',fx:e=>{e.after={at:S.t+0.2/24,hit:Math.random()>0.3,how:'ram'};return 'Full ahead. Steering for her conning tower.';}}
+  },dflt:(e,sh)=>has(sh,'driver')||has(sh,'drinker')?'hold':sh.gun?'fire':knotsOf(sh)>=16?'run':'zig'},
+  x2:{q:'The ship ahead is sinking and her people are in the water. The Admiralty\'s orders are to keep going.',opts:{
+    stop:{label:'Stop and pick up survivors',hint:()=>'Saves lives and earns the Line honour. A stopped ship is the easiest target there is.',fx:(e,sh)=>warNearby(e,sh,true)},
+    pass:{label:'Keep going, as ordered',hint:()=>'Keeps her out of the submarine\'s sights. The patrols will come for the boats, perhaps.',fx:(e,sh)=>warNearby(e,sh,false)}
+  },dflt:(e,sh)=>has(sh,'cautious')||has(sh,'driver')?'pass':'stop'},
+  x3:{q:'A German raider has ordered her to stop.',opts:{
+    run:{label:'Run for it',hint:(e,sh)=>knotsOf(sh)>=16?'She might get away in the dark.':'The raider is faster: she will very likely be caught, and shelled.',fx:(e,sh)=>{e.after={at:S.t+1/24,hit:Math.random()<(knotsOf(sh)>=16?0.45:0.8),how:'run'};if(e.after.hit&&Math.random()<0.4){e.shelled=true;}return 'Running at full speed. All lights out.';}},
+    stop:{label:'Stop and surrender the ship',hint:()=>'Her people will be taken off and landed safely. She will be sunk.',fx:e=>{e.after={at:S.t+1/24,hit:true,how:'stop'};return 'Stopped. Awaiting the boarding party.';}}
+  },dflt:(e,sh)=>has(sh,'driver')?'run':'stop'},
   q1:{who:'The agents ask',q:'The port health officer has ordered her into quarantine.',opts:{
     accept:{label:'Accept the quarantine',hint:e=>`${e.days} days at anchor off the quarantine station, and the fees.`,fx:()=> 'Quarantine accepted. Ship at the quarantine anchorage.'},
     station:{label:'Land steerage at the quarantine station and pay their keep',ok:e=>e.steer>0,hint:e=>`The ship is released in a day. You pay for ${int(e.steer)} people ashore for ${e.days} days, about ${fmt(Math.round(e.steer*e.days*0.8+300))}.`,
@@ -217,6 +239,7 @@ function emDecide(e,id,by){
 function emergencyStep(e,sh,step){
   if(e.over||e.k==='quar')return;
   const D=EMERG[e.k],h=step*24;
+  if(D.type==='war'){if(e.dec&&S.t>=e.dec.until)emDecide(e,null,'master');if(e.after&&S.t>=e.after.at)warResolve(e,sh);return;}
   for(const r of e.resp)if(!r.arrived&&S.t>=r.eta){r.arrived=true;
     emSay(e,null,r.navy?`${r.name} alongside SS ${e.ship}. Boarding party sent across.`:r.tug?`Tug ${r.name} alongside SS ${e.ship}. Salvage pumps going aboard.`:`SS ${r.name} standing by SS ${e.ship}${D.type==='water'||D.type==='fire'?'. Boats lowered, pumps and hoses passed across':''}.`,'good',r.navy?'Naval wireless':r.tug?'Tug\'s wireless':`SS ${r.name}'s wireless`);
     if(r.own)S.rep=clamp(S.rep+1,0,100);}
@@ -225,7 +248,9 @@ function emergencyStep(e,sh,step){
   const sv=e.sev||1,cap=Math.min(100,e.cap+e.capA-SEV_CAP[sv]+help*(D.type==='unrest'?35:D.type==='sick'?6:12));
   e.ctrl=Math.min(cap,e.ctrl+h*(D.type==='sick'?4:12)/SEV_SLOW[sv]);
   const beat=e.ctrl>55?(e.ctrl-55)/6:0;
-  if(e.settle)e.threat=Math.max(0,e.threat-20*h);
+  // a fight that has held level for three days is won: rate and control can balance so closely that the threat barely moves
+  if(!e.held&&!e.settle&&!e.doom&&D.type!=='sick'&&S.t-e.t0>3)e.held=true;
+  if(e.settle||e.held)e.threat=Math.max(0,e.threat-20*h);
   else e.threat=clamp(e.threat+h*(e.rate*e.rateM*(1-e.ctrl/100)-beat),0,100);
   if(e.doom)e.threat=Math.max(e.threat,100*Math.min(1,(S.t-e.t0)/Math.max(1e-6,e.doomAt-e.t0))); // the 1912 ship: nothing saves her
   e.peak=Math.max(e.peak,e.threat);
@@ -257,6 +282,8 @@ function writeOff(e,sh,how){
   S.ships=S.ships.filter(x=>x!==sh);if(S.selShip===sh.id)S.selShip=S.ships[0]?S.ships[0].id:null;
 }
 function emEnd(e,sh,how){
+  if(EMERG[e.k].type==='war')return warEnd(e,sh,how);
+  if(how!=='lost'&&EMERG[e.k].war)sh.warLoss=false;
   const D=EMERG[e.k],help=e.resp.filter(r=>r.arrived&&!r.navy).length,souls=soulsOf(sh),crew=crewOf(sh),rk=sh.legRoute,R=Math.random;
   e.over=how;e.t1=S.t;sh.em=null;if(e.dec){e.dec=null;}
   if(how==='lost'&&(D.type==='water'||D.type==='fire')){
@@ -274,7 +301,7 @@ function emEnd(e,sh,how){
       :`${lost?`Boats of SS ${e.ship} found after a long night. ${int(souls+crew-lost)} survivors. ${int(lost)} missing.`:`All the boats of SS ${e.ship} picked up. Everyone saved.`}`,lost?'bad':'good','Coast station');
     if(sh.load)book('fares',-Math.round(sh.load.paxRev*0.5),rk,sh);
     sh.lost={t:S.t,where:posText(sh),saved:1-lost/Math.max(1,souls+crew),lost};
-    queueInquiry(sh,e);sh.inqQ=true;
+    if(!D.war)queueInquiry(sh,e);sh.inqQ=true; // no court sits on a ship the enemy sank
     if(radioOf(sh)||e.known)loseShip(sh);else{sh.state='lost';sh.stopLeft=0;}
     return;}
   if(how==='beached'){
@@ -327,6 +354,8 @@ function startQuarantine(sh,rk){
 function emTick(){
   for(const e of S.emerg||[]){
     if(e.dec&&S.t>=e.dec.until&&(e.k==='quar'||!emShip(e)||emShip(e).state!=='sea'))emDecide(e,null,'master');
+    // an emergency whose ship has moved on (another emergency, war service, a sale) is closed after a week, not left open for ever
+    if(!e.over&&e.k!=='quar'&&S.t-e.t0>7){const sh=emShip(e);if(!sh||sh.em!==e.id||sh.state!=='sea'){e.over=sh&&sh.state==='lost'?'lost':'saved';e.t1=S.t;e.dec=null;if(sh&&sh.em===e.id)sh.em=null;}}
     if(e.later&&e.later.length){const due=e.later.filter(l=>l.at<=S.t);if(due.length){e.later=e.later.filter(l=>l.at>S.t);
       for(const l of due){emSay(e,null,l.txt,l.kind,l.via);}}}
   }
@@ -356,11 +385,11 @@ function emergencyHTML(){
     <div class="em-head"><div><span class="eyebrow">Port health · ${hhmm(e.t0)} ${dateLong(e.t0)}</span><h3>SS ${esc(e.ship)}: quarantine at ${esc(e.where)}</h3></div>
       <button class="btn" data-act="emmin">Minimise</button></div>${tabs}
     <div class="em-body">${dec}${log}${e.over?`<button class="btn" data-act="emclose" data-id="${e.id}">Close</button>`:''}</div></div>`;}
-  const gname={water:'Water',fire:'Fire',sick:'Sickness',unrest:'Unrest'}[D.type];
+  const gname={water:'Water',fire:'Fire',sick:'Sickness',unrest:'Unrest'}[D.type],isWar=D.type==='war';
   const aboard=sh?`${int(soulsOf(sh))} passengers and about ${int(crewOf(sh))} crew aboard.`:'';
   const title=D.type==='sick'?`${DISEASE[e.dis].name[0].toUpperCase()+DISEASE[e.dis].name.slice(1)} aboard`:D.name;
   const state=e.over==='saved'?'Over. She was saved.':e.over==='beached'?'Over. She was beached.':e.over==='lost'?`Over. She was lost${e.dead?', with '+e.dead+' lives':''}.`
-    :e.seized?'The ship has been seized. Waiting for the navy.':e.abandon?'Abandoning ship.':e.beach?'Running for the shore.':e.threat>60?'Losing the fight.':e.ctrl>70?'Getting on top of it.':'Fighting it.';
+    :isWar?(e.after?'Waiting to see.':'The master wants orders.'):e.seized?'The ship has been seized. Waiting for the navy.':e.abandon?'Abandoning ship.':e.beach?'Running for the shore.':e.threat>60?'Losing the fight.':e.ctrl>70?'Getting on top of it.':'Fighting it.';
   const resp=e.resp.length?e.resp.map(r=>`<li>${r.navy?esc(r.name):(r.tug?'Tug ':'SS ')+esc(r.name)} <span class="meta">${r.navy?'navy':esc(r.line)}${r.own?' · yours':''}</span><span class="num">${r.arrived||S.t>=r.eta?'alongside':Math.max(1,Math.round((r.eta-S.t)*24))+' h away'}</span></li>`).join(''):`<li class="meta">${D.sos?'No ship has answered.':'No help needed at sea.'}</li>`;
   return `<div class="emerg${e.over?' done':''}" role="dialog" aria-label="Emergency">
     <div class="em-head"><div><span class="eyebrow">${e.over?'Emergency over':'Emergency'} · ${hhmm(e.t0)} ${dateLong(e.t0)}</span><h3>SS ${esc(e.ship)}: ${title}</h3></div>
@@ -368,8 +397,8 @@ function emergencyHTML(){
     <div class="em-body">
       <p class="em-state"><strong>${state}</strong> ${Math.floor(hrs)} h ${Math.round((hrs%1)*60)} min since the first signal, ${e.where}. ${aboard}</p>
       ${dec}
-      <div class="em-gauges"><div><span class="lbl">${gname}</span><div class="bar"><i class="${e.threat>60?'low':e.threat>30?'mid':''}" style="width:${Math.round(e.threat)}%"></i></div></div>
-        <div><span class="lbl">Crew in control</span><div class="bar"><i style="width:${Math.round(e.ctrl)}%"></i></div></div></div>
+      ${isWar?'':`<div class="em-gauges"><div><span class="lbl">${gname}</span><div class="bar"><i class="${e.threat>60?'low':e.threat>30?'mid':''}" style="width:${Math.round(e.threat)}%"></i></div></div>
+        <div><span class="lbl">Crew in control</span><div class="bar"><i style="width:${Math.round(e.ctrl)}%"></i></div></div></div>`}
       <div><span class="lbl">Answering the call</span><ul class="em-resp">${resp}</ul></div>
       ${log}
       ${!e.over?`<div class="em-orders"><span class="lbl">From the office</span>${radio?`<div class="em-opts">${sh?officeOpts(e,sh).map(([id,o])=>`<button class="em-opt" data-act="emoffice" data-id="${e.id}" data-o="${id}"><b>${esc(o.label)}</b><span>${esc(o.hint(e,sh))}</span></button>`).join(''):''}</div><button class="btn quiet" data-act="emreport" data-id="${e.id}">Ask for a report</button>`:'<p class="note">She has no wireless. The office cannot reach her; the master decides alone.</p>'}</div>`:''}

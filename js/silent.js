@@ -9,7 +9,7 @@ function nmBetween(a,b){const q=latLon((a.x+b.x)/2,(a.y+b.y)/2);return Math.hypo
 /* the speed the office plans on: the passage her schedule allows (a foul bottom, a coaling stop), or her speed if none */
 function plannedSpeed(sh){const lg=sh.load;
   if(lg&&lg.geo===sh.geo&&lg.seaDays>0){const g=GEO(sh.geo),calls=stopsFor(sh.geo,sh.dir).length,days=lg.seaDays-calls*CALL_DAYS;if(days>0.5)return g.dist/days;}
-  return knotsOf(sh)*SPD[sh.speed]*shipMods(sh).speed*foulF(sh)*24/trackF(sh.geo,S.m);}
+  return knotsOf(sh)*SPD[sh.speed]*shipMods(sh).speed*foulF(sh)*24/trackF(sh.geo,S.m)/warSlow(sh);}
 /* where the office thinks a silent ship is: from her last report, at her planned speed */
 function estimateOf(sh){
   const g=GEO(sh.geo),base=sh.seen||{t:sh.sailedAt||S.t,pos:0,stopped:false},v=base.v||plannedSpeed(sh);
@@ -76,10 +76,10 @@ function insClaim(sh,k){
 }
 /* the underwriters pay the insured value; the loss of life is never forgotten */
 function loseShip(sh){
-  const L=sh.lost||{lost:0,saved:1},c=insClaim(sh);admRepay(sh); // her Admiralty loan is settled out of the claim
-  S.rep=clamp(S.rep-(L.lost>200?8:L.lost>20?5:2),0,100); // the court of inquiry decides the rest
-  if(!sh.inqQ)queueInquiry(sh,null);
-  news(`SS ${sh.name} is lost${L.where?' '+L.where:''}. ${L.lost?`${int(L.lost)} lives lost.`:'Everyone aboard was saved.'} ${c.txt} A court of inquiry will sit.`,'bad',2);
+  const war=!!sh.warLoss,L=sh.lost||{lost:0,saved:1},c=war?warClaim(sh):insClaim(sh);admRepay(sh); // her Admiralty loan is settled out of the claim
+  S.rep=clamp(S.rep-(war?(L.lost>200?3:0):L.lost>200?8:L.lost>20?5:2),0,100); // the court of inquiry decides the rest
+  if(!sh.inqQ&&!war)queueInquiry(sh,null);
+  news(`SS ${sh.name} is ${war?'sunk by the enemy':'lost'}${L.where?' '+L.where:''}. ${L.lost?`${int(L.lost)} lives lost.`:'Everyone aboard was saved.'} ${c.txt}${war?'':' A court of inquiry will sit.'}`,'bad',2);
   S.ships=S.ships.filter(x=>x!==sh);if(S.selShip===sh.id)S.selShip=S.ships[0]?S.ships[0].id:null;
 }
 /* daily: overdue ships, drifting ships, posted missing */

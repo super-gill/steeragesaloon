@@ -2,6 +2,27 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.28.0 (29 September 2026)
+The bubble and the handover, 1919 and 1920.
+- From the armistice the world wants ships. Second-hand prices climb to about two and a half times their normal level by the spring of 1920; the yards take orders again, at up to three fifths over normal; freight still pays well and, in 1920, emigrants rush to cross the North Atlantic before America closes the door.
+- Buyers make offers for the Line's ships, a little over their inflated worth, under Needs attention. Sell and she goes now, or when she next reaches port. A ship sold at the top fetches two to three times her 1913 worth in 1913 money.
+- Speculative lines are floated on borrowed money at the top of the market. They mostly fail in the crash.
+- In June 1919 the peace treaty hands the German lines' big ships to the Allies. The two largest are auctioned by the Reparations Commission on the Buy and build tab: sealed bids (low, fair or high) by October, against the Allied lines. The rest go to the biggest Allied lines.
+- The boom breaks in the autumn of 1920 and from January 1921 the game carries on as the 1921 game, crash and all. A ship held through it loses half to two thirds of her peak value; a ship built at 1920 prices is worth her real cost once the boom is gone. The 1920 emigrant rush does not carry into the demand after 1921.
+- Head office gives no advice to buy or build at boom prices, and the brokers list fewer ships while the boom lasts. The times shows the boom and warns when it turns.
+- Fixed: an emergency could stay open for months when the fight and the flooding balanced almost exactly, or when her ship had moved on. A fight that holds for three days is now won, and an emergency whose ship has moved on is closed after a week.
+- The harness reports the handover (lines solvent in 1914 still trading, their fleets, and net worth over the crash), and its careful owner does not buy at boom prices.
+
+## 0.27.0 (29 September 2026)
+The Great War, part two: the war at sea.
+- Raiders on the southern trades in the autumn of 1914, mines off the home ports, and submarines from February 1915, at their worst in the spring of 1917 when the war on merchant ships becomes unrestricted.
+- An attack plays out in the emergency window. A submarine sighted: run, zigzag, hold her course, open fire if she carries a gun, or ram her if she surfaced close ahead. A ship torpedoed nearby: stop for her people, or keep going as ordered. A raider: run, or stop and let her people be taken off. A torpedo hit is a flooding emergency fought like any other, and most torpedoed ships are lost.
+- Protections, each with a price: convoys from June 1917, speed, zigzagging, dazzle paint from March 1917, a gun and naval gunners (for lines with the Admiralty's goodwill), the wireless kept day and night, and a good deck crew. A new War at sea section on each ship's panel shows her risk and her protections; the Marine Superintendent advises them.
+- The state's war-risk scheme pays four fifths of a ship sunk by the enemy; a private top-up on her panel pays the rest, dearer after each loss. No court of inquiry sits on a war loss. Ships on war service can be lost too, and the state pays an agreed value close to their pre-war worth.
+- In May 1915 a rival's express liner is torpedoed off Ireland with Americans aboard; fewer cabin passengers cross.
+- Dazzle paint replaces the livery until the ship is repainted after the war.
+- The harness counts war losses and plays the careful owner with protections (or without, `PROT=0`), and reports war growth with ships at their pre-war worth.
+
 ## 0.26.0 (29 September 2026)
 The Great War, part one: the war economy.
 - War breaks out in August 1914. A page says what changes. Emigration stops and the cabin trade falls to a fifth or less within three months (Americans keep crossing until April 1917); reservists crowd the eastbound steerage home in August and September. Hamburg and the cruises close until 1920. The rate wars end.

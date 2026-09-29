@@ -70,7 +70,7 @@ const idleCost=sh=>0.25*crewCost(sh)+(sh.captain?sh.captain.wage:0)+insCost(sh);
 const DEPT_OF={wcr:'traffic',cpay:'crew',ctrain:'crew',off:'crew',review:'sec',reserve:'sec',buy:'traffic',build:'traffic','rep-mail':'sec','rep-low':'sec','conf-war':'sec',pier:'sec',agency:'sec',bunker:'sec',dept:'sec',
   fare:'fares',tension:'fares',adv:'fares',service:'fares',match:'fares',
   move:'traffic',unlay:'traffic',layup:'traffic',sell:'traffic',rin:'traffic',
-  speed:'marine',maint:'marine',thresh:'marine',dock:'marine',scrape:'marine',oil:'marine',refurb:'marine',reefer:'marine',wireless:'marine',warcargo:'marine',replate:'marine',boats:'marine',watch:'marine',gross:'marine',censure:'marine',scrap:'marine',
+  speed:'marine',maint:'marine',thresh:'marine',dock:'marine',scrape:'marine',oil:'marine',refurb:'marine',reefer:'marine',wireless:'marine',warcargo:'marine',zig:'marine',convoy:'marine',dazzle:'marine',gun:'marine',wtop:'marine',replate:'marine',boats:'marine',watch:'marine',gross:'marine',censure:'marine',scrap:'marine',
   pay:'crew',captain:'crew'};
 const deptOf=h=>DEPT_OF[h.id.split(/[:0-9]/)[0]]||'sec';
 let ADV_CACHE={key:null,list:[]};
@@ -204,6 +204,18 @@ function advice(){MOD_EPOCH++;
         why:`The surveyors find her plating wasting and her frames tired. New plate and frames (${money(refitCost(sh,'replate'))}, ${yardDays(sh,'replate')} days) buy her years of safe service${n?', though less than last time':''}. Left alone she gets more dangerous every crossing and loses her steerage certificate.`,act:[['Book it','setyard',sh.id,'replate']]});
       if(f>=88&&S.ships.length>1)add({id:`scrap:${sh.id}`,scope:'ship',ref:sh.id,sev:'warn',gain:600,title:`Send SS ${sh.name} to the breakers`,
         why:`She is worn out: ${f>=90?'no steerage certificate, double insurance, and':''} a far higher chance of a serious emergency every crossing. A loss now would go badly at the inquiry.`,act:[['Send her to the breakers','scrapship',sh.id],['View her','selship',sh.id]]}); }
+    // the war at sea: each protection, when it is to be had
+    if(atWar()&&sh.line&&ACTIVE.includes(sh.state)){const pm=warLossPM(sh),v=shipValue(sh),yr=p=>Math.max(1,Math.round((1-Math.pow(1-p,12))*100));
+      if(pm>0.002&&!sh.zigzag)add({id:`zig:${sh.id}`,scope:'ship',ref:sh.id,sev:'warn',gain:v*(pm-warLossPM(sh,{zigzag:true})),title:`Zigzag SS ${sh.name}`,
+        why:`She has about a ${yr(pm)}% chance of being sunk in a year as she sails. Zigzagging brings it to about ${yr(warLossPM(sh,{zigzag:true}))}%, for passages about 7% longer.`,act:[['Zigzag','setship',sh.id,'zigzag',1]]});
+      if(convoyOK()&&!sh.convoy&&knotsOf(sh)<20&&pm>0.002)add({id:`convoy:${sh.id}`,scope:'ship',ref:sh.id,sev:'warn',gain:v*(pm-warLossPM(sh,{convoy:true})),title:`Sail SS ${sh.name} in convoy`,
+        why:`In convoy her chance of being sunk in a year falls from about ${yr(pm)}% to ${yr(warLossPM(sh,{convoy:true}))}%. She will be about a fifth slower on each passage.`,act:[['Join the convoys','setship',sh.id,'convoy',1]]});
+      if(S.m>=DAZZLE_FROM&&!sh.dazzle&&!inVisit('dazzle')&&canSpend(refitCost(sh,'dazzle')))add({id:`dazzle:${sh.id}`,scope:'ship',ref:sh.id,sev:'tip',gain:v*(pm-warLossPM(sh,{dazzle:true})),title:`Paint SS ${sh.name} in dazzle`,
+        why:`Fewer hits for ${money(refitCost(sh,'dazzle'))} and ${yardDays(sh,'dazzle')} days in the yard.`,act:[[sh.pendingYard?'Add it to her yard visit':'Book it','setyard',sh.id,'dazzle']]});
+      if(warGoodwill()&&!sh.gun&&!inVisit('gun')&&canSpend(refitCost(sh,'gun'))&&pm>0.002)add({id:`gun:${sh.id}`,scope:'ship',ref:sh.id,sev:'tip',gain:v*(pm-warLossPM(sh,{gun:true})),title:`Arm SS ${sh.name}`,
+        why:`A gun aft and naval gunners keep a surfaced submarine at a distance: fewer hits, for ${money(refitCost(sh,'gun'))} and ${yardDays(sh,'gun')} days in the yard.`,act:[[sh.pendingYard?'Add it to her yard visit':'Book it','setyard',sh.id,'gun']]});
+      if(!sh.warTop&&(1-Math.pow(1-pm,12))>0.06)add({id:`wtop:${sh.id}`,scope:'ship',ref:sh.id,sev:'tip',gain:v*0.2*pm,title:`Take a private war-risk top-up on SS ${sh.name}`,
+        why:`If she is sunk the state pays four fifths of her value; the rest, about ${money(v*0.2)}, would be the Line's loss. The top-up costs about ${money(v*0.2*warInsRate(S.m)*2.5*(1+0.2*((S.war&&S.war.losses)||0)))} a month.`,act:[['Take it','setship',sh.id,'warTop',1]]});}
     if(atWar()&&!sh.wcSave&&(sh.berths.t||0)+(sh.berths.tt||0)>=100){const t=sh.berths.t||0,tt=sh.berths.tt||0;
       yard('warcargo',{berths:{...sh.berths,t:0,tt:0},cargo:Math.round(sh.cargo+t*WC_T+tt*WC_TT)},`Clear SS ${sh.name}'s steerage for cargo`,`The emigrants have stopped coming and every hold fills at war rates. Her steerage decks would take about ${int(t*WC_T+tt*WC_TT)} more tons; they can be put back after the war for the same price.`);}
     if(sh.fuel==='coal'&&yearNow()>=OIL_FROM&&yearNow()-sh.built<28)yard('oil',{fuel:'oil'},`Convert SS ${sh.name} to oil`,'Oil firing cuts her stokehold crew and her bunker bill.');
@@ -252,7 +264,8 @@ function advice(){MOD_EPOCH++;
     why:`You hold ${money(S.cash)} against running costs of about ${money(rc)} a month, before coal and port bills. One bad month could put you in the bank's hands. Borrow while you can, lay up a loss-making ship, or hold off on buying.`,act:[['Bank','tabgo','finance']]});
   const deps=S.market.map(m=>Math.round(m.price*0.4));
   const fleetV=S.ships.reduce((a,x)=>a+shipValue(x),0);
-  if(S.market.length&&S.cash-reserve>Math.min(...deps)&&(!S.ships.length||S.debt<0.6*fleetV)){
+  // not at the top of the 1919 and 1920 boom: ships bought at two and a half times their worth lose most of it in the crash
+  if(S.market.length&&shipMkt()<=1.3&&S.cash-reserve>Math.min(...deps)&&(!S.ships.length||S.debt<0.6*fleetV)){
     let best=null;
     for(const m of S.market){const dep=Math.round(m.price*0.4);if(fatOf(m)>=70||S.cash-reserve<dep||S.debt+m.price-dep>0.62*(fleetV+m.price))continue;
       for(const rk of Object.keys(ROUTES)){const q=econYear(m,rk);const pay=q.pm-(m.price-dep)*0.065/12;if(!best||pay>best.pay)best={m,rk,pay,dep};}}
@@ -262,7 +275,7 @@ function advice(){MOD_EPOCH++;
       act:[['Buy her','buyship',best.m.name,best.rk],['See brokers','tabgo','brokers']]});
   }
   // a new ship, when the line can carry the cost
-  const bi=warNoBuild()?null:buildIdea();
+  const bi=warNoBuild()||warBuild(S.m)>1.1?null:buildIdea(); // no ordering at inflated prices either
   if(bi)add({id:'build',scope:'co',sev:'tip',gain:bi.pm,title:`Build ${/^[aeiou]/i.test(PURPOSES[bi.d.purpose].name)?'an':'a'} ${PURPOSES[bi.d.purpose].name.toLowerCase()} for ${ROUTES[bi.rk].name}`,
     why:`The traffic figures suggest a ${int(bi.d.grt)}-ton, ${bi.d.knots}-knot ${PURPOSES[bi.d.purpose].name.toLowerCase()} would clear about ${money(bi.pm)} a month there at today's trade: about ${fmt(bi.price)}, paying for herself in ${Math.round(bi.price/(bi.pm*12))} years. Open the drawing office to work it up.`,
     act:[['Open the drawing office','build',bi.d]]});

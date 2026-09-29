@@ -102,6 +102,7 @@ function alerts(){
   if(S.call)A.push({id:'call',noNote:true,k:'bad',t:`The bank has called in ${fmt(S.call.amt)}, due by ${monthName(S.call.due)}. Unpaid, it will seize ships.`,b:[['Bank','tabgo','finance']]});
   for(const sh of S.ships)if(fatOf(sh)>=90&&sh.state!=='yard')A.push({id:'worn'+sh.id,k:'warn',t:`SS ${sh.name} is worn out and should go to the breakers.`,b:[['View','selship',sh.id]]});
   if(S.war&&S.war.ask)A.push({id:'reqask'+S.war.ask.due,noNote:true,k:'bad',t:`The Admiralty needs ${S.war.ask.n===1?'another ship':S.war.ask.n+' more ships'} for war service. Offer the ones you would rather lose, or it chooses by ${monthName(S.war.ask.due)}.`,b:[['Choose','tabgo','company']]});
+  if(S.war&&S.war.offers)for(const o of S.war.offers){const x=S.ships.find(q=>q.id===o.sid);if(x&&!x.pendingExit)A.push({id:'offer'+o.sid+'_'+o.exp,noNote:true,k:'good',t:`A buyer offers ${fmt(o.amt)} for SS ${x.name} (worth about ${fmt(shipValue(x))} on the market), open until ${monthName(o.exp)}.`,b:[['Sell','offeryes',o.sid],['Decline','offerno',o.sid]]});}
   if(S.cash<0)A.push({id:'od',noNote:true,k:'bad',t:`The account is overdrawn. The bank forecloses below ${fmt(-odLimit())}.`,b:[['Bank','tabgo','finance']]});
   // an item the owner has noted or acted on stays away until the situation passes; decisions and the bank's demands stay put
   const seen=S.attnSeen=S.attnSeen||{};for(const id in seen)if(!A.some(a=>a.id===id))delete seen[id];
@@ -247,6 +248,7 @@ function renderShipDetail(sh){
       <span class="note">Every yard job, upgrade and facility for her in one window, booked as one visit.${atOwnYard(sh)?' She is at your own yard: work here is 30% cheaper and quicker.':''}</span></div>
     <div class="ctl"><span class="lbl">Her hull</span><span class="note"><strong>${fatWord(sh)}.</strong> ${Math.floor(yearNow()-sh.built)} years old${condCap(sh)<92?`; the yard can bring her to ${condCap(sh)}% at best`:''}${sh.replates?`, re-plated ${sh.replates===1?'once':sh.replates+' times'}`:''}. Hard driving, full speed, gales and neglect use up her life faster. ${dimsOf(sh).len|0} ft long, drawing ${dimsOf(sh).draught|0} ft${sh.len?'':' (estimated)'}. ${(sh.foul||0)<0.2?'Clean bottom.':(sh.foul||0)<0.45?'Some growth on her bottom.':(sh.foul||0)<0.7?'Her bottom is foul; she has lost speed.':'Badly foul and slow. She needs drydocking.'}</span></div>
     `)}
+    ${atWar()&&sh.state!=='req'?shipGrp('warsea','War at sea',`${sh.convoy&&convoyOK()?'convoy · ':''}${sh.zigzag?'zigzag · ':''}${sh.dazzle?'dazzle · ':''}${sh.gun?'gun · ':''}about ${Math.max(1,Math.round((1-Math.pow(1-warLossPM(sh),12))*100))}% a year`,warSeaHTML(sh)):''}
     ${newCal()?shipGrp('safe','Boats and wireless',safeSum(sh),safeHTML(sh)):''}
     ${shipGrp('ins','Insurance',`${INS_COVER[insOf(sh).cover].short} · ${fmt(insCost(sh))} a month`,insHTML(sh))}
     ${shipGrp('crew','Master and crew',`${sh.captain?sh.captain.name+' · ':''}morale ${Math.round(sh.morale)} · ${Math.round(crewHands(sh))} hands`,`
@@ -483,7 +485,7 @@ function renderBrokers(){
       ${sh.note?`<div class="meta">${sh.note}</div>`:''}
       <button class="btn" data-act="buy" data-id="${sh.id}" ${S.cash<dep||S.over?'disabled':''} style="width:fit-content">Buy · ${fmt(dep)} down, ${fmt(sh.price-dep)} mortgaged</button></div>`;}).join('')
     :'<p class="note">Nothing on the lists. New ships come up every quarter.</p>';
-  setHTML($('pane-brokers'),orderBookHTML()+`<section class="sec"><h2>Ships for sale</h2><p class="note">The brokers send a new list every quarter. The bank mortgages 60% of the price; you pay the rest in cash. Bought ships arrive laid up where they lie.</p>${body}</section>`);
+  setHTML($('pane-brokers'),orderBookHTML()+auctionHTML()+`<section class="sec"><h2>Ships for sale</h2><p class="note">The brokers send a new list every quarter. The bank mortgages 60% of the price; you pay the rest in cash. Bought ships arrive laid up where they lie.</p>${body}</section>`);
 }
 
 /* ---------- Shore ---------- */

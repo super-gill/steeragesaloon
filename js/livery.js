@@ -43,7 +43,7 @@ function rivalLiv(o){
 const lineLiv=()=>livFill(S.livery||LIV_DEFAULT);
 const paintOf=sh=>sh.owner?rivalLiv(sh.owner):livFill(sh.paint||S.livery||LIV_DEFAULT);
 const livKey=l=>{const q=livFill(l);return [q.funnel,q.band1,q.band2,q.top,q.hull,q.boot,q.upper].join('|');};
-const paintDiff=sh=>livKey(paintOf(sh))!==livKey(lineLiv());
+const paintDiff=sh=>(!!sh.dazzle&&!atWar())||livKey(paintOf(sh))!==livKey(lineLiv());
 /* a ship on the brokers' list comes in her old owners' colours */
 /* seeded from the ship herself, so the game's dice are not disturbed */
 function oldOwnerPaint(sh){

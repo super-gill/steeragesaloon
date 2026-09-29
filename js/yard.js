@@ -162,7 +162,7 @@ function designStats(d){
   let extras=fc.cost/PX();for(const k in d.extras)if(d.extras[k]&&EXTRAS[k])extras+=EXTRAS[k].cost(g);
   // the biggest ships cost far more than their tonnage: longer slips, heavier plate, more of everything done once only
   const sizeK=1+0.6*Math.pow(Math.max(0,(g-20000)/40000),1.3);
-  const base=(hull*sizeK*(LY.cost||1)+power+interiors+extras)*B.price*(d.contract==='fixed'?1.08:1)*(d.adm&&admEligible(d)?1.05:1)*PX(); // naval standards cost a twentieth more
+  const base=(hull*sizeK*(LY.cost||1)+power+interiors+extras)*B.price*(d.contract==='fixed'?1.08:1)*(d.adm&&admEligible(d)?1.05:1)*PX()*warBuild(S.m); // naval standards cost a twentieth more; 1919 and 1920 prices are inflated
   const price=Math.round(base/1000)*1000;
   const months=Math.round((6+g/1600)*Math.pow(Math.max(1,e.shp/15000),0.12)*[0.95,1,1.08,1.15][d.quality]*B.speed*Math.sqrt(P.cx));
   // running character: coal or oil a day at service speed, set by her engines and her lines
@@ -221,7 +221,7 @@ function placeOrder(d){
   const st=designStats(d);if(st.warn.length)return {ok:false,why:st.warn[0]};
   const adm=!!(d.adm&&admEligible(d)),dep=Math.round(st.price*0.1),own=adm?Math.round(dep/3):dep;if(S.cash<own)return {ok:false,why:`The yard wants ${fmt(own)} with the order${adm?' (the Admiralty pays the rest)':''}.`};
   S.orders=S.orders||[];S.yardNext=S.yardNext||534;
-  const o={id:S.yardNext++,d:Object.assign(JSON.parse(JSON.stringify(d)),{auto:{mach:false,form:false}}),price:st.price,paid:0,due:0,months:st.months,prog:0,stage:'drawing',left:2,ordered:S.m,late:0,unpaid:0,log:[],pi0:PX(),adm,admBal:0};
+  const o={id:S.yardNext++,d:Object.assign(JSON.parse(JSON.stringify(d)),{auto:{mach:false,form:false}}),price:st.price,paid:0,due:0,months:st.months,prog:0,stage:'drawing',left:2,ordered:S.m,late:0,unpaid:0,log:[],pi0:PX(),wb:warBuild(S.m),adm,admBal:0};
   o.d.name=o.d.name.trim();
   pay(o,dep,'deposit');S.orders.push(o);
   logOrder(o,`Ordered from ${builderOf(o.d).name} as Yard No. ${o.id}. ${fmt(dep)} paid with the order.`);
@@ -280,7 +280,7 @@ function ordersMonth(){
 }
 const LAUNCH_SPONSORS=['Lady Morven, wife of the chairman','the Duchess of Montrose','the Lord Provost\'s wife','Princess Mary','a shipyard apprentice\'s mother, at the chairman\'s insistence','the Countess of Eglinton','Mrs Stanley Baldwin'];
 function deliver(o,st,kn,B){
-  const d=o.d,sh=makeShip({name:d.name,built:Math.floor(yNow()),grt:d.grt,knots:kn,berths:{...st.berths},cargo:st.cargo,fuel:d.fuel,base:o.price,pi0:o.pi0||1,reefer:!!d.extras.reefer},96,B.port);
+  const d=o.d,sh=makeShip({name:d.name,built:Math.floor(yNow()),grt:d.grt,knots:kn,berths:{...st.berths},cargo:st.cargo,fuel:d.fuel,base:Math.round(o.price/(o.wb||1)),pi0:o.pi0||1,reefer:!!d.extras.reefer},96,B.port);
   Object.assign(sh,{fuelK:st.fuelK*Math.pow(d.knots/kn,0),crewK:st.crewK,appFS:st.fs,appT:st.t,galeK:st.gale,riskK:st.risk,safety:st.safety,decayK:st.decay,style:d.style,newUntil:S.m+18,foul:0,
     len:st.eng.len,beam:st.eng.beam,draught:st.eng.draught,shp:st.eng.shp,range:st.eng.range,designLine:d.line||null,
     design:{layout:d.layout||null,form:d.form,funnels:d.funnels,purpose:d.purpose,mach:d.mach,quality:d.quality,yardNo:o.id,builder:B.name,extras:Object.keys(d.extras).filter(k=>d.extras[k])},fit:100});
@@ -308,6 +308,6 @@ function genMarketShip(){
   d.fuel=built>=1925||d.mach==='motor'?'oil':'coal';d.style=built>=1950?'contemp':built>=1933?'moderne':built>=1925?'deco':'edw';d.quality=Math.random()<0.2?2:1;
   let name=GEN_A[Math.floor(Math.random()*GEN_A.length)]+GEN_B[Math.floor(Math.random()*GEN_B.length)];name=name[0]+name.slice(1);
   const st=designStats(d);
-  return {name,built,grt:d.grt,knots:d.knots,berths:{...st.berths},cargo:st.cargo,fuel:d.fuel,base:Math.round(st.price*0.8),pi0:PX(),reefer:!!d.extras.reefer,
+  return {name,built,grt:d.grt,knots:d.knots,berths:{...st.berths},cargo:st.cargo,fuel:d.fuel,base:Math.round(st.price*0.8/warBuild(S.m)),pi0:PX(),reefer:!!d.extras.reefer,
     note:`A ${PURPOSES[pk].name.toLowerCase()}, ${MACHINES[d.mach].name.toLowerCase()}, ${built<1901&&d.style==='edw'?'Victorian':STYLES[d.style].name} interiors.`,gen:{fuelK:st.fuelK,crewK:st.crewK,appFS:st.fs,style:d.style,design:{form:d.form,funnels:d.funnels,purpose:pk},len:st.eng.len,beam:st.eng.beam,draught:st.eng.draught,shp:st.eng.shp,range:st.eng.range}};
 }

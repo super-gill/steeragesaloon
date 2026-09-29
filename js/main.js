@@ -68,6 +68,9 @@ document.addEventListener('click',e=>{
     case 'emmin':UI.emMin=true;break;
     case 'warclose':warClose();break;
     case 'reqpick':reqChoose(+b.dataset.id);break;
+    case 'offeryes':offerTake(+b.dataset.id,true);break;
+    case 'offerno':offerTake(+b.dataset.id,false);break;
+    case 'abid':{const d=JSON.parse(b.dataset.d||'[]');auctionBid(d[0],d[1]);break;}
     case 'rcard':UI.rcard=b.dataset.id;break;
     case 'rclose':UI.rcard=null;break;
     case 'livopen':livPickOpen('change');break;
@@ -96,7 +99,7 @@ document.addEventListener('click',e=>{
     case 'unyardx':if(sh&&sh.state!=='yard')sh.yardAdd=(sh.yardAdd||[]).filter(x=>x!==b.dataset.k);break;
     case 'askexit':UI.confirm=b.dataset.k+sh.id;break;
     case 'exit':if(sh){if(sh.state==='sea'||sh.state==='repo')sh.pendingExit=b.dataset.k;else exitShip(sh,b.dataset.k);}UI.confirm=null;break;
-    case 'unexit':if(sh)sh.pendingExit=null;break;
+    case 'unexit':if(sh){sh.pendingExit=null;sh.saleAmt=null;}break;
     case 'openline':{const rk=b.dataset.id,fee=Math.round(2500*PX());if(S.cash>=fee&&!S.lines[rk]&&routeOpen(rk,S.m)){book('office',-fee,rk);S.lines[rk]={fares:defaultFares(rk),service:1,adv:1,last:[null,null]};news(`The Morven Line opens a ${ROUTES[rk].name} service.`,'good');}break;}
     case 'askclose':UI.confirm='close'+b.dataset.id;break;
     case 'closeline':{const rk=b.dataset.id;delete S.lines[rk];delete S.mail[rk];delete S.wars[rk];S.ships.forEach(x=>{if(x.line===rk){x.line=null;}});news(`The ${ROUTES[rk].name} service is closed.`);UI.confirm=null;break;}

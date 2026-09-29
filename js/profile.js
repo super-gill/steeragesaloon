@@ -4,7 +4,7 @@ function profileSVG(sh,mode,build){
   const VH=250,wl=195,k=1; // every ship is drawn to the same plan, then scaled as a whole by her size
   const L=400+k*190,VW=L+80,x0=40,hH=30+k*12,dy=wl-hH,X=f=>x0+L*f,bot=wl+16;
   const cid='hc'+sh.id+mode;
-  const D=sh.design||{},lay=layoutOf(sh),cargoLay=CARGO_LAY.includes(lay),P=paintOf(sh),V=varOf(sh);
+  const D=sh.design||{},lay=layoutOf(sh),cargoLay=CARGO_LAY.includes(lay),P=sh.dazzle?{...paintOf(sh),funnel:'#8E969A',band1:null,band2:null,top:false,hull:'#2B3033',upper:'#C9CDCF'}:paintOf(sh),V=varOf(sh);
   const rake=D.form?(D.form==='trad'?5:D.form==='maier'?22:D.form==='bulb'||D.form==='tank'?20:16):({island:6,castle:18,motor:30,fruit:24,modern:28,stream:20}[lay]||16);
   const cruiser=['castle','motor','fruit','stream','modern'].includes(lay);
   const bulb=D.form==='bulb'||D.form==='tank'?` Q${x0+L-rake+12},${bot-4} ${x0+L-rake+6},${bot+2}`:'';
@@ -62,6 +62,8 @@ function profileSVG(sh,mode,build){
     // hull
     const white=lay==='fruit'||lay==='modern'||!!sh.cruiser,hc=white?'#F3F1EA':P.hull,bootC=white&&lum(P.boot)<0.2?'#3D6B3A':P.boot,light=lum(hc)>0.55,up=P.upper;
     s+=`<path d="${hull}" style="fill:${hc}${light?';stroke:#BDB6A6':''}" stroke-width=".6"/>`;
+    if(sh.dazzle){const Rz=seed(strHash(sh.name+'dz'));s+=`<g clip-path="url(#${cid})">`;for(let x=x0-40;x<x0+L+40;x+=26+Rz()*22){const w=8+Rz()*16,sl=(Rz()<0.5?-1:1)*(20+Rz()*30),c=['#E9ECEE','#5E6E7A','#1B1F22','#9AB0BC'][Math.floor(Rz()*4)];
+      s+=`<polygon points="${x},${dy-12} ${x+w},${dy-12} ${x+w+sl},${bot+4} ${x+sl},${bot+4}" style="fill:${c}"/>`;}s+='</g>';}
     s+=`<g clip-path="url(#${cid})"><rect x="${x0-5}" y="${inYard?wl-4:wl-4}" width="${L+10}" height="${inYard?30:8}" style="fill:${bootC}"/>${lay==='fruit'?`<rect x="${x0-5}" y="${dy+3}" width="${L+10}" height="2" style="fill:#1B4757"/>`:''}</g>`;
     if(!cargoLay){
       s+=`<line x1="${x0+4}" y1="${dy+3}" x2="${X(.97)}" y2="${dy-2-V.sheer*0.6}" stroke="${light?'#1B4757':'#D9D2C0'}" stroke-width="${light?1.4:.8}" opacity=".6"/>`;
