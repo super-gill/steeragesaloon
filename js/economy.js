@@ -96,7 +96,7 @@ function gilts(buy,amt){
 /* ---------- the tax man: excess profits over a threshold, each January ---------- */
 function taxMonth(net){
   S.yearNet=(S.yearNet||0)+net;
-  if(S.m%12!==0)return;const profit=S.yearNet;S.yearNet=0;epdJanuary(profit);
+  if(S.m%12!==0)return;const profit=S.yearNet;S.yearNet=0;epdJanuary(profit);if(typeof floatJanuary==='function')floatJanuary(profit);
   const thr=150000*PX();if(S.m<ym(1925,0)||profit<=thr)return;
   const tax=Math.round((profit-thr)*0.3/100)*100;book('tax',-tax);
   news(`Excess profits duty: on ${fmt(profit)} earned last year the Treasury takes ${fmt(tax)}.`,'bad');

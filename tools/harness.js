@@ -7,7 +7,7 @@
    Prints survival, net worth by year, first-year profit, rate wars and profit by route. */
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const ROOT = path.join(__dirname, '..');
-const FILES = ['chart-data', 'data', 'helpers', 'economy', 'lanes', 'wireless', 'silent', 'emergency', 'disaster', 'livery', 'war', 'ledger', 'sim', 'rivals', 'companies', 'outside', 'trust', 'prewar', 'market', 'yard', 'naval', 'facilities', 'crew', 'state', 'clock', 'advice', 'times'].map(f => path.join(ROOT, 'js', f + '.js'));
+const FILES = ['chart-data', 'data', 'helpers', 'economy', 'lanes', 'wireless', 'silent', 'emergency', 'disaster', 'livery', 'war', 'ledger', 'sim', 'rivals', 'companies', 'outside', 'trust', 'prewar', 'market', 'float', 'yard', 'naval', 'facilities', 'crew', 'state', 'clock', 'advice', 'times'].map(f => path.join(ROOT, 'js', f + '.js'));
 const SRC = FILES.map(f => [f, fs.readFileSync(f, 'utf8')]).map(([f, s]) => [f, process.env.PATCH ? s.replace(/^const /gm, 'var ') : s]);
 
 const PRELUDE = `
@@ -45,7 +45,8 @@ const STRATS={
   prudent(){H.expand(12000,true);},
   /* the sensible owner the 1900 targets are set for: keeps six months' running costs in hand, borrows no more than half
      the fleet's value, buys only ships that should earn a sixth of their price a year, and lays up a ship that loses money */
-  careful(){const run=runningCost();H.boats();if(typeof PROT==='undefined'||PROT!=='0')H.warProt();
+  careful(){const run=runningCost();H.boats();if(typeof FLOAT!=='undefined'&&FLOAT&&!S.fl&&S.m>=ym(1906,0)&&!flCanFloat())flFloat(FLOAT,false); // FLOAT=0.6: float that share once it can, from 1906
+if(typeof PROT==='undefined'||PROT!=='0')H.warProt();
     // on rumours of a panic a careful owner puts spare cash into government stock, safe from a failing bank; after it, back
     if(S.crash&&S.crash.stage==='rumour'){const spare=Math.floor((S.cash-3*run)/1000)*1000;if(spare>0)gilts(true,spare);return;}
     if(S.gilts>0&&(!S.crash&&!S.call||S.cash<3*run))gilts(false,S.gilts); // back out of stock after the panic, or to pay the bills
@@ -67,7 +68,7 @@ const STRATS={
 `;
 
 function runGame(strategy, seed) {
-  const ctx = { console, PROT: process.env.PROT, MKT_OFF: process.env.MKT === '0', performance: { now: () => 0 }, localStorage: { getItem() { return null; }, setItem() {} } };
+  const ctx = { console, PROT: process.env.PROT, MKT_OFF: process.env.MKT === '0', FLOAT: +(process.env.FLOAT || 0), performance: { now: () => 0 }, localStorage: { getItem() { return null; }, setItem() {} } };
   vm.createContext(ctx);
   vm.runInContext(PRELUDE.replace('SEED', String(seed * 7919 + 13)).split('const H=')[0], ctx);
   for (const [f, s] of SRC) vm.runInContext(s, ctx, { filename: f });
@@ -88,7 +89,7 @@ function runGame(strategy, seed) {
         strat();}
       advance(1);
     }
-    return {bust:S.over==='bust'||S.over==='wound'?S.m-S.m0:null,wound:S.over==='wound',last:S.over?S.news.slice(0,8).map(n=>n.t):null,trace,keyN,cats,ships:S.ships.length,warLost,warReqLost,adj1919,warShips:warSet.size,sunk:globalThis.SUNK||[],final:Math.round(netWorth()),ships:S.ships.length,wars,byYear,fleetY,routes,firstYear:Math.round(first.reduce((a,b)=>a+b,0)),rep:Math.round(S.rep),lost,emerg:(S.emerg||[]).filter(e=>e.k!=='quar').length};
+    return {over:S.over,fl:S.fl?{bids:S.fl.bids||0,conf:Math.round(S.fl.conf),own:S.fl.own/S.fl.n,floated:S.fl.floated}:null,bust:S.over==='bust'||S.over==='wound'?S.m-S.m0:null,wound:S.over==='wound',last:S.over?S.news.slice(0,8).map(n=>n.t):null,trace,keyN,cats,ships:S.ships.length,warLost,warReqLost,adj1919,warShips:warSet.size,sunk:globalThis.SUNK||[],final:Math.round(netWorth()),ships:S.ships.length,wars,byYear,fleetY,routes,firstYear:Math.round(first.reduce((a,b)=>a+b,0)),rep:Math.round(S.rep),lost,emerg:(S.emerg||[]).filter(e=>e.k!=='quar').length};
   })()`, ctx);
 }
 
@@ -113,6 +114,8 @@ function report(strategy, n) {
   console.log(`  final net worth: p10 ${k(pct(R.map(r => r.final), 0.1))} · median ${k(pct(R.map(r => r.final), 0.5))} · p90 ${k(pct(R.map(r => r.final), 0.9))}`);
   if (+(process.env.END || 1915) >= 1921) { const s14 = R.filter(r => r.byYear[1914] > 0), ok = s14.filter(r => r.bust === null), fy = y => { const v = ok.map(r => r.fleetY[y]).filter(v => v !== undefined); return v.length ? pct(v, 0.5) : '-'; };
     console.log(`  handover: ${ok.length} of ${s14.length} lines solvent in 1914 still trading at the end; their median fleet ` + [1914, 1919, 1920, 1921, 1922].map(y => `${y} ${fy(y)}`).join(' · ') + `; net worth 1921 over 1920 median ${(pct(ok.filter(r => r.byYear[1920] > 0 && r.byYear[1921] !== undefined).map(r => r.byYear[1921] / r.byYear[1920]), 0.5) || 0).toFixed(2)}`); }
+  if (process.env.FLOAT) { const f = R.filter(r => r.fl || r.over === 'removed' || r.over === 'taken');
+    console.log(`  floated ${process.env.FLOAT}: ${f.length} of ${n} floated · removed by the board ${R.filter(r => r.over === 'removed').length} · taken over ${R.filter(r => r.over === 'taken').length} · bids per floated game ${(f.reduce((a, r) => a + (r.fl ? r.fl.bids : 0), 0) / Math.max(1, f.length)).toFixed(1)} · board at the end ${f.filter(r => r.fl).map(r => r.fl.conf).join(', ')}`); }
   console.log(`  fleet at end (median): ${pct(R.map(r => r.ships), 0.5)} · rate wars per game: ${(R.reduce((a, r) => a + r.wars, 0) / n).toFixed(1)} · reputation ${pct(R.map(r => r.rep), 0.5)} · emergencies per game ${(R.reduce((a, r) => a + r.emerg, 0) / n).toFixed(1)}, ships lost ${(R.reduce((a, r) => a + r.lost, 0) / n).toFixed(2)}`);
   console.log(`  avg profit by route over game: ` + Object.entries(routes).sort((a, b) => b[1] - a[1]).map(([q, v]) => `${q} ${k(v)}`).join(' · '));
 }

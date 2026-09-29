@@ -63,4 +63,7 @@ cash, which the crash does not touch).
 | Takeover prices uneven | In 1906, Dominion Pacific (14 ships, £411k fleet, £211k cash, no debt) cost £310k net of its cash to take to 90% and merge, 0.75 of its fleet's worth, since a cash-rich line trades well under its net worth; Nordmark (13 ships, £408k fleet, £185k debt) cost £768k, 1.9 times | A takeover about as dear as the fleet it brings in normal times, cheap in a crash | 0.30.0 |
 | Seat and control effects unmeasured | The halved and stopped fare pressure are checked as rules, not as outcomes (fewer rate wars in a game) | Measure rate wars per game with a controlled leader | 0.30.0 |
 | Investment Office heads are fixed | No candidates or replacement, unlike the other departments | Candidates each quarter, as the other departments | 0.29.0 |
+| Takeovers of an undefended floated Line | 1 in 10 careful owners floating 60% in 1906 taken over by 1925, 1.7 bids per game (the harness never defends) | Rare for an owner who defends; test a defending strategy | 0.31.0 |
+| Float proceeds may be generous | 49% raises about 0.75 of the Line's worth and 75% about twice it, all as new capital to the Line | Check against the real returns of floating; maybe part goes to the owner, not the Line | 0.31.0 |
+| Board targets unmeasured over the long run | No removals in 10 careful games; the board ends between 42 and 99 | Some removals for a careless owner; test a careless strategy | 0.31.0 |
 | 20-seed noise | About 2 games in 20 | Use 40 seeds for the final pass | 0.16.0 |

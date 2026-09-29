@@ -49,14 +49,16 @@ const moodWord=v=>v<0.6?'in a panic':v<0.8?'frightened':v<0.93?'nervous':v<1.08?
 
 /* what a company is worth, in all: the lines on their ships, cash and debts and their earnings; the others on earnings */
 function mkFund(id,m){
+  if(id==='morven')return typeof flOn==='function'&&flOn()?flWorth():0; // the Line itself, once floated
   const R=MK_REL_BY[id];if(R)return R.e0*PX()*R.drv(m)*10;
   // a line: half on its ships less its debts (cash counts up to a normal reserve: a hoard never reaches the shareholders),
   // half on eight years' earnings; never below a quarter of its ships, which a buyer could always sell
   const co=S.rivals[id];if(!co||co.dead)return 0;const val=coValue(id),e=coProfit(id),fl=0.25*val+1000*PX();
   return 0.5*Math.max(fl,val-co.debt+clamp(co.cash,-val,0.3*val))+0.5*Math.max(fl,e*8);}
-const mkListable=(id,m)=>{const R=MK_REL_BY[id];if(R)return !R.from||m>=R.from;return !!(S.rivals[id]&&!S.rivals[id].dead);};
-const mkName=id=>MK_REL_BY[id]?MK_REL_BY[id].name:RIVALS[id]?RIVALS[id].name:id;
-const mkKind=id=>MK_REL_BY[id]?MK_REL_BY[id].kind:'Shipping line';
+const mkListable=(id,m)=>{if(id==='morven')return typeof flOn==='function'&&flOn();const R=MK_REL_BY[id];if(R)return !R.from||m>=R.from;return !!(S.rivals[id]&&!S.rivals[id].dead);};
+const mkName=id=>id==='morven'?'The Morven Line':MK_REL_BY[id]?MK_REL_BY[id].name:RIVALS[id]?RIVALS[id].name:id;
+const mkRival=id=>!MK_REL_BY[id]&&id!=='morven';
+const mkKind=id=>id==='morven'?'Your line':MK_REL_BY[id]?MK_REL_BY[id].kind:'Shipping line';
 
 function mkEnsure(){
   if(S.ex)return S.ex;
@@ -93,13 +95,13 @@ function marketMonth(){
     // news, and a drift of its own that fades slowly (so a gap from worth is no sure thing to trade on)
     const R=MK_REL_BY[id],sd=R?R.sd:0.045;c.f=c.f===undefined?mkFund(id,m):c.f+0.2*(mkFund(id,m)-c.f);
     // growth beyond the rise in prices is paid for in part with new shares, so a holder keeps only part of it
-    const fr=c.f/PX();if(c.fr0===undefined)c.fr0=fr;if(fr>c.fr0){if(mkStake(id)<0.5)c.n*=Math.pow(fr/c.fr0,0.4);c.fr0=fr;}else c.fr0=Math.max(fr,c.fr0*0.995); // a board the Line controls issues no shares over its head
+    const fr=c.f/PX();if(c.fr0===undefined)c.fr0=fr;if(fr>c.fr0){if(mkStake(id)<0.5&&id!=='morven')c.n*=Math.pow(fr/c.fr0,0.4);c.fr0=fr;}else c.fr0=Math.max(fr,c.fr0*0.995); // a board the Line controls issues no shares over its head
     // two drifts: a quick one that fades in months, and a slow one (fashion, reputation) that takes a decade
     c.e=0.9*(c.e||0)+0.6*sd*mnorm();c.w=0.995*(c.w||0)+0.6*sd*mnorm();c.sh=1+(c.sh-1)*0.85;
-    c.px=Math.max(0.004,c.f/c.n*M.mood*c.sh*Math.exp(c.e+(c.w||0))*(warring.has(id)?0.94:1));
+    c.px=Math.max(0.004,c.f/c.n*M.mood*c.sh*Math.exp(c.e+(c.w||0))*(warring.has(id)?0.94:1)*(id==='morven'&&S.fl&&S.fl.founders?FL_FOUNDERS:1));
     c.hist.push(c.px);if(c.hist.length>120)c.hist.shift();}
   // the shipping share index: the lines together, January of the first year = 100
-  const lines=Object.keys(M.cos).filter(id=>!MK_REL_BY[id]&&!M.cos[id].gone),cap=lines.reduce((a,id)=>a+mkCap(id),0),fnd=lines.reduce((a,id)=>a+mkFund(id,m),0);
+  const lines=Object.keys(M.cos).filter(id=>mkRival(id)&&!M.cos[id].gone),cap=lines.reduce((a,id)=>a+mkCap(id),0),fnd=lines.reduce((a,id)=>a+mkFund(id,m),0);
   if(!M.idx0&&cap>0)M.idx0={cap,fnd};
   if(M.idx0){M.idx.push([m,Math.round(cap/M.idx0.cap*1000)/10,Math.round(fnd/M.idx0.fnd*1000)/10]);if(M.idx.length>600)M.idx.shift();}
   // dividends each quarter, at the end of March, June, September and December
@@ -107,7 +109,7 @@ function marketMonth(){
   // (coYearEnd, out of its own cash), reaching the shareholders in February
   if(m%3===2)for(const id in M.cos){const c=M.cos[id],R=MK_REL_BY[id];if(c.gone||!R)continue;const e=0.5*R.e0*PX()*R.drv(m);c.dy=e/c.n;mkPayDiv(id,e/4/c.n);}
   if(m%12===1)for(const id in M.cos){const c=M.cos[id],co=S.rivals[id];if(c.gone||MK_REL_BY[id]||!co)continue;c.dy=(co.div||0)/c.n;mkPayDiv(id,c.dy);}
-  mkControlMonth();mkLoanMonth();mkFundMonth();mkOfficeMonth();
+  mkControlMonth();if(typeof floatMonth==='function')floatMonth();mkLoanMonth();mkFundMonth();mkOfficeMonth();
 }
 function mkShock(id,f,why){const c=S.ex.cos[id];if(!c||c.gone)return;c.sh*=f;
   if(why&&mkHeld(id))news(`${mkName(id)} ${why}: its shares fall sharply. The Line holds ${int(mkHeld(id))}.`,'bad');}
@@ -191,7 +193,7 @@ function mkRebalance(F){const M=S.ex,sk=mkSkill(),B=MK_BRIEF[F.brief];
   const tot=mkFundVal(F);if(tot<=0)return;
   const w=clamp(B.eq*(1+sk*0.6*(1-M.mood)),0.1,0.95);
   // no line in trouble, nor one floated in the last two years; a sharp manager keeps off the stretched ones too
-  const ids=Object.keys(M.cos).filter(id=>{const c=M.cos[id];if(c.gone||c.px<0.01)return false;if(MK_REL_BY[id])return true;
+  const ids=Object.keys(M.cos).filter(id=>{const c=M.cos[id];if(c.gone||c.px<0.01||id==='morven')return false;if(MK_REL_BY[id])return true;
     const hl=coHealth(id)[0];return S.m-c.since>=24&&hl!=='In trouble'&&hl!=='Failed'&&!(hl==='Stretched'&&mrand()<sk);});
   const score=id=>{const c=M.cos[id],r=mkVal(id)/c.px,noise=(0.2+(1-sk)*0.4)*mnorm(),k=mkKind(id);
     const pref=F.brief==='preserve'?(MK_STEADY.includes(k)?0.25:-0.15):F.brief==='growth'?(MK_STEADY.includes(k)?-0.1:0.1):0;
@@ -219,7 +221,7 @@ function mkOfficeMonth(){const M=S.ex,O=M.office;if(!O)return;book('office',-mkO
 /* its advice, each quarter: a weaker head reads a company's worth less truly */
 function mkOfficeAdvice(){const M=S.ex,O=M.office,sk=O.head.comp/100,out=[];
   const est=id=>mkVal(id)/M.cos[id].px*Math.exp((0.15+(1-sk)*0.4)*mnorm());
-  const live=Object.keys(M.cos).filter(id=>!M.cos[id].gone&&M.cos[id].px>0.01);
+  const live=Object.keys(M.cos).filter(id=>!M.cos[id].gone&&M.cos[id].px>0.01&&id!=='morven');
   if(M.mood<0.8)out.push({k:'good',t:`The market is ${moodWord(M.mood)}. Shares are cheap against what the companies own: a time to buy with cash, not with borrowed money.`});
   if(M.mood>1.2)out.push({k:'bad',t:`The market is ${moodWord(M.mood)}. Prices are running ahead of what the companies are worth; a time to take profits and keep cash.`});
   const cheap=live.map(id=>[id,est(id)]).filter(x=>x[1]>1.35).sort((a,b)=>b[1]-a[1]).slice(0,3);
@@ -349,7 +351,7 @@ function stakeHTML(o){const M=S.ex,c=M.cos[o],co=S.rivals[o],k=mkStake(o),inf=mk
   return h;}
 /* ---------- the Market tab ---------- */
 const pxTxt=p=>{if(!(p>0))return '–';let L=Math.floor(p),s=Math.floor((p-L)*20),d=Math.round(((p-L)*20-s)*12);if(d===12){d=0;s++;}if(s===20){s=0;L++;}
-  return (L?`£${L} `:'')+`${s}s`+(d?` ${d}d`:'');};
+  if(L&&!s&&!d)return `£${L}`;return (L?`£${L} `:'')+`${s}s`+(d?` ${d}d`:'');};
 const pctS=v=>(v>=0?'+':'−')+Math.abs(Math.round(v*1000)/10)+'%';
 function mkSpark(vals,w=180,h=34){if(vals.length<2)return '';const lo=Math.min(...vals),hi=Math.max(...vals),r=hi-lo||1;
   const pts=vals.map((v,i)=>`${(i/(vals.length-1)*w).toFixed(1)},${(h-2-(v-lo)/r*(h-4)).toFixed(1)}`).join(' ');
@@ -366,7 +368,7 @@ function mkIdxChart(){const I=S.ex.idx.slice(-240);if(I.length<3)return '';const
 function exchangeHTML(){
   const M=mkEnsure(),shut=mkShut(),A=M.me,sel=UI.mkSel,O=M.office,F=M.fund;
   const amts=[500,5000,50000].map(v=>Math.round(v*PX()/100)*100);
-  const live=Object.keys(M.cos).filter(id=>!M.cos[id].gone).sort((a,b)=>(MK_REL_BY[a]?1:0)-(MK_REL_BY[b]?1:0)||mkCap(b)-mkCap(a));
+  const live=Object.keys(M.cos).filter(id=>!M.cos[id].gone&&id!=='morven').sort((a,b)=>(MK_REL_BY[a]?1:0)-(MK_REL_BY[b]?1:0)||mkCap(b)-mkCap(a));
   const I=M.idx[M.idx.length-1];
   const head=`<section class="sec"><h2>The Stock Exchange</h2>
     <p class="${M.mood<0.8?'badline':M.mood>1.2?'warnline':'note'}">${shut?'The Stock Exchange is closed for the war. Dealing resumes in January 1915.':`The market is ${moodWord(M.mood)}.${I?` Shipping shares stand at ${Math.round(I[1])} (${Math.round(I[1]/Math.max(1,I[2])*100)}% of what the lines are worth).`:''}`}</p>
@@ -414,5 +416,5 @@ function exchangeHTML(){
       <button class="btn quiet" data-act="officeclose">${UI.confirm==='officeclose'?'Confirm: close the Office':'Close the Office'}</button>`
     :`<p class="note">A department of your own, instead of a broker: ${fmt(oc)} to set up and about ${fmt(Math.round((65*PX()+3*CLERK_WAGE+50*PX())))} a month and up, by its head. It advises on every company and can run the investment account itself. A good head beats a broker; a poor one does worse.</p>
       <button class="btn" data-act="officeopen" ${S.cash<oc||S.over?'disabled':''}>Open the Investment Office · ${fmt(oc)}</button>`}</section>`;
-  return head+mine+list+fund+office;
+  return (typeof flHTML==='function'?flHTML():'')+head+mine+list+fund+office;
 }

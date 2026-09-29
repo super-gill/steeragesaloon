@@ -2,6 +2,18 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.31.0 (29 September 2026)
+Floating the Line (stage R4).
+- Float the Line on the Stock Exchange from the Shares view, once it has three ships, three years of accounts and a solid net worth: sell 25%, 49%, 60% or 75% as new shares for capital. The more you sell, the more you raise. The 1919 and 1920 boom is the best time.
+- A minority float brings a board that sets you targets each year and complains when you miss them, but cannot remove you, and nobody can bid for the Line. A majority float brings more money, and two risks: the board can vote you out, and other lines can bid for the Line.
+- The board's targets: a dividend, profit, the share price against shipping shares as a whole, and safety. Its confidence rises and falls at the January meeting and with events (losses at sea, gross negligence, the Blue Riband). Below 20, after a year's warning under 35, it removes you: a new ending.
+- Set the dividend (none, normal or generous), paid each January to the public.
+- Buy shares back at the market to regain control, or all of them to go private again.
+- Bids for the Line: the biggest rich line bids now and then, more often when your shares are cheap; until 1914 the Combine bids instead of offering. If holders of over half the votes accept, the Line is taken over: another new ending.
+- Defences: a white knight, Pac-Man (take control of the bidder), scorched earth (sell the ships), a buyback, founders' voting shares (set up beforehand; your shares carry three votes), a crown jewel sale, and an appeal to the government against a foreign bidder (at the price of staying British with every ship at the Admiralty's call).
+- A private Line plays exactly as before.
+- New check `tools/float.js`, and the harness can float the careful owner (`FLOAT=0.6`).
+
 ## 0.30.0 (29 September 2026)
 Stakes and control (stage R3).
 - A stake in a rival line brings powers, shown under its card on the Shares view: a seat on its board at 20%, control over 50%, special resolutions at 75%, and a buy-out of the rest at 90%.

@@ -56,9 +56,10 @@ function trustMonth(){
         news(`${TRUST_SHORT[0].toUpperCase()+TRUST_SHORT.slice(1)} buys ${RIVALS[t].name} for about ${fmt(Math.round(price/1000)*1000)}. It keeps its name and ships.`,S.ships.some(x=>x.line&&ownersOn(x.line)[t])?'bad':'');}}}
   // an offer for the Morven Line, once it is worth having: about once in three years, never within two of a refusal
   if(!S.trustOffer&&!S.over&&S.ships.length>=3&&m>=T.next&&R()<0.03){
-    const amt=Math.round(Math.max(netWorth(),fleetValue()*0.5)*(1.3+R()*0.3)/1000)*1000;
+    if(typeof flMajority==='function'&&flMajority()){T.next=m+36;if(!S.fl.bid&&m<ym(1914,0))flBid('combine');} // a Line the public holds is bid for, not asked (until the war)
+    else{const amt=Math.round(Math.max(netWorth(),fleetValue()*0.5)*(1.3+R()*0.3)/1000)*1000;
     if(amt>0){S.trustOffer={amt,exp:m+2};T.offers++;
-      news(`${TRUST_SHORT[0].toUpperCase()+TRUST_SHORT.slice(1)} offers ${fmt(amt)} for the Morven Line. It is under Needs attention.`,'',true);}}
+      news(`${TRUST_SHORT[0].toUpperCase()+TRUST_SHORT.slice(1)} offers ${fmt(amt)} for the Morven Line. It is under Needs attention.`,'',true);}}}
   if(S.trustOffer&&m>=S.trustOffer.exp)trustRefuse(true);
 }
 /* the owner sells: the game ends with the Line in the Combine */

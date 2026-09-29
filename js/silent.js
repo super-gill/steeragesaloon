@@ -81,6 +81,7 @@ function loseShip(sh){
   if(!sh.inqQ&&!war)queueInquiry(sh,null);
   news(`SS ${sh.name} is ${war?'sunk by the enemy':'lost'}${L.where?' '+L.where:''}. ${L.lost?`${int(L.lost)} lives lost.`:'Everyone aboard was saved.'} ${c.txt}${war?'':' A court of inquiry will sit.'}`,'bad',2);
   S.ships=S.ships.filter(x=>x!==sh);if(S.selShip===sh.id)S.selShip=S.ships[0]?S.ships[0].id:null;
+  if(typeof flEvent==='function')flEvent('lost',sh); // a floated Line's board wants to know why
 }
 /* daily: overdue ships, drifting ships, posted missing */
 function silentDaily(){

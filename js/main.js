@@ -5,7 +5,7 @@ document.addEventListener('click',e=>{
   const b=e.target.closest('[data-act]');if(!b||b.disabled)return;const prevTab=UI.tab;
   {const al=b.closest('.alert[data-aid]:not([data-sticky])');if(al)(S.attnSeen=S.attnSeen||{})[al.dataset.aid]=true;}
   const a=b.dataset.act,sh=S.ships.find(x=>x.id===S.selShip),L=S.lines[S.selLine];
-  if(a!=='cancel'&&!a.startsWith('ask')&&!['exit','closeline','leave','new','loadcode','fundclose','officeclose','mkmerge','mkwind'].includes(a))UI.confirm=null;
+  if(a!=='cancel'&&!a.startsWith('ask')&&!['exit','closeline','leave','new','loadcode','fundclose','officeclose','mkmerge','mkwind','flcrown'].includes(a)&&!a.startsWith('flfloat'))UI.confirm=null;
   if(UI.slow&&!['zoom','zoomfit'].includes(a))UI.slow=null; // the owner is dealing with it: back to full speed
   switch(a){
     case 'eventmode':UI.eventMode=b.dataset.v;try{localStorage.setItem('ss_eventmode',UI.eventMode);}catch(e){}break;
@@ -122,6 +122,13 @@ document.addEventListener('click',e=>{
     case 'mkbuy':{const d=JSON.parse(b.dataset.d);mkBuy(d[0],+d[1],!!d[2]);break;}
     case 'mksell':{const d=JSON.parse(b.dataset.d);mkSell(d[0],+d[1]);break;}
     case 'mkrepay':mkRepay(+b.dataset.id);break;
+    case 'flfloat':{const d=JSON.parse(b.dataset.d);if(UI.confirm!=='fl'+d[0])UI.confirm='fl'+d[0];else{UI.confirm=null;flFloat(+d[0],!!d[1]);}break;}
+    case 'flbuyback':flBuyback(+b.dataset.id);break;
+    case 'flfounders':flFounders();break;
+    case 'fldiv':if(S.fl&&MK_DIV[b.dataset.id])S.fl.pay=b.dataset.id;break;
+    case 'flknight':flKnight(b.dataset.id);break;
+    case 'flcrown':if(UI.confirm!=='flcrown')UI.confirm='flcrown';else{UI.confirm=null;flCrown();}break;
+    case 'flappeal':flAppeal();break;
     case 'mkpct':{const d=JSON.parse(b.dataset.d);mkBuyPct(d[0],+d[1]);break;}
     case 'ctrlset':{const d=JSON.parse(b.dataset.d);mkCtrlSet(d[0],d[1],d[2]);break;}
     case 'ctrlpeace':mkPeace(b.dataset.id);break;
@@ -154,6 +161,7 @@ document.addEventListener('change',e=>{
   if(t.dataset.dzx&&UI.dz){UI.dz.extras[t.dataset.dzx]=t.checked;}
   if(t.dataset.dzline&&UI.dz){UI.dz.line=t.value;}
   if(t.dataset.rfjob&&UI.rf){UI.rf.jobs[t.dataset.rfjob]=t.checked;}
+  if(t.dataset.flfounders)UI.flFounders=t.checked;
   if(t.dataset.reserve){const x=S.ships.find(y=>y.id===+t.dataset.reserve);if(x&&!atWar())x.reserve=t.checked;}
   if((t.dataset.livc||t.dataset.livon||t.dataset.livem||t.dataset.livdock)&&UI.liv)livInput(t);
   t.blur();UI.rev=(UI.rev||0)+1;save();UI.dirty=true;

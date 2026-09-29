@@ -103,6 +103,8 @@ function alerts(){
   for(const sh of S.ships)if(fatOf(sh)>=90&&sh.state!=='yard')A.push({id:'worn'+sh.id,k:'warn',t:`SS ${sh.name} is worn out and should go to the breakers.`,b:[['View','selship',sh.id]]});
   if(S.war&&S.war.ask)A.push({id:'reqask'+S.war.ask.due,noNote:true,k:'bad',t:`The Admiralty needs ${S.war.ask.n===1?'another ship':S.war.ask.n+' more ships'} for war service. Offer the ones you would rather lose, or it chooses by ${monthName(S.war.ask.due)}.`,b:[['Choose','tabgo','company']]});
   if(S.war&&S.war.offers)for(const o of S.war.offers){const x=S.ships.find(q=>q.id===o.sid);if(x&&!x.pendingExit)A.push({id:'offer'+o.sid+'_'+o.exp,noNote:true,k:'good',t:`A buyer offers ${fmt(o.amt)} for SS ${x.name} (worth about ${fmt(shipValue(x))} on the market), open until ${monthName(o.exp)}.`,b:[['Sell','offeryes',o.sid],['Decline','offerno',o.sid]]});}
+  if(S.fl&&S.fl.bid)A.push({id:'flbid'+S.fl.bid.due,noNote:true,k:'bad',t:`A bid for the Morven Line from ${flBidName(S.fl.bid)}, open until ${monthName(S.fl.bid.due)}. Your defences are on the Shares view.`,b:[['Defences','finsub','shares']]});
+  if(S.fl&&flMajority()&&S.fl.conf<35)A.push({id:'flconf'+Math.floor(S.m/12),k:'bad',t:`The board is ${confWord(S.fl.conf)} (${Math.round(S.fl.conf)}). Below 20 at the next January meeting it removes you.`,b:[['Targets','finsub','shares']]});
   if(S.ex&&S.ex.call)A.push({id:'mkcall'+S.ex.call.due,noNote:true,k:'bad',t:`Margin call: pay the broker ${fmt(S.ex.call.amt)} or sell shares by ${monthName(S.ex.call.due)}, or he sells at the market.`,b:[['Shares','finsub','shares']]});
   if(S.cash<0)A.push({id:'od',noNote:true,k:'bad',t:`The account is overdrawn. The bank forecloses below ${fmt(-odLimit())}.`,b:[['Bank','tabgo','finance']]});
   // an item the owner has noted or acted on stays away until the situation passes; decisions and the bank's demands stay put
@@ -699,9 +701,9 @@ function renderModal(){
   if(!S.over&&S.war&&S.war.show){setHTML(el,warModalHTML());return;}
   if(!S.over&&S.dis&&S.dis.show){setHTML(el,disModalHTML());return;}
   if(!S.over){el.innerHTML='';return;}
-  const nw=netWorth(),sold=S.over==='sold',wound=S.over==='wound';
+  const nw=netWorth(),sold=S.over==='sold',wound=S.over==='wound',flEnd=S.over==='removed'||S.over==='taken';
   const v=sold?`The Morven Line now belongs to the ${TRUST_NAME}. Its ships keep their names and sail under the Combine's orders; you leave with ${fmt(S.soldFor)} for the shareholders.`:'The bank has foreclosed. The Morven Line is finished.';
-  setHTML(el,`<div class="modal" role="dialog" aria-modal="true" aria-labelledby="mt"><div class="panel">${wound?woundHTML():`<h3 id="mt">${sold?'Sold to the Combine':'Foreclosed'}</h3><p style="margin:0">${v}</p>`}
+  setHTML(el,`<div class="modal" role="dialog" aria-modal="true" aria-labelledby="mt"><div class="panel">${wound?woundHTML():flEnd?flEndHTML():`<h3 id="mt">${sold?'Sold to the Combine':'Foreclosed'}</h3><p style="margin:0">${v}</p>`}
     <dl class="kv">${sold?`<dt>Sale price</dt><dd>${fmt(S.soldFor)}</dd>`:''}<dt>Net worth</dt><dd>${fmt(nw)}</dd><dt>Fleet</dt><dd>${S.ships.length}</dd><dt>Reputation</dt><dd>${Math.round(S.rep)}</dd><dt>Reached</dt><dd>${dateLong(S.t)}</dd></dl>
     <button class="btn primary" data-act="newnow">Start a new line</button>
     <label class="lbl" for="loadCode2">Or load a save code</label><textarea id="loadCode2" data-keep="1" class="code" rows="2" placeholder="Paste a code here"></textarea>
