@@ -149,15 +149,20 @@ function boardHTML(){
 }
 /* ---------- Fleet ---------- */
 function renderFleet(){
-  const order=[...Object.keys(S.lines),null],grp=sh=>sh.line&&sh.state!=='laid'&&S.lines[sh.line]?sh.line:null;
-  const items=order.map(g=>{const on=S.ships.filter(sh=>grp(sh)===g);if(!on.length)return '';
-    const lm=S.lastMonth&&S.lastMonth.lines[g||'_idle'];
-    return `<div class="fgrp row" data-key="fg${g}"><span>${g?ROUTES[g].name:'Laid up or off a line'}</span>${lm===undefined?'':`<span class="num ${lm<0?'neg':'pos'}">${fmt(lm)}</span>`}</div>`+on.map(sh=>{const st=shipStatus(sh),sel=S.selShip===sh.id,due=sh.cond<(sh.autoDock||50)&&sh.state!=='yard';
-    return `<button class="item" data-key="s${sh.id}" data-act="selship" data-id="${sh.id}" aria-pressed="${sel}">
-      <span class="row"><span class="nm">SS ${sh.name}</span>${st.chip}</span>
-      <span class="row meta"><span>${sh.line&&sh.state!=='laid'?ROUTES[sh.line].name:'Laid up'}</span><span class="${due?'neg':''}">${Math.round(sh.cond)}%${sh.pendingYard==='dock'?' · drydock booked':''}</span></span>
-      <span class="row meta"><span>Last month</span>${(()=>{const v=(sh.pl||[]).slice(-1)[0];return v===undefined?'<span>new</span>':`<span class="num ${v<0?'neg':'pos'}">${fmt(v)}</span>`;})()}</span></button>`;}).join('');}).join('');
-  setHTML($('fleetL'),`<h2>Fleet · ${S.ships.length} ship${S.ships.length===1?'':'s'}</h2>${items}`);
+  /* one short row a ship, grouped by line; the groups fold away. The Fleet Manager has the full table. */
+  const order=[...Object.keys(S.lines),null],grp=sh=>sh.line&&sh.state!=='laid'&&S.lines[sh.line]?sh.line:null,shut=UI.fgShut||{};
+  const live=S.ships.filter(sh=>sh.state!=='lost');
+  const items=order.map(g=>{const on=live.filter(sh=>grp(sh)===g);if(!on.length)return '';
+    const gk=g||'_idle',lm=on.reduce((a,sh)=>a+((sh.pl||[]).slice(-1)[0]||0),0),closed=!!shut[gk];
+    const head=`<button class="fgrp fghead" data-key="fg${gk}" data-act="fgtoggle" data-id="${gk}" aria-expanded="${!closed}"><span>${closed?'▸':'▾'} ${g?ROUTES[g].name:'Laid up or off a line'} <span class="meta">· ${on.length}</span></span><span class="num ${lm<0?'neg':'pos'}">${fmt(lm)}</span></button>`;
+    if(closed)return head;
+    return head+on.map(sh=>{const st=fmStateOf(sh),due=sh.cond<(sh.autoDock||50)&&sh.state!=='yard',v=(sh.pl||[]).slice(-1)[0],bad=/chip bad/.test(shipStatus(sh).chip);
+      return `<button class="item frow" data-key="s${sh.id}" data-act="selship" data-id="${sh.id}" aria-pressed="${S.selShip===sh.id}" title="${esc(shipStatus(sh).short)}">
+        <span class="fdot fd-${bad?'bad':st}" aria-hidden="true"></span><span class="nm">${esc(sh.name)}</span>
+        <span class="fcond${due?' neg':''}">${fmMini(sh.cond)}${Math.round(sh.cond)}%</span>
+        <span class="num ${v<0?'neg':'pos'}">${v===undefined?'<span class="meta">new</span>':fmt(v)}</span></button>`;}).join('');}).join('');
+  setHTML($('fleetL'),`<div class="row fhead"><h2>Fleet · ${live.length} ship${live.length===1?'':'s'}</h2><button class="btn" data-act="fmopen" ${live.length?'':'disabled'}>Fleet manager</button></div>
+    ${items}<p class="note fkey">${[['sea','at sea'],['port','in port'],['yard','yard'],['laid','laid up'],['bad','in trouble']].map(([k,l])=>`<span><span class="fdot fd-${k}"></span> ${l}</span>`).join('')}<span>· condition · last month</span></p>`);
   const sh=S.ships.find(x=>x.id===S.selShip)||S.ships[0];if(sh){S.selShip=sh.id;renderShipDetail(sh);}
 }
 /* ---------- Wireless ---------- */
@@ -226,6 +231,7 @@ function renderShipDetail(sh){
     else exitH=`<button class="btn danger" data-act="askexit" data-k="sell" ${S.over?'disabled':''}>Sell · ${fmt(sellV)}</button><button class="btn danger" data-act="askexit" data-k="scrap" ${S.over?'disabled':''}>Scrap · ${fmt(scrapV)}</button>`;
   }
   setHTML($('detailD'),`
+    ${UI.fmBack?'<button class="btn" data-act="fmback" style="width:fit-content">‹ Back to the fleet manager</button>':''}
     <div><div class="row"><h3>SS ${sh.name}</h3>${st.chip}</div>
     <div class="meta">Built ${sh.built} (${age} years) · ${int(sh.grt)} grt · ${knotsOf(sh)} knots · ${sh.fuel}-fired · ${sh.up&&sh.up.wireless?'wireless':'no wireless'} · worth about ${fmt(shipValue(sh))}</div></div>
     <p class="stline">${st.text}</p>

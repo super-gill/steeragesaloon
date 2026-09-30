@@ -44,6 +44,7 @@ It is a static browser game with no build step. Open `index.html`, or serve the 
 | `js/design.js` | The drawing office window and the order book |
 | `js/tutorial.js` | The first-year briefing |
 | `js/times.js` | The times: the season, conditions in force, what is coming and the history so far |
+| `js/fleetmgr.js` | The Fleet Manager window: every ship in one table, five views of columns, sorting, filters and actions on ticked ships |
 | `js/ui.js` | Panels and tabs, rendered by patching the DOM in place |
 | `js/main.js` | Input handling and start-up |
 
@@ -216,6 +217,27 @@ The harder moves, under a company's card on the Shares view, and the rivals' ans
 
 **Against a floated Line** the rivals make the same moves (`mvAgainst`): a dawn raid on its shares when they are cheap (the raider holds up to a fifth, may come back with a bid, and at an annual meeting with the board's confidence under 40 forces a vote: the more unhappy the board, the more of the public votes with the raider, and if the raider outvotes the owner, the owner is removed), and a bear raid (the Line's shares down 12% and a rate war on its busiest trade). Founders' voting shares count three times against a raider too.
 
+## The fleet (`js/ui.js`, `js/fleetmgr.js`, 0.35)
+
+The **Fleet tab** lists one short row a ship, grouped by line: a dot for where she is (green at sea, pale blue in port, amber in the yard, hollow laid up or on war service, red in trouble), her condition, and last month's profit. Each line's heading gives its ship count and last month's profit, and folds away with a click (`UI.fgShut`). Clicking a ship opens her full panel below the list.
+
+The **Fleet Manager** (the button at the top of the Fleet tab) is a window over the chart, and on a wide screen over the left column too. It pauses the clock while it is open, like the drawing office and the crew window, and restores the speed when it closes.
+
+| Part | What it does |
+| --- | --- |
+| Views | Five sets of columns, so the table never scrolls sideways on a laptop: **Trading** (line, where she is, speed, last month, twelve-month average, what needs attention), **Condition** (condition, age, hull, service threshold, upkeep, fittings, yard), **Money** (worth, her share of the mortgage, insurance cover, excess, premium, last month), **Crew** (master and his habits, hands, wages, morale and skill by department, weak officers) and **Fittings** (tons, knots, fuel, berths by class, cargo, wireless, boats for all, reefer, war cargo) |
+| Sorting | Click any heading; again to reverse |
+| Filters | By line (or laid up), by state (at sea, in port, in the yard, laid up, war service), "needs attention", and a search by name once the fleet passes 15 ships |
+| Needs attention | In trouble at sea (overdue, stopped, under tow, limping), run down (under 35%), due for the yard (under her threshold, nothing booked), losing money over the year (her average below nothing after at least six months; a bad winter month alone does not count), uninsured, to be sold or scrapped, or head office has a warning for her (tips do not count) |
+| Actions | Tick ships (or the heading box for every ship shown) and set speed, upkeep, service threshold, insurance cover or excess, or assign them to a line; these take effect at once. Drydock, lay up, sell and scrap ask first and show the total cost or proceeds |
+| By line | Ships, berths, cargo tons, last month and the average for each line, laid-up ships and ships on war service, and the fleet |
+
+The rules the actions follow are the ship panel's: a ship at sea changes line, lays up, docks or is sold when she reaches port; a ship on war service is left out of moving, docking and selling; the bank insists on cover while the Line is in debt; the Line keeps at least one ship; a drydock is booked only while there is cash for it. Anything the owner sets this way counts as the owner's own choice, so the departments leave it alone for three months. The window reports what was done and which ships were left out and why.
+
+Clicking a ship's name opens her panel beside the table on a wide screen; on a phone the window closes, her panel opens, and a button takes you back. In the Crew view a name opens her crew window instead. The crew window's "The whole fleet" button opens the Crew view; it replaces the Crewing Office's own fleet table, and is there for every owner.
+
+On a phone the table keeps the ship's name and one column a view; the rest are in her panel.
+
 ## Outside work
 
 Each pier, repair yard, emigrant hostel, booking agency and freight canvasser the Line owns has a switch in `S.shore.sell` (keys such as `pier:NYC`, `yard:GLA`, `hostel:LIV`, `agency:british`, `fagent:africa`; absent means own use only, the default). Every month `outsideMonth` (called from the rivals' month with that month's `routeStats`) works out for every place, selling or not, what it would earn (`S.shore.est[key]`, shown on the Shore tab), and for those selling books the takings to the ledger as `shorein` and keeps twelve months in `S.shore.earn[key]`. The rival companies pay out of their cash, in proportion to their use.
@@ -264,7 +286,7 @@ Checked with the harness after any economic change. For the 1900 start (the over
 - A sensible owner (`careful`) has 3 to 6 ships in August 1914, and fewer than 1 in 5 such games go bankrupt before the war. At 0.34, over 40 seeds: 6 in 40 bankrupt before the war, median fleet 7 in 1914.
 - Through the war (`END=1922 node tools/harness.js careful 40`, 0.34): net worth in January 1921 about 2.1 times January 1914 at 1914 prices (target about 2; 5 before 0.33). Losses: about 1 ship in 5 of those in the fleets over the war when trading unprotected (`PROT=0`), about 1 in 9 to 1 in 12 with every protection the careful owner can get, counting ships lost on war service (target 1 in 12). Steerage in the war holds at a quarter of the pre-war trade until 1917.
 - Through the boom and the crash (0.34): 33 of the 33 lines solvent in 1914 still trading in 1922 (target at least 7 in 10). A ship held from 1913 is worth about 2.3 times her 1913 worth in 1913 money at the top and loses about three fifths by 1921 (target two to three times, half to two thirds lost). The bank lends on ships at their armistice worth in the boom.
-- The long run (`END=1939`, 0.34): the advisor strategy (8 seeds) has 1 bankrupt; the careful owner (20 seeds) has 8, 4 of them in the Depression. The careful result is open for 0.35 (see `docs/overhaul/BALANCE.md`).
+- The long run (`END=1939`, 0.34): the advisor strategy (8 seeds) has 1 bankrupt; the careful owner (20 seeds) has 8, 4 of them in the Depression. The careful result is open for 0.36 (see `docs/overhaul/BALANCE.md`).
 - Rival lines (`node tools/companies.js`, 0.34): about 5.6 failures a decade over 1900 to 1940; a trade may lie empty for a while in at most 1 game in 10.
 - The share market (`node tools/market.js 12`, 0.34): over 1901 to 1940 a broker's account against the same money in government stock ends about 1.4 times (preserve), 1.7 (balanced) and 1.5 (growth) (target 1.3 to 1.6); buying every company in 1901 and holding ends at about 1.07 times stock. An untouched market changes nothing.
 - Floating (`FLOAT=0.6 END=1925 node tools/harness.js careful 20`, 0.34): a careful owner who floats 60% in 1906 is removed in 1 game in 20 and taken over in none; a careless one (no dividend) in 10 games: 1 removed, 3 taken over, 2 bankrupt. Half of what a float raises goes to the Line, half to the owner.

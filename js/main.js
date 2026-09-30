@@ -14,7 +14,7 @@ document.addEventListener('click',e=>{
     case 'insall':if(sh){const p=insOf(sh);S.insDefault={cover:p.cover,excess:p.excess};S.ships.forEach(x=>{x.ins={...S.insDefault};});}break;
     case 'insexcess':if(sh){insOf(sh);sh.ins.excess=+b.dataset.v;}break;
     case 'speed':if(!S.over){UI.speed=+b.dataset.v;if(UI.speed>0)UI.banner=null;else UI.banner='Paused.';}break;
-    case 'selship':S.selShip=+b.dataset.id;UI.tab='fleet';(S.tutSeen=S.tutSeen||{}).fleet=true;break;
+    case 'selship':S.selShip=+b.dataset.id;UI.tab='fleet';UI.fmBack=false;(S.tutSeen=S.tutSeen||{}).fleet=true;break;
     case 'selline':S.selLine=b.dataset.id;UI.tab='lines';(S.tutSeen=S.tutSeen||{}).lines=true;break;
     case 'tabgo':UI.tab=(UI.wide&&b.dataset.tab==='overview')?UI.tab:b.dataset.tab;(S.tutSeen=S.tutSeen||{})[b.dataset.tab]=true;break;
     case 'tutoff':if(S.tut)S.tut.off=true;break;
@@ -27,7 +27,9 @@ document.addEventListener('click',e=>{
     case 'plmonth':UI.plMonth=b.dataset.id;break;
     case 'crew':openCrew(+b.dataset.id||+(JSON.parse(b.dataset.d||'[]')[0])||S.selShip);break;
     case 'crewclose':closeCrew();break;
-    case 'crewfleet':UI.crewFleet=true;break;
+    case 'crewfleet':closeCrew();openFleetMgr('crew');break;
+    case 'fmopen':case 'fmclose':case 'fmview':case 'fmsort':case 'fmattn':case 'fmclear':case 'fmship':case 'fmback':case 'fmask':case 'fmno':case 'fmdo':fmAct(a,b);break;
+    case 'fgtoggle':{const o=UI.fgShut=UI.fgShut||{};o[b.dataset.id]=!o[b.dataset.id];break;}
     case 'crewship':UI.crewSid=+b.dataset.id;UI.crewFleet=false;UI.offPool=null;break;
     case 'offpool':UI.offPool=UI.offPool===b.dataset.id?null:b.dataset.id;break;
     case 'cruisehelp':UI.cruiseHelp=!UI.cruiseHelp;break;
@@ -170,6 +172,7 @@ document.addEventListener('change',e=>{
   if(t.dataset.dzline&&UI.dz){UI.dz.line=t.value;}
   if(t.dataset.rfjob&&UI.rf){UI.rf.jobs[t.dataset.rfjob]=t.checked;}
   if(t.dataset.flfounders)UI.flFounders=t.checked;
+  if(UI.fmOpen)fmChange(t);
   if(t.dataset.reserve){const x=S.ships.find(y=>y.id===+t.dataset.reserve);if(x&&!atWar())x.reserve=t.checked;}
   if((t.dataset.livc||t.dataset.livon||t.dataset.livem||t.dataset.livdock)&&UI.liv)livInput(t);
   t.blur();UI.rev=(UI.rev||0)+1;save();UI.dirty=true;
@@ -182,6 +185,7 @@ document.addEventListener('keydown',e=>{
 document.addEventListener('input',e=>{const t=e.target;
   if(t.dataset.dz&&UI.dz){dzSet(t.dataset.dz,t.value);UI.dzMsg=null;UI.dirty=true;}
   if(t.dataset.dzname&&UI.dz){UI.dz.name=t.value;UI.dirty=true;}
+  if(t.dataset.fmq&&UI.fmOpen){fmState().q=t.value;UI.dirty=true;}
 });
 // hold the tray still while the pointer or a finger is on it
 document.addEventListener('pointerover',e=>{const on=!!e.target.closest('#traybody');if(on!==!!UI.trayHover){UI.trayHover=on;UI.trayHold=on||UI.trayTouch>performance.now();if(!UI.trayHold)UI.dirty=true;}});

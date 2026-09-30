@@ -454,9 +454,9 @@ input[type=range]{width:100%;accent-color:var(--brass)}
 .cwset .seg{flex-wrap:wrap}
 .cwoff{border:1px solid var(--line);border-radius:6px;padding:8px 10px;display:flex;flex-direction:column;gap:3px}
 .cwsum{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;font-size:13px}
-.cwfleet{padding:16px;overflow:auto}
-.cwfleet tr[data-act]{cursor:pointer} .cwfleet tr[data-act]:hover{background:var(--surface2)}
-.board.cwft{table-layout:auto} .board.cwft th,.board.cwft td{width:auto!important;padding-inline:8px} .board.cwft th.c{text-align:center;border-bottom:none}
+
+
+
 .goodline{font-size:12.5px;color:var(--good,#3d7a4f);margin:0;font-weight:600}
 
 /* cruise programme: her year */
@@ -510,3 +510,61 @@ input[type=range]{width:100%;accent-color:var(--brass)}
 /* the share market */
 .mkt td.num,.mkt th.r{white-space:nowrap}
 .mkt tr[data-act]{cursor:pointer} .mkt tr[data-act]:hover,.mkt tr.cur{background:var(--surface2)}
+
+/* ---------- the Fleet tab, compact: one row a ship (0.35) ---------- */
+.fhead{align-items:center;margin-bottom:4px} .fhead h2{margin:0}
+.fhead .btn{padding:4px 10px;font-size:12px}
+.fghead{all:unset;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 4px 3px;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600}
+.fghead:focus-visible{outline:2px solid var(--brass)}
+.fghead .num{font-size:12px;text-transform:none;letter-spacing:0}
+#fleetL .item.frow{flex-direction:row;align-items:center;gap:8px;padding:5px 8px}
+.frow .nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.frow .fcond{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.frow .fcond.neg{color:var(--bad)}
+.frow .num{min-width:62px;text-align:right;font-size:12px;font-variant-numeric:tabular-nums}
+.fdot{display:inline-block;width:8px;height:8px;border-radius:50%;flex:none;background:var(--muted)}
+.fd-sea{background:var(--good)} .fd-port{background:var(--sea-muted)} .fd-yard{background:var(--warn)} .fd-laid,.fd-req{background:transparent!important;box-shadow:inset 0 0 0 1.5px var(--muted)} .fd-bad{background:var(--bad)}
+.fkey{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;margin-top:6px} .fkey>span{white-space:nowrap;display:inline-flex;align-items:center;gap:4px}
+.fmbar{display:inline-block;width:34px;height:5px;background:var(--line);border-radius:3px;overflow:hidden;vertical-align:middle}
+.fmbar i{display:block;height:100%;background:var(--good)} .fmbar i.mid{background:var(--warn)} .fmbar i.low{background:var(--bad)}
+.chip.warn{color:var(--warn)}
+
+/* ---------- the Fleet Manager window (0.35) ---------- */
+.fm{flex:1;min-height:0;overflow:auto;padding:12px 16px 24px;display:flex;flex-direction:column;gap:10px}
+.fm>*{flex:none}
+.fmtop{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between}
+.fmfilt{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.fmfilt select,.fmfilt input,.fmdd select{font:inherit;font-size:13px;padding:5px 6px;border:1px solid var(--line);border-radius:3px;background:var(--surface2);color:var(--ink)}
+.fmfilt input{width:150px}
+.fmfilt .btn{padding:5px 9px;font-size:12px} .fmfilt .btn.on{background:var(--sea);color:var(--sea-ink);border-color:var(--sea)}
+.fm>[data-key="fmbar"]{position:sticky;top:-12px;z-index:2}
+.fmbulk{z-index:2;background:var(--surface2);border:1px solid var(--line);border-left:3px solid var(--brass);border-radius:0 3px 3px 0;padding:8px 10px;display:flex;flex-direction:column;gap:6px}
+.fmctl{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:flex-end}
+.fmdd{display:flex;flex-direction:column;gap:2px}
+.fmctl .btns .btn{padding:5px 9px;font-size:12px}
+.fmconfirm{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px;padding-top:6px;border-top:1px solid var(--line)}
+.fmconfirm span{flex:1 1 260px}
+.fmhint{margin:0}
+.board.fmt,.board.fmlines{table-layout:auto}
+.board.fmt th,.board.fmt td,.board.fmlines th,.board.fmlines td{width:auto!important;white-space:nowrap;padding-inline:7px;vertical-align:middle}
+.board.fmt td.r,.board.fmt th.r,.board.fmlines .r{text-align:right;font-variant-numeric:tabular-nums}
+.board.fmt tbody tr:hover{background:var(--surface2)}
+.board.fmt tr.on td{background:var(--brass-soft)}
+.board.fmt tr.cur td.fmname{box-shadow:inset 3px 0 0 var(--brass)}
+.board.fmt .fmtick{width:22px!important;padding-right:0}
+.fmsort{all:unset;cursor:pointer;font:inherit;color:inherit;text-transform:inherit;letter-spacing:inherit}
+.fmsort:hover{color:var(--ink)} .fmsort:focus-visible{outline:2px solid var(--brass)}
+.fmname .fmsort{font-weight:600;color:var(--ink)} .fmname .fmsort:hover{text-decoration:underline}
+.board.fmlines{max-width:640px}
+.board.fmlines .fmtot td{border-top:2px solid var(--line);font-weight:600}
+.fmmsg{margin:0}
+@media (max-width:640px){
+  .board.fmt .opt,.board.fmlines .opt{display:none}
+  .fm{padding:10px 10px 24px}
+  .fmfilt{width:100%} .fmfilt select{flex:1 1 40%}
+}
+/* on a wide screen the fleet manager spreads over the left column too */
+.app.wide .designer.fmw{left:calc(-1 * clamp(300px,23vw,380px));border-left:0}
+@media (max-width:1599px){.fmwhere{display:none}}
+.board.fmt .fmgrp th{border-bottom:0;padding-bottom:0} .board.fmt .fmgrp th.c{text-align:center;border-bottom:1px solid var(--line)}
+@media (max-width:640px){.fm>[data-key="fmbar"]{position:static}}

@@ -61,7 +61,9 @@ Balance issues left open by each release are listed in [BALANCE.md](BALANCE.md),
 | 0.31.0 | Floating the Line, R4 (done: `js/float.js`, `tools/float.js`) |
 | 0.32.0 | Advanced moves, R5 (done: `js/moves.js`, `tools/moves.js`); the markets are complete |
 | 0.33.0 | Final balance pass, part one: the economy, the war, the rival lines (done) |
-| 0.34.0 | Final balance pass, part two: the markets, and a 40-seed check of every target |
+| 0.34.0 | Final balance pass, part two: the markets, and a 40-seed check of every target (done; 0.34.1 fixed head office advising Spartan tables) |
+| 0.35.0 | The fleet for larger fleets: a compact Fleet tab and the Fleet Manager window (done: `js/fleetmgr.js`) |
+| 0.36.0 | The late game, 1921 to 1939: careful owners in the Depression, the advisor's lead, the stale war-outbreak text |
 | 1.0.0 | 1900 to 1940 complete and balanced |
 
 ## The 0.16.0 balance pass

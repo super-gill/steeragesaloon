@@ -49,8 +49,10 @@ function architectReport(d,st){
   return out.map(t=>`<li>${t}</li>`).join('');
 }
 function renderDesigner(){
+  {const el=$('designer'),w=!!UI.fmOpen&&!UI.crewOpen&&!UI.refitOpen;if(el.classList.contains('fmw')!==w)el.classList.toggle('fmw',w);} // the fleet manager also covers the left column
   if(UI.crewOpen&&renderCrew())return;
   if(UI.refitOpen&&renderRefit())return;
+  if(UI.fmOpen&&renderFleetMgr())return;
   const el=$('designer');if(!UI.designOpen){if(!el.hidden){el.hidden=true;el.innerHTML='';el._h=null;}return;}
   el.hidden=false;
   const d=UI.dz;d.auto=d.auto||{mach:false,form:false};d.line=d.line||'';

@@ -107,7 +107,7 @@ function appointOfficer(sh,role,cid){
 /* ---------- the crew office: one window, a ship at a time, or the whole fleet with a Crewing Office ---------- */
 function openCrew(id){
   if(!S.offPool)refreshOffPool();
-  UI.crewOpen=true;UI.crewSid=id||S.selShip;UI.crewFleet=!id&&!!(S.depts&&S.depts.crew);UI.offPool=null;UI.refitOpen=false;UI.designOpen=false;
+  UI.crewOpen=true;UI.crewSid=id||S.selShip;UI.offPool=null;UI.refitOpen=false;UI.designOpen=false;
   UI.cwPrev=UI.speed;if(UI.speed>0){UI.speed=0;UI.banner='Paused while you look over her crew.';}UI.dirty=true;
 }
 function closeCrew(){UI.crewOpen=false;if(UI.cwPrev>0&&!S.over){UI.speed=UI.cwPrev;UI.banner=null;}UI.dirty=true;}
@@ -126,7 +126,6 @@ function crewEffects(sh){
 function renderCrew(){
   const el=$('designer');if(!UI.crewOpen)return false;
   const hasOffice=!!(S.depts&&S.depts.crew);
-  if(UI.crewFleet&&hasOffice){renderCrewFleet(el);return true;}
   const sh=S.ships.find(x=>x.id===UI.crewSid)||S.ships.find(x=>x.state!=='lost');if(!sh){closeCrew();return false;}
   el.hidden=false;const cw=cwOf(sh),off=offOf(sh),hands=Math.round(crewHands(sh)),cost=crewCostOf(sh);
   const offRow=r=>{const o=off[r],O=OFFICER[r],pool=(S.offPool||{})[r]||[],open=UI.offPool===r;
@@ -146,7 +145,7 @@ function renderCrew(){
       <div class="cwset"><span class="lbl">Manning</span>${seg3(d,'man',MAN.map(x=>x[0]))}<span class="lbl">Pay</span>${seg3(d,'pay',['Low','Union rates','Good'])}<span class="lbl">Training</span>${seg3(d,'train',TRAIN.map(x=>x[0]))}</div></div>`;};
   const others=S.ships.filter(x=>x.state!=='lost'&&x!==sh);
   setHTML(el,`<div class="dz-head"><div><span class="eyebrow">${hasOffice&&S.depts.crew.auto?'Her crew · managed by the Crewing Office':'Her crew'}</span><h2>SS ${esc(sh.name)} <small>${hands} hands · ${fmt(cost+(sh.captain?sh.captain.wage:0))} a month with her master</small></h2></div>
-    <div class="btns">${hasOffice?'<button class="btn" data-act="crewfleet">The whole fleet</button>':''}<button class="btn" data-act="crewclose">Close</button></div></div>
+    <div class="btns"><button class="btn" data-act="crewfleet">The whole fleet</button><button class="btn" data-act="crewclose">Close</button></div></div>
   <div class="dz-body">
     <div class="dz-view"><div class="dz-top stack">
       <div class="dz-figs"><div><span class="lbl">Hands</span><b class="num">${hands}</b></div><div><span class="lbl">Wages and training</span><b class="num">${fmt(cost)}</b></div><div><span class="lbl">Morale</span><b class="num">${Math.round(sh.morale)}</b></div></div>
@@ -161,18 +160,4 @@ function renderCrew(){
       <section><h3>The ship's company</h3><div class="stack" style="gap:8px">${CD_KEYS.map(deptCard).join('')}</div></section>
     </div></div>`);
   return true;
-}
-function renderCrewFleet(el){
-  el.hidden=false;const live=S.ships.filter(x=>x.state!=='lost');
-  const cell=(v,lo)=>`<td class="r num ${v<lo?'neg':''}">${Math.round(v)}</td>`;
-  const rows=live.map(sh=>{const cw=cwOf(sh),off=offOf(sh),weak=OFF_KEYS.filter(r=>off[r]&&off[r].skill<40).length;
-    return `<tr data-act="crewship" data-id="${sh.id}"><td><b>${sh.name}</b><div class="meta">${Math.round(crewHands(sh))} hands · ${fmt(crewCostOf(sh))}</div></td>
-      ${CD_KEYS.map(d=>deptCount(sh,d)>=1?cell(cw[d].mor,45):'<td class="r meta">–</td>').join('')}${CD_KEYS.map(d=>deptCount(sh,d)>=1?cell(cwSk(sh,d),45):'<td class="r meta">–</td>').join('')}
-      <td class="r">${weak?`<span class="chip bad">${weak} weak</span>`:''}</td></tr>`;}).join('');
-  const tot=live.reduce((a,x)=>a+crewCostOf(x),0);
-  setHTML(el,`<div class="dz-head"><div><span class="eyebrow">Crewing Office</span><h2>The fleet's crews <small>${Math.round(live.reduce((a,x)=>a+crewHands(x),0))} hands · ${fmt(tot)} a month</small></h2></div>
-    <div class="btns"><button class="btn" data-act="crewclose">Close</button></div></div>
-  <div class="cwfleet"><div class="tablewrap"><table class="board cwft"><thead><tr><th></th><th class="c" colspan="3">Morale</th><th class="c" colspan="3">Skill</th><th></th></tr>
-    <tr><th>Ship</th><th class="r">Deck</th><th class="r">Engine</th><th class="r">Catering</th><th class="r">Deck</th><th class="r">Engine</th><th class="r">Catering</th><th class="r">Officers</th></tr></thead><tbody>${rows}</tbody></table></div>
-    <p class="note">Red is below 45. "Weak" counts officers of little ability. Click a ship to open her crew.${S.depts.crew.auto?' The Crewing Office is acting: it raises pay where morale is low, starts drills where skill is poor, and appoints better officers when it finds them.':' Set the Crewing Office to Act on the Company tab and it will raise pay, start drills and appoint better officers for you.'}</p></div>`);
 }

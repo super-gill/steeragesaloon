@@ -2,6 +2,16 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.35.0 (30 September 2026)
+The fleet, for larger fleets: a compact Fleet tab and a Fleet Manager window.
+- The Fleet tab lists one short row a ship: a dot for where she is, her condition and last month's profit, grouped by line. Each line's heading gives its ships and profit and folds away.
+- The Fleet Manager (the button at the top of the Fleet tab) shows every ship in one table, in five views: trading, condition, money, crew and fittings. Sort by any column; filter by line, by state or by what needs attention; search by name in a large fleet.
+- Tick ships to set speed, upkeep, service threshold, insurance cover or excess for them together, or assign them to a line. Drydocking, laying up, selling and scrapping ask first and show the total.
+- A table by line gives each line's ships, berths, cargo and profit.
+- It pauses the clock while it is open. On a wide screen it covers the chart and the left column, and the ship you pick opens beside it; on a phone a button takes you back to it.
+- The crew window's "The whole fleet" opens the manager's Crew view, for every owner. It replaces the Crewing Office's fleet table.
+- The late-game balance work moves to 0.36.0.
+
 ## 0.34.1 (30 September 2026)
 - Fixed: head office, and the Fares office when acting, set lines to a Spartan table and held the Line's reputation in the teens. The advice compared one line's takings this month at today's standing, so it counted the table's saving but not what it did to the Line's name. It now judges each table by the whole fleet's takings at the reputation that table leads to, and never advises a table that would drop the Line below 40, where the Post Office stops tendering for mails. The advice says where your reputation would settle. Following head office's advice to 1914 now ends with a reputation of about 44 instead of 15, and nearly three times the net worth: the Spartan table was a trap.
 

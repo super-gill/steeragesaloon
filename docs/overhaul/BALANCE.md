@@ -5,7 +5,7 @@ before 1.0.0. Each entry gives the measure, the target and where it
 stands. Figures come from `tools/harness.js` over 20 to 40 seeds, so a
 difference of about 2 games in 20 is noise.
 
-The final pass ran over 0.33.0 and 0.34.0, and found the 1920s and 1930s untested from the 1900 start; that is 0.35.0. Each item is now one of:
+The final pass ran over 0.33.0 and 0.34.0, and found the 1920s and 1930s untested from the 1900 start; that is 0.36.0. Each item is now one of:
 **closed** (fixed and measured), **accepted** (the figure stands, for the
 reason given), or **open** (for 0.34.0, or after 1.0.0 where marked).
 
@@ -78,7 +78,7 @@ to the war. The 0.30.0 to 0.32.0 market figures were measured with it.
 | Long and short at once | Closed | Not allowed: sell first, or buy back the short first | Cannot dodge a buy-in |
 | Rival moves among themselves | After 1.0.0 | Rivals raid and bid only for the Line | Rivals take each other over |
 
-## The long run (for 0.35.0)
+## The long run (for 0.36.0)
 
 | Issue | Status | Measure now | Target |
 | --- | --- | --- | --- |
@@ -86,7 +86,7 @@ to the war. The 0.30.0 to 0.32.0 market figures were measured with it.
 | A trade can lie empty | Accepted | Hamburg in the 1921 quota years, in one game in ten; the companies check allows one in ten | Refilled within two years |
 | Careful owners in the Depression | Open | Played to 1939 (20 seeds): 8 bankrupt, 4 of them between 1930 and 1936, a quarter of those still trading in 1929. They buy up to 17 to 19 ships on heavy debt in the 1920s and sell them at the bottom. Laying ships up instead makes it worse (20 of 20 bankrupt): a laid-up ship still costs her interest | A sensible owner survives the Depression, smaller |
 | Head office advised Spartan tables | Closed (0.34.1) | The advice judged a table by one line's takings at today's reputation, so it kept advising Spartan and the advisor strategy ended 1914 at reputation 15. Now judged at the reputation it leads to: 44, and net worth by 1914 about 2.8 times what it was (6 seeds) | Advice that does not sink the Line's name |
-| Advisor far ahead of careful again | Open | With the table fixed the advisor strategy ends 1914 at about £1.3m (6 seeds), against £0.46m before; the gap to the careful owner, already accepted at about 11 times, widens | Revisit in 0.35 with the late game |
+| Advisor far ahead of careful again | Open | With the table fixed the advisor strategy ends 1914 at about £1.3m (6 seeds), against £0.46m before; the gap to the careful owner, already accepted at about 11 times, widens | Revisit in 0.36 with the late game |
 | The advisor strategy to 1939 | Closed | Played to 1939 (8 seeds): 1 bankrupt, in 1926; the rest end with £8.6m to £13.7m and a median fleet of 28. It runs 37 rate wars a game and ends with a reputation of 7, which the careful owner's rules would not allow | Survives the Depression |
 
 ## Final check
