@@ -63,6 +63,10 @@ function yearPlan(sh,cp){
 }
 const lineShips=rk=>S.ships.filter(x=>x.line===rk&&x.state!=='laid');
 function lineEcon(rk,patch){let pm=0,pax=0;for(const sh of lineShips(rk)){const q=econ(sh,rk,patch);pm+=q.pm;pax+=q.pax;}return {pm,pax};}
+/* the standing a table on one line would bring the Line to, and the whole fleet's monthly takings at that standing */
+function serviceRep(rk,v){const L=S.lines[rk],was=L.service;L.service=v;try{const t=repTarget();return t===null?S.rep:t;}finally{L.service=was;}}
+function serviceEcon(rk,v){const L=S.lines[rk],was=L.service,rep=S.rep;const t=serviceRep(rk,v);L.service=v;S.rep=t;
+  try{let pm=0;for(const r of Object.keys(S.lines))if(ROUTES[r])pm+=lineEcon(r,{}).pm;return pm;}finally{L.service=was;S.rep=rep;}}
 const WINTER=[10,11,0,1];
 const money=v=>fmt(Math.round(v/10)*10);
 const canSpend=cost=>S.cash-cost>=3*runningCost();
@@ -129,14 +133,19 @@ function advice(){MOD_EPOCH++;
     // comparing against the settled-fare figure made every other setting look better, so the advice flipped back and forth
     const now=lineEcon(rk,{});
     for(const k of ['adv','service']){
-      let best={v:L[k],pm:now.pm};
-      for(const v of k==='adv'?[0,1,2,3]:[0,1,2]){if(v===L[k])continue;const q=lineEcon(rk,{[k]:v});if(q.pm>best.pm)best={v,pm:q.pm};}
-      const gain=best.pm-now.pm;
+      // the table is judged by the whole fleet's takings at the standing it leads to, not this line's at today's:
+      // a Spartan table saves its cost at once, but the Line's name sinks on every trade over the months that follow
+      const judge=v=>k==='service'?serviceEcon(rk,v):v===L[k]?now.pm:lineEcon(rk,{[k]:v}).pm;
+      const cur=judge(L[k]);let best={v:L[k],pm:cur};
+      for(const v of k==='adv'?[0,1,2,3]:[0,1,2]){if(v===L[k])continue;
+        if(k==='service'&&v<L[k]&&serviceRep(rk,L[k])>=40&&serviceRep(rk,v)<40)continue; // below 40 the Post Office will not tender
+        const pm=judge(v);if(pm>best.pm)best={v,pm};}
+      const gain=best.pm-cur;
       if(best.v!==L[k]&&gain>=150){
         const nm=k==='adv'?['no advertising','£300 advertising','£800 advertising','£1,500 advertising'][best.v]:['a Spartan table','a Standard table','a Lavish table'][best.v];
         add({id:`${k}:${rk}`,scope:'line',ref:rk,sev:'tip',gain,title:`Try ${nm} on ${r.name}`,
           why:k==='adv'?(best.v>L.adv?'More advertising would fill enough extra berths to pay for itself.':'Your advertising costs more than the extra passengers it brings.')
-            :(best.v===2?'Lavish service fills first class and builds reputation.':best.v===0?'A Spartan table saves money, but it lowers your standing, and standing is what first class buys.':'Standard service balances cost and reputation better here.'),
+            :`${best.v===2?'Lavish service fills first class and builds reputation.':best.v===0?'A Spartan table saves money here even after what it costs your standing.':'Standard service balances cost and reputation better here.'} Your reputation would settle near ${Math.round(serviceRep(rk,best.v))}, against ${Math.round(serviceRep(rk,L.service))} as things stand, and every trade's first class feels it.`,
           act:[['Apply','setlineopt',rk,k,best.v]]});
       }
     }

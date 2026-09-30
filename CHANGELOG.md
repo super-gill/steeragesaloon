@@ -2,6 +2,9 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.34.1 (30 September 2026)
+- Fixed: head office, and the Fares office when acting, set lines to a Spartan table and held the Line's reputation in the teens. The advice compared one line's takings this month at today's standing, so it counted the table's saving but not what it did to the Line's name. It now judges each table by the whole fleet's takings at the reputation that table leads to, and never advises a table that would drop the Line below 40, where the Post Office stops tendering for mails. The advice says where your reputation would settle. Following head office's advice to 1914 now ends with a reputation of about 44 instead of 15, and nearly three times the net worth: the Spartan table was a trap.
+
 ## 0.34.0 (29 September 2026)
 The final balance pass, part two: the markets, the rival lines' long run, and every target on 40 seeds.
 - A controlled line can be lent money at 5% to carry it through a bad patch. It repays when it has cash to spare, the loan counts in your net worth, and it is lost if the line fails.

@@ -343,11 +343,8 @@ function monthRoll(pm){
       news(`${old} retires from SS ${sh.name}. Her chief officer, ${sh.captain.name}, takes command. You may prefer to appoint someone from the pool.`);}}}
   if(S.m%3===0)S.capPool=[0,1,2,3].map(()=>makeCaptain());
   // reputation drifts toward the standing your service, speed, captains and shore establishment earn
-  const act=S.ships.filter(x=>x.line&&S.lines[x.line]&&ACTIVE.includes(x.state));
-  if(act.length){const svc=act.reduce((a,x)=>a+(S.lines[x.line].service-1),0)/act.length,spd=act.reduce((a,x)=>a+(x.speed-1),0)/act.length;
-    const pop=act.filter(x=>has(x,'popular')).length/act.length;
-    S.stain=(S.stain||0)*0.97;
-    const target=32-S.stain+[0,0,3][S.safety===undefined?1:S.safety]+22*svc+8*spd+(Object.keys(S.mail).length?5:0)+4*pop+Math.min(4,2*Object.keys(S.shore.hostels).length)+ribandRep();S.rep=clamp(S.rep+(target-S.rep)*0.12,0,100);}
+  S.stain=(S.stain||0)*0.97;
+  const target=repTarget();if(target!==null)S.rep=clamp(S.rep+(target-S.rep)*0.12,0,100);
   if(S.shore.bunker&&S.shore.bunker.until===S.m-1)news('Your bunker contract has expired. Coal and oil are back at market prices.','bad');
   if(S.offer&&S.offer.exp<=S.m)S.offer=null;
   // a cruise that has ended (Prohibition's repeal ends the cruises to nowhere): its ships are laid up and the line closes
@@ -405,4 +402,13 @@ function eraEvents(){
     const x=makeRivalShip('imperial','exp',1938);Object.assign(x,{name:'Britannic Queen',grt:80000,knots:30});const K=RIVAL_KIND.liner(80000);
     x.berths={f:Math.round(K.berths.f),s:Math.round(K.berths.s),t:Math.round(K.berths.t)};x.cargo=Math.round(K.cargo);S.rships.push(x);newRivalVis(x);}
   if(S.m===ym(1952,3))for(const rk in S.mail)S.mail[rk].pay=Math.round(S.mail[rk].pay*0.8);
+}
+
+/* the standing the Line's service, speed, captains and shore establishment earn: reputation drifts a little of the way
+   to it each month. Null with no ship trading. The advice uses it to judge a table by where it leaves the Line's name. */
+function repTarget(){
+  const act=S.ships.filter(x=>x.line&&S.lines[x.line]&&ACTIVE.includes(x.state));if(!act.length)return null;
+  const svc=act.reduce((a,x)=>a+(S.lines[x.line].service-1),0)/act.length,spd=act.reduce((a,x)=>a+(x.speed-1),0)/act.length;
+  const pop=act.filter(x=>has(x,'popular')).length/act.length;
+  return clamp(32-(S.stain||0)+[0,0,3][S.safety===undefined?1:S.safety]+22*svc+8*spd+(Object.keys(S.mail).length?5:0)+4*pop+Math.min(4,2*Object.keys(S.shore.hostels).length)+ribandRep(),0,100);
 }
