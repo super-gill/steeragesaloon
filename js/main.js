@@ -11,6 +11,7 @@ document.addEventListener('click',e=>{
     case 'devopen':UI.devOpen=!UI.devOpen;break;
     case 'devall':UI.devAll=!UI.devAll;break;
     case 'gonetoggle':UI.goneOpen=!UI.goneOpen;break;
+    case 'follow':startFollow(+b.dataset.id||null);break;
     case 'advall':UI.advAll=!UI.advAll;break;
     case 'irqmode':UI.irq=b.dataset.v;try{localStorage.setItem('ss_irq',UI.irq);}catch(e){}break;
     case 'eventmode':UI.eventMode=b.dataset.v;try{localStorage.setItem('ss_eventmode',UI.eventMode);}catch(e){}break;

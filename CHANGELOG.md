@@ -2,6 +2,13 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.36.5 (1 October 2026)
+Costs that grow with the fleet, fast ships that burn what they should, and a camera that follows a ship.
+- Head office now costs by tonnage, lines and ports, not a flat sum a hull: a fleet of big liners costs far more to run than one of small steamers. Past a dozen ships, running the fleet from one office costs more again; each department you keep takes a fifth of that off. A one-ship Line pays about what it did. The Company tab says what head office costs and why.
+- Fixed: a ship's coal did not depend on her speed, so a 25-knot express burned no more than a 12-knot emigrant ship of her size, about half what the Cunard expresses really burned. Ships fast for their size now burn more; ordinary steamers and every ship the Line designs (whose engines set their own figure) are unchanged.
+- New: Follow on the chart, on a ship's page. The chart keeps her in the middle; zoom as you like, and drag the chart or press Stop to let her go.
+- Balance: the careful test owner is back in the target band (7 of 40 bankrupt to 1922, median £371k), and the advisor's lead over the careful owner narrows (median £1.24m by 1914, from £1.66m).
+
 ## 0.36.4 (1 October 2026)
 Fixes from Ross's play on a phone.
 - Fixed: on a phone the Menu button sat under the clock. It now sits beside the version, above the date; on the narrowest phones the clock has a row of its own.

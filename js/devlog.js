@@ -3,6 +3,7 @@
    record is CHANGELOG.md and ROADMAP.md. Add an entry here with every release (see Releasing in the README), and move a
    plan item to DONE when it ships. */
 const DEVLOG=[
+  {v:'0.36.5',d:'1 October 2026',t:'Costs that grow with the fleet, and a follow camera',items:['Head office costs grow with the tonnage, lines and ports you run, and more again for a big fleet from one office; each department you keep takes some of that off. The Company tab shows the sums.','Fast ships burn the coal they should: an express of 25 knots about twice an ordinary ship of her size.','Follow on the chart: from a ship\'s page, the chart keeps her in the middle.']},
   {v:'0.36.4',d:'1 October 2026',t:'Fixes from the phone',items:['The Menu button no longer sits under the clock on a phone.','A ship that is lost, seized or sold off stays under Needs attention until noted, and the Fleet tab lists the ships gone from the fleet.','A ship without wireless that sinks stays on the lists, reckoned at sea, until she is posted missing.']},
   {v:'0.36.3',d:'1 October 2026',t:'Hotfix',items:['If a panel fails to draw, the rest of the game keeps going and a notice at the foot of the screen says what went wrong. Please send that line to the developer.']},
   {v:'0.36.2',d:'1 October 2026',t:'Running a fleet by line',items:[
@@ -25,8 +26,7 @@ const DEVLOG=[
 ];
 /* what is coming, in order; 'now' marks the next release */
 const DEVPLAN=[
-  {v:'0.36.5',t:'Costs that grow with the fleet, and a follow-ship camera',now:true,items:['Head office and shore costs that grow with tonnage, lines and ports; departments bend them back down.','A camera that follows one ship on the chart.']},
-  {v:'0.37.0',t:'Rescue, and harder times',items:['A Line that goes under is usually rescued, by a bank, a rival or the Treasury, at a lasting cost. With that net in place, the panics and the Depression hit harder.']},
+    {v:'0.37.0',t:'Rescue, and harder times',now:true,items:['A Line that goes under is usually rescued, by a bank, a rival or the Treasury, at a lasting cost. With that net in place, the panics and the Depression hit harder.']},
   {v:'0.37.1',t:'The war and the ship\'s hospital',items:['War freight and Admiralty hire as they were; a choice of which ships to give up.','A ship\'s surgeon and hospital that matter in an epidemic.','A great disaster at sea about once a decade, not always the same kind.']},
   {v:'Test round 4',t:'Test players, 1927 to 1945',items:['Two test players play the late game and report what is broken or exploitable.']},
   {v:'0.40.0',t:'1900 to 1940 complete',items:['Every serious known issue closed and the game balanced to 1940.']},

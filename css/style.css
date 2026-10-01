@@ -603,3 +603,6 @@ input[type=range]{width:100%;accent-color:var(--brass)}
   .band-in .brand,.band-in .clock{grid-column:1/-1}
   .clock .seg{display:flex}.clock .seg button{flex:1}
 }
+/* the follow camera (0.36.5) */
+.followchip{position:absolute;bottom:42px;left:50%;transform:translateX(-50%);z-index:6;display:flex;gap:8px;align-items:center;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:16px;padding:3px 4px 3px 12px;font-size:12.5px;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.followchip .btn{padding:2px 10px}

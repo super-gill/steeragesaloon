@@ -5,7 +5,13 @@ const turnDays=(sh,port)=>Math.max(2,TURN_DAYS-(sh.up&&sh.up.gear?1:0)-(S.shore&
 const cargoPull=(rk,reefer)=>{const sh=S.shore||{},calls=ROUTES[rk].calls;let f=1;for(const a in sh.fagents||{})if(FAGENCY[a]&&FAGENCY[a].ports.some(p=>calls.includes(p)))f+=0.075;if(reefer&&Object.keys(sh.cold||{}).some(p=>calls.includes(p)))f+=0.2;return f;};
 const bunkerDiscount=()=>S.shore&&S.shore.bunker&&S.shore.bunker.until>=S.m?0.88:1;
 const fuelPrice=(sh,m)=>(sh.fuel==='coal'?coalPrice(m,bunkerHeld()):oilPrice(m))*bunkerDiscount()*slumpK('fuel',m)*PX();
-const fuelRate=(sh,sm)=>sh.grt/(sh.fuel==='coal'?70:95)*Math.pow(sm,3)*(sh.up&&sh.up.turbines?0.92:1)*(sh.fuelK||1)*crewMods(sh).fuel;
+/* a ship fast for her size burns far more: power grows with the cube of speed. A ship the Line designs has her own figure
+   (fuelK, from her engines); for the rest, above the speed a hull of her size makes economically (about 16 knots at
+   10,000 tons, a little more for bigger ships) coal rises with the speed to the power 2.5 (0.36.5). Fitted so that a
+   25-knot express of 31,500 tons burns about 900 tons a day at service speed, as the Cunard expresses of 1907 burned
+   about 1,000, and an Olympic-class liner about 770 against some 650; ordinary steamers are unchanged. */
+const fastK=sh=>sh.fuelK?1:Math.max(1,Math.pow((sh.knots||12)/(16*Math.pow(Math.max(1000,sh.grt)/10000,0.15)),2.5));
+const fuelRate=(sh,sm)=>sh.grt/(sh.fuel==='coal'?70:95)*Math.pow(sm,3)*(sh.up&&sh.up.turbines?0.92:1)*(sh.fuelK||fastK(sh))*crewMods(sh).fuel;
 const duesAt=(sh,port,mult)=>sh.grt*mult*(S.shore&&S.shore.piers[port]?0.4:1)*slumpK('dues')*PX();
 /* the intermediate calls of a geography in sailing order for a direction, as [port, nm from departure] */
 function stopsFor(gk,dir){if(dir===1&&ROUTES[gk]&&ROUTES[gk].cruise)return []; // a cruise sails home non-stop

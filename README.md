@@ -298,6 +298,12 @@ Each month the Shore tab also shows what each pier, hostel and booking agency is
 
 Money is in 1921 pounds, scaled by the price index. Head office suggests selling spare berths at piers and yards (which cost the fleet nothing) once they would earn £400 a month; hostels and agents are left to the player, since they help rivals on the Line's own routes.
 
+## Costs that grow with the fleet (0.36.5)
+
+- **Head office** (`officeParts`, `officeCost` in `js/economy.js`), in 1921 pounds a month: 500, plus 100 and 20 a thousand tons for each ship, 150 for each line open and 40 for each port its lines call at; times one plus the friction of a big fleet, 0.5 × ln(1 + (ships − 12) / 12) past a dozen ships, of which each department the Line keeps takes a fifth; plus 350 in the conference. One 4,600-ton ship on one line: about 920 (868 before); ten of 6,000 tons on three lines: 3,500 (3,800); seventy of 8,000 tons on eight lines: 38,600 (34,200), or 24,100 with all four departments; twenty of 30,000 tons on four lines: 19,500 (7,800). The Company tab breaks it down (`officeHTML`).
+- **Coal and speed** (`fastK`, `fuelRate` in `js/sim.js`): a ship without her own engine figure (`fuelK`, set for every ship the Line designs) burns, above the economical speed for her size (16 knots × (tons / 10,000)^0.15), more by (knots / that speed)^2.5. A 25-knot express of 31,500 tons: about 900 tons a day at service speed (the 1907 Cunard expresses burned about 1,000); an Olympic of 45,000 tons at 21.5 knots about 770 (about 650 in fact); a 12.5-knot emigrant ship of 6,000 tons unchanged at 86.
+- **Follow camera** (`startFollow`, `followTo`, `followChip` in `js/map.js`): Follow on the chart, on a ship's page, zooms to 2.5 times the fitted chart if it is further out and eases the view to keep her in the middle each frame. Zooming keeps following; dragging the chart or Stop on the chip ends it.
+
 ## Ships gone from the fleet (0.36.4)
 
 Every way a ship leaves the fleet records it (`fleetGone`, `S.gone`, the last thirty): lost at sea or to the enemy, written off, seized by the bank, sold to see off a bid, sold or broken up by the owner. A loss, a seizure or a sale to see off a bid stays under Needs attention for two months or until noted; the Fleet tab has a fold-away list, Gone from the fleet. The fleet lists (`shownShips`) keep a silent ship that has foundered, shown at sea by reckoning, until she is posted missing: the office cannot know sooner.

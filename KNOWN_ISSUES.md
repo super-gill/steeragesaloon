@@ -1,6 +1,6 @@
 # Known Issues
 
-Steerage & Saloon 0.36.2. This log records every known defect, loophole and open question that has not been fixed in a released version. Balance targets and accepted behaviour are in `docs/overhaul/BALANCE.md`; this file covers what is wrong or unfinished.
+Steerage & Saloon 0.36.5. This log records every known defect, loophole and open question that has not been fixed in a released version. Balance targets and accepted behaviour are in `docs/overhaul/BALANCE.md`; this file covers what is wrong or unfinished.
 
 **Severity**
 
@@ -85,7 +85,7 @@ Steerage & Saloon 0.36.2. This log records every known defect, loophole and open
 
 | ID | Status | Question |
 |---|---|---|
-| KI-090 | Partly done (0.36.2) | **Large fleets are supported, not discouraged.** Done: performance, delegation, running by line. Left: costs that scale (0.36.3). Decided: make them playable (KI-001), hand routine work to masters and departments (standing orders, an inbox that shows only the owner's decisions and summarises the rest), let the player run a fleet by line, and make shore support scale with the fleet properly. Office cost today is `600 + 250n + 18n^1.6` a month (n = ships): it counts hulls only (a tramp costs the same as a 45,000-ton liner) and ignores the number of lines and ports. |
+| KI-090 | Done (0.36.5) | **Large fleets are supported, not discouraged.** Done: performance, delegation, running by line. Costs that scale with tonnage, lines, ports and fleet size: 0.36.5. Decided: make them playable (KI-001), hand routine work to masters and departments (standing orders, an inbox that shows only the owner's decisions and summarises the rest), let the player run a fleet by line, and make shore support scale with the fleet properly. Office cost today is `600 + 250n + 18n^1.6` a month (n = ships): it counts hulls only (a tramp costs the same as a 45,000-ton liner) and ignores the number of lines and ports. |
 | KI-091 | Planned (0.37) | **Rescue instead of game over (accepted).** An insolvent Line gets a likely, not certain, rescue: a bank consortium or rival line before the 1920s, the Treasury after, with lasting costs (dilution, a government director, no dividends until repaid, possibly a forced merger; a second failure is final). With a safety net the game can hit harder (KI-060, KI-061 to be rebalanced together). Rival failures can use the same machinery. |
 | KI-092 | Discuss | **Desktop app (Electron).** Pinned; not needed for 0.40. It runs the same engine, so it does not fix KI-001. It would give file saves and backups without the browser's storage limits, no throttling when the window is in the background, a database (SQLite) for long histories, and a Steam-style installer. |
 | KI-093 | Fixed (0.36.2) | **Advice moves ships off the line they were built for, and the player loses track.** Count the design line in move advice, show built-for and mismatches in the fleet manager and line view, and warn when ordering a ship for a line already near its trade's capacity. Replaces KI-048. |
@@ -96,7 +96,7 @@ New features must fit the theme and be at least roughly historical. After 1939 t
 
 | ID | From | Verdict | Request and notes |
 |---|---|---|---|
-| FR-01 | Ross | Accept (0.36) | **Follow-ship camera**: lock the map onto one ship, zoomed in. |
+| FR-01 | Ross | Done (0.36.5) | **Follow-ship camera**: lock the map onto one ship, zoomed in. |
 | FR-02 | Ross | Done (0.36.1) | **Quiet watch**: suppress interruptions except major disasters. The same work as KI-090 (standing orders, masters' discretion, a short inbox). |
 | FR-03 | Ross | Adapt | **Classes merge in the 1960s.** Historically the Atlantic lines went to two classes, First and Tourist, through the 1950s and 60s ("Economy" is an airline word). Cruising was one class from the start. Proposed: two-class ships from the late 1950s, one-class cruise ships. |
 | FR-04 | Ross | Adapt | **Family class from the 1980s.** Cruise ships did not reintroduce classes; families were a market, not a class. Proposed: cruise market segments (budget, premium, family) that a ship's facilities appeal to. |

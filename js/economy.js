@@ -188,7 +188,17 @@ function airShare(rk,c,m){
   return Math.min(0.25,a*(fast?0.6:1));
 }
 /* ---------- head office grows faster than the fleet ---------- */
-const officeCost=()=>(600+250*S.ships.length+18*Math.pow(S.ships.length,1.6)+(S.conf?350:0))*PX();
+/* head office (0.36.5): a base, each ship by her tonnage, each line open (agents and an office at both ends) and each port
+   the fleet calls at; and, past a dozen ships, the friction of running a big fleet from one office, which the departments
+   take off: each one the Line keeps cuts a fifth of it. In 1921 pounds a month: one ship of 4,600 tons on one line about
+   £920 (the same as before); ten ships of 6,000 tons on three lines about £3,500; seventy of 8,000 tons on eight lines
+   about £39,000 with no departments and £25,000 with all four. Before, a hull cost the same whatever her size. */
+function officeParts(){const n=S.ships.filter(x=>x.state!=='lost').length,tons=S.ships.reduce((a,x)=>a+(x.state!=='lost'?x.grt:0),0),lines=Object.keys(S.lines).length;
+  const ports=new Set();for(const rk in S.lines)if(ROUTES[rk])for(const p of ROUTES[rk].calls)ports.add(p);
+  const base=500+n*100+tons/1000*20+lines*150+ports.size*40;
+  const depts=Object.keys(S.depts||{}).length,fr=0.5*Math.log(1+Math.max(0,n-12)/12)*(1-0.2*Math.min(4,depts));
+  return {base,friction:fr,conf:S.conf?350:0,n,tons,lines,ports:ports.size,depts};}
+const officeCost=()=>{const o=officeParts();return (o.base*(1+o.friction)+o.conf)*PX();};
 
 /* ---------- ships wear out ----------
    sh.fat is the hull's used-up life, 0 to 100. Every crossing uses some: more at full speed, in a run-down ship, with a

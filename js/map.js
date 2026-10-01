@@ -44,7 +44,7 @@ function zoomFit(){VIEW.s=null;applyView();}
   m.addEventListener('pointerdown',e=>{if(e.button!==0||e.target.closest('.zoomctl,.banner'))return;drag={id:e.pointerId,sx:e.clientX,sy:e.clientY,vx:VIEW.x,vy:VIEW.y,moved:false};});
   m.addEventListener('pointermove',e=>{if(!drag||e.pointerId!==drag.id)return;const dx=e.clientX-drag.sx,dy=e.clientY-drag.sy;
     if(!drag.moved&&Math.hypot(dx,dy)>4){drag.moved=true;m.classList.add('dragging');try{m.setPointerCapture(e.pointerId);}catch(_){}}
-    if(drag.moved){VIEW.x=drag.vx+dx;VIEW.y=drag.vy+dy;applyView();}});
+    if(drag.moved){if(UI.follow){UI.follow=null;UI.dirty=true;}VIEW.x=drag.vx+dx;VIEW.y=drag.vy+dy;applyView();}}); // dragging the chart stops following a ship (0.36.5)
   const end=e=>{if(!drag)return;if(drag.moved){UI.suppressClick=true;setTimeout(()=>UI.suppressClick=false,0);}m.classList.remove('dragging');drag=null;};
   m.addEventListener('pointerup',end);m.addEventListener('pointercancel',end);
   m.addEventListener('wheel',e=>{e.preventDefault();const r=m.getBoundingClientRect();zoomAt(e.deltaY<0?1.15:1/1.15,e.clientX-r.left,e.clientY-r.top);},{passive:false});
@@ -73,6 +73,15 @@ function renderMap(){
   else b.hidden=true;
 }
 const MARKS={};
+/* the follow camera (0.36.5): the chart keeps the followed ship in the middle, easing towards her each frame; zoom still
+   works, and dragging the chart, or Stop on the chip, lets her go */
+function followTo(x,y){const m=document.getElementById('map');if(!m)return;const w=m.clientWidth,h=m.clientHeight;if(!w||!h)return;
+  const tx=w/2-x*VIEW.s,ty=h/2-y*VIEW.s;VIEW.x+=(tx-VIEW.x)*0.2;VIEW.y+=(ty-VIEW.y)*0.2;applyView();}
+function followChip(){let c=document.getElementById('followChip');const sh=UI.follow&&S.ships.find(x=>x.id===UI.follow);
+  if(!sh){if(UI.follow)UI.follow=null;if(c)c.remove();return;}
+  if(!c){c=document.createElement('div');c.id='followChip';c.className='followchip';const m=document.getElementById('map');(m||document.body).appendChild(c);}
+  const t=`Following SS ${esc(sh.name)}`;if(c.dataset.t!==t){c.dataset.t=t;c.innerHTML=`<span>${t}</span><button class="btn" data-act="follow" data-id="0">Stop</button>`;}}
+function startFollow(id){UI.follow=id||null;if(id&&VIEW.z<2.2){const m=document.getElementById('map');VIEW.s=VIEW.fit*2.5;VIEW.z=2.5;applyView();}UI.dirty=true;}
 /* a style written only when it changes */
 const setSt=(el,k,v)=>{const c=el._st||(el._st={});if(c[k]!==v){c[k]=v;el.style[k]=v;}};
 function drawShips(){
@@ -101,9 +110,11 @@ function drawShips(){
     const sel=S.selShip===sh.id;
     {const P=paintOf(sh),c=lum(P.funnel)>0.8?(P.band1||P.hull):P.funnel;setSt(el._hull,'background',sh.state==='yard'||sh.state==='laid'||(!est&&sh.state==='sea'&&(sh.stopLeft>0||sh.limp||sh.towed))?'':c);}
     const cls='shipm'+(sel?' sel':'')+(est?' est'+(sh.overdue?' overdue':''):'')+(!est&&sh.state==='sea'&&(sh.stopLeft>0||sh.limp||sh.towed)?' broken':'')+(sh.state==='yard'?' yard':'')+(sh.state==='laid'?' laid':'');if(el.className!==cls)el.className=cls;
+    if(UI.follow===sh.id)followTo(x,y);
     const tag=el._tag;const txt=sel||VIEW.z>=1.8?'SS '+sh.name+(est?' (reckoned)':''):'';if(tag.textContent!==txt)tag.textContent=txt;
   }
   for(const id of Object.keys(MARKS))if(!seen.has(+id)){MARKS[id].remove();delete MARKS[id];}
+  followChip();
   // the rivals' markers ten times a second: there are many, they are small, and they move slowly on the chart (0.36.0)
   const now=performance.now();if(!drawShips.rt||now-drawShips.rt>100||VIEW.s!==drawShips.rs){drawShips.rt=now;drawShips.rs=VIEW.s;drawRivals();}
 }

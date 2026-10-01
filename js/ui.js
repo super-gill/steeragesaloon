@@ -258,7 +258,7 @@ function renderShipDetail(sh){
   }
   setHTML($('detailD'),`
     ${UI.fmBack?'<button class="btn" data-act="fmback" style="width:fit-content">‹ Back to the fleet manager</button>':''}
-    <div><div class="row"><h3>SS ${sh.name}</h3>${st.chip}</div>
+    <div><div class="row"><h3>SS ${sh.name}</h3><span class="btns">${st.chip}<button class="btn quiet" data-act="follow" data-id="${UI.follow===sh.id?0:sh.id}" aria-pressed="${UI.follow===sh.id}">${UI.follow===sh.id?'Stop following':'Follow on the chart'}</button></span></div>
     <div class="meta">Built ${sh.built} (${age} years) · ${int(sh.grt)} grt · ${knotsOf(sh)} knots · ${sh.fuel}-fired · ${sh.up&&sh.up.wireless?'wireless':'no wireless'} · worth about ${fmt(shipValue(sh))}</div></div>
     <p class="stline">${st.text}</p>
     ${advRow('ship'+sh.id,shownAdvice().filter(h=>h.scope==='ship'&&h.ref===sh.id),'her')}
@@ -687,6 +687,9 @@ function rivalsHTML(){
     <div class="stack">${live.map(card).join('')}</div>
     ${gone.length||born.length?`<details class="thist"><summary>Lines come and gone (${gone.length+born.length})</summary>${gone.length?`<span class="lbl">Failed</span><ul class="note" style="padding-left:18px;margin:0">${gone.join('')}</ul>`:''}${born.length?`<span class="lbl">Founded</span><ul class="note" style="padding-left:18px;margin:0">${born.join('')}</ul>`:''}</details>`:''}</section>`;
 }
+/* what head office costs and why (0.36.5) */
+function officeHTML(){const o=officeParts(),p=PX(),tot=officeCost();
+  return `<p class="note">Head office costs ${fmt(tot)} a month: ${fmt(Math.round(o.base*p))} for ${o.n} ship${o.n===1?'':'s'} of ${int(o.tons)} tons in all, ${o.lines} line${o.lines===1?'':'s'} and ${o.ports} ports${o.friction>0.005?`, and ${Math.round(o.friction*100)}% more for running a fleet this size from one office${o.depts<4?`; each department you keep takes a fifth of that off`:''}`:''}${o.conf?`, with ${fmt(Math.round(o.conf*p))} of conference dues`:''}.</p>`;}
 function renderCompany(){
   const own='<span class="chip sea">Owned</span>',buy=(kind,key,label)=>{const c=shoreCost(kind,key);return `<button class="btn" data-act="shorebuy" data-d='${JSON.stringify([kind,key])}' ${S.cash<c||S.over?'disabled':''}>${label||'Buy'} · ${fmt(c)}</button>`;};
   const depts=Object.keys(DEPTS).map(k=>{const d=DEPTS[k],o=S.depts[k],dc=deptCost(k);
@@ -721,7 +724,7 @@ function renderCompany(){
   setHTML($('pane-company'),`
     ${colours}
     ${warHTML()}
-    <section class="sec"><h2>Departments</h2>${S.ships.length<4?`<p class="warnline">With ${S.ships.length===1?'one ship':S.ships.length+' ships'} a department costs more than it can save: they start to pay their way at about four ships. Each costs its opening fee plus wages and rent every month.</p>`:''}<p class="note">Each department advises in its own field, and can be told to act on its advice. A department is only as good as its head and staff: a muddled head misses months and misjudges fares, a careful one lets small gains go. Acting departments keep a cash reserve and never open lines, buy, build or sell ships on their own: they bring those to you as proposals.</p><div class="stack">${depts}</div></section>
+    <section class="sec"><h2>Departments</h2>${officeHTML()}${S.ships.length<4?`<p class="warnline">With ${S.ships.length===1?'one ship':S.ships.length+' ships'} a department costs more than it can save: they start to pay their way at about four ships. Each costs its opening fee plus wages and rent every month.</p>`:''}<p class="note">Each department advises in its own field, and can be told to act on its advice. A department is only as good as its head and staff: a muddled head misses months and misjudges fares, a careful one lets small gains go. Acting departments keep a cash reserve and never open lines, buy, build or sell ships on their own: they bring those to you as proposals.</p><div class="stack">${depts}</div></section>
     ${safety}
     <section class="sec"><h2>North Atlantic conference</h2>${conf}</section>
     ${rivalsHTML()}
