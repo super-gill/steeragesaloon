@@ -121,6 +121,7 @@ function flCrown(){const F=S.fl,b=F&&F.bid;if(!b||b.crown)return false;const sh=
   if(!sh||S.ships.length<2)return false;const price=Math.round(shipValue(sh)*0.85),to=coLive().filter(o=>o!==b.by&&!RIVAL_P[o].kind&&!trustMember(o)&&flKnightMoney(o)>=price).sort((a,c)=>(flBritish(c)?1:0)-(flBritish(a)?1:0))[0];if(!to)return false;
   const rk=sh.line||(Object.keys(S.lines)[0])||'liv';S.cash+=price;coPay(to,price);
   const x=makeRivalShip(to,rk,sh.built);Object.assign(x,{name:sh.name,grt:sh.grt,knots:sh.knots,berths:{...sh.berths},cargo:sh.cargo});S.rships.push(x);newRivalVis(x);RW_CACHE.k=null;
+  fleetGone(sh,'sold',`sold to ${RIVALS[to].name} to see off the bid`);
   S.ships=S.ships.filter(y=>y!==sh);if(S.selShip===sh.id)S.selShip=S.ships[0]?S.ships[0].id:null;b.crown=true;
   news(`SS ${sh.name}, the Line's finest ship, is sold to ${RIVALS[to].name} for ${fmt(price)}. It cannot be undone.`,'bad',true);return true;}
 /* appeal to the government: only against a foreign bidder. The price: the Line stays British and keeps its ships at the Admiralty's call */

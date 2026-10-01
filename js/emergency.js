@@ -287,6 +287,7 @@ function writeOff(e,sh,how){
   const war=!!(EMERG[e.k]&&EMERG[e.k].war)&&typeof warClaim==='function';
   sh.lost={t:S.t,where:posText(sh),saved:1,lost:0};const c=war?warClaim(sh):insClaim(sh,0.85);queueInquiry(sh,e);S.rep=clamp(S.rep-3,0,100);
   news(`SS ${e.ship} is a constructive total loss ${how}. Everyone aboard was saved. ${war||insOf(sh).cover==='none'?c.txt:`The underwriters take her over. ${c.txt}`}`,'bad',2);
+  fleetGone(sh,'lost',`a constructive total loss ${how}`);
   S.ships=S.ships.filter(x=>x!==sh);if(S.selShip===sh.id)S.selShip=S.ships[0]?S.ships[0].id:null;
 }
 function emEnd(e,sh,how){

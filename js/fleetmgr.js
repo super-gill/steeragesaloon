@@ -15,8 +15,8 @@ function closeFleetMgr(){UI.fmOpen=false;if(UI.fmPrev>0&&!S.over){UI.speed=UI.fm
 
 /* ---------- what the table knows about a ship ---------- */
 let FM_A=null; // the month's advice, read once per drawing of the window
-const fmLive=()=>S.ships.filter(x=>x.state!=='lost');
-function fmStateOf(sh){if(sh.state==='req')return 'req';if(sh.state==='yard')return 'yard';if(sh.state==='laid'||!sh.line||!S.lines[sh.line])return 'laid';return sh.state==='sea'||sh.state==='repo'?'sea':'port';}
+const fmLive=()=>shownShips();
+function fmStateOf(sh){if(sh.state==='lost')return 'sea';if(sh.state==='req')return 'req';if(sh.state==='yard')return 'yard';if(sh.state==='laid'||!sh.line||!S.lines[sh.line])return 'laid';return sh.state==='sea'||sh.state==='repo'?'sea':'port';}
 const fmLast=sh=>{const v=(sh.pl||[]).slice(-1)[0];return v===undefined?null:v;};
 const fmAvg=sh=>{const p=sh.pl||[];return p.length?p.reduce((a,b)=>a+b,0)/p.length:null;};
 const fmLineName=sh=>fmStateOf(sh)==='req'?'War service':sh.line&&S.lines[sh.line]&&sh.state!=='laid'?ROUTES[sh.line].name:'Laid up';

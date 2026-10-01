@@ -2,6 +2,13 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.36.4 (1 October 2026)
+Fixes from Ross's play on a phone.
+- Fixed: on a phone the Menu button sat under the clock. It now sits beside the version, above the date; on the narrowest phones the clock has a row of its own.
+- A ship lost, seized by the bank or sold off to see off a bid now stays under Needs attention until you note it, and the Fleet tab lists the ships gone from the fleet, how and when. Before, the only record was a line in the news, easy to miss at speed.
+- Fixed: a ship without wireless that foundered vanished from the fleet lists at once, though nobody ashore could know she was lost. She now stays on the lists, at sea by reckoning, until she is overdue and posted missing.
+- Costs that grow with the fleet and the follow-ship camera move to 0.36.5.
+
 ## 0.36.3 (1 October 2026)
 A hotfix. A game saved under 0.36.1 failed to draw under 0.36.2: the panels were blank, the ships missing from the chart and the clock stopped. The fault could not be reproduced here, so this release makes the game survive it and say what it was.
 - Each part of the screen is drawn on its own. A fault in one panel no longer blanks the others or stops the clock: it shows a notice at the foot of the screen with a line to send to the developer.

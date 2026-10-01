@@ -253,6 +253,12 @@ textarea.code{width:100%;box-sizing:border-box;font:11px/1.35 ui-monospace,Menlo
   .eyebrow{font-size:9.5px;letter-spacing:.14em}
   .eyebrow .long{display:none}
   .brand h1{font-size:19px}
+  /* the Menu button sits beside the version, above the date: beside the date it ran under the clock (0.36.4) */
+  .brand{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:8px;row-gap:1px}
+  .brand .row{display:contents}
+  .brand .eyebrow{grid-column:1;grid-row:1;min-width:0}
+  .brand .menubtn{grid-column:2;grid-row:1;justify-self:end;padding:1px 7px;font-size:10px;letter-spacing:.12em}
+  .brand h1{grid-column:1/-1;grid-row:2;min-width:0;overflow:hidden;text-overflow:clip}
   .clock .lbl{display:none}
   .clock .seg button{min-width:0;padding:5px 8px;font-size:12.5px}
   .stats{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;justify-content:stretch}
@@ -591,3 +597,9 @@ input[type=range]{width:100%;accent-color:var(--brass)}
 .faultbar{position:fixed;left:12px;right:12px;bottom:12px;z-index:100;background:#7a1f1f;color:#fff;padding:10px 12px;border-radius:6px;font-size:13px;line-height:1.4;box-shadow:0 4px 18px rgba(0,0,0,.35)}
 .faultbar code{display:block;margin:6px 0;font-family:var(--mono);font-size:12px;white-space:pre-wrap;word-break:break-word;color:#ffe9c7}
 .faultbar .btn{margin-top:4px}
+.gone{margin:8px 0 4px;font-size:13px}.gone ul{margin:4px 0;padding-left:18px}
+/* the narrowest phones: the clock on a row of its own under the date (0.36.4) */
+@media (max-width:360px){
+  .band-in .brand,.band-in .clock{grid-column:1/-1}
+  .clock .seg{display:flex}.clock .seg button{flex:1}
+}

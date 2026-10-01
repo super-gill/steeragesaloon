@@ -108,6 +108,8 @@ function alerts(){
   if(S.fl&&flMajority()&&S.fl.conf<35)A.push({id:'flconf'+Math.floor(S.m/12),k:'bad',t:`The board is ${confWord(S.fl.conf)} (${Math.round(S.fl.conf)}). Below 20 at the next January meeting it removes you.`,b:[['Targets','finsub','shares']]});
   if(S.ex&&S.ex.me.short)for(const id in S.ex.me.short){const q=S.ex.me.short[id],c=S.ex.cos[id];if(c&&!c.gone&&q.n*c.px>0.8*(q.col+q.margin))A.push({id:'short'+id,k:'bad',t:`The Line's short in ${mkName(id)} is close to being bought in: its shares have risen.`,b:[['Shares','mksel',id]]});}
   if(S.ex&&S.ex.call)A.push({id:'mkcall'+S.ex.call.due,noNote:true,k:'bad',t:`Margin call: pay the broker ${fmt(S.ex.call.amt)} or sell shares by ${monthName(S.ex.call.due)}, or he sells at the market.`,b:[['Shares','finsub','shares']]});
+  // a ship lost, seized or sold off in the last two months stays here until noted (0.36.4)
+  for(const g of S.gone||[])if(['lost','seized'].includes(g.kind)||g.kind==='sold'&&/bid/.test(g.txt))if(S.t-g.d<=60)A.push({id:'gone'+g.id,k:'bad',t:`SS ${g.name} is gone from the fleet: ${g.txt} (${dateLong(g.d)}).`,b:[]});
   if(S.cash<0)A.push({id:'od',noNote:true,k:'bad',t:`The account is overdrawn. The bank forecloses below ${fmt(-odLimit())}.`,b:[['Bank','tabgo','finance']]});
   // an item the owner has noted or acted on stays away until the situation passes; decisions and the bank's demands stay put
   const seen=S.attnSeen=S.attnSeen||{};for(const id in seen)if(!A.some(a=>a.id===id))delete seen[id];
@@ -131,7 +133,7 @@ function renderOverview(){
 
 /* every line with its ships under it, and what each is making, in one table */
 function boardHTML(){
-  const sum=o=>Object.values(o||{}).reduce((a,b)=>a+b,0),LM=S.lastMonth,live=S.ships.filter(x=>x.state!=='lost');
+  const sum=o=>Object.values(o||{}).reduce((a,b)=>a+b,0),LM=S.lastMonth,live=shownShips();
   const n=v=>v===undefined||v===null?'<td class="r meta">–</td>':`<td class="r num ${v<0?'neg':'pos'}">${fmt(Math.round(v))}</td>`;
   const shipRow=sh=>{const st=shipStatus(sh),pl=sh.pl||[],avg=pl.length?pl.reduce((a,b)=>a+b,0)/pl.length:null;
     return `<tr class="bship" data-act="selship" data-id="${sh.id}" data-key="bs${sh.id}"><td><div class="nm">${sh.name}</div><div class="meta" title="${st.short}">${st.short}</div></td>${n((S.mtd.ships||{})[sh.id]?sum(S.mtd.ships[sh.id]):0)}${n(pl.slice(-1)[0])}${n(avg)}</tr>`;};
@@ -152,7 +154,7 @@ function boardHTML(){
 function renderFleet(){
   /* one short row a ship, grouped by line; the groups fold away. The Fleet Manager has the full table. */
   const order=[...Object.keys(S.lines),null],grp=sh=>sh.line&&sh.state!=='laid'&&S.lines[sh.line]?sh.line:null,shut=UI.fgShut||{};
-  const live=S.ships.filter(sh=>sh.state!=='lost');
+  const live=shownShips();
   const items=order.map(g=>{const on=live.filter(sh=>grp(sh)===g);if(!on.length)return '';
     const gk=g||'_idle',lm=on.reduce((a,sh)=>a+((sh.pl||[]).slice(-1)[0]||0),0),closed=!!shut[gk];
     const head=`<button class="fgrp fghead" data-key="fg${gk}" data-act="fgtoggle" data-id="${gk}" aria-expanded="${!closed}"><span>${closed?'▸':'▾'} ${g?ROUTES[g].name:'Laid up or off a line'} <span class="meta">· ${on.length}</span></span><span class="num ${lm<0?'neg':'pos'}">${fmt(lm)}</span></button>`;
@@ -163,7 +165,7 @@ function renderFleet(){
         <span class="fcond${due?' neg':''}">${fmMini(sh.cond)}${Math.round(sh.cond)}%</span>
         <span class="num ${v<0?'neg':'pos'}">${v===undefined?'<span class="meta">new</span>':fmt(v)}</span></button>`;}).join('');}).join('');
   setHTML($('fleetL'),`<div class="row fhead"><h2>Fleet · ${live.length} ship${live.length===1?'':'s'}</h2><button class="btn" data-act="fmopen" ${live.length?'':'disabled'}>Fleet manager</button></div>
-    ${items}<p class="note fkey">${[['sea','at sea'],['port','in port'],['yard','yard'],['laid','laid up'],['bad','in trouble']].map(([k,l])=>`<span><span class="fdot fd-${k}"></span> ${l}</span>`).join('')}<span>· condition · last month</span></p>`);
+    ${items}${(S.gone||[]).length?`<div class="gone"><button class="fgrp fghead" data-act="gonetoggle" aria-expanded="${!!UI.goneOpen}"><span>${UI.goneOpen?'▾':'▸'} Gone from the fleet <span class="meta">· ${S.gone.length}</span></span></button>${UI.goneOpen?`<ul class="note">${S.gone.slice(0,12).map(g=>`<li><strong>SS ${esc(g.name)}</strong>, ${dateLong(g.d)}: ${g.txt}.</li>`).join('')}</ul>`:''}</div>`:''}<p class="note fkey">${[['sea','at sea'],['port','in port'],['yard','yard'],['laid','laid up'],['bad','in trouble']].map(([k,l])=>`<span><span class="fdot fd-${k}"></span> ${l}</span>`).join('')}<span>· condition · last month</span></p>`);
   const sh=S.ships.find(x=>x.id===S.selShip)||S.ships[0];if(sh){S.selShip=sh.id;renderShipDetail(sh);}
 }
 /* ---------- Wireless ---------- */

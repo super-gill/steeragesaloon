@@ -87,6 +87,7 @@ function callDue(){
   if(owe<=0)return;
   const fleet=S.ships.filter(x=>x.state!=='sea'&&x.state!=='repo'&&x.state!=='lost').sort((a,b)=>shipValue(b)-shipValue(a));
   while(owe>0&&fleet.length&&S.ships.length>0){const x=fleet.shift(),v=Math.round(shipValue(x)*0.6);
+    fleetGone(x,'seized',`seized by the bank and sold for ${fmt(v)}`);
     S.ships=S.ships.filter(y=>y!==x);if(S.selShip===x.id)S.selShip=S.ships[0]?S.ships[0].id:null;admRepay(x);
     const use=Math.min(v,owe);owe-=use;S.debt-=use;S.cash+=v-use;
     news(`The bank has seized SS ${x.name} and sold her at a forced sale for ${fmt(v)} against the called loan.`,'bad',true);}

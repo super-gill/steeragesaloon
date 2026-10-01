@@ -138,6 +138,12 @@ const INS_RANK={none:0,mort:1,value:2,agreed:3};
 /* ship names: one ship of a name afloat at a time, across the Line, the rivals, the brokers' lists and the yards (0.35.7) */
 function nameTaken(n,noMarket){return S.ships.some(x=>x.name===n)||(S.rships||[]).some(x=>x.name===n)||(!noMarket&&(S.market||[]).some(x=>x.name===n))||(S.rorders||[]).some(q=>q.sh&&q.sh.name===n)||(S.orders||[]).some(o=>o.d&&o.d.name===n);}
 function freshName(n){if(!nameTaken(n))return n;for(const r of ['II','III','IV','V','VI','VII','VIII','IX'])if(!nameTaken(n+' '+r))return n+' '+r;return n+' '+Math.floor(S.t);}
+/* a ship gone from the fleet, kept on a record the owner sees (0.36.4): a loss or a forced sale stays under Needs
+   attention until it is noted, and the Fleet tab lists the last ships to go, so a ship never just disappears */
+/* the ships the office believes it has: a silent ship that has foundered is still at sea as far as anyone knows, until
+   she is overdue and posted missing (0.36.4: she vanished from the fleet lists the moment she sank) */
+const shownShips=()=>S.ships.filter(x=>x.state!=='lost'||isSilent(x));
+function fleetGone(sh,kind,txt){(S.gone=S.gone||[]).unshift({d:Math.floor(S.t),id:sh.id,name:sh.name,kind,txt});if(S.gone.length>30)S.gone.length=30;}
 /* lost, or in an emergency now: no underwriter adds cover on her (0.35.7) */
 const shipInTrouble=sh=>sh.state==='lost'||!!sh.lost||(S.emerg||[]).some(e=>!e.over&&e.sid===sh.id);
 function setCover(sh,cover,excess){const i=insOf(sh);sh.ins.cover=i.cover;sh.ins.excess=i.excess;const nc=cover||i.cover,ne=excess===undefined?i.excess:excess;

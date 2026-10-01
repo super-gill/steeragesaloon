@@ -263,6 +263,7 @@ function reqLoss(sh){
   const v=Math.round(shipValue(sh)/warShips(S.m)/100)*100;S.cash+=v;const bank=payMortgage(sh,v);admRepay(sh);S.war.losses=(S.war.losses||0)+1;
   const how={amc:'in action with a German cruiser',hospital:'by a mine off the French coast',troop:'by a submarine in the Mediterranean',transport:'by a submarine in the Western Approaches'}[sh.req.role];
   news(`SS ${sh.name}, on war service as ${REQ_NAME[sh.req.role]}, has been sunk ${how}. The Admiralty pays the agreed value, ${fmt(v)}${bank>100?`, ${fmt(Math.round(bank))} of it to the mortgagees`:''}.`,'bad',true);
+  fleetGone(sh,'lost',`sunk on war service ${how}`);
   S.ships=S.ships.filter(x=>x!==sh);if(S.selShip===sh.id)S.selShip=S.ships[0]?S.ships[0].id:null;return true;
 }
 /* the headlines of the war at sea */

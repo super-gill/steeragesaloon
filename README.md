@@ -298,6 +298,10 @@ Each month the Shore tab also shows what each pier, hostel and booking agency is
 
 Money is in 1921 pounds, scaled by the price index. Head office suggests selling spare berths at piers and yards (which cost the fleet nothing) once they would earn £400 a month; hostels and agents are left to the player, since they help rivals on the Line's own routes.
 
+## Ships gone from the fleet (0.36.4)
+
+Every way a ship leaves the fleet records it (`fleetGone`, `S.gone`, the last thirty): lost at sea or to the enemy, written off, seized by the bank, sold to see off a bid, sold or broken up by the owner. A loss, a seizure or a sale to see off a bid stays under Needs attention for two months or until noted; the Fleet tab has a fold-away list, Gone from the fleet. The fleet lists (`shownShips`) keep a silent ship that has foundered, shown at sea by reckoning, until she is posted missing: the office cannot know sooner.
+
 ## Faults (0.36.3)
 
 `render` draws each part of the screen on its own (`RENDER_PARTS`); a fault in one is caught, written to the console and shown in a bar at the foot of the screen with the panel, the message and the first lines of the stack (`reportFault`), and the rest of the screen and the clock carry on. A fault in the simulation step pauses the clock and shows the same bar. Before, one fault stopped the frame loop: every panel went blank and the clock stopped.

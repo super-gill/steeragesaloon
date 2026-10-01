@@ -264,7 +264,7 @@ const scrapValue=sh=>Math.round(sh.grt*2*PX());
 function exitShip(sh,how){
   if(sh.state==='req'||sh.state==='lost')return false; // a requisitioned ship is the Admiralty's until she is handed back (0.35.6)
   const v=how==='scrap'?scrapValue(sh):saleValue(sh);
-  S.cash+=v;const adm=admRepay(sh);S.ships=S.ships.filter(x=>x!==sh);
+  S.cash+=v;const adm=admRepay(sh);fleetGone(sh,how==='scrap'?'scrapped':'sold',how==='scrap'?`broken up for ${fmt(v)}`:`sold for ${fmt(v)}`);S.ships=S.ships.filter(x=>x!==sh);
   news((how==='scrap'?`SS ${sh.name} sold to the breakers for ${fmt(v)}.`:`SS ${sh.name} sold for ${fmt(v)}.`)+(adm?` ${fmt(Math.round(adm))} of it repays her Admiralty loan.`:''));
   if(S.selShip===sh.id)S.selShip=S.ships[0]?S.ships[0].id:null;
 }
