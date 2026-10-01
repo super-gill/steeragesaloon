@@ -1,6 +1,6 @@
 # Known Issues
 
-Steerage & Saloon 0.36.1. This log records every known defect, loophole and open question that has not been fixed in a released version. Balance targets and accepted behaviour are in `docs/overhaul/BALANCE.md`; this file covers what is wrong or unfinished.
+Steerage & Saloon 0.36.2. This log records every known defect, loophole and open question that has not been fixed in a released version. Balance targets and accepted behaviour are in `docs/overhaul/BALANCE.md`; this file covers what is wrong or unfinished.
 
 **Severity**
 
@@ -56,19 +56,19 @@ Steerage & Saloon 0.36.1. This log records every known defect, loophole and open
 
 | ID | Sev | Status | Source | Issue |
 |---|---|---|---|---|
-| KI-040 | S2 | Planned (0.36) | P1, P2 | Forecasts are optimistic for mixed ships (about half the forecast on three moves). Move advice piles ships onto one line without counting the ones already sent. |
-| KI-041 | S2 | Planned (0.36) | P2 | The Fares Office sets fares below the conference floor. |
+| KI-040 | S2 | Fixed (0.36.2) | P1, P2 | Forecasts are optimistic for mixed ships (about half the forecast on three moves). Move advice piles ships onto one line without counting the ones already sent. |
+| KI-041 | S2 | Fixed (0.36.2) | P2 | The Fares Office sets fares below the conference floor. |
 | KI-043 | S3 | Open | P3 | The forecast horizon ignores the certain July 1924 quota cut. |
 | KI-045 | S3 | Open | P2 | Advice flips with no memory: the Fares Office downgraded tables that the same engine had advised upgrading a year earlier (reputation 71 → 62 in a quarter). |
 | KI-046 | S3 | Open | P2 | Captain advice to replace a "popular" captain recurs every quarter on the adjective alone. |
 | KI-047 | S3 | Open | P3 | Tourist Third refits look very strong (£12.6k raised one ship's forecast from 22k to 27k a month). Check against the 1920s trade. |
-| KI-048 | S4 | See KI-093 | U | **The game never shows what line a ship was built for.** `designLine` is saved at delivery but used nowhere. The design does matter (bunkers for the longest leg, draught for the ports, seakeeping for the route), so a ship moved to another line can be short-legged or too deep without the player knowing why. Fix: show "Built for ..." in the ship detail and fleet manager, and flag a mismatch with its reason. |
+| KI-048 | S4 | Fixed (0.36.2) | U | **The game never shows what line a ship was built for.** `designLine` is saved at delivery but used nowhere. The design does matter (bunkers for the longest leg, draught for the ports, seakeeping for the route), so a ship moved to another line can be short-legged or too deep without the player knowing why. Fix: show "Built for ..." in the ship detail and fleet manager, and flag a mismatch with its reason. |
 
 ## Economy and balance
 
 | ID | Sev | Status | Source | Issue |
 |---|---|---|---|---|
-| KI-060 | S2 | Planned (0.36) | Harness | Careful owners in the Depression: 8 of 20 careful seeds go bankrupt by 1939, 4 of them in the Depression. See KI-091. |
+| KI-060 | S2 | Planned (0.37) | Harness | Careful owners in the Depression: 8 of 20 careful seeds went bankrupt by 1939 (0.34). Since 0.36.2's realistic forecasts the careful owner does much better to 1922 (2 of 40 bankrupt); to be rebalanced with the rescue. See KI-091. |
 | KI-061 | S2 | Planned (0.36) | P2 | The 1907 bank failure is very large: 70% of one player's cash, £242k for another, after one news line of warning. |
 | KI-062 | S3 | Discuss | Harness | Rival failures run at 7.2 a decade against 6.3 for 0.34, and 11 to 13 a game in the 1920s. See KI-091. |
 | KI-063 | S3 | Planned (0.36) | Harness | Shipping shares recover to only 0.90 of worth by 1937. |
@@ -85,10 +85,10 @@ Steerage & Saloon 0.36.1. This log records every known defect, loophole and open
 
 | ID | Status | Question |
 |---|---|---|
-| KI-090 | Planned (0.36) | **Large fleets are supported, not discouraged.** Decided: make them playable (KI-001), hand routine work to masters and departments (standing orders, an inbox that shows only the owner's decisions and summarises the rest), let the player run a fleet by line, and make shore support scale with the fleet properly. Office cost today is `600 + 250n + 18n^1.6` a month (n = ships): it counts hulls only (a tramp costs the same as a 45,000-ton liner) and ignores the number of lines and ports. |
+| KI-090 | Partly done (0.36.2) | **Large fleets are supported, not discouraged.** Done: performance, delegation, running by line. Left: costs that scale (0.36.3). Decided: make them playable (KI-001), hand routine work to masters and departments (standing orders, an inbox that shows only the owner's decisions and summarises the rest), let the player run a fleet by line, and make shore support scale with the fleet properly. Office cost today is `600 + 250n + 18n^1.6` a month (n = ships): it counts hulls only (a tramp costs the same as a 45,000-ton liner) and ignores the number of lines and ports. |
 | KI-091 | Planned (0.37) | **Rescue instead of game over (accepted).** An insolvent Line gets a likely, not certain, rescue: a bank consortium or rival line before the 1920s, the Treasury after, with lasting costs (dilution, a government director, no dividends until repaid, possibly a forced merger; a second failure is final). With a safety net the game can hit harder (KI-060, KI-061 to be rebalanced together). Rival failures can use the same machinery. |
 | KI-092 | Discuss | **Desktop app (Electron).** Pinned; not needed for 0.40. It runs the same engine, so it does not fix KI-001. It would give file saves and backups without the browser's storage limits, no throttling when the window is in the background, a database (SQLite) for long histories, and a Steam-style installer. |
-| KI-093 | Planned (0.36) | **Advice moves ships off the line they were built for, and the player loses track.** Count the design line in move advice, show built-for and mismatches in the fleet manager and line view, and warn when ordering a ship for a line already near its trade's capacity. Replaces KI-048. |
+| KI-093 | Fixed (0.36.2) | **Advice moves ships off the line they were built for, and the player loses track.** Count the design line in move advice, show built-for and mismatches in the fleet manager and line view, and warn when ordering a ship for a line already near its trade's capacity. Replaces KI-048. |
 
 ## Feature requests
 

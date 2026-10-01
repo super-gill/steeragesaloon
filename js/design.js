@@ -48,6 +48,13 @@ function architectReport(d,st){
   } else out.push('No particular line in the brief: we have given her bunkers for about 3,500 miles and made no allowance for any port.');
   return out.map(t=>`<li>${t}</li>`).join('');
 }
+/* room on a line for one more ship (0.36.2): how full the Line's ships there sailed, and how many are already on order for
+   it. The forecast counts the ships there now; ships on order will thin the loads as well. */
+function lineRoom(rk){if(!rk||!S.lines[rk])return '';const L=S.lines[rk],n0=S.ships.filter(x=>x.line===rk&&x.state!=='laid').length,ord=(S.orders||[]).filter(o=>o.d&&o.d.line===rk).length;
+  let n=0,c=0;for(const lg of L.last||[]){if(!lg||!lg.pax)continue;for(const k in lg.pax){n+=lg.pax[k].n||0;c+=lg.pax[k].cap||0;}}
+  const lf=c?n/c:null,tight=(lf!==null&&lf<0.75)||ord>0;
+  if(!n0&&!ord)return '';
+  return `<p class="${tight?'warnline':'note'}" style="margin:4px 0 0">Your ${n0} ship${n0===1?'':'s'} on ${ROUTES[rk].name}${lf!==null?` sailed ${Math.round(lf*100)}% full on the last crossings`:''}${ord?`, and ${ord} more ${ord===1?'is':'are'} on order for it`:''}.${tight?' Another ship will thin the loads: the figure counts the ships there now, not those on order.':''}</p>`;}
 function renderDesigner(){
   {const el=$('designer'),w=!!UI.fmOpen&&!UI.crewOpen&&!UI.refitOpen;if(el.classList.contains('fmw')!==w)el.classList.toggle('fmw',w);} // the fleet manager also covers the left column
   if(UI.crewOpen&&renderCrew())return;
@@ -77,6 +84,7 @@ function renderDesigner(){
   const fund=reach<need?`<p class="warnline">You would need about ${fmt(need)} over the next ${Math.round(st.months*0.62)+2} months to reach her launch, and you can raise about ${fmt(Math.max(0,reach))} today. Work stops if a payment cannot be met.</p>`:'';
   const view=fl?(fl.pm>0?`On <strong>${ROUTES[fl.rk].name}</strong> she would clear about <strong class="pos">${fmt(fl.pm)} a month</strong> averaged over a year at today's trade: paid for in about ${Math.max(1,Math.round(st.price/(fl.pm*12)))} years.`:`On <strong>${ROUTES[fl.rk].name}</strong> she would not pay her way at today's trade.`)+(b&&b.rk!==fl.rk&&b.pm>fl.pm*1.2?` She would do better on ${ROUTES[b.rk].name} (about ${fmt(b.pm)} a month).`:'')
     :(b&&b.pm>0?`Best placed on <strong>${ROUTES[b.rk].name}</strong>, where she would clear about <strong class="pos">${fmt(b.pm)} a month</strong> averaged over a year at today's trade: paid for in about ${Math.max(1,Math.round(st.price/(b.pm*12)))} years.`:'At today\'s trade she would not pay her way on any route.');
+  const room=lineRoom(fl?fl.rk:b?b.rk:null);
   setHTML(el,`<div class="dz-head"><div><span class="eyebrow">Drawing office · Yard No. ${S.yardNext||534}</span><h2>${esc(d.name||'Unnamed')} <small>${P.name}${d.line?' for '+ROUTES[d.line].name:''}</small></h2></div><button class="btn" data-act="dzclose">Close</button></div>
   <div class="dz-body">
     <div class="dz-view"><div class="dz-top stack">
@@ -90,7 +98,7 @@ function renderDesigner(){
       </div>
       <div class="report"><span class="lbl">The naval architects report</span><ul>${architectReport(d,st)}</ul>
         <div class="pcurve-wrap"><span class="lbl">Power needed as speed rises</span>${powerCurveSVG(d,st.eng)}<p class="note" style="margin:0">Past the wall her own bow and stern waves hold her back, and every extra knot costs far more power and fuel.</p></div></div>
-      <div class="forecast"><span class="lbl">The traffic manager's view</span><p style="margin:0">${view}</p>
+      <div class="forecast"><span class="lbl">The traffic manager's view</span><p style="margin:0">${view}</p>${room}
         <p class="note">Trade changes over the ${Math.round((deliv-S.m)/12*10)/10} years before she sails, and one more ship on a route thins everyone's loads.</p></div>
       ${st.warn.length?`<div class="stack" style="gap:4px">${st.warn.map(w=>`<p class="badline">${w}</p>`).join('')}</div>`:''}
       ${fund}</div><div class="dz-bot stack">

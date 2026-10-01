@@ -2,6 +2,19 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.36.2 (1 October 2026)
+Running a fleet by line.
+- New: each ship shows the line she was built for, and what about her build does not suit the line she is on. The Fleet Manager's Fittings view has a Built for column.
+- Head office keeps a ship on the line she was built for unless another pays twice the usual margin, and suggests bringing her back when she would do as well there.
+- Fixed: head office advised every ship onto the same best-looking line at once. It now advises one ship onto a line at a time.
+- Fixed: forecasts were about twice what ships then earned: they assumed a year without a day in the yard or a repair bill. They now allow for both, and over many test games the median ship earns what she was forecast.
+- The drawing office says how full your ships on a line are sailing and how many are on order for it.
+- New: each line can be managed by your departments or left to you.
+- The Advice tab gathers the same advice for many ships into one item.
+- Fixed: the Fares Office could set a fare below the conference floor.
+- New: What's new and Coming next in the Menu, and a note after each update.
+- Balance: with realistic forecasts the careful test owner chooses better and does markedly better (2 of 40 bankrupt to 1922, median £625k against £340k); the late game's balance is revisited with the rescue in 0.37.0.
+
 ## 0.36.1 (1 October 2026)
 Delegation for big fleets: the owner's desk holds what needs the owner, and the masters and departments see to the rest.
 - New: standing orders. An acting department works under orders you can turn off one by one on the Company tab (fares, advertising and table; moving and laying up ships; speeds, upkeep and refits; pay, drills and officers). What it may not do comes to you.

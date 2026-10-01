@@ -3,7 +3,8 @@
    department open and acting under its standing orders, plays a year in each seed and measures what reaches the owner:
      - the advice left on the owner's desk each month (what no acting department will see to), and what the departments do;
      - how many emergencies slow the clock and ask for orders under the Auto setting, against Every emergency;
-     - that turning a standing order off puts that kind of advice back on the owner's desk.
+     - that turning a standing order off puts that kind of advice back on the owner's desk;
+     - (0.36.2) that, with a line crowded, no more than one ship is advised onto any line at once.
    Usage:  node tools/desk.js [seeds] [ships]   (default 3 seeds, 70 ships) */
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const ROOT = path.join(__dirname, '..');
@@ -27,12 +28,16 @@ function run(seed) {
     let maxMine=0,sumMine=0,months=0,sumAll=0,acts=0;const nd=S.news.length;let seenNews=new Set(S.news);
     const asked={auto:0,all:0},lv={1:0,2:0,3:0};const seenE=new Set();
     const m1=S.m+12;
-    while(S.m<m1&&!S.over){const m0=S.m;to(S.m+1);ADV_CACHE.key=null;const A=advice(),mine=A.filter(h=>!handled(h));
+    while(S.m<m1&&!S.over){const m0=S.m;to(S.m+1);ADV_CACHE.key=null;const A=advice(),mine=deskItems(A);
       maxMine=Math.max(maxMine,mine.length);sumMine+=mine.length;sumAll+=A.length;months++;
       for(const n of S.news){if(seenNews.has(n))continue;seenNews.add(n);if(/^(Fares Office|Traffic Department|Marine Superintendent|Crewing Office): /.test(n.t))acts++;}
       for(const e of S.emerg||[]){if(seenE.has(e.id))continue;seenE.add(e.id);const l=emLevel(e);lv[l]++;if(l>=2)asked.all++;if(l>=(S.ships.length>=15?3:2))asked.auto++;}}
     ok('the owner\\'s own list averages under a third of all the advice',sumMine<sumAll/3,'owner '+(sumMine/months).toFixed(1)+' a month (most '+maxMine+') of '+(sumAll/months).toFixed(1)+'; departments acted '+acts+' times in the year');
     ok('under Auto, a big fleet\\'s clock is held only by grave emergencies',asked.auto<=asked.all&&asked.auto===lv[3],'emergencies by level '+JSON.stringify(lv)+'; asking under Auto '+asked.auto+', under Every emergency '+asked.all);
+    // never more than one ship advised onto a line at once (0.36.2)
+    {for(const x of S.ships.slice(0,20))if(x.state!=='laid'){x.line='gny';}ADV_CACHE.key=null;const A=advice(),per={};
+     for(const h of A)if(/^(move|unlay|home):/.test(h.id)){const rk=h.act[0][3];per[rk]=(per[rk]||0)+1;}
+     const most=Math.max(0,...Object.values(per));ok('no more than one ship is advised onto any line at once',most<=1,JSON.stringify(per));}
     // a standing order turned off puts its advice back on the desk
     {ADV_CACHE.key=null;const A=advice();const fh=A.filter(h=>h.dept==='fares'&&orderOf(h)==='fares');
      S.depts.fares.orders={fares:false};ADV_CACHE.key=null;const B=advice();const back=B.filter(h=>h.dept==='fares'&&orderOf(h)==='fares'&&!handled(h)).length;

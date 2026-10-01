@@ -182,7 +182,7 @@ function advGoneHTML(){const g=UI.advGone;if(!g||UI.rev-g.rev>6)return '';
    is summed up in a line; the rest shows the first eight, gravest first, with the others a click away */
 const SEV_RANK={bad:0,warn:1,tip:2};
 function deskHTML(ADV){
-  const mine=ADV.filter(h=>!handled(h)).sort((a,b)=>(SEV_RANK[a.sev]??3)-(SEV_RANK[b.sev]??3)||b.gain-a.gain),theirs=ADV.filter(handled);
+  const mine=deskItems(ADV),theirs=ADV.filter(handled); // grouped (0.36.2)
   const by={};for(const h of theirs)by[h.dept]=(by[h.dept]||0)+1;
   const dl=Object.keys(by).length?`<p class="note deskline">Your departments are seeing to ${theirs.length} more: ${Object.keys(by).map(k=>`${DEPTS[k].name} ${by[k]}`).join(', ')}. Their standing orders are on the Company tab.</p>`:'';
   const n=mine.length,show=UI.advAll?mine:mine.slice(0,8);
@@ -208,7 +208,7 @@ function trayHTML(nAttn,attn,ADV){
     body=UI.trayTab==='attn'?attn:UI.trayTab==='advice'?advGoneHTML()+deskHTML(ADV)
       :`<div class="row">${newW?`<button class="btn quiet" data-act="wreadall">Decode all ${newW}</button>`:'<span></span>'}<label class="check"><input type="checkbox" data-wirert="1" ${UI.wireRoutine!==false?'checked':''}> Sailings and arrivals</label></div><div class="stack tape" style="gap:6px">${wireHTML(W.slice(0,30),true)}</div>`;
     UI._tray={tab:UI.trayTab,body,rev:UI.rev};}
-  return `<section class="sec tray"><div class="traytabs" role="tablist">${tab('attn','Needs attention',nAttn,'badge')}${tab('advice','Advice',ADV.filter(h=>!handled(h)).length,'count')}${tab('wire','Wireless',newW,'badge wb')}</div>
+  return `<section class="sec tray"><div class="traytabs" role="tablist">${tab('attn','Needs attention',nAttn,'badge')}${tab('advice','Advice',deskItems(ADV).length,'count')}${tab('wire','Wireless',newW,'badge wb')}</div>
     <div class="traybody" id="traybody" data-key="tray-${UI.trayTab}">${body}</div></section>`;
 }
 /* advice for one ship or line sits behind a single row of constant height, opened on request */
@@ -234,6 +234,10 @@ function animWire(now){
     h=esc(txt.slice(0,k))+`<span class="mo">${morseOf(txt.slice(k))}</span>`;}
   if(an._h!==h){an._h=h;an.innerHTML=h;}
 }
+/* the line she was built for, and anything about her build that does not suit the line she is on (0.36.2) */
+function builtForHTML(sh){const bf=builtFor(sh),on=sh.line&&ROUTES[sh.line]?sh.line:null,iss=on?lineFit(sh,on):[];
+  if(!bf&&!iss.length)return '';
+  return `<p class="note builtfor">${bf?`Built for ${ROUTES[bf].name}${on&&on!==bf?`; now on ${ROUTES[on].name}`:''}.`:''}${iss.length?` <span class="warnline">On ${ROUTES[on].name} she is ${iss.join('; ')}.</span>`:''}</p>`;}
 function renderShipDetail(sh){
   const st=shipStatus(sh),age=Math.floor(yearNow()-sh.built),atSea=sh.state==='sea'||sh.state==='repo';
   setHTML($('profileD'),`<div class="stack" style="gap:8px">${profileSVG(sh,UI.view)}
@@ -258,6 +262,7 @@ function renderShipDetail(sh){
     ${advRow('ship'+sh.id,shownAdvice().filter(h=>h.scope==='ship'&&h.ref===sh.id),'her')}
     ${shipGrp('earn','Earnings and line',(()=>{const v=(sh.pl||[]).slice(-1)[0];return sh.line&&sh.state!=='laid'?ROUTES[sh.line].name+(v===undefined?'':' · last month '+fmt(v)):'Laid up';})(),`
     ${shipAccHTML(sh)}
+      ${builtForHTML(sh)}
       <div class="ctl"><span class="lbl">Speed</span>${seg('shipset','speed',sh.speed,['Economical','Service','Full'])}</div>
     `)}
     ${shipGrp('upkeep','Upkeep',`Condition ${Math.round(sh.cond)}% · ${fatWord(sh).toLowerCase()}${sh.pendingYard||sh.state==='yard'?' · yard booked':''}`,`
@@ -401,6 +406,13 @@ function renderLines(){
   setHTML($('linesL'),`<h2>Lines · month to date</h2>${items}`);
   renderLineDetail(S.selLine||'hal');
 }
+/* running a fleet by line (0.36.2): the ships built for it and those visiting, how full they sail, and whether the
+   departments manage it under their standing orders or leave it to the owner */
+function lineManHTML(rk,ships){const L=S.lines[rk];const home=ships.filter(x=>builtFor(x)===rk).length,away=S.ships.filter(x=>builtFor(x)===rk&&x.line!==rk&&x.state!=='lost').length;
+  const unfit=ships.filter(x=>lineFit(x,rk).length);let n=0,c=0;for(const lg of L.last||[]){if(!lg||!lg.pax)continue;for(const k in lg.pax){n+=lg.pax[k].n||0;c+=lg.pax[k].cap||0;}}
+  const any=Object.values(S.depts||{}).some(o=>o.auto);
+  return `<div class="linemgr"><p class="note" style="margin:0">${ships.length?`${home} of its ${ships.length} ship${ships.length===1?'':'s'} ${home===1?'was':'were'} built for it${away?`; ${away} built for it ${away===1?'is':'are'} elsewhere`:''}.`:''}${c?` They sailed ${Math.round(n/c*100)}% full on the last crossings.`:''}${unfit.length?` <span class="warnline">${unfit.map(x=>'SS '+x.name).slice(0,3).join(', ')}${unfit.length>3?' and others':''} ${unfit.length===1?'does':'do'} not suit it: see ${unfit.length===1?'her':'their'} page.</span>`:''}</p>
+    ${any?`<div class="ctl"><span class="lbl">Departments</span><div class="seg" role="group"><button data-act="linehands" data-d='${JSON.stringify([rk,1])}' aria-pressed="${L.hands!==false}">Manage it</button><button data-act="linehands" data-d='${JSON.stringify([rk,0])}' aria-pressed="${L.hands===false}">Leave it to me</button></div><span class="meta">${L.hands===false?'The departments leave this line and its ships alone; their advice comes to you.':'The acting departments see to this line and its ships under their standing orders.'}</span></div>`:''}</div>`;}
 function renderLineDetail(rk){
   const r=ROUTES[rk],L=S.lines[rk];
   if(!L){
@@ -427,6 +439,7 @@ function renderLineDetail(rk){
   setHTML($('lineD'),`
     <div><div class="row"><h3>${r.name}</h3>${war?'<span class="chip bad">Rate war</span>':''}</div><div class="meta">${callsText(rk)} · ${int(r.dist)} nm · ${ships.length} ship${ships.length===1?'':'s'} · month to date ${fmt(S.mtd.lines[rk]||0)}</div></div>
     <p class="note">${r.blurb} ${cargoText(rk)}${r.winter?(r.winter.months.includes(S.m%12)?' The St Lawrence is frozen: sailings run to Saint John until May.':' From December to April the St Lawrence freezes and sailings run to Saint John.'):''}</p>
+    ${lineManHTML(rk,ships)}
     ${advRow('line'+rk,shownAdvice().filter(h=>h.scope==='line'&&h.ref===rk),'this line')}
     ${war?`<p class="badline">${war.lines?`${war.by.map(o=>RIVALS[o].name).join(' and ')} are at war here: steerage at about ${Math.round(war.multT*100)}% of the line rate, cabins ${Math.round(war.mult*100)}%, the other lines following part of the way`:war.trust?`The Combine's lines have cut steerage to ${Math.round(war.multT*100)}% of the line rate and cabins to ${Math.round(war.mult*100)}% to punish your refusal`:`The ${confOpen()?'conference ':''}lines have cut fares to ${Math.round(war.mult*100)}% of the line rate`}, for ${war.left} more month${war.left>1?'s':''}.</p>`:''}
     ${S.mail[rk]?`<p class="note">Mail contract: ${fmt(S.mail[rk].pay)} per round trip, up to two a month. ${wirelessRule()?'Only ships with wireless carry it; ships':'Ships'} at economical speed or broken down do not earn it.${ships.some(mailShip)?'':' <strong>None of her ships has wireless: the contract will be lost.</strong>'}</p>`
@@ -724,7 +737,7 @@ function MENU_HTML(){return `<div class="modal" role="dialog" aria-modal="true" 
     <section class="sec"><h2>Settings</h2><div class="ctl"><span class="lbl">On big events</span><div class="seg" role="group">${[['slow','Slow down'],['pause','Pause'],['off','Carry on']].map(([k,l])=>`<button data-act="eventmode" data-v="${k}" aria-pressed="${UI.eventMode===k}">${l}</button>`).join('')}</div><p class="note">Slow down: the clock drops to a crawl for a few seconds so you can read what happened, then picks up again on its own, or as soon as you act.</p></div>
       <div class="ctl"><span class="lbl">Interruptions</span><div class="seg" role="group">${[['auto','Auto'],['all','Every emergency'],['serious','Grave only'],['quiet','Quiet watch']].map(([k,l])=>`<button data-act="irqmode" data-v="${k}" aria-pressed="${(UI.irq||'auto')===k}">${l}</button>`).join('')}</div><p class="note">Which emergencies at sea stop the clock and ask for your orders. Every emergency: each serious one. Grave only: the masters handle the rest and the news says what they did. Auto: every emergency until the fleet is fifteen ships, then grave only. Quiet watch: grave emergencies only, and no other news slows the clock but the gravest.</p></div>
       <div class="ctl"><span class="lbl">Frame times</span><div class="seg" role="group">${[[0,'Off'],[1,'On']].map(([v,l])=>`<button data-act="perfhud" data-v="${v}" aria-pressed="${!!UI.perf===!!v}">${l}</button>`).join('')}</div><p class="note">A readout in the corner of the chart: frames a second, and the milliseconds a frame spends on the simulation, head office's advice and drawing the screen. Useful with a big fleet.</p></div></section>
-    <section class="sec"><h2>Game</h2><p class="note">Version <strong>${GAME_VERSION}</strong>, released ${GAME_BUILT}.</p><div class="btns">${UI.confirm==='new'?`<button class="btn danger" data-act="new">Confirm: start again</button><button class="btn" data-act="cancel">Keep playing</button>`:`<button class="btn" data-act="new">New game</button>`}</div></section></div></div>`;}
+    <section class="sec"><h2>Game</h2><p class="note">Version <strong>${GAME_VERSION}</strong>, released ${GAME_BUILT}. <button class="btn quiet" data-act="devopen">${UI.devOpen?"Hide what's new":"What's new and coming next"}</button></p>${UI.devOpen?devlogHTML():""}<div class="btns">${UI.confirm==='new'?`<button class="btn danger" data-act="new">Confirm: start again</button><button class="btn" data-act="cancel">Keep playing</button>`:`<button class="btn" data-act="new">New game</button>`}</div></section></div></div>`;}
 function renderModal(){
   const el=$('modal');
   if(!S.over&&UI.menu){setHTML(el,MENU_HTML());return;}

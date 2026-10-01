@@ -41,6 +41,14 @@ function powerFor(disp,L,kn,formEff,Cb){
 function longestLeg(rk){
   const g=GEO(geoKey(rk,6)),pts=g.calls.filter(c=>BUNKER_PORTS.includes(c[0]));let m=0;
   for(let i=1;i<pts.length;i++)m=Math.max(m,pts[i][1]-pts[i-1][1]);return m||g.dist;}
+/* how well a ship suits a line, from her build (0.36.2): short-legged for its longest leg between coaling ports, or too
+   deep or too long to lie alongside at a port it calls at (she works into lighters there, at a cost in time and money) */
+function lineFit(sh,rk){if(!ROUTES[rk])return [];const D=dimsOf(sh),out=[],leg=longestLeg(rk);
+  if(D.range&&D.range<leg*1.05)out.push(`short-legged for the ${int(leg)}-mile leg (she fills cargo space with coal)`);
+  for(const p of linePorts(rk)){const L=PORT_LIMIT[p];if(L&&!L.tender&&(D.draught>L.dr||D.len>L.len))out.push(`too ${D.draught>L.dr?'deep':'long'} for ${L.note||PN[p]}, so she works into lighters there`);}
+  return out;}
+/* the line a ship was built for, if the Line built her for one */
+const builtFor=sh=>sh.designLine&&ROUTES[sh.designLine]?sh.designLine:null;
 const linePorts=rk=>{const s=new Set(ROUTES[rk].calls);if(ROUTES[rk].winter)geoEnds(ROUTES[rk].winter.key).forEach(p=>s.add(p));return [...s];};
 /* can she get alongside? */
 function portFit(sh,p){const L=PORT_LIMIT[p],d=dimsOf(sh);if(!L)return {ok:true};

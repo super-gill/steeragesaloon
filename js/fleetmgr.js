@@ -70,6 +70,9 @@ function fmCols(view){
   return fmTrade(C);
 }
 function fmFit(C){return [
+    // the line she was built for, and a mark where her build does not suit the line she is on (0.36.2)
+    C('built','Built for',sh=>builtFor(sh)||'~',sh=>{const bf=builtFor(sh),iss=sh.line&&ROUTES[sh.line]?lineFit(sh,sh.line):[];
+      return `${bf?esc(ROUTES[bf].name):'<span class="meta">–</span>'}${bf&&sh.line&&sh.line!==bf?' <span class="meta">(elsewhere)</span>':''}${iss.length?` <span class="neg" title="${esc(iss.join('; '))}">unsuited</span>`:''}`;},'',false),
     C('grt','Tons',sh=>sh.grt,sh=>int(sh.grt),'r',false),
     C('kn','Knots',sh=>knotsOf(sh),sh=>knotsOf(sh)),
     C('fuel','Fuel',sh=>sh.fuel==='oil'?1:0,sh=>sh.fuel==='oil'?'Oil':'Coal',''),

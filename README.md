@@ -52,7 +52,7 @@ Scripts are plain (non-module) files loaded in the order in `index.html` and sha
 
 ## Releasing
 
-Bump `GAME_VERSION` in `js/data.js`, change `?v=` on every script and stylesheet link in `index.html` to match (so browsers fetch the new files instead of cached ones), and add an entry to `CHANGELOG.md`.
+Bump `GAME_VERSION` in `js/data.js`, change `?v=` on every script and stylesheet link in `index.html` to match (so browsers fetch the new files instead of cached ones), add an entry to `CHANGELOG.md`, and add a short player-facing entry to `DEVLOG` in `js/devlog.js` (moving the shipped item off `DEVPLAN`). The Menu's Game section shows both as What's new and Coming next, and after an update the game points the player there once (`ss_seenver` in this browser).
 
 ## The calendar
 
@@ -298,6 +298,17 @@ Each month the Shore tab also shows what each pier, hostel and booking agency is
 
 Money is in 1921 pounds, scaled by the price index. Head office suggests selling spare berths at piers and yards (which cost the fleet nothing) once they would earn £400 a month; hostels and agents are left to the player, since they help rivals on the Line's own routes.
 
+## Running a fleet by line (0.36.2)
+
+- **Built for**: a ship the Line builds keeps the line she was designed for (`sh.designLine`, `builtFor`). Her page says so, and says where she is now; the Fleet Manager's Fittings view has a Built for column. `lineFit(sh, rk)` (in `js/naval.js`) names what about her build does not suit a line: short of range for its longest leg between coaling ports, or too deep or too long to lie alongside at one of its ports (`PORT_LIMIT`), where she works into lighters. The figures already charged for both; now the player can see why.
+- **Advice and the line she was built for**: a ship on her own line is advised to move only for twice the usual gain; a ship away from her line, when it is open and she would make £150 a month more there, is advised to return (`home:`, under the Traffic Department's order on moves).
+- **No piling**: in each pass of the advice only the best move onto each line stays (moves, returns and putting laid-up ships to work). Every ship's figures assume the others stay where they are, so advising them all at once crowded whichever line looked best.
+- **Forecasts** (`econYear`, `yearReal`): a year's figures allow for the time a ship does not sail and for her yard bills, fitted to the test fleets: about 0.9 of a clear year's takings less coal, 0.72 for an old ship (wear 60 to 90), and 0.06 of her tonnage a month in the yard at 1921 prices (four times that when old). Before, forecasts were about twice what ships then earned. `tools/forecast.js` checks the median of actual over forecast is within a fifth overall and a third for each kind of ship.
+- **Room on a line** (`lineRoom`, the drawing office): how full the Line's ships there sailed on their last crossings and how many are on order for it, with a warning when another ship would thin the loads.
+- **Lines left to the owner**: each line's page shows how many of its ships were built for it and how full they sail, and, with any department acting, whether the departments manage it or leave it to the owner (`S.lines[rk].hands`; `lineKept`). A line left to the owner keeps all its own and its ships' advice on the owner's desk.
+- **The desk** (`deskItems`): more than three ships under the same advice (sell, lay up, put back to work, return, move) make one item, with the Fleet Manager a click away.
+- **Conference floor**: fares set by head office or a department inside the conference are never below the floor (`floorFare`); the economics already charged the floor.
+
 ## Delegation (0.36.1)
 
 A big fleet produces far more than an owner can read: at 70 ships head office raises 90 to 130 items a month. The owner's desk now holds only what needs the owner.
@@ -346,6 +357,7 @@ Run from the repo root with Node (and Python for the bundler).
 | `node tools/world.js [seeds]` | Plays a kept fleet of six from 1900 to 1927 in each seed (default 6) and checks the world stays consistent: no two ships afloat or rival lines share a name, rival ships do not fill the war's news moving between closed trades, silent ships are overdue but safe no more than about once in two ship-years, and the January fare revision does not add a year's inflation to a fare set in December |
 | `node tools/perf.mjs <bundled html> [ships]` | Frame times: opens a bundled build (`python3 tools/build-single.py /tmp/ss.html`) in headless Chromium with a fleet of the given size (default 70), runs the clock at top speed on each main tab and prints frames a second and the slowest frames (needs Playwright; set `PLAYWRIGHT` to its module path if it is not found) |
 | `node tools/desk.js [seeds] [ships]` | Plays a year with a big fleet (default 70 ships) and every department acting, and checks what reaches the owner: the share of the advice left on the desk, which emergencies ask under Auto, and that a standing order turned off returns its advice to the owner |
+| `node tools/forecast.js [seeds]` | Forecasts every ship on her own line at five dates (1902 to 1928) and compares the next twelve months' takings and costs; checks the median of actual over forecast is within a fifth overall and a third by kind of ship |
 | `node tools/lint.js` | Finds code hidden inside a `//` comment on a long line (a comment added mid-line swallows the code after it; it stopped the strikes and the 1912 disaster in 0.35.4). Run it before every release |
 | `node tools/play.js new|step|do|look <slot> ...` | Plays a real game a few months at a time from the command line, for test players (people or programs): the player's own controls as actions, a report each step, and read-only views. Saved to `tools/play/<slot>.json` between calls and loaded as the browser loads a save, so every step is also a save-and-reload test. `node tools/play.js look <slot> help` lists the actions and views. The actions are in `tools/play-lib.js` |
 | `node tools/market.js [years] [seeds]` | Plays from 1900 (default 40 years, 6 seeds) with the Line kept afloat, runs three broker accounts side by side (preserve, balanced, growth) from January 1901 and a buy-and-hold of every company, and prints each against government stock at key years, each account's worst fall in the 1907, 1921 and 1930s slumps, and the shipping share index against what the lines are worth. Checks that the balanced account beats stock over the run, every account loses in some slump, and shares fall below worth in the slumps and recover |

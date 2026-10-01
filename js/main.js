@@ -8,6 +8,8 @@ document.addEventListener('click',e=>{
   if(a!=='cancel'&&!a.startsWith('ask')&&!['exit','closeline','leave','new','loadcode','fundclose','officeclose','mkmerge','mkwind','flcrown'].includes(a)&&!a.startsWith('flfloat'))UI.confirm=null;
   if(UI.slow&&!['zoom','zoomfit'].includes(a))UI.slow=null; // the owner is dealing with it: back to full speed
   switch(a){
+    case 'devopen':UI.devOpen=!UI.devOpen;break;
+    case 'devall':UI.devAll=!UI.devAll;break;
     case 'advall':UI.advAll=!UI.advAll;break;
     case 'irqmode':UI.irq=b.dataset.v;try{localStorage.setItem('ss_irq',UI.irq);}catch(e){}break;
     case 'eventmode':UI.eventMode=b.dataset.v;try{localStorage.setItem('ss_eventmode',UI.eventMode);}catch(e){}break;
@@ -20,7 +22,7 @@ document.addEventListener('click',e=>{
     case 'selline':S.selLine=b.dataset.id;UI.tab='lines';(S.tutSeen=S.tutSeen||{}).lines=true;break;
     case 'tabgo':UI.tab=(UI.wide&&b.dataset.tab==='overview')?UI.tab:b.dataset.tab;(S.tutSeen=S.tutSeen||{})[b.dataset.tab]=true;break;
     case 'tutoff':if(S.tut)S.tut.off=true;break;
-    case 'setfare':case 'setfares':case 'setlineopt':case 'setship':case 'moveship':case 'setyard':case 'sellship':case 'hire':case 'shorebuy':case 'shoresell':case 'deptmode':case 'openmove':case 'buyship':case 'newhead':case 'propyes':case 'propno':case 'build':case 'scrapship':case 'crewset':case 'appoint':case 'setwc':case 'cruiseadd':case 'cruisedrop':
+    case 'setfare':case 'setfares':case 'setlineopt':case 'linehands':case 'setship':case 'moveship':case 'setyard':case 'sellship':case 'hire':case 'shorebuy':case 'shoresell':case 'deptmode':case 'openmove':case 'buyship':case 'newhead':case 'propyes':case 'propno':case 'build':case 'scrapship':case 'crewset':case 'appoint':case 'setwc':case 'cruiseadd':case 'cruisedrop':
       {const d=JSON.parse(b.dataset.d||'[]');if(a==='moveship'||a==='openmove'||a==='setship'||a==='setwc'||a==='cruiseadd'||a==='cruisedrop'){const x=S.ships.find(q=>q.id===d[0]);if(x)x.ownerSet=S.t;}if(a==='crewset'||a==='appoint'){const x=S.ships.find(q=>q.id===d[0]);if(x)x.crewSet=S.t;}const big=S.ships.length>25,bef=big?[]:advice().map(h=>[h.id,h.title]);doAction(a,d);ADV_CACHE.key=null;UI.rev++;
         // with a big fleet the screen works the advice out over the next frames instead (0.36.0)
         const now=big?new Set():new Set(advice().map(h=>h.id)),gone=bef.filter(([id])=>!now.has(id)&&!(b.closest('.advice[data-key]')&&b.closest('.advice[data-key]').dataset.key===id));
@@ -201,4 +203,6 @@ window.addEventListener('pagehide',()=>save());
 {const old=oldSaveNote();S=load();if(!S){newGame();if(old)news('Saves from before version 0.19 cannot be carried over: the calendar now runs from 1900, so this is a new game. The old save is left untouched in the browser.','bad');}}applyPrices();
 if(location.hash.startsWith('#save=')){const code=location.hash.slice(1);history.replaceState(null,'',location.pathname+location.search);
   loadSaveCode(code).then(()=>news('Game loaded from a save link.'),e=>{UI.loadMsg={ok:false,t:'The save link could not be read: '+(e.message||'damaged code')};UI.menu=true;UI.dirty=true;});}
+// after an update, point the player to what is new (0.36.2)
+try{const was=localStorage.getItem('ss_seenver');if(was&&was!==GAME_VERSION&&S&&!S.over)UI.banner=`Updated to v${GAME_VERSION}. See Menu, What's new and coming next.`;localStorage.setItem('ss_seenver',GAME_VERSION);}catch(e){}
 layoutMode();UI.dirty=true;applyView();requestAnimationFrame(frame);
