@@ -2,6 +2,11 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.35.3 (1 October 2026)
+- Fixed: buying a company's shares a little at a time could make billions. Each purchase moved the price against the shares still on offer, so as they ran out the last few lifted it by half each time, and buying by amount had no limit, so the Line could hold more shares than the company had. Twenty-nine purchases of £20,000 pushed a price up 51,000 times and selling sold into it: £6.5 million became £2.8 billion. A deal now moves the price against all the company's tradable shares, and the Line can buy no more than are on offer: buying a whole company a little at a time lifts its price under two times, and selling it straight back loses money.
+- Fixed: winding up a line the Line had lent to paid the loan back twice: once as the loan, and again in the shareholders' share of its cash.
+- The stakes check (`tools/stakes.js`) now tests both.
+
 ## 0.35.2 (30 September 2026)
 - Fixed: buying a big stake looked free. The cash went, but the Line's own buying pushed the price up (by about half, for half a line bought at once) and the holding was valued at that price, so net worth rose. The shares are now valued at the price without the Line's own push, which fades over a few months: buying half a line at once now shows its real cost, about a quarter of what it spent, the premium paid for control. Buying in stages over months costs less, as it should. The same goes for a dawn raid, a tender and the Line's short sales.
 - The Shares view shows what each holding is worth without your own dealing, next to the market price, when the two differ.

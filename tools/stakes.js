@@ -9,7 +9,8 @@
        accounts say (its cash, ships and debts, less the minority's payment and the market value of the stake);
      - a Combine member can never be more than 40% held;
      - at 90% after the 1929 Companies Act the rest is bought at the market; before it at a quarter over;
-     - winding up pays the Line its share of what is left and queues a new line for the trades.
+     - winding up pays the Line its share of what is left and queues a new line for the trades, and a loan to it comes back once;
+     - the Line cannot buy more than the shares on offer, and buying a company a little at a time cannot pump its price (0.35.3).
    Usage:  node tools/stakes.js [seeds]   (default 4) */
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const ROOT = path.join(__dirname, '..');
@@ -63,6 +64,16 @@ function run(seed) {
     const o2=coLive().filter(q=>!trustMember(q)&&!RIVAL_P[q].kind&&coFleet(q).length>=2&&q!==o).sort((a,b)=>coFleet(a).length-coFleet(b).length)[0];
     if(o2){buyTo(o2,0.76);const k=mkStake(o2),wv=Math.max(0,mkWindValue(o2))*k,c1=S.cash,q0=(S.coQueue||[]).length;
       ok('winding up pays the Line its share',mkWindUp(o2)&&Math.abs(S.cash-c1-wv)<Math.max(500,0.01*wv)&&(S.coQueue||[]).length===q0+1,Math.round(S.cash-c1)+' vs '+Math.round(wv));}
+    // a loan to a line that is then wound up comes back once, not twice (0.35.3)
+    const oL=coLive().filter(x=>!trustMember(x)&&!RIVAL_P[x].kind&&x!==o&&x!==o2&&coFleet(x).length>=2)[0];
+    if(oL){buyTo(oL,0.76);const k=mkStake(oL),L=1e6;mkLend(oL,L);const wv=Math.max(0,mkWindValue(oL))*k+L,c1=S.cash;
+      ok('a loan comes back once at a winding up',mkWindUp(oL)&&Math.abs(S.cash-c1-wv)<Math.max(500,0.01*wv),Math.round(S.cash-c1)+' vs '+Math.round(wv));}
+    // the Line cannot buy more than the shares on offer, and cannot pump a price by buying a little at a time (0.35.3)
+    const o4=coLive().filter(x=>!trustMember(x)&&!RIVAL_P[x].kind&&x!==o&&x!==o2&&x!==oL&&!S.rivals[x].dead)[0];
+    if(o4){const c=S.ex.cos[o4],p0=c.px;S.cash=5e6;const c0=S.cash;let g=0;while(g++<200&&mkBuy(o4,2e4,false));
+      ok('no more than the shares on offer',mkStake(o4)<=1-mkLock(o4)+1e-9,Math.round(mkStake(o4)*100)+'%');
+      ok('buying it all a little at a time lifts the price under 2.5 times',c.px/p0<2.5,'x'+(c.px/p0).toFixed(2));
+      mkSell(o4,1);ok('buying it all and selling it back loses money',S.cash<c0,Math.round(S.cash-c0));}
     // buying out: at a quarter over before the 1929 Act, at the market after
     const o3=coLive().filter(q=>!trustMember(q)&&coFleet(q).length>=2).sort((a,b)=>coFleet(a).length-coFleet(b).length)[0];
     if(o3){buyTo(o3,0.9);const c=S.ex.cos[o3],pre=mkBuyoutCost(o3),rest=c.n-S.ex.me.pos[o3].n;

@@ -49,12 +49,12 @@ function mvProxy(o){const M=mkEnsure(),c=mvC(o);if(!c||c.gone||!mkRival(o)||mkSt
 function mvShort(id,pct){const M=mkEnsure(),c=mvC(id);if(!c||c.gone||id==='morven'||mkShut()||(M.me.pos[id]&&M.me.pos[id].n>0))return false;const s0=(M.me.short=M.me.short||{})[id];
   // (sell what you hold before selling short)
   const q=Math.floor(Math.min(pct*c.n,0.5*mkFree(id)-(s0?s0.n:0)));if(q<1)return false;
-  const imp=Math.min(0.5,0.6*q/Math.max(1,mkFree(id))),gross=q*c.px*(1-imp/2),col=gross*(1-MK_FEE_SELL),margin=Math.round(gross*MV_SHORT_MARGIN);if(S.cash<margin)return false;
+  const imp=Math.min(0.5,0.6*q/mkDepth(id)),gross=q*c.px*(1-imp/2),col=gross*(1-MK_FEE_SELL),margin=Math.round(gross*MV_SHORT_MARGIN);if(S.cash<margin)return false;
   S.cash-=margin;c.px*=1-imp;c.e=(c.e||0)+Math.log(1-imp);mkOwnPush(id,Math.log(1-imp));const s=M.me.short[id]||(M.me.short[id]={n:0,col:0,margin:0});s.n+=q;s.col+=col;s.margin+=margin;
   news(`The Line sells short ${int(q)} borrowed shares in ${mkName(id)} for ${fmt(col)}, putting up ${fmt(margin)} as margin. It pays ${Math.round(MV_SHORT_FEE*100)}% a year to borrow them.`);return true;}
 const mvShortVal=s=>s.col+s.margin;
 function mvCover(id,forced){const M=S.ex,s=M.me.short&&M.me.short[id],c=mvC(id);if(!s)return false;if(mkShut()&&!forced)return false;
-  const imp=c&&!c.gone?Math.min(0.5,0.6*s.n/Math.max(1,mkFree(id)+s.n)):0,cost=c&&!c.gone?s.n*c.px*(1+imp/2)*(1+MK_FEE_BUY):0;if(c&&!c.gone){c.px*=1+imp;c.e=(c.e||0)+Math.log(1+imp);mkOwnPush(id,Math.log(1+imp));}
+  const imp=c&&!c.gone?Math.min(0.5,0.6*s.n/mkDepth(id)):0,cost=c&&!c.gone?s.n*c.px*(1+imp/2)*(1+MK_FEE_BUY):0;if(c&&!c.gone){c.px*=1+imp;c.e=(c.e||0)+Math.log(1+imp);mkOwnPush(id,Math.log(1+imp));}
   S.cash+=s.margin;book('shares',s.col-cost);delete M.me.short[id];
   news(`${forced?'The broker buys in':'The Line buys back'} its short in ${mkName(id)} for ${fmt(cost)}: ${s.col>=cost?'a gain of '+fmt(s.col-cost):'a loss of '+fmt(cost-s.col)}.`,s.col>=cost?'good':'bad',!!forced);return true;}
 const mvShortsVal=()=>{const M=S.ex;if(!M||!M.me.short)return 0;let v=0;for(const id in M.me.short){const s=M.me.short[id],c=mvC(id);v+=mvShortVal(s)-(c&&!c.gone?s.n*mkFair(id):0);}return v;};
