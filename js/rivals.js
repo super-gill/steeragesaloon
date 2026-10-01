@@ -52,7 +52,7 @@ const shipEraGrt=b=>b>=1920?1:b>=1913?0.85+0.15*(b-1913)/7:b>=1900?0.6+0.25*(b-1
 const shipEraKnots=b=>b>=1920?0:b>=1913?-0.5*(1920-b)/7:b>=1900?-1.5+(b-1900)/13:-1.5-0.075*(1900-b);
 function makeRivalShip(o,rk,built){
   const P=RIVAL_P[o],used=new Set(S.rships.filter(x=>x.owner===o).map(x=>x.name).concat((S.rorders||[]).filter(q=>q.o===o).map(q=>q.sh.name)));
-  const nm=P.names.find(n=>!used.has(n))||P.names[Math.floor(Math.random()*P.names.length)]+' II';
+  const nm=P.names.find(n=>!used.has(n)&&!nameTaken(n))||freshName(P.names[Math.floor(Math.random()*P.names.length)]);
   const y=Math.floor(yearNow());built=built||Math.round(y-1-Math.random()*22);
   const grt=Math.round((P.grt[0]+Math.random()*(P.grt[1]-P.grt[0]))*shipEraGrt(built)/100)*100;
   const knots=+(P.knots[0]+Math.random()*(P.knots[1]-P.knots[0])+shipEraKnots(built)).toFixed(1);
@@ -114,7 +114,9 @@ function rivalFare(o,rk,c){const war=S.wars[rk];return (S.rivalIdx[o]||1)*((S.rf
 /* a rate war's cut: steerage can fall by half in a war between lines, cabins less; lines not in the fight hold their fares a little better */
 const warMult=(w,c,o)=>{const m=(c==='t'||c==='tt')&&w.multT?w.multT:w.mult;return w.by&&o&&!w.by.includes(o)?1-(1-m)*0.7:m;};
 // a class priced far above the rate cannot hide a cut in another from the rivals (0.35.4): each class counts at no more than a tenth over
-function ourFareRatio(rk){const r=ROUTES[rk];let a=0,b=0;for(const c of ['f','s','t']){a+=r.base[c]*Math.min(1.1,effFare(rk,c)/r.ref[c]);b+=r.base[c];}return a/b;}
+/* the classes the rivals watch: Tourist Third too, once it exists (0.35.6) */
+const watchCL=rk=>{const r=ROUTES[rk];return CL.filter(c=>r.base[c]>0&&r.ref[c]>0&&(c!=='tt'||(r.cruise||S.m>=ym(1925,0))&&S.ships.some(x=>x.line===rk&&(x.berths.tt||0)>0)));};
+function ourFareRatio(rk){const r=ROUTES[rk];let a=0,b=0;for(const c of watchCL(rk)){a+=r.base[c]*Math.min(1.1,effFare(rk,c)/r.ref[c]);b+=r.base[c];}return b?a/b:1;}
 function ourAppeal(sh,rk,c){
   const L=S.lines[rk],r=ROUTES[rk];
   const pf=fareDemand(r.ref[c]/effFare(rk,c),c);
@@ -175,8 +177,9 @@ function ownersOn(rk){const o={};for(const x of S.rships)if(x.route===rk)o[x.own
 function topRival(rk){const o=ownersOn(rk);const k=Object.keys(o).sort((a,b)=>o[b]*RIVAL_P[b].aggr-o[a]*RIVAL_P[a].aggr)[0];return k||(RIVAL_START[rk]||[]).map(q=>q[0]).find(coAlive)||coLive()[0];}
 function routeAggr(rk){const o=ownersOn(rk);let w=0,a=0;for(const k in o){w+=o[k];a+=o[k]*RIVAL_P[k].aggr;}return w?a/w:0.6;}
 function pressure(rk,fares,ourPax,n,m){
-  let sum=0;for(const c of ['f','s','t'])sum+=Math.min(1.1,fares[c]/ROUTES[rk].ref[c]);
-  const ratio=sum/3,rp=rivalPax(rk,m),share=ourPax/Math.max(1,ourPax+rp);
+  // weighted by each class's trade, as the rivals' matching is, so dear cabins cannot hide cheap steerage (0.35.5)
+  const R0=ROUTES[rk];let sum=0,w=0;for(const c of watchCL(rk)){sum+=R0.base[c]*Math.min(1.1,(fares[c]||R0.ref[c])/R0.ref[c]);w+=R0.base[c];}
+  const ratio=w?sum/w:1,rp=rivalPax(rk,m),share=ourPax/Math.max(1,ourPax+rp);
   const p=(Math.max(0,0.97-ratio)*250+Math.max(0,share-0.2)*150+Math.max(0,n-1)*6)*routeAggr(rk);
   return {p:clamp(p,0,100),share,ratio,rp};
 }
@@ -201,10 +204,14 @@ function rivalsMonth(){
     const next=cur+(target-cur)*(target<cur?0.25*routeAggr(rk):0.2);
     if(cur>=0.95&&next<0.95&&act&&ratio<0.97)news(`Rival lines on ${ROUTES[rk].name} are cutting their fares to match yours.`,'bad');
     S.rfare[rk]=next;}
-  for(const x of S.rships)if(!routeOpen(x.route,m)){const to=Object.keys(ROUTES).find(k=>isCruise(k)&&routeOpen(k,m)&&k!==x.route&&ROUTES[k].calls[0]===ROUTES[x.route].calls[0])||'cwi';rivalMove(x.owner,x.route,'move',x.name,to);x.route=to;}
+  // a ship on a closed trade moves to an open one of the same kind from the same port, or lies where she is: no more
+  // monthly news of ships moving from one closed trade to another (0.35.7)
+  for(const x of S.rships)if(!routeOpen(x.route,m)){const cr=isCruise(x.route),p0=ROUTES[x.route].calls[0];
+    const to=Object.keys(ROUTES).find(k=>k!==x.route&&routeOpen(k,m)&&isCruise(k)===cr&&ROUTES[k].calls[0]===p0)||(cr&&routeOpen('cwi',m)&&x.route!=='cwi'?'cwi':null);
+    if(to){rivalMove(x.owner,x.route,'move',x.name,to);x.route=to;}}
   // ships ordered earlier come into service; a line that has failed meanwhile loses its order
   if(S.rorders&&S.rorders.length){const due=S.rorders.filter(q=>q.at<=m);S.rorders=S.rorders.filter(q=>q.at>m);
-    for(const q of due){if(!coAlive(q.o)||!routeOpen(q.rk,m))continue;S.rships.push(q.sh);newRivalVis(q.sh);rivalMove(q.o,q.rk,'add',q.sh.name);}}
+    for(const q of due){if(!coAlive(q.o)||!routeOpen(q.rk,m))continue;if(typeof mkKeepRoute==='function'){q.rk=mkKeepRoute(q.o,q.rk);q.sh.route=q.rk;}S.rships.push(q.sh);newRivalVis(q.sh);rivalMove(q.o,q.rk,'add',q.sh.name);}}
   const stats={};for(const rk in ROUTES)stats[rk]=routeStats(rk,m);
   S.lastRivalPax={};for(const rk in ROUTES)S.lastRivalPax[rk]=Math.round(stats[rk].rivalPax);
   outsideMonth(stats); // the rivals pay for any spare capacity the Morven Line sells them
@@ -237,7 +244,7 @@ function rivalsMonth(){
       if(co.born!==undefined&&m-co.born<18&&!coShort(o))continue; // a new line gives its first trade a year and a half
       if(st.rel<0.72&&st.ships>0&&R()<0.3){
         const ships=S.rships.filter(x=>x.route===rk&&x.owner===o).sort((a,b)=>a.built-b.built),x=ships[0];
-        const alt=Object.keys(ROUTES).filter(k=>k!==rk&&stats[k].owners[o]&&stats[k].owners[o].rel>1.0).sort((a,b)=>stats[b].owners[o].rel-stats[a].owners[o].rel)[0];
+        const alt=Object.keys(ROUTES).filter(k=>k!==rk&&stats[k].owners[o]&&stats[k].owners[o].rel>1.0&&!(S.rivals[o].keepOff&&S.lines[k])).sort((a,b)=>stats[b].owners[o].rel-stats[a].owners[o].rel)[0];
         if(alt&&ships.length>0&&(ships.length>1||R()<0.5)){x.route=alt;rivalMove(o,rk,'move',x.name,alt);}
         else if(ships.length>1&&!atWar(m)){dropRival(x);if(coAge(x)<20){co.cash+=coShipVal(x)*0.75;rivalMove(o,rk,'sold',x.name);}else{co.cash+=coScrap(x);rivalMove(o,rk,'retire',x.name);}} // a young ship is sold abroad, an old one broken up
         break;}}

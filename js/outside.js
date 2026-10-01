@@ -86,7 +86,19 @@ function outsideMonth(stats){
     for(const o in w.from)if(S.rivals[o]&&coAlive(o))S.rivals[o].cash+=(w.gain[o]||0)-w.from[o];}
   for(const key in s.earn)if(!outKeys().includes(key))delete s.earn[key];
   if(tot>0)book('shorein',tot);
+  outOwnMonth();
 }
+/* what each pier, hostel and agency is worth to the Line's own ships: their monthly takings with it, against without it,
+   over a year of seasons (0.35.7; before, the Shore tab showed only what selling the spare would earn, so an agency used
+   by the Line's own ships alone looked as if it earned nothing). Repair yards and canvassers are left to the ledger. */
+const OUT_MAP={pier:'piers',hostel:'hostels',agency:'agents'};
+function outOwnMonth(){const s=S.shore;s.own={};
+  for(const key of outKeys()){const [k,id]=key.split(':'),mp=OUT_MAP[k];if(!mp||!s[mp]||!(id in s[mp]))continue;
+    const ships=S.ships.filter(x=>x.line&&ACTIVE.includes(x.state)&&ROUTES[x.line]&&(k==='agency'?AGENCY[id].ports.some(p=>ROUTES[x.line].calls.includes(p)):ROUTES[x.line].calls.includes(id)));
+    if(!ships.length){s.own[key]=0;continue;}
+    let w=0,wo=0;try{MOD_EPOCH++;for(const x of ships)w+=econ(x,x.line).pm;const keep=s[mp][id];delete s[mp][id];MOD_EPOCH++;
+      try{for(const x of ships)wo+=econ(x,x.line).pm;}finally{s[mp][id]=keep;MOD_EPOCH++;}}catch(e){continue;}
+    s.own[key]=Math.round(w-wo);}}
 const outYear=key=>((S.shore.earn||{})[key]||[]).reduce((a,b)=>a+b,0);
 const outLast=key=>{const h=(S.shore.earn||{})[key]||[];return h.length?h[h.length-1]:0;};
 /* the switch and what it says, for the Shore tab */
@@ -96,6 +108,6 @@ function outHTML(key){
   const help={pier:'they berth cheaply and save on dues',yard:'their repairs cost them a little less',hostel:'their steerage on lines calling here rises about 6%',
     agency:'their passengers on routes these agents serve rise 1.5 to 3.5%',fagent:'their cargo on routes these canvassers serve rises about 4%'}[key.split(':')[0]];
   return `<div class="outrow"><div class="seg" role="group" aria-label="Outside work"><button data-act="shoresell" data-d='${JSON.stringify([key,0])}' aria-pressed="${!on}">Own use</button><button data-act="shoresell" data-d='${JSON.stringify([key,1])}' aria-pressed="${on}">Sell spare</button></div>
-    <span class="meta">${on?(n?`Earned ${fmt(outLast(key))} last month, ${fmt(yr)} in ${n===12?'the last year':n+' month'+(n===1?'':'s')}.`:'Selling from the end of this month.'):e?`Would earn about ${fmt(Math.round(e.gross/10)*10)} a month.`:'An estimate at the end of the month.'}
+    <span class="meta">${(S.shore.own||{})[key]!==undefined?`Worth about ${fmt(Math.round(S.shore.own[key]/10)*10)} a month to the Line's own ships. `:''}${on?(n?`Earned ${fmt(outLast(key))} last month, ${fmt(yr)} in ${n===12?'the last year':n+' month'+(n===1?'':'s')}.`:'Selling from the end of this month.'):e?`Would earn about ${fmt(Math.round(e.gross/10)*10)} a month.`:'An estimate at the end of the month.'}
     ${e?` ${capF(e.note)}.`:''} ${on?'Other lines gain by it: ':'If you sell, '}${help}.</span></div>`;
 }

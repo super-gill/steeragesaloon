@@ -60,7 +60,13 @@ const crewOf=sh=>Math.round(sh.grt/45)+40;
 const R01=()=>Math.random();
 function activeEmergency(){return (S.emerg||[]).find(e=>!e.over&&e.known);}
 /* how fast the clock may run: an hour a second through an emergency, slower still while the master waits for orders */
-const emBig=e=>e.sev>1||e.k==='quar';
+/* which emergencies come to the owner (0.36.1). Each has a level: 3 grave, 2 serious (or a quarantine), 1 minor, which the
+   master always handles. The owner's setting (Menu, Settings, Interruptions) says from which level the clock slows, the
+   panel opens and the master asks for orders: every serious one, grave ones only, or (Auto) every serious one until the
+   fleet is fifteen ships and grave ones only after. Below it the master decides, and the news reports what he did. */
+const emLevel=e=>e.sev>=3?3:(e.sev>1||e.k==='quar')?2:1;
+const irqFrom=()=>{const m=(typeof UI!=='undefined'&&UI.irq)||'auto';return m==='all'?2:m==='auto'?(S.ships.length>=15?3:2):3;};
+const emBig=e=>emLevel(e)>=irqFrom();
 function emClock(){
   const a=(S.emerg||[]).filter(e=>!e.over&&e.known&&emBig(e));if(!a.length)return S.dis&&S.dis.state==='rival'?EM_RATE:null;
   const d=a.filter(e=>e.dec&&e.dec.owner);if(!d.length)return EM_RATE;
@@ -277,8 +283,10 @@ function emergencyStep(e,sh,step){
 const sickNow=(e,sh)=>{const n=Math.max(2,Math.round((e.crew?crewOf(sh):soulsOf(sh))*e.threat/100*0.45));return `${int(n)} ${e.crew?'of the crew':'passengers'}`;};
 /* a ship given up: to the sea, or to the underwriters */
 function writeOff(e,sh,how){
-  sh.lost={t:S.t,where:posText(sh),saved:1,lost:0};const c=insClaim(sh,0.85);queueInquiry(sh,e);S.rep=clamp(S.rep-3,0,100);
-  news(`SS ${e.ship} is a constructive total loss ${how}. Everyone aboard was saved. ${insOf(sh).cover==='none'?c.txt:`The underwriters take her over. ${c.txt}`}`,'bad',2);
+  // a war loss is the state's war-risk scheme's, not the marine underwriters' (0.35.6)
+  const war=!!(EMERG[e.k]&&EMERG[e.k].war)&&typeof warClaim==='function';
+  sh.lost={t:S.t,where:posText(sh),saved:1,lost:0};const c=war?warClaim(sh):insClaim(sh,0.85);queueInquiry(sh,e);S.rep=clamp(S.rep-3,0,100);
+  news(`SS ${e.ship} is a constructive total loss ${how}. Everyone aboard was saved. ${war||insOf(sh).cover==='none'?c.txt:`The underwriters take her over. ${c.txt}`}`,'bad',2);
   S.ships=S.ships.filter(x=>x!==sh);if(S.selShip===sh.id)S.selShip=S.ships[0]?S.ships[0].id:null;
 }
 function emEnd(e,sh,how){
@@ -321,7 +329,7 @@ function emEnd(e,sh,how){
     if(e.salvage){const aw=Math.round(shipValue(sh)*0.06);book('yard',-aw,rk,sh);emLater(e,2,`Salvage award to the tug owners agreed at ${fmt(aw)}.`,'','Lloyd\'s');}
     if((e.peak>=85&&R()<(e.peak-80)/25)||(e.sev===3&&e.peak>=70&&R()<0.3)){
       emSay(e,sh,`${D.type==='water'?'Leak held':'Fire out'}. Surveyor's report: frames buckled and the hull strained through. Not worth repairing.`,'bad');
-      if(sh.load){book('fares',-Math.round(sh.load.paxRev*0.3),rk,sh);}writeOff(e,sh,'after her '+D.name.toLowerCase());return;}
+      if(sh.load){book('fares',-Math.round(sh.load.paxRev*0.3),rk,sh);}writeOff(e,sh,{torpedo:'after the torpedo hit',mine:'after striking a mine'}[e.k]||'after her '+D.name.toLowerCase());return;}
     sh.brk=null;book('yard',-Math.round(sh.grt*(0.2+sev*0.8)*(e.flooded?1.3:1)),rk,sh);sh.cond=clamp(sh.cond-sev*15,5,95);sh.pendingYard=sev>0.5?'repair':'engine';sh.limp=sev>0.3;sh.limpF=0.6;
     repHit(-Math.round(sev*4));sh.stopLeft=e.delay||0;
     emSay(e,sh,`${D.type==='water'?'Leak under control':'Fire out'}. Proceeding at reduced speed${help?', escorted':''}. ${sev>0.5?'Damage heavy. Will need the yard.':'Damage moderate.'}`,'good');}
@@ -332,7 +340,7 @@ function emEnd(e,sh,how){
   if(D.type==='unrest'){sh.stopLeft=0;if(!e.settle){const c=Math.round(800+R()*2000);book('crew',-c,rk,sh);repHit(-3);}
     emSay(e,sh,e.settle?'Order restored. Proceeding.':e.k==='piracy'?`Order restored. Ringleaders in irons. ${e.seized?'Mail and valuables taken.':'Nothing lost.'} Proceeding.`:`Order restored. Ringleaders in irons for the courts. Proceeding with a scratch stokehold.`,'good');
     if(e.k==='mutiny')sh.morale=Math.max(sh.morale,45);}
-  news(`SS ${e.ship}: ${D.type==='sick'?DISEASE[e.dis].name+' aboard':D.name.toLowerCase()} ${how==='saved'?'survived':'ended'}.${e.dead?' '+e.dead+' dead.':''}`,how==='saved'&&!e.dead?'':'bad');
+  news(`SS ${e.ship}: ${D.type==='sick'?DISEASE[e.dis].name+' aboard':D.name.toLowerCase()} ${how==='saved'?'survived':'ended'}.${e.dead?' '+e.dead+' dead.':''}${emLevel(e)>=2&&!emBig(e)?' Her master handled it on his own orders.':''}`,how==='saved'&&!e.dead?'':'bad');
 }
 /* on arrival with sickness aboard: the port health officer */
 function startQuarantine(sh,rk){

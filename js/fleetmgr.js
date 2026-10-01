@@ -29,7 +29,7 @@ function fmAttn(sh){
   const a=fmAvg(sh);if(a!==null&&a<0&&(sh.pl||[]).length>=6&&st!=='req')out.push(['warn','Losing money']); // over the year, not a winter month
   if(insOf(sh).cover==='none')out.push(['warn','Uninsured']);
   if(sh.pendingExit)out.push(['idle',sh.pendingExit==='scrap'?'To be scrapped':'To be sold']);
-  const adv=(FM_A||advice()).filter(h=>h.scope==='ship'&&h.ref===sh.id&&h.sev!=='tip').length;if(adv)out.push(['sea',adv===1?'Advice':adv+' advice']);
+  const adv=(FM_A||shownAdvice()).filter(h=>h.scope==='ship'&&h.ref===sh.id&&h.sev!=='tip').length;if(adv)out.push(['sea',adv===1?'Advice':adv+' advice']);
   return out;
 }
 const fmChips=L=>L.slice(0,2).map(([c,t])=>`<span class="chip ${c}">${t}</span>`).join(' ')+(L.length>2?` <span class="meta" title="${L.slice(2).map(x=>x[1]).join(', ')}">+${L.length-2}</span>`:'');
@@ -114,8 +114,8 @@ function fmBulk(kind,v){
     switch(kind){
       case 'speed':case 'maint':own(sh);doAction('setship',[sh.id,kind,+v]);n++;break;
       case 'autoDock':sh.autoDock=DOCK_TH[+v];n++;break;
-      case 'cover':if(v==='none'&&S.debt>0){skip.push([sh,'the bank insists on cover']);break;}insOf(sh);sh.ins.cover=v;own(sh);n++;break;
-      case 'excess':insOf(sh);sh.ins.excess=+v;n++;break;
+      case 'cover':if(v==='none'&&S.debt>0){skip.push([sh,'the bank insists on cover']);break;}if(setCover(sh,v)!==true)skip.push([sh,'at sea: from her next port']);own(sh);n++;break;
+      case 'excess':if(setCover(sh,null,+v)!==true)skip.push([sh,'at sea: from her next port']);n++;break;
       case 'move':if(st==='req'){skip.push([sh,'on war service']);break;}own(sh);if(doAction('moveship',[sh.id,v||'']))n++;break;
       case 'dock':if(st==='req'){skip.push([sh,'on war service']);break;}if(sh.state==='yard'&&sh.yardKind==='dock'||sh.pendingYard==='dock'){skip.push([sh,'already booked']);break;}
         if(doAction('setyard',[sh.id,'dock']))n++;else skip.push([sh,'not enough cash']);break;
@@ -175,7 +175,7 @@ function fmChange(t){
 
 /* ---------- the window ---------- */
 function renderFleetMgr(){
-  const el=$('designer');if(!UI.fmOpen)return false;el.hidden=false;FM_A=advice();
+  const el=$('designer');if(!UI.fmOpen)return false;el.hidden=false;FM_A=shownAdvice();
   const F=fmState(),live=fmLive(),cols=fmCols(F.view),shown=fmShown(),sel=fmSelected();
   for(const k in F.sel)if(!live.some(sh=>sh.id===+k))delete F.sel[k];
   const allOn=shown.length&&shown.every(sh=>F.sel[sh.id]);

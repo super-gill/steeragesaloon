@@ -2,6 +2,77 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.36.1 (1 October 2026)
+Delegation for big fleets: the owner's desk holds what needs the owner, and the masters and departments see to the rest.
+- New: standing orders. An acting department works under orders you can turn off one by one on the Company tab (fares, advertising and table; moving and laying up ships; speeds, upkeep and refits; pay, drills and officers). What it may not do comes to you.
+- A department's desk grows with the fleet: it does as much more as it has more ships to look after.
+- The Advice tab leaves out what your departments will see to, says how many each has in hand, and shows the first eight of the rest, gravest first.
+- Needs attention gathers many ships with the same trouble into one line.
+- New: Interruptions (Menu, Settings). Every emergency, Grave only, Auto (grave only from fifteen ships) or Quiet watch (grave only, and no other news slows the clock). Below your setting the master handles it and the news says so. At 70 ships under Auto, the clock stops for a grave emergency about once a year instead of eight to fifteen times.
+- With the clock running, departments no longer freeze the screen working out the advice.
+- New check: `tools/desk.js`.
+
+## 0.36.0 (1 October 2026)
+Performance with a big fleet. The simulation was never the cost (6 ms a game day at 70 ships); the screen and head office's advice were.
+- Head office's advice is worked out a few milliseconds a frame while the clock runs, instead of in one go each month. At 70 ships that froze the screen for most of a second every game month; the slowest frame is now about a tenth of a second on a machine without a graphics card.
+- The advice does about half the work: the best line for each ship is kept for the month, the fare search narrows in on the best fare, and a table's effect on the Line's standing is worked out once a pass.
+- Ship markers on the chart move without making the browser lay out the page again every frame; rival markers are redrawn ten times a second.
+- The funnel smoke on a ship's drawing drifts only while the clock is stopped; it repainted the ship panel every frame.
+- With more than 25 ships an action no longer works out the whole advice twice.
+- New: a frame-time readout (Menu, Settings, Frame times) shows frames a second and where each frame's time goes.
+- New check: `tools/perf.mjs` measures frame times for a fleet of any size in a headless browser.
+
+## 0.35.7 (1 October 2026)
+The small bugs and text from the test players' notes. A new check, `tools/world.js`, plays 1900 to 1927 and checks the world stays consistent.
+- Fixed: silent ships were reported overdue more than once a year each, nearly always for a gale the office had not allowed for. The office's reckoning now allows for the weather on her track; a kept ship is overdue but safe about once in five years.
+- Fixed: the January fare revision added a whole year's inflation to fares set in the months before, and fares drifted off the line rate. Each fare now moves with its line rate since it was set. (A test player also saw fares rise in January 1921 while prices were falling; that one is right: prices in January 1921 were still well above January 1920's.)
+- Fixed: rival lines refounded under the same name year after year, and ships shared names (four ships called Blue Horizon II, three Sunderland Bays on the brokers' list). Every new line has a name no line has had, and no two ships afloat share a name.
+- Fixed: rival cruise ships moved from one closed trade to another every month in the war, ten to fifteen news lines a month. A ship on a closed trade moves to an open one of her kind from her port, or lies quietly.
+- Fixed: a controlled line told to keep off the Line's trades could put a newly delivered ship on one.
+- Fixed: a reparations auction bid the Line could not pay was taken from cash regardless. It now fails, at a cost in reputation.
+- Fixed: Elbe-Werft in Hamburg took British orders in January 1919. It takes none from the outbreak of war to the end of 1920.
+- Fixed: the private war-risk top-up could be taken out on a ship already torpedoed.
+- Fixed: the Post Office offered a declined mail contract again every few months. A declined offer is not repeated on that line for two years; the offer and the contract say how long they last.
+- Fixed: head office advised boats for all on ships whose boats already held everyone aboard.
+- The Shore tab shows what each pier, hostel and booking agency is worth to the Line's own ships each month; an agency used only by the Line had seemed to earn nothing.
+- The Finance tab says when the bank has stopped lending, instead of showing what could be borrowed.
+- The peacetime tax from 1925 is called income tax, not excess profits duty. The armistice news no longer reads as if it were the eleventh of November on the first of December.
+
+## 0.35.6 (1 October 2026)
+The third round of test players (1914 to 1927 on 0.35.5) found two large exploits in the war and the 1919 boom, two holes in my 0.35.5 fixes, and a set of wartime bugs. `tools/exploits.js` now checks each one.
+- Fixed: buying three quarters of a rival in the war, merging it and selling its ships the same day made £200,000 to £365,000 a day. Its ships are booked at what the market paid for them, and like any ship the Line acquires they sell for no more than that, moved with the market, for a year.
+- Fixed: a ship ordered in January 1919 sold on delivery in 1920 for twice her price. In the boom new ships cost what ships on the market fetch, the ironmoulders' strike (autumn 1919) holds up every yard, and a new ship's first year is capped like any other. A ship ordered in January 1919 now sells on delivery for about 1.4 times her price, the rise in the market.
+- Fixed: the boom's buyers' offers ignored the one-year cap; a receiver's bargain drew an offer of twice her price a month later.
+- Fixed: cover could still be raised on a ship that had foundered but was not yet posted missing. It now waits for her next port, which she never reaches.
+- Fixed: a one-share short allowed a bear raid. A short is at least 1% of the company, a bear raid needs 2%, and none can be started in wartime.
+- Fixed: Tourist Third fares were ignored by the rivals; a £1 Tourist Third raised no tension.
+- Fixed: the 1912 disaster struck in August 1914 in games saved under 0.35.4. A disaster whose moment has passed never runs.
+- Fixed: a torpedoed or mined ship written off in port was paid by the marine underwriters, and the news read "after her torpedoed". It is a war loss, paid by the state's scheme.
+- Fixed: head office advised buying a ship for Hamburg to New York in August 1914, a trade the war had closed. Advice, purchases and the drawing office's forecasts skip closed trades.
+- Fixed: a slip quoted free was taken by a rival's order while the Line's design was still in the drawing office. The builder holds it.
+- Fixed: a requisitioned ship could be sold or scrapped.
+- Moving the last ship off a line with a mail contract now warns at once, head office never advises it, and the Post Office's offer says a sailing is needed every month.
+- Fixed: on a phone the header jumped as the months changed length. The date has a fixed width.
+
+## 0.35.5 (1 October 2026)
+The second round of test players (1900 to 1914 on 0.35.4) found two bugs of my own making and a handful of new loopholes.
+- Fixed: strikes and the 1912 disaster never happened in 0.35.4. A comment added to the overdraft line hid the two calls that run them. A new check, `tools/lint.js`, finds code hidden in a comment and runs before every release.
+- Fixed: a builder's slip was never freed after a save was reloaded, so orders waited for ever; by 1912 nearly every slip in the game was booked to the Line. Saves made since are repaired on loading.
+- Fixed: the Line's own new building slip started as if a rival's ship were on it.
+- Fixed: a Line short of cash could not take delivery of a new ship: the bank's advance on her came only after the last payment, which the Line could not make. The advance now comes first.
+- Fixed: floating the Line priced its shares about a third over their worth (the share count assumed all the money went to the Line, when half goes to the owner), and valued the Line on this year's profit to date scaled up. The issue is now priced on the new money only, on last year's accounts.
+- Fixed: leaving and rejoining the conference on the same day ended every rate war on every route. Joining now ends only the wars against the Line, and a Line that leaves cannot rejoin for a year.
+- Fixed: cover could be raised on a ship already overdue, before she was posted missing. More cover on a ship at sea starts when she next reaches port.
+- Fixed: a line merged or wound up in January lost the dividend it had voted; it is paid first.
+- Fixed: the investment account was valued at the price its own buying had pushed up.
+- Fixed: dear cabins could still hide a steerage cut from the conference's tension; classes are weighted by their trade.
+- Fixed: a bear raid could be launched without a short open.
+- Fixed: dividends paid to the public counted as a cost against the Line's profit, for the board's targets and the duty.
+- Fixed: with part of the Line floated, the Combine offered the owner the price of the whole Line; it now offers for the owner's shares.
+- Fixed: yard jobs from later eras (gyro stabilisers in 1900) could be booked from head office's actions.
+- Fixed: celebrity news ran every week; it comes a few times a year.
+- Head office's advice on booking agencies says the gain is after their £300 a month.
+
 ## 0.35.4 (1 October 2026)
 The first test players' fixes. Two programs played 1900 to 1912 through the new command-line player (`tools/play.js`); one played carefully, one hunted for exploits and reached £10 million. Everything they found is fixed here, and `tools/exploits.js` checks that it stays fixed.
 - Fixed: fares had no ceiling. Above about twice the rate a class kept a fixed sliver of its passengers however dear it was, so ten times the rate earned ten times as much; and a line alone on a route had its fare cancel out altogether. Demand now falls away with no floor, and travellers can always go another way: alone on a route, about one and a half times the rate pays best while the ships are full, and ten times earns nothing.

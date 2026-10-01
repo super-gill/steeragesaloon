@@ -132,6 +132,23 @@ const INS_KEYS=['none','mort','value','agreed'];
 const INS_EXCESS=[{name:'None',k:1.15,x:0,own:0.1},{name:'Standard',k:1,x:0.02,own:1},{name:'High',k:0.8,x:0.08,own:2.5}];
 const shipMortgage=sh=>{if(!(S.debt>0))return 0;const fv=S.ships.reduce((a,x)=>a+shipValue(x),0)||1;return Math.min(S.debt,S.debt*shipValue(sh)/fv);};
 function insOf(sh){const i=sh.ins||(sh.ins={...(S.insDefault||{cover:'value',excess:1})});return {cover:i.cover==='none'&&S.debt>0?'mort':i.cover,excess:i.excess===undefined?1:i.excess};}
+/* the underwriters will not raise a ship's cover while she is at sea: more cover, or a lower excess, starts when she next
+   reaches port (0.35.5: cover could be raised on a ship already overdue, before she was posted missing) */
+const INS_RANK={none:0,mort:1,value:2,agreed:3};
+/* ship names: one ship of a name afloat at a time, across the Line, the rivals, the brokers' lists and the yards (0.35.7) */
+function nameTaken(n,noMarket){return S.ships.some(x=>x.name===n)||(S.rships||[]).some(x=>x.name===n)||(!noMarket&&(S.market||[]).some(x=>x.name===n))||(S.rorders||[]).some(q=>q.sh&&q.sh.name===n)||(S.orders||[]).some(o=>o.d&&o.d.name===n);}
+function freshName(n){if(!nameTaken(n))return n;for(const r of ['II','III','IV','V','VI','VII','VIII','IX'])if(!nameTaken(n+' '+r))return n+' '+r;return n+' '+Math.floor(S.t);}
+/* lost, or in an emergency now: no underwriter adds cover on her (0.35.7) */
+const shipInTrouble=sh=>sh.state==='lost'||!!sh.lost||(S.emerg||[]).some(e=>!e.over&&e.sid===sh.id);
+function setCover(sh,cover,excess){const i=insOf(sh);sh.ins.cover=i.cover;sh.ins.excess=i.excess;const nc=cover||i.cover,ne=excess===undefined?i.excess:excess;
+  // more cover waits for her next port while she is at sea, lost (not yet posted missing) or in trouble (0.35.6)
+  const away=sh.state==='sea'||sh.state==='repo'||shipInTrouble(sh);
+  if(away&&(INS_RANK[nc]>INS_RANK[i.cover]||ne<i.excess)){
+    if(INS_RANK[nc]<INS_RANK[i.cover])sh.ins.cover=nc;
+    if(ne>i.excess)sh.ins.excess=ne;
+    sh.insNext={cover:nc,excess:ne};return 'from her next port';}
+  sh.ins.cover=nc;sh.ins.excess=ne;delete sh.insNext;return true;}
+function insArrive(sh){if(sh.insNext){sh.ins={...insOf(sh),...sh.insNext};delete sh.insNext;}}
 function insured(sh){const c=insOf(sh).cover;return c==='none'?0:c==='mort'?shipMortgage(sh):c==='agreed'?shipValue(sh)*1.25:shipValue(sh);}
 /* the underwriters' rate a year: 5% for a sound ship on a quiet route */
 function insRate(sh){

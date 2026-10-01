@@ -134,7 +134,7 @@ function mkPayDiv(id,d){const M=S.ex;if(!(d>0))return;if(typeof mvShortDiv==='fu
 function mkDeal(A,id,q){const c=S.ex.cos[id];if(!c||c.gone||!q||mkShut())return null;
   const h=A.pos[id]||{n:0,cost:0};if(q<0)q=-Math.min(-q,h.n);if(!q)return null;
   const imp=Math.min(0.5,0.6*Math.abs(q)/mkDepth(id)),p=c.px*(q>0?1+imp/2:1-imp/2),gross=Math.abs(q)*p,fee=gross*(q>0?MK_FEE_BUY:MK_FEE_SELL);
-  c.px*=q>0?1+imp:1-imp;c.e=(c.e||0)+Math.log(q>0?1+imp:1-imp);A.pos[id]=h;if(A===S.ex.me)mkOwnPush(id,Math.log(q>0?1+imp:1-imp));
+  c.px*=q>0?1+imp:1-imp;c.e=(c.e||0)+Math.log(q>0?1+imp:1-imp);A.pos[id]=h;if(A===S.ex.me||A===S.ex.fund)mkOwnPush(id,Math.log(q>0?1+imp:1-imp));
   if(q>0){h.n+=q;h.cost+=gross+fee;return {cash:-(gross+fee),gain:0};}
   const basis=h.cost*(-q)/h.n;h.n+=q;h.cost-=basis;if(h.n<=0)delete A.pos[id];
   return {cash:gross-fee,gain:gross-fee-basis};}
@@ -143,7 +143,7 @@ function mkDeal(A,id,q){const c=S.ex.cos[id];if(!c||c.gone||!q||mkShut())return 
    back on the books as a paper gain, until the price drifted back over the following months */
 function mkOwnPush(id,lg,sh){const c=S.ex.cos[id];if(!c)return;if(lg)c.own=(c.own||0)+lg;if(sh)c.ownS=(c.ownS||1)*sh;}
 const mkFair=id=>{const c=S.ex.cos[id];return c&&!c.gone?c.px/Math.exp(c.own||0)/(c.ownS||1):0;};
-const mkPosVal=A=>Object.keys(A.pos).reduce((a,id)=>a+A.pos[id].n*(S.ex.cos[id]?(A===S.ex.me?mkFair(id):S.ex.cos[id].px):0),0);
+const mkPosVal=A=>Object.keys(A.pos).reduce((a,id)=>a+A.pos[id].n*(S.ex.cos[id]?(A===S.ex.me||A===S.ex.fund?mkFair(id):S.ex.cos[id].px):0),0);
 /* the Line's own dealing, from the Market tab */
 function mkBuy(id,amt,margin){const M=mkEnsure(),c=M.cos[id];if(!c||c.gone||mkShut()||!(amt>0)||(M.me.short&&M.me.short[id]))return false; // buy back the short first
   const own=margin?amt*(1-MK_MARGIN):amt;if(S.cash<own)return false;
@@ -289,6 +289,9 @@ function mkControlMonth(){const M=S.ex;
       const cr=isCruise(x.route),ok=k=>k!==x.route&&!S.lines[k]&&routeOpen(k,S.m)&&isCruise(k)===cr,own=coFleet(o).map(y=>y.route).filter(ok);
       const to=own[0]||Object.keys(ROUTES).filter(ok).sort((a,b)=>S.rships.filter(y=>y.route===a).length-S.rships.filter(y=>y.route===b).length)[0];
       if(to){rivalMove(o,x.route,'move',x.name,to);x.route=to;RW_CACHE.k=null;}}}}
+/* a controlled line told to keep off the Line's trades sends a new ship, or a move, elsewhere too (0.35.7) */
+function mkKeepRoute(o,rk){const co=S.rivals[o];if(!co||!co.keepOff||!S.lines[rk])return rk;const cr=isCruise(rk),ok=k=>k!==rk&&!S.lines[k]&&routeOpen(k,S.m)&&isCruise(k)===cr;
+  return coFleet(o).map(y=>y.route).find(ok)||Object.keys(ROUTES).filter(ok).sort((a,b)=>S.rships.filter(y=>y.route===a).length-S.rships.filter(y=>y.route===b).length)[0]||rk;}
 function mkCtrlSet(o,k,v){if(mkInfl(o)<2)return false;const co=S.rivals[o];
   if(k==='div'&&MK_DIV[v])co.divPol=v;else if(k==='strat'&&MK_STRAT[v])co.strat=v;else if(k==='keep')co.keepOff=!co.keepOff;else return false;return true;}
 /* end the rate wars it is fighting */
@@ -299,9 +302,10 @@ function mkPeace(o){if(mkInfl(o)<2)return false;let n=0;
 function mkAdopt(x,o){const age=Math.max(0,yearOfM(S.m)-x.built),fat=clamp(age*1.8,0,95),cond=75;
   const base=Math.round(coShipVal(x)/(PX()*Math.pow(cond/100,0.7)*Math.max(0.15,1-fat*0.0085)*shipMkt()));
   const port=(x.v&&x.v.port)||ROUTES[x.route].calls[0];
-  const sh=makeShip({name:S.ships.some(y=>y.name===x.name)?x.name+' II':x.name,built:x.built,grt:x.grt,knots:x.knots,berths:{f:0,s:0,t:0,tt:0,...x.berths},cargo:x.cargo||0,fuel:x.fuel||(x.built>=1925?'oil':'coal'),base,note:`Late of ${mkName(o)}.`},cond,port);
+  const sh=makeShip({name:S.ships.some(y=>y.name===x.name)?freshName(x.name):x.name,built:x.built,grt:x.grt,knots:x.knots,berths:{f:0,s:0,t:0,tt:0,...x.berths},cargo:x.cargo||0,fuel:x.fuel||(x.built>=1925?'oil':'coal'),base,note:`Late of ${mkName(o)}.`},cond,port);
   if(typeof rivalLiv==='function')sh.paint={...rivalLiv(o),name:`${mkName(o)}'s colours`};
-  sh.acq=S.m;if(S.lines[x.route]&&routeOpen(x.route,S.m)){sh.line=x.route;sh.state='port';sh.portLeft=2;}
+  // booked at what the market paid for her: the break-up value at the share-price floor (0.35.6)
+  sh.acq=S.m;sh.paid=Math.round(0.6*coShipVal(x));sh.mk0=shipIdx();if(S.lines[x.route]&&routeOpen(x.route,S.m)){sh.line=x.route;sh.state='port';sh.portLeft=2;}
   S.ships.push(sh);dropRival(x);return sh;}
 function mkTakeShip(o,sid){if(mkInfl(o)<2)return false;const x=S.rships.find(y=>y.id===sid&&y.owner===o);if(!x)return false;
   const price=Math.round(coShipVal(x)/100)*100;if(S.cash<price)return false;
@@ -311,7 +315,7 @@ function mkTakeShip(o,sid){if(mkInfl(o)<2)return false;const x=S.rships.find(y=>
    and debts become the Line's */
 const mkMergeCost=o=>Math.round((1-mkStake(o))*S.ex.cos[o].n*Math.max(mkVal(o),mkFair(o),0)); // the minority are paid its worth or the market, whichever is more (0.35.4)
 function mkMerge(o){const M=S.ex,c=M.cos[o],co=S.rivals[o];if(!c||c.gone||mkStake(o)<MK_SPECIAL)return false;
-  const cost=mkMergeCost(o);if(S.cash+co.cash<cost)return false;
+  const cost=mkMergeCost(o);if(S.cash+co.cash<cost)return false;mkPayDeclared(o);
   const n=mkName(o),fleet=coFleet(o),routes=[...new Set(fleet.map(x=>x.route))];let opened=0;
   for(const rk of routes)if(!S.lines[rk]&&routeOpen(rk,S.m)){S.lines[rk]={fares:defaultFares(rk),service:1,adv:1,last:[null,null]};opened++;}
   for(const x of fleet)mkAdopt(x,o);
@@ -327,7 +331,9 @@ const mkWindValue=o=>{const co=S.rivals[o];return co.cash+coFleet(o).reduce((a,x
 /* lend to a controlled line to carry it through a bad patch: 5% a year, repaid when it is flush, lost if it fails */
 function mkLend(o,amt){if(mkInfl(o)<2||!(amt>0)||S.cash<amt)return false;const co=S.rivals[o];S.cash-=amt;co.cash+=amt;co.lineLoan=(co.lineLoan||0)+amt;
   news(`The Line lends ${mkName(o)} ${fmt(amt)} at 5%, to be repaid when it can.`);return true;}
-function mkWindUp(o){const M=S.ex,c=M.cos[o],co=S.rivals[o];if(!c||c.gone||mkStake(o)<MK_SPECIAL)return false;
+/* a dividend voted in January is paid in February; a line merged or wound up in between pays it first (0.35.5: it was lost) */
+function mkPayDeclared(o){const c=S.ex.cos[o],co=S.rivals[o];if(c&&co&&co.div>0&&S.m%12===0){c.dy=co.div/c.n;mkPayDiv(o,c.dy);co.div=0;}}
+function mkWindUp(o){const M=S.ex,c=M.cos[o],co=S.rivals[o];if(!c||c.gone||mkStake(o)<MK_SPECIAL)return false;mkPayDeclared(o);
   const loan=Math.min(co.lineLoan||0,Math.max(0,mkWindValue(o)+(co.lineLoan||0)));if(loan>0){S.cash+=loan;co.cash-=loan;co.lineLoan=0;} // repaid out of its cash, so the shareholders do not get it again (0.35.3)
   const net=Math.max(0,mkWindValue(o)),perSh=net/c.n,k=mkStake(o),n=mkName(o),fleet=coFleet(o),routes=[...new Set(fleet.map(x=>x.route))];
   for(const x of fleet)dropRival(x);S.rorders=(S.rorders||[]).filter(q=>q.o!==o);

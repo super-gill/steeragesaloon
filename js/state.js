@@ -1,7 +1,7 @@
 /* ================= STATE ================= */
 const KEY='steerage-saloon-v3',OLD_KEYS=['steerage-saloon-v2']; // v3: the calendar counts from 1900 (0.19.0); older saves are retired
 let S=null;
-const UI={speed:0,tab:'overview',confirm:null,banner:'Paused. Press 1× to start the clock.',eventMode:(()=>{try{return localStorage.getItem('ss_eventmode')||'slow';}catch(e){return 'slow';}})(),view:'ext',dirty:true};
+const UI={irq:(()=>{try{return localStorage.getItem('ss_irq')||'auto';}catch(e){return 'auto';}})(),perf:(()=>{try{return localStorage.getItem('ss_perf')==='1';}catch(e){return false;}})(),speed:0,tab:'overview',confirm:null,banner:'Paused. Press 1× to start the clock.',eventMode:(()=>{try{return localStorage.getItem('ss_eventmode')||'slow';}catch(e){return 'slow';}})(),view:'ext',dirty:true};
 function newGame(){
   const m0=START,t0=tOfM(m0,1),pi=piAt(m0);
   S={v:3,t:t0,m:m0,t0,m0,cash:Math.round(18000*pi/500)*500,debt:Math.round(40000*pi/1000)*1000,rep:30,conf:false,ships:[],lines:{},wars:{},mail:{},offer:null,market:[],news:[],hist:[18000],
@@ -44,6 +44,7 @@ function migrate(s){
   applyPrices(); // the tables at the save's own prices, before the rival companies are set up against them
   ensureRivals();
   if(s.over==='end')s.over=false;
+  relinkSlips(s); // an order's slip is the builder's own slip again after loading (0.35.5)
   S=prev;
   return s;
 }

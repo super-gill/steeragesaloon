@@ -34,7 +34,7 @@ function prewarMonth(){
       const twin=PREWAR_SHIPS.find(z=>z!==q&&z.order===q.order&&z.o===q.o);
       if(!twin||PREWAR_SHIPS.indexOf(twin)>PREWAR_SHIPS.indexOf(q))news(`${RIVALS[o].name} orders ${twin?`two ${PREWAR_NAME[q.kind]}s`:`a new ${PREWAR_NAME[q.kind]}`}: ${twin?`SS ${q.name} and SS ${twin.name}`:`SS ${q.name}`}, ${int(q.grt)} tons and ${q.knots} knots, for ${ROUTES[q.rk].name}${q.kind==='giant'?'. Nothing so big has ever been built':''}.`,S.lines[q.rk]?'bad':'');}
     if(m===q.at&&P.ordered[q.name]&&!P.done[q.name]){const o=prewarOwner(P.ordered[q.name]);P.done[q.name]=true;if(!o)continue;
-      const nm=o===q.o?q.name:(RIVAL_P[o].names.find(n=>!S.rships.some(y=>y.name===n))||q.name); // a line that takes over the order names her itself
+      const nm=o===q.o?q.name:(RIVAL_P[o].names.find(n=>!nameTaken(n))||freshName(q.name)); // a line that takes over the order names her itself
       const x={id:'r'+(S.rnext++),owner:o,name:nm,route:q.rk,grt:q.grt,knots:q.knots,built:Math.floor(yearOfM(m)),berths:{...q.berths},cargo:q.cargo,reefer:false,phase:Math.random(),kind:q.kind};
       S.rships.push(x);newRivalVis(x);RW_CACHE.k=null;S.rmoves.unshift({m,o,rk:q.rk,kind:'add',ship:nm});
       news(`${RIVALS[o].name}'s SS ${nm} sails on her maiden voyage on ${ROUTES[q.rk].name}: ${int(q.grt)} tons, ${q.knots} knots${q.kind==='giant'?', the largest ship in the world':''}.${S.lines[q.rk]?' Your cabin trade there will feel it.':''}`,S.lines[q.rk]?'bad':'',true);}}

@@ -187,7 +187,7 @@ function designShip(d,st){
 /* the best of the lines you run, or of all routes, for a forecast */
 function designForecast(d){
   const st=designStats(d),sh=designShip(d,st);let best=null;
-  for(const rk of Object.keys(ROUTES)){if(!S.lines[rk])S.lines[rk]={fares:defaultFares(rk),service:1,adv:1,last:[null,null],_tmp:1};
+  for(const rk of Object.keys(ROUTES)){if(!routeOpen(rk,S.m))continue;if(!S.lines[rk])S.lines[rk]={fares:defaultFares(rk),service:1,adv:1,last:[null,null],_tmp:1};
     let pm=0;try{pm=econYear(sh,rk).pm;}catch(e){pm=-1e9;}
     if(S.lines[rk]._tmp)delete S.lines[rk];
     if(!best||pm>best.pm)best={rk,pm};}
@@ -200,9 +200,18 @@ function designForecast(d){
 function slipsOf(b){
   S.bslips=S.bslips||{};const B=b==='own'?ownBuilder():BUILDERS[b];if(!B)return [];
   let L=S.bslips[b];
-  if(!L){L=S.bslips[b]=[];for(let i=0;i<B.slips;i++){const R=seed(b.length*97+i*13+7);L.push(R()<0.6?{until:S.m+Math.round(3+R()*20),who:'rival'}:{until:S.m,who:null});}}
+  // the Line's own slip starts empty (0.35.5)
+  if(!L){L=S.bslips[b]=[];for(let i=0;i<B.slips;i++){const R=seed(b.length*97+i*13+7);L.push(b!=='own'&&R()<0.6?{until:S.m+Math.round(3+R()*20),who:'rival'}:{until:S.m,who:null});}}
   return L;
 }
+/* a save keeps an order's slip as a copy of the builder's slip, so after loading it must point at the builder's own
+   again, or a launch frees the copy and the slip stays booked for ever (0.35.5). Slips booked to the Line by no order
+   (from saves made before the fix) are freed. */
+function relinkSlips(s){const B=s.bslips||{},used=new Set();
+  for(const o of s.orders||[]){if(!o.slip)continue;const L=B[o.d.builder]||[];
+    let x=o.slipI!==undefined?L[o.slipI]:null;if(!x||used.has(x))x=L.find(q=>q.who==='us'&&!used.has(q))||null;
+    if(x){x.who='us';used.add(x);o.slip=x;o.slipI=L.indexOf(x);}else o.slip=null;}
+  for(const b in B)for(const x of B[b])if(x.who==='us'&&!used.has(x)){x.who=null;x.until=Math.min(x.until,s.m);}}
 function slipFreeAt(b){const L=slipsOf(b);if(!L.length)return S.m;
   const q=(S.orders||[]).filter(o=>o.d.builder===b&&o.stage==='waiting').length;
   const ends=L.map(x=>Math.max(S.m,x.until)).sort((a,c)=>a-c);return ends[Math.min(q,ends.length-1)]+(q>=ends.length?12:0);}
@@ -211,17 +220,23 @@ function slipsMonth(){
     for(const x of L)if(x.who==='rival'&&x.until<=S.m)x.who=null;
     // rivals order ships too, especially in good times
     const free=L.filter(x=>x.who===null&&x.until<=S.m&&!(S.orders||[]).some(o=>o.slip===x));
-    if(b!=='own'&&free.length&&Math.random()<(slump(S.m)>0.5?0.03:0.1)){const x=free[0];x.who='rival';x.until=S.m+14+Math.floor(Math.random()*18);}}
+    // the builder keeps a free slip for each of the Line's orders still in the drawing office or waiting (0.35.6)
+    const held=(S.orders||[]).filter(o=>o.d.builder===b&&(o.stage==='drawing'||o.stage==='waiting')).length;
+    if(b!=='own'&&free.length>held&&Math.random()<(slump(S.m)>0.5?0.03:0.1)){const x=free[0];x.who='rival';x.until=S.m+14+Math.floor(Math.random()*18);}}
 }
 
 /* ---------- orders ---------- */
 const STAGES={drawing:'In the drawing office',waiting:'Waiting for a slip',framing:'Keel laid, framing',plating:'Plating the hull',fitting:'Launched, fitting out',trials:'On trials',done:'Delivered'};
+/* the German yard takes no British orders from the war until 1921: after the armistice it builds for the Reparations
+   Commission (0.35.7) */
+const builderShut=k=>k==='elbe'&&newCal()&&S.m>=ym(1914,7)&&S.m<ym(1921,0);
 function placeOrder(d){
+  if(builderShut(d.builder))return {ok:false,why:'Elbe-Werft takes no British orders until 1921: the German yards are building for the Reparations Commission.'};
   if(warNoBuild())return {ok:false,why:'The yards are working for the Admiralty. No new orders until the war is over.'};
   const st=designStats(d);if(st.warn.length)return {ok:false,why:st.warn[0]};
   const adm=!!(d.adm&&admEligible(d)),dep=Math.round(st.price*0.1),own=adm?Math.round(dep/3):dep;if(S.cash<own)return {ok:false,why:`The yard wants ${fmt(own)} with the order${adm?' (the Admiralty pays the rest)':''}.`};
   S.orders=S.orders||[];S.yardNext=S.yardNext||534;
-  const o={id:S.yardNext++,d:Object.assign(JSON.parse(JSON.stringify(d)),{auto:{mach:false,form:false}}),price:st.price,paid:0,due:0,months:st.months,prog:0,stage:'drawing',left:2,ordered:S.m,late:0,unpaid:0,log:[],pi0:PX(),wb:warBuild(S.m),adm,admBal:0};
+  const o={id:S.yardNext++,d:Object.assign(JSON.parse(JSON.stringify(d)),{auto:{mach:false,form:false}}),price:st.price,paid:0,due:0,months:st.months,prog:0,stage:'drawing',left:2,ordered:S.m,late:0,unpaid:0,log:[],pi0:PX(),wb:warBuild(S.m),mk0:shipIdx(),adm,admBal:0};
   o.d.name=o.d.name.trim();
   pay(o,dep,'deposit');S.orders.push(o);
   logOrder(o,`Ordered from ${builderOf(o.d).name} as Yard No. ${o.id}. ${fmt(dep)} paid with the order.`);
@@ -252,12 +267,13 @@ function ordersMonth(){
     if(o.stage==='drawing'){o.left--;if(o.left<=0){o.stage='waiting';logOrder(o,'Drawings approved.');}}
     if(o.stage==='waiting'){if(warNoBuild())continue; // no keel for a merchant ship while the war lasts
       const L=slipsOf(o.d.builder),x=L.find(s=>s.who===null&&s.until<=S.m&&!(S.orders||[]).some(q=>q.slip===s));
-      if(x){x.who='us';o.slip=x;if(!bill(o,0.2,'at the keel laying')){x.who=null;o.slip=null;continue;}
+      if(x){x.who='us';o.slip=x;o.slipI=L.indexOf(x);if(!bill(o,0.2,'at the keel laying')){x.who=null;o.slip=null;continue;}
         o.stage='framing';o.keel=S.m;logOrder(o,`Keel laid on slip ${L.indexOf(x)+1}.`);news(`The keel of SS ${o.d.name} is laid at ${B.name}.`);}
       continue;}
     if(['framing','plating','fitting'].includes(o.stage)){
       // strikes, steel shortages and a good month on the yard
-      let step=1/o.months*(warNoBuild()?0.25:1);const R=Math.random(); // Admiralty work comes first in the war
+      // Admiralty work comes first in the war; the moulders' strike of autumn 1919 starves the yards of castings (0.35.6)
+      let step=1/o.months*(warNoBuild()?0.25:1)*(moulders()?0.25:1);const R=Math.random();
       if(R<0.03){o.late+=2;step=0;logOrder(o,'A strike in the yard. No work this month.');news(`Riveters at ${B.name} are on strike. SS ${o.d.name} is delayed.`,'bad');}
       else if(R<0.07){step*=0.5;logOrder(o,'Steel deliveries late.');}
       else if(R>0.95){step*=1.4;}
@@ -274,6 +290,8 @@ function ordersMonth(){
     if(o.stage==='trials'){o.left--;if(o.left>0)continue;
       const st=designStats(o.d),q=B.quality,kn=+(o.d.knots*(0.975+Math.random()*0.035+(q-1)*0.3)).toFixed(1);
       o.trial=kn;
+      // the bank's mortgage on her is advanced against the last payment, so a Line short of cash can take delivery (0.35.5)
+      if(!o.mortAdv&&!(S.noLend>S.m)&&S.cash<o.price*0.5){const adv=Math.min(Math.round(o.price*0.5),Math.max(0,Math.round(headroom()+0.7*o.price)));if(adv>0){S.debt+=adv;S.cash+=adv;o.mortAdv=adv;}}
       if(!bill(o,1-(o.paid+o.due)/o.price,'on delivery'))continue;
       deliver(o,st,kn,B);}
   }
@@ -284,6 +302,7 @@ function deliver(o,st,kn,B){
   Object.assign(sh,{fuelK:st.fuelK*Math.pow(d.knots/kn,0),crewK:st.crewK,appFS:st.fs,appT:st.t,galeK:st.gale,riskK:st.risk,safety:st.safety,decayK:st.decay,style:d.style,newUntil:S.m+18,foul:0,
     len:st.eng.len,beam:st.eng.beam,draught:st.eng.draught,shp:st.eng.shp,range:st.eng.range,designLine:d.line||null,
     design:{layout:d.layout||null,form:d.form,funnels:d.funnels,purpose:d.purpose,mach:d.mach,quality:d.quality,yardNo:o.id,builder:B.name,extras:Object.keys(d.extras).filter(k=>d.extras[k])},fit:100});
+  sh.acq=S.m;sh.paid=o.price;sh.mk0=o.mk0||null; // her first year she sells for no more than her price, moved with the market (0.35.6)
   sh.up.wireless=!!d.extras.wireless;sh.up.lux=d.quality>=2;sh.fac={...(d.fac||{})};sh.cruiser=!!(PURPOSES[d.purpose]&&PURPOSES[d.purpose].cruiser);
   for(const k of ['stab','fins','aircon','pool','cinema','rphone','radar','hatch','heavy','deep','boats'])if(d.extras[k])sh.up[k]=true;
   const pool=(S.capPool||[]).slice().sort((a,b)=>b.exp-a.exp);if(pool.length){sh.captain=pool[0];S.capPool=S.capPool.filter(q=>q!==pool[0]);}
@@ -293,7 +312,7 @@ function deliver(o,st,kn,B){
   if(d.builder==='own')S.shore.slipBuilt=(S.shore.slipBuilt||0)+1;
   // the bank takes a mortgage on the new ship as on any other
   // only when the Line needs it, and never while a panic has stopped lending (0.35.4: it was advanced to a Line with millions in hand)
-  const mort=S.noLend>S.m||S.cash>=o.price*0.5?0:Math.min(Math.round(o.price*0.5),Math.max(0,Math.round(headroom())));if(mort>0){S.debt+=mort;S.cash+=mort;}
+  const mort=o.mortAdv||0; // advanced against the last payment, if the Line needed it
   news(`SS ${d.name} made ${kn} knots on the measured mile and is handed over at ${PN[B.port]}.${sh.adm?` The Admiralty's loan on her stands at ${fmt(Math.round(sh.adm.bal))}, and it pays ${fmt(sh.adm.sub*12)} a year while she sails.`:''}${mort>0?` The bank advances ${fmt(mort)} on her mortgage.`:''} ${sh.captain?sh.captain.name+' takes command.':''} ${toLine?`She joins the ${ROUTES[toLine].name} service.`:'Assign her to a line.'}`,'good',true);
   wire(sh,`SS ${d.name} handed over at ${PN[B.port]}. Trials ${kn} knots. Ready for service.`,'good');
 }

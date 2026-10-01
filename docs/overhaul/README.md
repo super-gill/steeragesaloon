@@ -19,7 +19,7 @@ The research notes behind the data tab are in `research/`.
 ## Decisions
 
 - 1900 is the only start; old saves are retired at 0.19.0.
-- The overhaul builds to about 1940; later eras come after 1.0.
+- The overhaul builds to about 1940 (milestone 0.40.0). The later eras follow in the same way, and 1.0.0 is the game complete to the present day (see `ROADMAP.md`).
 - The clock runs at half today's speed (a year is about 20 minutes at 1x),
   with a new 14x at today's 7x. Big events slow the clock, never pause it.
 - Money follows real history year by year: the price index is about 0.40
@@ -39,7 +39,7 @@ Settled in 0.29 (open questions on the design doc's markets tab): every rival li
 
 ## Build order
 
-Balance issues left open by each release are listed in [BALANCE.md](BALANCE.md), for the final pass before 1.0.0.
+Balance issues left open by each release are listed in [BALANCE.md](BALANCE.md), for the final pass before 0.40.0.
 
 | Release | Scope |
 | --- | --- |
@@ -63,8 +63,9 @@ Balance issues left open by each release are listed in [BALANCE.md](BALANCE.md),
 | 0.33.0 | Final balance pass, part one: the economy, the war, the rival lines (done) |
 | 0.34.0 | Final balance pass, part two: the markets, and a 40-seed check of every target (done; 0.34.1 fixed head office advising Spartan tables) |
 | 0.35.0 | The fleet for larger fleets: a compact Fleet tab and the Fleet Manager window (done: `js/fleetmgr.js`) |
-| 0.36.0 | The late game, 1921 to 1939: careful owners in the Depression, the advisor's lead, the stale war-outbreak text |
-| 1.0.0 | 1900 to 1940 complete and balanced |
+| 0.35.6 to 0.37.1 | Test-player fixes, performance, delegation, running by line, rescue and the late game: see `ROADMAP.md` in the repo root |
+| 0.40.0 | 1900 to 1940 complete and balanced |
+| 1.0.0 | The game complete to the present day |
 
 ## The 0.16.0 balance pass
 

@@ -69,7 +69,7 @@ function warMonth(){
   if(m===RESERVE_FROM)news('With the naval scare at its height, the Admiralty asks the lines to put ships on its reserve list for war service. A ship on the list may be called up in a war; a line that volunteers will be treated better. See the Company tab.','hist',true);
   if(m===WAR_FROM&&!W.began){W.began=true;warBegins();}
   if(m===US_WAR)news('The United States declares war on Germany. The American lines lose their neutral trade, and their government begins to build ships in huge numbers.','hist',true);
-  if(m===ARMISTICE+1&&!W.over){W.over=true;news('The armistice is signed. The guns fall silent at eleven o\'clock on the eleventh of November. The Admiralty will return requisitioned ships over the coming year.','hist',true);}
+  if(m===ARMISTICE+1&&!W.over){W.over=true;news('The war is over: the armistice was signed on the eleventh of November, and the guns fell silent at eleven o\'clock. The Admiralty will return requisitioned ships over the coming year.','hist',true);}
   if(atWar(m))reqMonth();
   if(m>=ym(1919,2)&&m<ym(1920,0))reqReturns();
   for(const sh of S.ships.slice())if(sh.state==='req')reqWear(sh);
@@ -297,19 +297,26 @@ function warSeaHTML(sh){
    at the top fetches two to three times her 1913 worth at 1913 prices; held through 1921 she loses half to two thirds. */
 const PEACE=ym(1919,0),VERSAILLES=ym(1919,5),AUCTION_CLOSE=ym(1919,9);
 /* building again, from 1919, at prices well over the general rise, until the crash */
-const warBuild=m=>newCal()&&m>ARMISTICE&&m<M21?curveAt([[ARMISTICE+1,1.3],[ym(1920,3),1.6],[ym(1920,11),1.2]],m):1;
+/* new building in the boom: with every yard full, a new ship costs what one on the market fetches, so a ship ordered
+   in 1919 gains on delivery only what the market has risen since (0.35.6; it was 1.3 to 1.6, and a ship ordered in
+   January 1919 sold for twice her price in 1920) */
+const warBuild=m=>newCal()&&m>ARMISTICE&&m<M21?Math.max(1,warShips(m)):1;
+/* the ironmoulders' strike, 22 September 1919 to January 1920: no castings, and the yards all but stop */
+const moulders=()=>newCal()&&S.m>=ym(1919,8)&&S.m<ym(1920,1);
 const bubbleOn=m=>{m=m===undefined?S.m:m;return newCal()&&m>=ym(1919,1)&&m<ym(1920,9);};
 function bubbleMonth(){
   const m=S.m,W=S.war;if(!newCal()||m<PEACE||m>=M21)return;
   if(m===PEACE)news('The yards are taking orders again, at prices nobody has seen before. Shipowners who kept their ships are rich on paper; every broker in the City has a buyer.','hist',true);
   if(m===VERSAILLES&&!W.rep)reparations();
   if(W.auction&&m>=W.auction.close)auctionClose();
+  if(m===ym(1919,8))news('The ironmoulders have come out on strike. Without castings the shipyards can do little more than wait; every ship on the stocks will be late.','bad',true);
   if(m===ym(1920,3))news('Ship prices are at their height. Some owners are selling while buyers will pay anything; others are ordering new tonnage at record prices.','hist',true);
   if(m===ym(1920,9))news('Freight rates are falling fast. Ships are laying up in every port, and the bankers are beginning to worry about the loans they made on inflated tonnage.','bad',true);
   // buyers' offers for the Line's ships
   if(bubbleOn(m)){W.offers=(W.offers||[]).filter(o=>o.exp>m&&S.ships.some(x=>x.id===o.sid));
     for(const sh of S.ships){if(sh.state==='req'||sh.state==='lost'||W.offers.some(o=>o.sid===sh.id)||Math.random()>0.07)continue;
-      const amt=Math.round(shipValue(sh)*(1.1+Math.random()*0.3)/1000)*1000;W.offers.push({sid:sh.id,amt,exp:m+2});
+      // a syndicate looks the ship up: one the Line has had under a year is offered no more than she cost, moved with the market (0.35.6)
+      const amt=Math.round(Math.min(shipValue(sh)*(1.1+Math.random()*0.3),saleCap(sh))/1000)*1000;if(amt<=saleValue({...sh,saleAmt:0}))continue;W.offers.push({sid:sh.id,amt,exp:m+2});
       news(`A syndicate offers ${fmt(amt)} for SS ${sh.name}, about ${Math.round(amt/Math.max(1,shipValue(sh)/warShips(m)*piAt(ym(1913,6))/PX())*10)/10} times her pre-war worth. It is under Needs attention.`,'',true);}}
   else if(W.offers&&W.offers.length)W.offers=[];
   // speculative lines floated on borrowed money
@@ -318,8 +325,9 @@ function bubbleMonth(){
 /* the offer taken: she goes now if she is in port, or when she next reaches port */
 function offerTake(sid,yes){const W=S.war;if(!W||!W.offers)return;const o=W.offers.find(q=>q.sid===sid);if(!o)return;W.offers=W.offers.filter(q=>q!==o);
   const sh=S.ships.find(x=>x.id===sid);if(!sh||!yes)return;
-  if(sh.state==='sea'||sh.state==='repo'){sh.pendingExit='sell';sh.saleAmt=o.amt;news(`SS ${sh.name} is sold for ${fmt(o.amt)}. The buyers take her when she reaches port.`,'good');}
-  else{sh.saleAmt=o.amt;exitShip(sh,'sell');}}
+  sh.saleAmt=o.amt;const v=saleValue(sh); // a ship held under a year is capped like any other sale (0.35.6)
+  if(sh.state==='sea'||sh.state==='repo'){sh.pendingExit='sell';news(`SS ${sh.name} is sold for ${fmt(v)}. The buyers take her when she reaches port.`,'good');}
+  else exitShip(sh,'sell');}
 /* the Treaty of Versailles: the German lines hand over their big ships; the two largest are auctioned */
 function reparations(){
   const W=S.war;W.rep=true;const G=S.rships.filter(x=>/German/.test((RIVALS[x.owner]||{}).flag||'')&&x.grt>=8000).sort((a,b)=>b.grt-a.grt);if(!G.length)return;
@@ -337,13 +345,16 @@ function auctionBid(i,k){const A=S.war&&S.war.auction;if(!A)return;const L=A.lot
 function auctionClose(){
   const A=S.war.auction;S.war.auction=null;
   for(const L of A.lots){const rival=Math.round(L.value*(0.85+Math.random()*0.5)/1000)*1000;
+    // the bank advances half against her; the rest must be in the Line's account at the close, or the bid fails (0.35.7)
+    const mortQ=L.bid?Math.min(Math.round(L.bid*0.5),Math.max(0,Math.round(headroom()))):0;
+    if(L.bid&&L.bid>=rival&&S.cash+mortQ<L.bid){news(`The Line cannot find the ${fmt(L.bid)} it bid for SS ${L.name}. The Commission takes the next bid, and the City notes it.`,'bad',true);S.rep=clamp(S.rep-2,0,100);L.bid=0;}
     if(L.bid&&L.bid>=rival){
       const sh=makeShip({name:L.name,built:L.built,grt:L.grt,knots:L.knots,berths:L.berths,cargo:L.cargo,fuel:'coal',base:Math.round(L.bid/(PX()*warShips(S.m))),note:'Bought from the Reparations Commission.'},72,'SOU');
-      sh.up.wireless=true;sh.up.boats=true;sh.paint=oldOwnerPaint(sh);S.ships.push(sh);S.cash-=L.bid;
-      const mort=Math.min(Math.round(L.bid*0.5),Math.max(0,Math.round(headroom())));if(mort>0){S.debt+=mort;S.cash+=mort;}
+      sh.up.wireless=true;sh.up.boats=true;sh.paint=oldOwnerPaint(sh);sh.acq=S.m;sh.paid=L.bid;sh.mk0=shipIdx();S.ships.push(sh);S.cash-=L.bid;
+      const mort=mortQ;if(mort>0){S.debt+=mort;S.cash+=mort;}
       news(`The Line's bid of ${fmt(L.bid)} wins SS ${L.name}, ${int(L.grt)} tons and ${L.knots} knots. She lies at Southampton; the bank advances ${fmt(mort)} on her.`,'good',true);}
     else{const t=coLive().filter(o=>!/German/.test((RIVALS[o]||{}).flag||'')&&!RIVAL_P[o].kind).sort((a,b)=>coWorth(b)-coWorth(a))[0];
-      if(t){const x=makeRivalShip(t,L.route==='ham'?'liv':L.route,L.built);Object.assign(x,{name:L.name,grt:L.grt,knots:L.knots,berths:L.berths,cargo:L.cargo});S.rships.push(x);newRivalVis(x);coPay(t,rival);RW_CACHE.k=null;}
+      if(t){const x=makeRivalShip(t,L.route==='ham'?'liv':L.route,L.built);Object.assign(x,{name:freshName(L.name),grt:L.grt,knots:L.knots,berths:L.berths,cargo:L.cargo});S.rships.push(x);newRivalVis(x);coPay(t,rival);RW_CACHE.k=null;}
       news(`SS ${L.name} goes to ${t?RIVALS[t].name:'an American buyer'} for ${fmt(rival)}${L.bid?`, over the Line's ${fmt(L.bid)}`:''}.`,L.bid?'bad':'');}}
 }
 function auctionHTML(){

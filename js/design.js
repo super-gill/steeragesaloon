@@ -69,7 +69,7 @@ function renderDesigner(){
   const extras=Object.keys(EXTRAS).filter(k=>techOn(EXTRAS[k].from,y)&&(!EXTRAS[k].ok||EXTRAS[k].ok())).map(k=>{const e=EXTRAS[k],small=e.min&&d.grt<e.min;
     return `<label class="xopt${small?' off':''}"><input type="checkbox" data-dzx="${k}" ${d.extras[k]?'checked':''} ${small?'disabled':''}><span><b>${e.name}</b> <span class="num">${fmt(e.cost(d.grt)*B.price)}</span><small>${e.blurb}${small?' Needs 12,000 tons.':''}</small></span></label>`;}).join('');
   const bl=Object.keys(BUILDERS).concat(S.shore&&S.shore.slip?['own']:[]).map(k=>{const b=k==='own'?ownBuilder():BUILDERS[k],fr=slipFreeAt(k);
-    return pick('builder',k,`${b.name}, ${PN[b.port]}`,`${b.blurb} Price ×${b.price.toFixed(2)}, pace ×${(1/b.speed).toFixed(2)}. ${fr<=S.m?'A slip is free now.':'Next slip free '+monthName(fr)+'.'}${d.grt>b.max?' Too small for this ship.':''}`,d.builder===k,d.grt>b.max);}).join('');
+    return pick('builder',k,`${b.name}, ${PN[b.port]}`,`${b.blurb} Price ×${b.price.toFixed(2)}, pace ×${(1/b.speed).toFixed(2)}. ${fr<=S.m?'A slip is free now.':'Next slip free '+monthName(fr)+'.'}${d.grt>b.max?' Too small for this ship.':''}${builderShut(k)?' Takes no British orders until 1921.':''}`,d.builder===k,d.grt>b.max||builderShut(k));}).join('');
   const mixRow=c=>`<div class="mixrow"><span>${CL_NAME[c]}</span><input type="range" min="0" max="100" step="1" value="${d.mix[c]}" data-dz="mix.${c}" aria-label="${CL_NAME[c]} share of passenger space" ${c==='tt'&&y<1925?'disabled':''}><span class="num">${st.berths[c]} berths</span></div>`;
   const ok=!st.warn.length,dep=Math.round(st.price*0.1*(d.adm&&admEligible(d)?1/3:1)),b=f.best,fl=f.line;
   const pct=v=>Math.round(v*100);

@@ -7,9 +7,11 @@ const isSilent=sh=>(sh.state==='sea'||sh.state==='lost')&&!radioOf(sh);
 /* nautical miles per chart pixel at a chart position (Mercator) */
 function nmBetween(a,b){const q=latLon((a.x+b.x)/2,(a.y+b.y)/2);return Math.hypot(a.x-b.x,a.y-b.y)*6*Math.cos(q.lat*Math.PI/180);}
 /* the speed the office plans on: the passage her schedule allows (a foul bottom, a coaling stop), or her speed if none */
-function plannedSpeed(sh){const lg=sh.load;
-  if(lg&&lg.geo===sh.geo&&lg.seaDays>0){const g=GEO(sh.geo),calls=stopsFor(sh.geo,sh.dir).length,days=lg.seaDays-calls*CALL_DAYS;if(days>0.5)return g.dist/days;}
-  return knotsOf(sh)*SPD[sh.speed]*shipMods(sh).speed*foulF(sh)*24/trackF(sh.geo,S.m)/warSlow(sh);}
+/* the office allows for the weather on her track: the gales, fog and ice the other ships report slow her reckoning as
+   they slow her (sh.slow), so a ship in a gale is not posted overdue for being where the weather put her (0.35.7) */
+function plannedSpeed(sh){const lg=sh.load,wx=sh.slow>0&&sh.slow<1?sh.slow:1;
+  if(lg&&lg.geo===sh.geo&&lg.seaDays>0){const g=GEO(sh.geo),calls=stopsFor(sh.geo,sh.dir).length,days=lg.seaDays-calls*CALL_DAYS;if(days>0.5)return g.dist/days*wx;}
+  return knotsOf(sh)*SPD[sh.speed]*shipMods(sh).speed*foulF(sh)*24/trackF(sh.geo,S.m)/warSlow(sh)*wx;}
 /* where the office thinks a silent ship is: from her last report, at her planned speed */
 function estimateOf(sh){
   const g=GEO(sh.geo),base=sh.seen||{t:sh.sailedAt||S.t,pos:0,stopped:false},v=base.v||plannedSpeed(sh);

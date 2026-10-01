@@ -13,16 +13,23 @@ const flOwn=()=>S.fl?S.fl.own/S.fl.n:1;                      // the owner's shar
 const flMajority=()=>flOn()&&flOwn()<0.5;                    // a majority float: removal and bids possible
 const flC=()=>S.ex&&S.ex.cos.morven;
 /* what the Line is worth to the market: half on its net worth, half on eight years' profit; never below a quarter of the fleet */
-function flWorth(){const fv=fleetValue(),fl=0.25*fv+5000*PX(),F=S.fl||{},e=F.lastProfit!==undefined?F.lastProfit:(S.yearNet||0)*12/Math.max(1,S.m%12||12);
+function flWorth(){const fv=fleetValue(),fl=0.25*fv+5000*PX(),F=S.fl||{},
+    // earnings: the last full year's accounts, not this year's to date scaled up (0.35.5: a good January was multiplied by twelve)
+    e=F.lastProfit!==undefined?F.lastProfit:((S.annual||{})[String(YEAR0+Math.floor(S.m/12)-1)]||0);
   return 0.5*Math.max(fl,netWorth())+0.5*Math.max(fl,e*8);}
 /* the float itself: new shares for the public, so the money goes to the Line */
 function flCanFloat(){if(flOn()||S.over||mkShut())return 'The Stock Exchange is closed.';
   if(S.ships.length<3)return 'A company floats on a fleet: three ships at least.';
   if(S.m-S.m0<36)return 'The City wants three years of accounts first.';
   if(netWorth()<60000*PX())return `Net worth must be at least ${fmt(60000*PX())} for the issuing houses to take it on.`;return '';}
-function flRaise(pct,founders){const V=flWorth()*mkEnsure().mood*(founders?FL_FOUNDERS:1);return Math.round(FL_DISC*V*pct/(1-FL_DISC*pct)*(1-FL_FEE));}
+/* the issue (0.35.5): half the shares sold are new and half the owner's own, so the Line after the float is worth what it
+   was plus the new money only; the public pays nine tenths of that a share. Before, the share count assumed all the money
+   went to the Line, and the shares were issued a third over what they were worth */
+function flIssue(pct,founders){const V=flWorth()*mkEnsure().mood*(founders?FL_FOUNDERS:1),n0=V/(2.5*PX()),n=n0/(1-pct/2),pub=Math.round(n*pct),
+  p=FL_DISC*V/(n*(1-FL_DISC*pct/2));return {V,n:Math.round(n),pub,p,gross:p*pub};}
+function flRaise(pct,founders){return Math.round(flIssue(pct,founders).gross*(1-FL_FEE));}
 function flFloat(pct,founders){if(flCanFloat()||!FL_OPTS.includes(pct))return false;const M=mkEnsure();
-  const V=flWorth()*M.mood*(founders?FL_FOUNDERS:1),raised=flRaise(pct,founders),gross=raised/(1-FL_FEE),n=Math.max(10000,Math.round((V+gross)/PX()/2.5)),pub=Math.round(n*pct);
+  const I=flIssue(pct,founders),raised=Math.round(I.gross*(1-FL_FEE)),gross=I.gross,n=I.n,pub=I.pub;
   const toLine=Math.round(raised/2); // half the shares sold are new, for the Line; half are the owner's own, sold for the owner (0.34)
   S.cash+=toLine;S.fl={n,own:n-pub,pub,founders:!!founders,conf:65,floated:S.m,raised:toLine,ownerCash:raised-toLine,pay:'normal',targets:null,knight:null,bid:null,nextBid:S.m+12,seen:{},paid:0};
   M.cos.morven={n,px:gross/pub,sh:1,dy:0,hist:[],since:S.m,f:flWorth(),e:0,w:0};

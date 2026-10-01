@@ -36,8 +36,8 @@ var PL = (function () {
     cancelorder: id => { const o = (S.orders || []).find(x => x.id === +id); if (!o) return false; if (o.slip) { o.slip.who = null; o.slip.until = S.m; } S.orders = S.orders.filter(x => x !== o); news(`The contract for SS ${o.d.name} is cancelled. The ${fmt(o.paid)} already paid is lost.`, 'bad'); return true; },
     cruise: (id, rk) => own(id) && doAction('cruiseadd', [+id, rk || '']),
     uncruise: (id, rk) => doAction('cruisedrop', [+id, rk]),
-    insurance: (id, cover, excess) => { const x = own(id); if (!x || !INS_COVER[cover] || (cover === 'none' && S.debt > 0)) return false; insOf(x); x.ins.cover = cover; if (excess !== undefined) x.ins.excess = +excess; return true; },
-    insall: (cover, excess) => { if (!INS_COVER[cover] || (cover === 'none' && S.debt > 0)) return false; S.insDefault = { cover, excess: excess === undefined ? 1 : +excess }; S.ships.forEach(x => { x.ins = { ...S.insDefault }; }); return true; },
+    insurance: (id, cover, excess) => { const x = own(id); if (!x || !INS_COVER[cover] || (cover === 'none' && S.debt > 0)) return false; return setCover(x, cover, excess === undefined ? undefined : +excess); },
+    insall: (cover, excess) => { if (!INS_COVER[cover] || (cover === 'none' && S.debt > 0)) return false; S.insDefault = { cover, excess: excess === undefined ? 1 : +excess }; S.ships.forEach(x => setCover(x, cover, S.insDefault.excess)); return true; },
     hire: (id, cid) => doAction('hire', [+id, +cid]),
     crew: (id, dept, key, v) => { const x = ship(id); if (x) x.crewSet = S.t; return doAction('crewset', [+id, dept, key, +v]); },
     appoint: (id, role, cid) => { const x = ship(id); if (x) x.crewSet = S.t; return doAction('appoint', [+id, role, +cid]); },
@@ -55,9 +55,9 @@ var PL = (function () {
     gilts: amt => +amt >= 0 ? gilts(true, +amt) : gilts(false, -amt),
     giltsall: () => gilts(false, S.gilts),
     // ---- the trade
-    join: () => { if (!(confOpen() && S.cash >= 3000 * PX()) || S.conf) return false; S.cash -= 3000 * PX(); S.conf = true; S.wars = {}; S.tension = {}; news('The Morven Line has joined the North Atlantic conference.', 'good'); return true; },
-    leave: () => { if (!S.conf) return false; S.conf = false; news('The Morven Line has left the conference. Expect retaliation if you undercut.', 'bad'); return true; },
-    mail: yes => { if (!S.offer) return false; if (yes) { S.mail[S.offer.route] = { pay: S.offer.pay, strikes: 0, ok: false }; news(`Mail contract won on ${ROUTES[S.offer.route].name}: ${fmt(S.offer.pay)} per round trip.`, 'good'); } S.offer = null; return true; },
+    join: () => confJoin(),
+    leave: () => confLeave(),
+    mail: yes => { if (!S.offer) return false; if (yes) { S.mail[S.offer.route] = { pay: S.offer.pay, strikes: 0, ok: false }; news(`Mail contract won on ${ROUTES[S.offer.route].name}: ${fmt(S.offer.pay)} per round trip.`, 'good'); } else (S.mailNo = S.mailNo || {})[S.offer.route] = S.m + 24; S.offer = null; return true; },
     union: yes => { if (!S.union) return false; unionAnswer(!!yes); return true; },
     combine: yes => { if (!S.trustOffer) return false; if (yes) trustAccept(); else trustRefuse(false); return true; },
     // ---- the war
@@ -139,22 +139,22 @@ VIEWS (look <view> [arg]): help · ship <id> · line <rk> · routes · market ·
   const avgOf = sh => { const q = sh.pl || []; return q.length ? k(q.reduce((a, b) => a + b, 0) / q.length) : '-'; };
   function pending() {
     const P = [];
-    if (S.offer) P.push(`mail contract offered on ${lineName(S.offer.route)}: ${p(S.offer.pay)} a round trip, until ${monthName(S.offer.exp)} → mail(true|false)`);
+    if (S.offer) P.push(`mail contract offered on ${lineName(S.offer.route)}: ${p(S.offer.pay)} a round trip; the offer is open until ${monthName(S.offer.exp)}, and the contract runs while the sailings are kept → mail(true|false)`);
     if (S.trustOffer) P.push(`the Combine offers ${p(S.trustOffer.amt)} for the Line (accepting ENDS the game) → combine(true|false)`);
     if (S.union) P.push(`union claims ${S.union.pct}% more pay → union(true|false)`);
     if (S.call) P.push(`the bank has called in ${p(S.call.amt)} of loans, due ${monthName(S.call.due)}`);
     if (S.ex && S.ex.call) P.push(`MARGIN CALL: pay in ${p(S.ex.call.amt)} or sell by ${monthName(S.ex.call.due)}`);
     if (S.war && S.war.ask) P.push(`the Admiralty asks for ${S.war.ask.n} more ship(s) from the reserve → offership(id)`);
     if (S.war && S.war.offers && S.war.offers.length) P.push('buyers bid for ships: ' + S.war.offers.map(o => `${(ship(o.sid) || {}).name} (id ${o.sid}) ${p(o.amt || o.price || 0)}`).join('; ') + ' → waroffer(id,yes)');
-    if (S.war && S.war.auction) P.push('reparations auction: ' + S.war.auction.lots.map((L, i) => `lot ${i} ${L.name} ${int(L.grt)}grt worth ~${p(L.value)}`).join('; ') + ` closes ${monthName(S.war.auction.close)} → auction(lot,0|1|2 for 80|100|120% of value)`);
+    if (S.war && S.war.auction) P.push('reparations auction: ' + S.war.auction.lots.map((L, i) => `lot ${i} ${L.name} ${int(L.grt)}grt worth ~${p(L.value)}`).join('; ') + ` closes ${monthName(S.war.auction.close)} → auction(lot,0|1|2 for 80|100|130% of value)`);
     for (const q of S.props || []) P.push(`proposal ${q.id}: ${q.title || q.act} → propose("${q.id}",true|false)`);
     if (S.fl && S.fl.bid) P.push(`BID for the Line by ${mkName(S.fl.bid.by)} at ${pxTxt(S.fl.bid.price)} a share, decided ${monthName(S.fl.bid.due)}`);
-    if (S.crash) P.push(`a ${S.crash.stage} in the City`);
+    if (S.crash && S.crash.stage === 'rumour') P.push('whispers in the City: a panic may be coming' + (S.crash.bank ? ', and the bank that holds the Line\'s cash is said to be overextended' : ''));
     return P;
   }
   function report(first) {
     const L = [];
-    L.push(`=== ${dateLong(S.t)} · cash ${p(S.cash)} · debt ${p(S.debt)} · net worth ${p(netWorth())} · can borrow ${p(headroom())} · reputation ${Math.round(S.rep)} (${repWord(S.rep)}) · prices ×${PX().toFixed(2)}${S.gilts ? ' · Consols ' + p(S.gilts) : ''}${S.ex && S.ex.fund ? ' · investment account ' + p(mkFundVal(S.ex.fund)) : ''}${S.conf ? ' · in the conference' : ''}${S.over ? ' · GAME OVER: ' + S.over : ''}`);
+    L.push(`=== ${dateLong(S.t)} · cash ${p(S.cash)} · debt ${p(S.debt)} · net worth ${p(netWorth())} · can borrow ${S.noLend > S.m ? 'nothing (lending stopped until ' + monthName(S.noLend) + ')' : p(headroom())} · reputation ${Math.round(S.rep)} (${repWord(S.rep)}) · prices ×${PX().toFixed(2)}${S.gilts ? ' · Consols ' + p(S.gilts) : ''}${S.ex && S.ex.fund ? ' · investment account ' + p(mkFundVal(S.ex.fund)) : ''}${S.conf ? ' · in the conference' : ''}${S.over ? ' · GAME OVER: ' + S.over : ''}`);
     if (S.lastMonth) L.push(`last month: net ${p(S.lastMonth.net)}`);
     L.push('SHIPS id | name | grt kn built | line | where | cond% | speed | last month | 12-mo avg £/mo');
     for (const sh of S.ships.filter(x => x.state !== 'lost')) {

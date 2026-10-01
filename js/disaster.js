@@ -111,6 +111,8 @@ function disasterMonth(){
 function disasterDaily(){
   botInspect();
   const D=S.dis;if(!D||!newCal())return;
+  // its moment passes: a save from before 0.35.5 that never ran the story does not sink a ship years late (0.35.6)
+  if(D.state==='wait'&&D.until&&S.t>D.until+60){D.state='none';return;}
   if(D.state==='wait'&&S.t>=D.from)disChoose();
   if(D.heads&&D.heads.length){const due=D.heads.filter(h=>h.at<=S.t);if(due.length){D.heads=D.heads.filter(h=>h.at>S.t);for(const h of due)news(h.txt,'hist');}}
 }

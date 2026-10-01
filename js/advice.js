@@ -65,8 +65,17 @@ const lineShips=rk=>S.ships.filter(x=>x.line===rk&&x.state!=='laid');
 function lineEcon(rk,patch){let pm=0,pax=0;for(const sh of lineShips(rk)){const q=econ(sh,rk,patch);pm+=q.pm;pax+=q.pax;}return {pm,pax};}
 /* the standing a table on one line would bring the Line to, and the whole fleet's monthly takings at that standing */
 function serviceRep(rk,v){const L=S.lines[rk],was=L.service;L.service=v;try{const t=repTarget();return t===null?S.rep:t;}finally{L.service=was;}}
-function serviceEcon(rk,v){const L=S.lines[rk],was=L.service,rep=S.rep;const t=serviceRep(rk,v);L.service=v;S.rep=t;
-  try{let pm=0;for(const r of Object.keys(S.lines))if(ROUTES[r])pm+=lineEcon(r,{}).pm;return pm;}finally{L.service=was;S.rep=rep;}}
+/* the whole fleet's takings with a table on one line at the standing it would bring. The other lines change only with the
+   standing, so each is worked out at two standings once per pass of the advice and read off the line between them;
+   only the line itself is worked out in full (0.36.0: it was every line for every table on every line, a quarter of
+   the advice's time with a big fleet) */
+let SVC_PASS=null;
+function svcOther(r){const P=SVC_PASS||(SVC_PASS={rep:S.rep,m:{}});if(P.m[r])return P.m[r];
+  const rep=S.rep;let a,b;try{S.rep=P.rep;a=lineEcon(r,{}).pm;S.rep=Math.min(100,P.rep+5);b=lineEcon(r,{}).pm;}finally{S.rep=rep;}
+  return P.m[r]={a,slope:(b-a)/Math.max(1e-9,Math.min(100,P.rep+5)-P.rep)};}
+function serviceEcon(rk,v){const L=S.lines[rk],was=L.service,rep=S.rep;const t=serviceRep(rk,v);
+  let pm=0;for(const r of Object.keys(S.lines))if(ROUTES[r]&&r!==rk){const o=svcOther(r);pm+=o.a+o.slope*(t-(SVC_PASS?SVC_PASS.rep:rep));}
+  L.service=v;S.rep=t;try{return pm+lineEcon(rk,{}).pm;}finally{L.service=was;S.rep=rep;}}
 const WINTER=[10,11,0,1];
 const money=v=>fmt(Math.round(v/10)*10);
 const canSpend=cost=>S.cash-cost>=3*runningCost();
@@ -77,10 +86,28 @@ const DEPT_OF={wcr:'traffic',cpay:'crew',ctrain:'crew',off:'crew',review:'sec',r
   speed:'marine',maint:'marine',thresh:'marine',dock:'marine',scrape:'marine',oil:'marine',refurb:'marine',reefer:'marine',wireless:'marine',warcargo:'marine',zig:'marine',convoy:'marine',dazzle:'marine',gun:'marine',wtop:'marine',replate:'marine',boats:'marine',watch:'marine',gross:'marine',censure:'marine',scrap:'marine',
   pay:'crew',captain:'crew'};
 const deptOf=h=>DEPT_OF[h.id.split(/[:0-9]/)[0]]||'sec';
+/* the standing order an item of advice falls under, and whether the department may act on it alone (0.36.1) */
+const orderOf=h=>{const kind=h.id.split(/[:0-9]/)[0],L=DEPT_ORDERS[h.dept||deptOf(h)];if(!L)return null;const o=L.find(x=>x[2].includes(kind));return o?o[0]:null;};
+const orderOn=(k,g)=>{const o=S.depts[k];return !!(o&&o.auto&&g&&!(o.orders&&o.orders[g]===false));};
+/* an item an acting department will see to under its standing orders: it leaves the owner's list */
+const handled=h=>h.dept&&h.dept!=='sec'&&h.act&&h.act[0]&&orderOn(h.dept,orderOf(h));
 let ADV_CACHE={key:null,list:[]};
-function advice(){MOD_EPOCH++;
-  const quiet=S.quietUntil>S.t,key=S.m+'|'+UI.rev+'|'+quiet;
+/* With a big fleet a full pass takes most of a second. The lines and the ships are worked out unit by unit, and the game
+   screen gives the pass a few milliseconds a frame: units not reached yet show what they said last time, and the pass
+   carries on next frame until it is complete (0.36.0; it froze the screen for most of a second each month at 70 ships).
+   Every other caller (departments, actions, the test tools) gets a complete pass. */
+const ADV_UNITS={sig:null,fresh:{},m:{}};let ADV_BUDGET=Infinity,ADV_T0=0,ADV_SHORT=false;
+function advUnit(k,fn){const U=ADV_UNITS;
+  if(U.fresh[k])return U.m[k];
+  if(ADV_BUDGET!==Infinity&&performance.now()-ADV_T0>ADV_BUDGET){ADV_SHORT=true;return U.m[k]||[];}
+  U.m[k]=fn();U.fresh[k]=true;return U.m[k];}
+const advKey=()=>S.m+'|'+UI.rev+'|'+(S.quietUntil>S.t);
+function advice(budget){
+  const quiet=S.quietUntil>S.t,key=advKey();
   if(ADV_CACHE.key===key)return ADV_CACHE.list;
+  if(ADV_UNITS.sig!==key){ADV_UNITS.sig=key;ADV_UNITS.fresh={};}
+  ADV_BUDGET=budget===undefined?Infinity:budget;ADV_T0=performance.now();ADV_SHORT=false;
+  MOD_EPOCH++;SVC_PASS=null; // a fresh pass (0.36.0: a cached answer no longer throws away every ship's cached figures)
   const A=[],mo=S.m%12,reserve=3*runningCost();
   const raised=new Set(),add=h=>{raised.add(h.id);if((S.dismiss[h.id]||-1)>=S.m)return;h.dept=deptOf(h);h.info=!h.act.some(a=>DOING.includes(a[1]));A.push(h);};
   // ---- last month review ----
@@ -94,8 +121,8 @@ function advice(){MOD_EPOCH++;
       why:`${costs.map(([l,v])=>`${l} took ${rev>0?Math.round(v/rev*100)+'% of revenue':money(v)}`).join(', ')}.${worst&&LM.lines[worst]<0?` ${ROUTES[worst].name} was the weakest line at ${money(LM.lines[worst])}.`:''}${winter?' Winter is the slack season: first class runs at about half its summer level, so some winter losses are normal. The question is whether summer covers them.':''}${S.m>=ym(1929,10)&&S.m<ym(1934,4)?' The Depression is hitting every line; laying up ships that cannot pay their way is how the survivors got through it.':''}`,act:[]});
   }
   // ---- lines: fares, tension, advertising and service ----
-  for(const rk of Object.keys(S.lines)){
-    const r=ROUTES[rk],L=S.lines[rk],ships=lineShips(rk);if(!ships.length)continue;
+  for(const rk of Object.keys(S.lines))for(const h of advUnit('line:'+rk,()=>{const A1=[],add=h=>A1.push(h);(()=>{
+    const r=ROUTES[rk],L=S.lines[rk],ships=lineShips(rk);if(!ships.length)return;
     // judge a fare where it ends up: rival lines match a cut below the line rate within a few months, and drift back up
     // once you stop undercutting, so compare fares at the rivals' settled response, not this month's
     const settled=(rk,f)=>{S.rfare=S.rfare||{};const had=S.rfare[rk];const L2=S.lines[rk],save=L2.fares;L2.fares={...save,...f};
@@ -104,15 +131,21 @@ function advice(){MOD_EPOCH++;
     const base=settled(rk,{}),t=S.tension[rk]||0,n=ships.filter(x=>ACTIVE.includes(x.state)).length||1;
     const nextT=f=>{const q=lineEcon(rk,{fares:f});return t+(pressure(rk,{...L.fares,...f},q.pax,n,S.m).p-t)*0.35;};
     const curNext=S.conf?0:nextT({});
-    for(const c of CL){
-      if(!ships.some(s=>s.berths[c]))continue;
+    // each class is a unit of its own: the search over fares is the heaviest part of the advice (0.36.0)
+    for(const c of CL)for(const h of advUnit('fare:'+rk+':'+c,()=>{const A2=[],add=h=>A2.push(h);(()=>{
+      if(!ships.some(s=>s.berths[c]))return;
       const ref=r.ref[c],lo=S.conf?confFloor(rk,c):Math.round(ref*0.6),hi=Math.round(ref*1.6),step=Math.max(1,Math.round(ref*0.05));
-      let best={f:L.fares[c],pm:settled(rk,{}).pm,tn:curNext};
-      for(let f=lo;f<=hi;f+=step){if(f===L.fares[c])continue;
-        const q=settled(rk,{[c]:f});if(q.pm<=best.pm+1)continue;
+      let best={f:L.fares[c],pm:base.pm,tn:curNext}; // the same as settled(rk,{}), worked out once
+      // every other step first, then the steps either side of the best (0.36.0: half the work, the same answer on a
+      // smooth curve)
+      const tried=new Set([L.fares[c]]);
+      const tryF=f=>{if(f<lo||f>hi||tried.has(f))return;tried.add(f);
+        const q=settled(rk,{[c]:f});if(q.pm<=best.pm+1)return;
         const tn=S.conf||c==='tt'?0:nextT({[c]:f});
-        if(!S.conf&&tn>=40&&f<L.fares[c])continue; // never advise a cut that risks a rate war
-        best={f,pm:q.pm,tn};}
+        if(!S.conf&&tn>=40&&f<L.fares[c])return; // never advise a cut that risks a rate war
+        best={f,pm:q.pm,tn};};
+      for(let f=lo;f<=hi;f+=2*step)tryF(f);
+      {const f0=best.f;tryF(f0-step);tryF(f0+step);}
       const gain=best.pm-base.pm;
       if(best.f!==L.fares[c]&&gain>=120){
         const up=best.f>L.fares[c],ld=L.last[0]&&L.last[0].pax[c];
@@ -122,7 +155,7 @@ function advice(){MOD_EPOCH++;
                 :`${ld?`Only ${ld.n} of ${ld.cap} ${CL_NAME[c].toLowerCase()} berths sold outbound last time. `:''}At £${L.fares[c]} against a line rate of £${ref}, you are pricing passengers off your ships.`,
           act:[[`Set £${best.f}`,'setfare',rk,c,best.f]]});
       }
-    }
+    })();return A2;}))add(h);
     if(!S.conf&&!S.wars[rk]&&curNext>=40){
       let fix=null;for(let k=1;k<=12&&!fix;k++){const f={};for(const c of ['f','s','t'])f[c]=Math.max(L.fares[c],Math.round(r.ref[c]*(0.94+k*0.02)));if(nextT(f)<40)fix=f;}
       add({id:`tension:${rk}`,scope:'line',ref:rk,sev:'warn',gain:5e5,title:`Calm the conference on ${r.name}`,
@@ -131,11 +164,12 @@ function advice(){MOD_EPOCH++;
     }
     // advertising and the table are judged against the line as it stands now, the same way as each option;
     // comparing against the settled-fare figure made every other setting look better, so the advice flipped back and forth
-    const now=lineEcon(rk,{});
-    for(const k of ['adv','service']){
+    // each setting is a unit of its own (0.36.0)
+    let nowQ=null;const nowPm=()=>(nowQ||(nowQ=lineEcon(rk,{}))).pm;
+    for(const k of ['adv','service'])for(const h of advUnit(k+':'+rk,()=>{const A2=[],add=h=>A2.push(h);(()=>{
       // the table is judged by the whole fleet's takings at the standing it leads to, not this line's at today's:
       // a Spartan table saves its cost at once, but the Line's name sinks on every trade over the months that follow
-      const judge=v=>k==='service'?serviceEcon(rk,v):v===L[k]?now.pm:lineEcon(rk,{[k]:v}).pm;
+      const judge=v=>k==='service'?serviceEcon(rk,v):v===L[k]?nowPm():lineEcon(rk,{[k]:v}).pm;
       const cur=judge(L[k]);let best={v:L[k],pm:cur};
       for(const v of k==='adv'?[0,1,2,3]:[0,1,2]){if(v===L[k])continue;
         if(k==='service'&&v<L[k]&&serviceRep(rk,L[k])>=40&&serviceRep(rk,v)<40)continue; // below 40 the Post Office will not tender
@@ -148,14 +182,14 @@ function advice(){MOD_EPOCH++;
             :`${best.v===2?'Lavish service fills first class and builds reputation.':best.v===0?'A Spartan table saves money here even after what it costs your standing.':'Standard service balances cost and reputation better here.'} Your reputation would settle near ${Math.round(serviceRep(rk,best.v))}, against ${Math.round(serviceRep(rk,L.service))} as things stand, and every trade's first class feels it.`,
           act:[['Apply','setlineopt',rk,k,best.v]]});
       }
-    }
+    })();return A2;}))add(h);
     if(S.rfare&&S.rfare[rk]<0.95&&!S.conf)
       add({id:`match:${rk}`,scope:'line',ref:rk,sev:'tip',gain:220,title:`Rivals have matched your fares on ${r.name}`,
         why:`Their fares are down to ${Math.round(S.rfare[rk]*100)}% of the line rate. Your cut no longer wins you passengers; it just lowers everyone's income. Raising fares back towards the line rate lets the whole route recover.`,act:[['View line','selline',rk]]});
-  }
+  })();return A1;}))add(h);
   // ---- ships: deployment, upkeep, upgrades, crew ----
-  for(const sh of S.ships){
-    if(sh.state==='lost')continue;
+  for(const sh of S.ships)for(const h of advUnit('ship:'+sh.id,()=>{const A1=[],add=h=>A1.push(h);(()=>{
+    if(sh.state==='lost')return;
     const r0=sh.line;
     if(sh.state==='laid'){
       const best=bestLine(sh,null);
@@ -167,21 +201,23 @@ function advice(){MOD_EPOCH++;
       if(best&&best.pm>(S.lines[best.rk]?0:300)&&!WINTER.slice(0,3).includes(mo))add({id:`unlay:${sh.id}`,scope:'ship',ref:sh.id,sev:'warn',gain:best.pm,title:`Put SS ${sh.name} back to work`,
         why:`Laid up she still costs wages and insurance. On ${ROUTES[best.rk].name} she would earn about ${money(best.pm)} a month over the coming year${!S.lines[best.rk]?' (that line is not open yet)':''}.${mo>=1&&mo<=3?' Spring bookings are picking up.':''}`,
         act:S.lines[best.rk]?[['Assign','moveship',sh.id,best.rk]]:[['Open it and assign her','openmove',sh.id,best.rk],['View line','selline',best.rk]]});
-      continue;
+      return;
     }
-    if(!r0||sh.state==='yard')continue;
+    if(!r0||sh.state==='yard')return;
     const cur=econ(sh,r0),curY=econYear(sh,r0),cruising=onProgramme(sh)||cruiseProg(sh).includes(r0); // away on her cruise season: head office leaves her line alone
-    const best=cruising?null:bestLine(sh,r0);
+    // the last ship on a line with a mail contract stays, or the contract goes after missed sailings (0.35.6)
+    const mailLast=!!S.mail[r0]&&!S.ships.some(x=>x!==sh&&x.line===r0&&x.state!=='laid');
+    const best=cruising||mailLast?null:bestLine(sh,r0);
     if(best&&best.pm>0&&best.pm-curY.pm>=Math.max(400,Math.abs(curY.pm)*0.15)&&(S.lines[best.rk]||best.pm>300))add({id:`move:${sh.id}:${best.rk}`,scope:'ship',ref:sh.id,sev:'tip',gain:best.pm-curY.pm,
       title:`Move SS ${sh.name} to ${ROUTES[best.rk].name}`,
       why:`Averaged over the coming year she would make about ${money(best.pm)} a month there, against ${money(curY.pm)} on ${ROUTES[r0].name}, at current fares.${!S.lines[best.rk]?' You would need to open that line first (£2,500).':''} Check conference tension there before you commit.`,
       act:S.lines[best.rk]?[['Move her','moveship',sh.id,best.rk]]:[['Open it and move her','openmove',sh.id,best.rk],['View line','selline',best.rk]]});
     const idle=idleCost(sh),bestY=best?Math.max(best.pm,curY.pm):curY.pm;
-    if(!cruising&&S.ships.length>1&&bestY<-idle-150)add({id:`layup:${sh.id}`,scope:'ship',ref:sh.id,sev:'warn',gain:-idle-curY.pm,
+    if(!cruising&&!mailLast&&S.ships.length>1&&bestY<-idle-150)add({id:`layup:${sh.id}`,scope:'ship',ref:sh.id,sev:'warn',gain:-idle-curY.pm,
       title:`Lay SS ${sh.name} up until trade recovers`,
       why:`Averaged over the coming year she would lose about ${money(-curY.pm)} a month on ${ROUTES[r0].name}, and no other route does better. Laid up on a skeleton crew she would cost only ${money(idle)}.`,
       act:[['Lay up at next port','moveship',sh.id,'']]});
-    else if(!cruising&&WINTER.includes(mo)&&cur.pm<-idle-150&&S.ships.length>1)add({id:`layup:${sh.id}`,scope:'ship',ref:sh.id,sev:'tip',gain:-idle-cur.pm,
+    else if(!cruising&&!mailLast&&WINTER.includes(mo)&&cur.pm<-idle-150&&S.ships.length>1)add({id:`layup:${sh.id}`,scope:'ship',ref:sh.id,sev:'tip',gain:-idle-cur.pm,
       title:`Lay SS ${sh.name} up for the winter`,
       why:`She is losing about ${money(-cur.pm)} a month in the winter trade. Laid up on a skeleton crew she would cost only ${money(idle)}. Bring her back in March.`,
       act:[['Lay up at next port','moveship',sh.id,'']]});
@@ -236,7 +272,8 @@ function advice(){MOD_EPOCH++;
         why:`${S.m>=ym(1937,8)?(S.m>=ym(1940,0)?'Under the Ocean Aid Convention she may carry no passengers without it. ':'From 1940 the Ocean Aid Convention bars passenger ships without wireless. '):''}${wirelessRule()?`Only ships with wireless can carry the mails, or more than forty-nine passengers out of an American port${S.m<ym(1940,0)?', or tell you when she is in trouble':''}${S.mail[r0]?', and this route has a contract':''}.`:'From July 1911 American law will require wireless on any ship leaving an American port with fifty or more aboard, and only ships with it will carry the mails. Meanwhile it lets her report from sea and call for help.'} Without it, nothing is heard of her at sea unless a passing ship sees her lamps. ${money(refitCost(sh,'wireless'))} and a week in the yard.`,
         act:[[sh.pendingYard?'Add it to her yard visit':'Book it','setyard',sh.id,'wireless']]});}
     // boats, the night watch, and what a court would find if she were lost
-    if(newCal()&&!hasBoats(sh)&&paxBerths(sh)>0&&S.m>=BOAT_NEWS&&!inVisit('boats'))
+    // only where the boats she has would not hold everyone aboard, so the law would bind (0.35.7)
+    if(newCal()&&!hasBoats(sh)&&paxBerths(sh)>0&&fullSouls(sh)>boatScale(sh.grt)&&S.m>=BOAT_NEWS&&!inVisit('boats'))
       add({id:`boats:${sh.id}`,scope:'ship',ref:sh.id,sev:S.m>=BOAT_LAW?'bad':'warn',gain:S.m>=BOAT_LAW?900:500,title:`Fit boats for all to SS ${sh.name}`,
         why:`${S.m>=BOAT_LAW?`The law now limits her to ${int(boatPaxMax(sh))} passengers, as many as her boats hold after her crew.`:`From July 1913 she may carry only as many as her boats hold: ${int(Math.max(0,boatScale(sh.grt)-crewOf(sh)))} passengers after her crew.`} Boats for all cost ${money(refitCost(sh,'boats'))} and ${yardDays(sh,'boats')} days in the yard.`,
         act:[[sh.pendingYard?'Add it to her yard visit':'Book it','setyard',sh.id,'boats']]});
@@ -263,8 +300,9 @@ function advice(){MOD_EPOCH++;
       if(capScore(pick)>capScore(sh.captain)+1)add({id:`captain:${sh.id}`,scope:'ship',ref:sh.id,sev:'tip',gain:300,title:`Replace ${sh.captain.name} on SS ${sh.name}`,
         why:`${sh.captain.name} is ${sh.captain.traits.map(t=>CAPT_TRAITS[t].name.toLowerCase()).join(' and ')||'inexperienced'}. ${pick.name} (${pick.exp} years in command${pick.traits.length?', '+pick.traits.map(t=>CAPT_TRAITS[t].name.toLowerCase()).join(', '):''}) is available at £${pick.wage} a month.`,
         act:[['Appoint him','hire',sh.id,pick.id]]});}
-  }
-  // ---- rivals ----
+  })();return A1;}))add(h);
+  // ---- rivals, then the company: one unit, so a pass in pieces does not work them out again every frame (0.36.0) ----
+  for(const h of advUnit('co',()=>{const A1=[],add=h=>A1.push(h);(()=>{
   for(const q of S.rmoves.filter(q=>q.m>=S.m-1&&q.kind==='add'&&S.lines[q.rk]))
     add({id:`rin:${q.rk}:${q.ship}`,scope:'line',ref:q.rk,sev:'warn',gain:250,title:`${RIVALS[q.o].name} has added SS ${q.ship} to ${ROUTES[q.rk].name}`,
       why:'More rival berths on the route means a smaller slice for each of your ships, especially in steerage. Consider a better table or more advertising to hold your share, or moving a ship somewhere less crowded.',act:[['View line','selline',q.rk]]});
@@ -281,7 +319,8 @@ function advice(){MOD_EPOCH++;
   if(S.market.length&&shipMkt()<=1.3&&S.cash-reserve>Math.min(...deps)&&(!S.ships.length||S.debt<0.6*fleetV)){
     let best=null;
     for(const m of S.market){const dep=buyTerms(m).dep;if(fatOf(m)>=70||S.cash-reserve<dep||S.debt+m.price-dep>0.62*(fleetV+m.price))continue;
-      for(const rk of Object.keys(ROUTES)){const q=econYear(m,rk);const pay=q.pm-(m.price-dep)*0.065/12;if(!best||pay>best.pay)best={m,rk,pay,dep};}}
+      for(const rk of Object.keys(ROUTES)){if(!routeOpen(rk,S.m))continue;const q=econYear(m,rk); // never a closed trade (0.35.6)
+        const pay=q.pm-(m.price-dep)*0.065/12;if(!best||pay>best.pay)best={m,rk,pay,dep};}}
     // only when cash is really piling up: well over a year of running costs beyond the deposit
     if(best&&best.pay>(slump(S.m)>0.3?1500:500)&&S.cash-best.dep>12*rc)add({id:`buy:${best.m.name}`,scope:'co',sev:'tip',gain:best.pay,title:'Put idle cash to work',
       why:`SS ${best.m.name} (${money(best.dep)} down) could earn about ${money(best.pay)} a month on ${ROUTES[best.rk].name}, averaged over a year of seasons and after mortgage interest. You would still hold three months of running costs in reserve.`,
@@ -303,7 +342,7 @@ function advice(){MOD_EPOCH++;
     const ships=S.ships.filter(x=>x.line&&ACTIVE.includes(x.state)&&AGENCY[a].ports.some(p=>ROUTES[x.line].calls.includes(p)));if(!ships.length)continue;
     let before=0;for(const x of ships)before+=econ(x,x.line).pm;S.shore.agents[a]=true;let after=0;try{for(const x of ships)after+=econ(x,x.line).pm;}finally{delete S.shore.agents[a];}
     const save=after-before-300;if(save>0&&cost/save<=30)add({id:`agency:${a}`,scope:'co',sev:'tip',gain:save,title:`Open ${AGENCY[a].name}`,
-      why:`Booking agents feed passengers to every line calling at ${AGENCY[a].ports.slice(0,4).map(p=>PN[p]).join(', ')}${AGENCY[a].ports.length>4?' and more':''}. About ${money(save)} a month more for ${money(cost)} and £300 a month.`,act:[['Appoint them','shorebuy','agency',a],['Shore','tabgo','shore']]});}
+      why:`Booking agents feed passengers to every line calling at ${AGENCY[a].ports.slice(0,4).map(p=>PN[p]).join(', ')}${AGENCY[a].ports.length>4?' and more':''}. About ${money(save)} a month more after their £300 a month, for ${money(cost)} to set up.`,act:[['Appoint them','shorebuy','agency',a],['Shore','tabgo','shore']]});}
   // spare berths at a pier or a yard cost the fleet nothing to sell; hostels and agents help rivals on your own routes, so they are left to you
   for(const key of outKeys()){const k=key.split(':')[0];if((k!=='pier'&&k!=='yard')||outSelling(key))continue;const e=(S.shore.est||{})[key];if(!e||e.gross<400*PX())continue;
     add({id:'sell:'+key,scope:'co',sev:'tip',gain:e.gross,title:`Sell spare ${k==='pier'?'berths at your '+PN[key.split(':')[1]]+' pier':'berths at your yard on '+YARD_PORTS[key.split(':')[1]]}`,
@@ -326,10 +365,13 @@ function advice(){MOD_EPOCH++;
     why:`${BANK_NAME[0].toUpperCase()+BANK_NAME.slice(1)} is said to be overextended. If it fails it takes most of the cash on deposit with it; government stock is safe. Keep a few months' running costs in the account and put the rest into Consols until the whispers pass.`,act:[['Finance','tabgo','finance']]});
   if(!S.conf&&confOpen()&&Object.keys(S.wars).length)add({id:'conf-war',scope:'co',sev:'tip',gain:200,title:'The conference is an option',
     why:'Members cannot be targeted by rate wars. The price is a fare floor at 95% of the line rate and a cap on steerage. Worth it if you keep provoking wars.',act:[['Conference','tabgo','company']]});
-  for(const id in S.dismiss)if(S.dismiss[id]===UNTIL_CLEAR&&!raised.has(id))delete S.dismiss[id]; // the situation has passed: it may be raised afresh
+  })();return A1;}))add(h);
+  // the situation has passed: it may be raised afresh (only on a complete pass)
+  if(!ADV_SHORT)for(const id in S.dismiss)if(S.dismiss[id]===UNTIL_CLEAR&&!raised.has(id))delete S.dismiss[id];
   A.sort((a,b)=>b.gain-a.gain);
   if(quiet)A.splice(0,A.length,...A.filter(h=>/^(boats|gross|censure):/.test(h.id))); // the weeks after the loss: routine advice keeps quiet
-  ADV_CACHE={key,list:A};
+  SVC_PASS=null;ADV_CACHE={key:ADV_SHORT?null:key,list:A,pending:ADV_SHORT?key:null};ADV_BUDGET=Infinity;
+  if(ADV_SHORT&&typeof UI!=='undefined')UI.advMore=true; // the clock carries the pass on, a little each frame
   return A;
 }
 /* advice stays on the desk until it is acted on or put aside. A note with nothing to do stays away once read, until the
@@ -337,9 +379,16 @@ function advice(){MOD_EPOCH++;
 const UNTIL_CLEAR=1e9,DOING=['crewset','appoint','crew','setfare','setfares','setlineopt','setship','moveship','setyard','sellship','scrapship','hire','shorebuy','openmove','buyship','build','refit'];
 const restFor=h=>h.id.startsWith('buy:')?18:h.sev==='tip'?6:3;
 function putAside(id){const h=advice().find(q=>q.id===id);if(!h)return;S.dismiss[id]=h.info?UNTIL_CLEAR:S.m+restFor(h);ADV_CACHE.key=null;}
-function shownAdvice(){if(S.advSeen)delete S.advSeen;return advice();}
+/* the screen's advice: while a pass is under way the screen shows what it has so far and leaves the work to the clock,
+   which gives it a few milliseconds a frame and redraws once it is complete (0.36.0) */
+function shownAdvice(){if(S.advSeen)delete S.advSeen;const k=advKey();if(ADV_CACHE.key===k)return ADV_CACHE.list;
+  if(ADV_CACHE.list&&ADV_CACHE.list.length&&typeof UI!=='undefined'&&UI.speed>0){UI.advMore=true;return ADV_CACHE.list;} // running: last month's until the clock has worked it out
+  return advice(8);}
+function advStep(){const k=advKey();if(ADV_CACHE.key===k)return;advice(8);if(ADV_CACHE.key===k)UI.dirty=true;}
 const capScore=c=>Math.min(c.exp,25)/5+c.traits.reduce((a,t)=>a+(CAPT_TRAITS[t].good?2:-3),0);
 
+/* a yard job the refit office would offer her now: no gyro stabilisers in 1900 (0.35.5) */
+function yardJobOk(sh,k){if(typeof RF_JOBS==='undefined')return true;for(const [,L] of RF_JOBS)for(const j of L)if(j[0]===k)return !!j[2](sh);return true;}
 /* ---------- actions: shared by buttons, departments and the test harness ---------- */
 function doAction(act,d){MOD_EPOCH++;
   const ship=id=>S.ships.find(q=>q.id===id);
@@ -356,8 +405,8 @@ function doAction(act,d){MOD_EPOCH++;
       if(cruiseFor(x,S.m)){if(x.state==='laid'){x.state='port';x.portLeft=1;}if(x.state==='port')cruiseSeason(x);} // in season: she switches now if she is in port
       return true;}
     case 'cruisedrop':{const [id,rk]=d;const x=ship(id);if(!x)return false;cruiseProg(x);x.cp=(x.cp||[]).filter(k=>k!==rk);return true;}
-    case 'moveship':{const [id,rk]=d;const x=ship(id);if(!x)return false;if(onProgramme(x)&&rk!==x.line&&x.ownerSet===S.t){x.wcHold=S.m+6;delete x.homeLine;} /* the owner's own choice wins this season */x.line=rk||null;if(x.line&&x.state==='laid'){x.state='port';x.portLeft=1;}return true;}
-    case 'setyard':{const [id,k]=d;const x=ship(id);if(!x)return false;if(x.pendingYard||x.state==='yard')return addYardJob(x,k);
+    case 'moveship':{const [id,rk]=d;const x=ship(id);if(!x)return false;const was=x.line;if(onProgramme(x)&&rk!==x.line&&x.ownerSet===S.t){x.wcHold=S.m+6;delete x.homeLine;} /* the owner's own choice wins this season */x.line=rk||null;if(x.line&&x.state==='laid'){x.state='port';x.portLeft=1;}if(was!==x.line)mailLeft(was);return true;}
+    case 'setyard':{const [id,k]=d;const x=ship(id);if(!x||!yardJobOk(x,k))return false;if(x.pendingYard||x.state==='yard')return addYardJob(x,k);
       if(x.state==='sea'||x.state==='repo'){x.pendingYard=k;return true;}if(S.cash>=refitCost(x,k)){enterYard(x,k);return true;}return false;}
     case 'crewset':{const [id,dp,k,v]=d;const x=ship(id);if(!x||!CDEPT[dp]||!['man','pay','train'].includes(k))return false;cwOf(x)[dp][k]=clamp(v|0,0,2);if(k==='pay')x.pay=cwOf(x).deck.pay;return true;}
     case 'appoint':{const [id,r,cid]=d;const x=ship(id);if(!x)return false;return appointOfficer(x,r,cid);}
@@ -382,7 +431,7 @@ function doAction(act,d){MOD_EPOCH++;
     case 'deptmode':{const [k,auto]=d;if(!S.depts[k])return false;S.depts[k].auto=!!auto;return true;}
     case 'openmove':{const [id,rk]=d;const x=ship(id);if(!x)return false;if(!S.lines[rk]){const fee=Math.round(2500*PX());if(S.cash<fee||!routeOpen(rk,S.m))return false;book('office',-fee,rk);S.lines[rk]={fares:defaultFares(rk),service:1,adv:1,last:[null,null]};news(`The Morven Line opens a ${ROUTES[rk].name} service.`,'good');}
       return doAction('moveship',[id,rk]);}
-    case 'buyship':{const [name,rk]=d;const m=S.market.find(q=>q.name===name);if(!m||!buyShip(m))return false;
+    case 'buyship':{const [name,rk]=d;const m=S.market.find(q=>q.name===name);if(!m||(rk&&!routeOpen(rk,S.m))||!buyShip(m))return false;
       if(rk)doAction('openmove',[m.id,rk]);return true;}
     case 'newhead':{const [k,i]=d;const o=S.depts[k];if(!o||!o.cands||!o.cands[i])return false;const sev=o.head?o.head.wage*3:0;if(S.cash<sev)return false;
       if(sev)book('office',-sev);const h=o.cands[i];news(`${o.head?o.head.name+' leaves with three months\' pay. ':''}${h.name} becomes ${DEPTS[k].head}.`);o.head=h;o.cands.splice(i,1);return true;}
@@ -396,7 +445,15 @@ function doAction(act,d){MOD_EPOCH++;
 }
 function shoreCost(kind,key){const p=PX();return kind==='fagent'?FAGENCY[key]&&Math.round(FAGENCY[key].cost*p):kind==='shed'?Math.round(SHED_COST*p):kind==='cold'?Math.round(COLD_COST*p):kind==='pier'?PIER_COST[key]:kind==='agency'?AGENCY[key]&&AGENCY[key].cost:kind==='hostel'?Math.round(35000*p):kind==='yard'?Math.round(150000*p):kind==='bunker'?Math.round(10000*p):kind==='slip'?Math.round(OWN_SLIP_COST*p):kind==='dept'?DEPTS[key]&&DEPTS[key].cost:0;}
 /* the best line for a ship, preferring lines already open: a new line must earn clearly more to be worth opening */
+/* kept for the month while the fleet's lines and the Line's standing stay as they are: a year of four seasons on every
+   route for every ship is most of the advice's time with a big fleet (0.36.0) */
+const BL_CACHE={key:null,m:{}};
 function bestLine(sh,exclude){
+  const fk=S.m+'|'+Math.round(S.rep)+'|'+Object.keys(S.lines).join(',')+'|'+S.ships.map(x=>x.line||'-').join(',');
+  if(BL_CACHE.key!==fk){BL_CACHE.key=fk;BL_CACHE.m={};}
+  const ck=sh.id+'|'+exclude+'|'+sh.state+'|'+sh.speed;if(ck in BL_CACHE.m)return BL_CACHE.m[ck];
+  return BL_CACHE.m[ck]=bestLine0(sh,exclude);}
+function bestLine0(sh,exclude){
   let bo=null,ba=null;
   for(const rk of Object.keys(ROUTES)){if(rk===exclude)continue;
     if(!routeOpen(rk,S.m))continue;
@@ -416,6 +473,9 @@ function buildIdea(){
     if(!best||yrs<best.yrs)best={d,rk:f.best.rk,pm:Math.round(f.best.pm),price:f.st.price,yrs};}
   S.buildIdea={m:S.m,v:best};return best;
 }
+/* a line with a mail contract and no ship left on it: say so at once, before the Post Office does (0.35.6) */
+function mailLeft(rk){if(!rk||!S.mail[rk]||S.ships.some(x=>x.line===rk&&x.state!=='laid'))return;
+  news(`No ship is left on ${ROUTES[rk].name}, which carries the mail. Without a sailing this month the Post Office will warn the Line, and after two it ends the contract.`,'bad',true);}
 /* ---------- departments ---------- */
 const HEAD_FIRST=['Walter','Robert','Hugh','Thomas','Alexander','Ian','Gordon','Norman','Stanley','Leonard','Margaret','Agnes'],HEAD_LAST=['Paterson','Galbraith','Rennie','Muir','Hendry','Barr','Lindsay','Crawford','Nisbet','Somerville','Bain','Kerr'];
 function makeHead(k,R=Math.random){const comp=Math.round(35+R()*55),bold=R()<0.5;
@@ -442,23 +502,30 @@ function runDepartments(){
 /* acting departments go through their desks every week, a little at a time */
 function deptWeek(){
   const acting=Object.keys(S.depts).filter(k=>S.depts[k].auto);if(!acting.length)return;
-  ADV_CACHE.key=null;const A=advice();
+  // on the screen with the clock running, the departments work from the last complete advice: a fresh pass is done a few
+  // milliseconds a frame, and they wait a week rather than freeze the screen (0.36.1)
+  let A;if(typeof document!=='undefined'&&typeof UI!=='undefined'&&UI.speed>0){if(ADV_CACHE.key!==advKey()){UI.advMore=true;return;}A=ADV_CACHE.list;}
+  else{ADV_CACHE.key=null;A=advice();}
+  // a department's desk grows with the fleet: one more pair of hands for every dozen ships (0.36.1)
+  const hands=Math.max(1,Math.ceil(S.ships.length/12));
   for(const k of acting){const o=S.depts[k],c=(o.head?o.head.comp:50)/100,R=Math.random;
     if(R()<(1-c)*0.3){if(R()<0.15)news(`${DEPTS[k].name}: the ${DEPTS[k].head.toLowerCase()} reports a backlog of paperwork. Nothing done this week.`);continue;}
-    const cap=1+Math.floor(c*1.5);let done=0,movedNow=false;o.last=o.last||{};o.moved=o.moved||{};
-    const mine=A.filter(h=>h.dept===k&&h.act[0]&&h.gain>=(o.head&&o.head.bold?120:250));
+    const cap=(1+Math.floor(c*1.5))*hands;let done=0,movedNow=0;o.last=o.last||{};o.moved=o.moved||{};
+    // only what its standing orders allow; the rest stays with the owner (an item under no order is proposed as before)
+    const mine=A.filter(h=>h.dept===k&&h.act[0]&&h.gain>=(o.head&&o.head.bold?120:250)&&(!orderOf(h)||orderOn(k,orderOf(h))));
     for(let i=0;i<mine.length&&done<cap;i++){
       // a weaker head sometimes takes the wrong item first
       let h=mine[i];if(R()<(1-c)*0.35&&mine.length>1)h=mine[Math.floor(R()*mine.length)];
       const [,act,...d0]=h.act[0],d=d0.slice(),key=h.id.split(':').slice(0,2).join(':');
       // laying a ship up is the owner's call: the department proposes it rather than doing it
-      if(BIG.includes(act)||(act==='moveship'&&!d[1])){propose(k,h,act,d);continue;}
+      // laying up is done under the Traffic Department's standing order; without it, proposed to the owner
+      if(BIG.includes(act)||(act==='moveship'&&!d[1]&&!orderOn(k,'layup'))){propose(k,h,act,d);continue;}
       if(!['setfare','setfares','setlineopt','setship','moveship','setyard','hire','crewset','appoint'].includes(act))continue;
       if(act==='setyard'&&!canSpend(refitCost(S.ships.find(q=>q.id===d[0])||{grt:0},d[1])))continue;
       if(act==='moveship'&&d[1]&&!S.lines[d[1]])continue;
       if(act==='moveship'){const x=S.ships.find(q=>q.id===d[0]);if(x&&((x.cp||[]).length||onProgramme(x)))continue;} // her cruising is the owner's choice
-      // one ship moved a week at most; a moved ship is left alone for two months to show what she can do
-      if(act==='moveship'&&(movedNow||o.moved[d[0]]>S.t-60))continue;
+      // one ship moved a week at most for every dozen in the fleet (0.36.1); a moved ship is left alone for two months to show what she can do
+      if(act==='moveship'&&(movedNow>=hands||o.moved[d[0]]>S.t-60))continue;
       // a ship the owner has placed or set himself is left alone for three months
       if((act==='moveship'||act==='setship')&&((S.ships.find(q=>q.id===d[0])||{}).ownerSet>S.t-90))continue;
       // a crew the owner has set himself is left alone for three months
@@ -468,7 +535,7 @@ function deptWeek(){
       // fares set by eye, not to the shilling
       if(act==='setfare'&&R()<(1-c)*0.8){const cur=(S.lines[d[0]]||{fares:{}}).fares[d[1]],up=d0[2]>cur;d[2]=Math.max(1,Math.round(d[2]*(0.9+R()*0.2)));
         if(cur!==undefined){if(up&&d[2]<=cur)d[2]=cur+1;if(!up&&d[2]>=cur)d[2]=Math.max(1,cur-1);}} // by eye, but never the wrong way (0.35.4)
-      if(doAction(act,d)){done++;if(act==='moveship'){movedNow=true;o.moved[d[0]]=S.t;}o.last[key]=S.t;
+      if(doAction(act,d)){done++;if(act==='moveship'){movedNow++;o.moved[d[0]]=S.t;}o.last[key]=S.t;
         news(`${DEPTS[k].name}: ${h.title}${act==='setfare'&&d[2]!==d0[2]?` (set at £${d[2]})`:''}.`);S.dismiss[h.id]=S.m;ADV_CACHE.key=null;}}
   }
   ADV_CACHE.key=null;

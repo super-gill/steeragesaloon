@@ -31,9 +31,15 @@ function inflate(){
     const r=base-0.06*slump(m)-0.05*f+(Math.random()-0.5)*0.01;
     S.pi=(S.pi||1)*(1+r/12);}
   applyPrices();
-  // each January the lines revise their tariffs to the price level, and the Morven Line's fares follow
+  // a fare changed this month is set against this month's line rate: remember the rate, so the January revision moves
+  // it with the rate since it was set, not by a whole year's prices (0.35.7; a fare set at the rate in December used to
+  // rise by the whole year's inflation in January, and drift off the rate)
+  for(const rk in S.lines){const L=S.lines[rk],f=L.fares,R=ROUTES[rk].ref;L.fseen=L.fseen||{...f};L.fref=L.fref||{};
+    for(const c in f)if(f[c]!==L.fseen[c]||!L.fref[c]){L.fref[c]=R[c]||0;L.fseen[c]=f[c];}}
+  // each January the lines revise their tariffs to the price level, and the Morven Line's fares follow the rates
   if(m%12===0&&m>0){const k=S.pi/(S.fareIdx||1);S.fareIdx=S.pi;
-    if(Math.abs(k-1)>0.004){for(const rk in S.lines){const f=S.lines[rk].fares;for(const c in f)f[c]=Math.max(1,Math.round(f[c]*k*10)/10);}
+    if(Math.abs(k-1)>0.004){for(const rk in S.lines){const L=S.lines[rk],f=L.fares,R=ROUTES[rk].ref;
+        for(const c in f){const kc=L.fref[c]>0&&R[c]>0?R[c]/L.fref[c]:k;f[c]=Math.max(1,Math.round(f[c]*kc*10)/10);L.fref[c]=R[c]||0;L.fseen[c]=f[c];}}
       news(`Tariff revision: the Atlantic lines ${k>1?'raise':'cut'} fares ${Math.abs(Math.round((k-1)*1000)/10)}% with the cost of living. The Morven Line's fares follow.`);}}
 }
 /* ---------- panics ----------
@@ -109,13 +115,13 @@ function gilts(buy,amt){
   giltsMark();amt=Math.min(amt,S.gilts||0);if(amt<=0)return false;const all=amt>=S.gilts-1;
   S.giltPar=all?0:S.giltPar*(1-amt/S.gilts);S.cash+=Math.round(amt*(1-GILT_FEE));giltsMark();return true;
 }
-/* ---------- the tax man: excess profits over a threshold, each January ---------- */
+/* ---------- the tax man: from 1925, tax on profits over an allowance, each January (wartime excess profits duty is epdJanuary) ---------- */
 function taxMonth(net){
   S.yearNet=(S.yearNet||0)+net;
   if(S.m%12!==0)return;const profit=S.yearNet;S.yearNet=0;epdJanuary(profit);if(typeof floatJanuary==='function')floatJanuary(profit);
   const thr=150000*PX();if(S.m<ym(1925,0)||profit<=thr)return;
   const tax=Math.round((profit-thr)*0.3/100)*100;book('tax',-tax);
-  news(`Excess profits duty: on ${fmt(profit)} earned last year the Treasury takes ${fmt(tax)}.`,'bad');
+  news(`Income tax: on ${fmt(profit)} earned last year the Inland Revenue takes ${fmt(tax)}, three tenths of what is over the allowance.`,'bad'); // not the wartime duty (0.35.7)
 }
 /* ---------- the unions: a big, rich line gets asked for more ---------- */
 const HOME_PORTS=['GLA','LIV','SOU','AVO'];

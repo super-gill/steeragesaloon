@@ -159,11 +159,19 @@ const CO_POOL=[
 const CO_KNOTS={liner:[15,19],cargo:[10,13],fruit:[14,16],mixed:[11,14],plate:[13,16],cruise:[14,17]},CO_GRT={liner:[10000,17000],cargo:[5000,8000],fruit:[4000,7000],mixed:[5000,9000],plate:[8000,14000],cruise:[8000,14000]};
 /* lines founded in play are saved as data and put back in the tables on load */
 function coRegister(){for(const id in (S.genCos||{})){const d=S.genCos[id];RIVALS[id]={name:d.name,flag:d.flag};RIVAL_P[id]={...d.P};}}
+/* a new line from the pool's pattern gets a name of its own, never one a line has had before: the same company was
+   refounded under the same name year after year (0.35.7). The ships take new names too. */
+const CO_WORDS=['Clyde','Mersey','Solway','Forth','Tay','Severn','Humber','Tyne','Medway','Avon','Tamar','Orwell','Ribble','Lune','Wear','Tees','Esk','Annan','Nith','Spey'];
+const CO_SUFFIX={liner:'Line',cargo:'Steamship Co.',fruit:'Fruit Line',mixed:'Steam Navigation Co.',plate:'Line',cruise:'Cruising Co.'};
+function coFreshName(base){const all=new Set(Object.values(RIVALS).map(r=>r.name).concat(Object.values(S.genCos||{}).map(g=>g.name)));
+  const words=[...(base.names||[]),...CO_WORDS].sort(()=>Math.random()-0.5),suf=CO_SUFFIX[base.kind]||'Line';
+  for(const w of words){const nm=`${w} ${suf}`;if(!all.has(nm))return nm;}
+  return `${base.name} (${Object.keys(S.genCos||{}).length+2})`;}
 function coFound(q){
   const m=S.m,R=Math.random,used=new Set(Object.keys(RIVAL_P));
   let d=CO_POOL.find(c=>!used.has(c.id)&&c.kind===q.kind)||CO_POOL.find(c=>!used.has(c.id)&&c.kind==='liner'&&q.kind!=='cruise'&&q.kind!=='cargo');
   if(!d){const base=CO_POOL.filter(c=>c.kind===q.kind)[0]||CO_POOL[0],n=Object.keys(S.genCos).length+2;
-    d={...base,id:base.id+n,name:base.name.replace(/( Line| Co\.| Steamers| Steamship Co\.)$/,` (${['New','Reformed','Second','United'][n%4]})$1`)};}
+    d={...base,id:base.id+n,name:coFreshName(base)};}
   const P={lev:d.lev,prestige:d.prestige,aggr:d.aggr,cash:0,col:d.col,knots:CO_KNOTS[d.kind].slice(),grt:CO_GRT[d.kind].slice(),kind:d.kind==='liner'?undefined:d.kind,names:d.names.slice()};
   const era=Math.max(0,(m-ym(1921,0))/12);P.knots=P.knots.map(k=>+(k+Math.min(4,era*0.1)).toFixed(1));P.grt=P.grt.map(g=>Math.round(g*(1+Math.min(0.5,era*0.015))/100)*100);
   S.genCos[d.id]={name:d.name,flag:d.flag,P,born:m};RIVALS[d.id]={name:d.name,flag:d.flag};RIVAL_P[d.id]=P;
@@ -175,13 +183,14 @@ function coFound(q){
   const fill=q.fill&&kindOK(q.fill)?q.fill:q.routes.find(rk=>kindOK(rk)&&!S.rships.some(x=>x.route===rk));
   routes=(fill?[fill,...routes.filter(rk=>rk!==fill)]:routes).slice(0,2);
   const n=2+Math.floor(R()*3),ships=[];
-  for(let i=0;i<n;i++){const x=makeRivalShip(d.id,routes[i%routes.length],Math.floor(yearOfM(m))-Math.floor(R()*4));ships.push(x);}
+  // each ship is afloat (in the list) before the next is named, so sisters never share a name (0.35.7)
+  for(let i=0;i<n;i++){const x=makeRivalShip(d.id,routes[i%routes.length],Math.floor(yearOfM(m))-Math.floor(R()*4));ships.push(x);S.rships.push(x);}
   const cost=ships.reduce((a,x)=>a+coNewPrice(x),0);
   // the promoters raise enough for the ships and about four months' running costs
   // a speculative line of 1919 and 1920 buys at bubble prices on borrowed money and keeps little in hand
   if(q.spec){P.lev=0.75;P.spec=true;const c2=cost*warShips(m);S.rivals[d.id]={cash:Math.round((c2*0.08+40000*PX())/1000)*1000,debt:Math.round(c2*0.75/1000)*1000,h:[],born:m,spec:true};}
   else S.rivals[d.id]={cash:Math.round((cost*0.5+80000*PX())/1000)*1000,debt:Math.round(cost*Math.min(0.35,P.lev)/1000)*1000,h:[],born:m}; // new capital: half the fleet's cost in hand, a third at most borrowed (0.34)
-  for(const x of ships){S.rships.push(x);newRivalVis(x);}
+  for(const x of ships)newRivalVis(x);
   S.coNew.unshift({o:d.id,m,routes});if(S.coNew.length>30)S.coNew.length=30;
   S.rmoves.unshift({m,o:d.id,rk:routes[0],kind:'enter'});if(S.rmoves.length>40)S.rmoves.length=40;
   const mine=routes.some(rk=>S.lines[rk]);

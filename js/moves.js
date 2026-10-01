@@ -48,7 +48,7 @@ function mvProxy(o){const M=mkEnsure(),c=mvC(o);if(!c||c.gone||!mkRival(o)||mkSt
 /* short selling: borrowed shares sold now, bought back later; half the sale put up as margin, a fee to the lender */
 function mvShort(id,pct){const M=mkEnsure(),c=mvC(id);if(!c||c.gone||id==='morven'||mkShut()||(M.me.pos[id]&&M.me.pos[id].n>0))return false;const s0=(M.me.short=M.me.short||{})[id];
   // (sell what you hold before selling short)
-  const q=Math.floor(Math.min(pct*c.n,0.5*mkFree(id)-(s0?s0.n:0)));if(q<1)return false;
+  const q=Math.floor(Math.min(pct*c.n,0.5*mkFree(id)-(s0?s0.n:0)));if(q<Math.max(1,0.01*c.n))return false; // a short is at least 1% of the company (0.35.6)
   const imp=Math.min(0.5,0.6*q/mkDepth(id)),gross=q*c.px*(1-imp/2),col=gross*(1-MK_FEE_SELL),margin=Math.round(gross*MV_SHORT_MARGIN);if(S.cash<margin)return false;
   S.cash-=margin;c.px*=1-imp;c.e=(c.e||0)+Math.log(1-imp);mkOwnPush(id,Math.log(1-imp));const s=M.me.short[id]||(M.me.short[id]={n:0,col:0,margin:0});s.n+=q;s.col+=col;s.margin+=margin;
   news(`The Line sells short ${int(q)} borrowed shares in ${mkName(id)} for ${fmt(col)}, putting up ${fmt(margin)} as margin. It pays ${Math.round(MV_SHORT_FEE*100)}% a year to borrow them.`);return true;}
@@ -68,7 +68,9 @@ function mvShortMonth(){const M=S.ex;if(!M.me.short)return;
 function mvShortDiv(id,d){const M=S.ex,s=M.me.short&&M.me.short[id];if(s&&d>0)book('shares',-s.n*d);} // a short seller pays the dividends on what he has borrowed
 /* bear raid: a rate war on a trade where the target sails and the Line runs a line; the Line's own fares go down too */
 function mvBearRoutes(o){return Object.keys(S.lines).filter(rk=>!S.wars[rk]&&routeOpen(rk,S.m)&&!isCruise(rk)&&coFleet(o).some(x=>x.route===rk));}
-function mvBear(o,rk){if(!mkRival(o)||!mvBearRoutes(o).includes(rk))return false;const L=S.lines[rk];
+// a bear raid needs a real short open, of at least 2% of the company (0.35.5; the size, and none in wartime, 0.35.6)
+const mvBearShort=o=>{const s=S.ex.me.short&&S.ex.me.short[o],c=mvC(o);return !!(s&&c&&s.n>=0.019*c.n);};
+function mvBear(o,rk){if(!mkRival(o)||atWar(S.m)||!mvBearRoutes(o).includes(rk)||!mvBearShort(o))return false;const L=S.lines[rk];
   for(const k of ['f','s','t','tt'])if(L.fares[k])L.fares[k]=Math.max(1,Math.round(L.fares[k]*0.75));
   S.wars[rk]={left:6,mult:0.72,multT:0.6,by:[o],bear:true};S.tension[rk]=0;mkShock(o,0.93);
   news(`The Morven Line cuts its fares on ${ROUTES[rk].name} by a quarter and starts a rate war with ${mkName(o)}.`,'',true);
@@ -113,6 +115,8 @@ function movesHTML(o){const M=S.ex,c=mvC(o),shut=mkShut(),k=mkStake(o),s=M.me.sh
   if(o!=='morven'&&!(s)&&M.me.pos[o]&&M.me.pos[o].n>0)h+=`<p class="note">To sell it short, first sell what the Line holds.</p>`;
   else if(o!=='morven'){h+=s?`<p class="note">Short ${int(s.n)} shares: sold for ${fmt(s.col)}, now ${fmt(s.n*c.px)} to buy back; margin ${fmt(s.margin)}; the lender's fee ${fmt(s.n*c.px*MV_SHORT_FEE/12)} a month.</p><div class="btns"><button class="btn" data-act="mvcover" data-id="${o}" ${shut||S.over?'disabled':''}>Buy back the short</button></div>`
       :`<div class="btns">${[0.02,0.05].map(p=>`<button class="btn" data-act="mvshort" data-d='${JSON.stringify([o,p])}' ${shut||S.cash<p*c.n*c.px*MV_SHORT_MARGIN||S.over?'disabled':''}>Sell ${Math.round(p*100)}% short</button>`).join('')}</div>`;}
-  if(rival&&s){const rks=mvBearRoutes(o);if(rks.length)h+=`<div class="btns">${rks.map(rk=>`<button class="btn danger" data-act="mvbear" data-d='${JSON.stringify([o,rk])}' ${S.over?'disabled':''}>Bear raid: rate war on ${ROUTES[rk].name}</button>`).join('')}</div>`;}
+  if(rival&&s&&atWar(S.m))h+=`<p class="note">No bear raids while the war lasts: the rate wars are suspended.</p>`;
+  else if(rival&&s&&!mvBearShort(o))h+=`<p class="note">A bear raid needs a short of at least 2% of the company.</p>`;
+  else if(rival&&s){const rks=mvBearRoutes(o);if(rks.length)h+=`<div class="btns">${rks.map(rk=>`<button class="btn danger" data-act="mvbear" data-d='${JSON.stringify([o,rk])}' ${S.over?'disabled':''}>Bear raid: rate war on ${ROUTES[rk].name}</button>`).join('')}</div>`;}
   if(!h)return '';
   return `<div class="ctl"><span class="lbl">Harder moves</span>${h}<p class="note">A dawn raid buys a fifth before the price moves, at a tenth over. A tender offers every holder a price and goes through only if you end with over half; a failed one costs the advisers and some standing. A proxy fight needs a tenth and the Line's name. Selling short pays if the price falls: half the sale as margin, ${Math.round(MV_SHORT_FEE*100)}% a year to the lender, its dividends to pay, and the broker buys you in if the price climbs; big shorts get squeezed. A bear raid adds a rate war on a trade you share, at a quarter off your own fares, and the target may answer in kind.</p></div>`;}

@@ -36,6 +36,8 @@ button,select,input{font:inherit;color:inherit}
 .brand{display:flex;flex-direction:column;gap:2px;min-width:240px}
 .eyebrow{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--sea-muted);font-weight:600}
 .brand h1{margin:0;font-family:var(--display);font-weight:400;font-size:28px;line-height:1.05;letter-spacing:.02em}
+/* the date: equal-width figures and room for the longest month, so the header does not reflow as the months pass (0.35.6) */
+.brand h1{font-variant-numeric:tabular-nums lining-nums;white-space:nowrap;min-width:8.6em}
 .clock{display:flex;flex-direction:column;gap:4px}
 .clock .seg{border-color:#4d6f7c}
 .clock .seg button{background:transparent;color:var(--sea-ink);border-right-color:#4d6f7c;min-width:46px}
@@ -126,7 +128,8 @@ html,body{height:100%}
   text-shadow:0 0 3px var(--chart-sea),0 0 3px var(--chart-sea),0 0 2px var(--chart-sea)}
 .chipm{position:absolute;transform:translate(-50%,-50%);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:1px 5px;border-radius:2px;background:var(--surface);border:1px solid currentColor;white-space:nowrap}
 .chipm.war{color:var(--bad)} .chipm.mail{color:var(--good)}
-.shipm{position:absolute;width:0;height:0;pointer-events:auto;cursor:pointer;transition:transform .6s ease}
+.shipm{position:absolute;left:0;top:0;width:0;height:0;pointer-events:auto;cursor:pointer}
+.shipm .off{position:absolute;left:0;top:0;transition:transform .6s ease} /* the spread of ships in port; the marker itself moves by transform (0.36.0) */
 .shipm .hit{position:absolute;left:-12px;top:-12px;width:24px;height:24px;border-radius:50%}
 .shipm .hull{position:absolute;left:-9px;top:-3.5px;width:18px;height:7px;background:var(--marker);
   clip-path:polygon(0 18%,70% 0,100% 50%,70% 100%,0 82%)}
@@ -193,8 +196,10 @@ input[type=number]{width:66px;background:var(--surface2);border:1px solid var(--
 .legend span{display:flex;align-items:center;gap:6px}
 .legend i{width:10px;height:10px;border-radius:2px;display:inline-block;flex:none}
 @media (prefers-reduced-motion:no-preference){
-  .smoke circle{animation:drift 2.8s linear infinite}
-  .smoke circle:nth-child(2){animation-delay:-.7s}.smoke circle:nth-child(3){animation-delay:-1.4s}.smoke circle:nth-child(4){animation-delay:-2.1s}
+  /* the smoke drifts only while the clock is stopped: an endless SVG animation repainted the ship panel every frame while
+     the game ran, the largest single cost on the Fleet tab (0.36.0) */
+  body.paused .smoke circle{animation:drift 2.8s linear infinite}
+  body.paused .smoke circle:nth-child(2){animation-delay:-.7s}body.paused .smoke circle:nth-child(3){animation-delay:-1.4s}body.paused .smoke circle:nth-child(4){animation-delay:-2.1s}
   @keyframes drift{from{transform:translate(0,0)}to{transform:translate(-14px,-4px)}}
 }
 
@@ -568,3 +573,10 @@ input[type=range]{width:100%;accent-color:var(--brass)}
 @media (max-width:1599px){.fmwhere{display:none}}
 .board.fmt .fmgrp th{border-bottom:0;padding-bottom:0} .board.fmt .fmgrp th.c{text-align:center;border-bottom:1px solid var(--line)}
 @media (max-width:640px){.fm>[data-key="fmbar"]{position:static}}
+
+/* the frame-time readout (0.36.0) */
+.perfhud{position:absolute;left:8px;bottom:8px;z-index:5;background:rgba(0,0,0,.72);color:#fff;font:11px/1.4 var(--mono);padding:4px 8px;border-radius:4px;pointer-events:none;max-width:calc(100% - 72px)}
+/* standing orders and the owner's desk (0.36.1) */
+.orders{display:flex;flex-direction:column;gap:4px;padding-top:4px;border-top:1px dashed var(--line,rgba(0,0,0,.12))}
+.orders .check{font-size:12.5px;color:var(--ink)}
+.deskline{margin:0 0 6px}

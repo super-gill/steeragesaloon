@@ -73,6 +73,8 @@ function renderMap(){
   else b.hidden=true;
 }
 const MARKS={};
+/* a style written only when it changes */
+const setSt=(el,k,v)=>{const c=el._st||(el._st={});if(c[k]!==v){c[k]=v;el.style[k]=v;}};
 function drawShips(){
   if(!S)return;
   const O=document.getElementById('shipsO'),stackN={};
@@ -81,7 +83,8 @@ function drawShips(){
     seen.add(sh.id);
     let el=MARKS[sh.id];
     if(!el){el=document.createElement('div');el.className='shipm';el.dataset.act='selship';el.dataset.id=sh.id;
-      el.innerHTML='<div class="hit"></div><div class="hull"></div><div class="tag"></div>';O.appendChild(el);MARKS[sh.id]=el;}
+      el.innerHTML='<div class="off"><div class="hit"></div><div class="hull"></div><div class="tag"></div></div>';O.appendChild(el);MARKS[sh.id]=el;
+      el._off=el.firstChild;el._hull=el.querySelector('.hull');el._tag=el.querySelector('.tag');}
     let x,y,ang=0,ox=0,oy=0;
     const est=isSilent(sh);
     if(est){const p=estXY(sh);x=p.x;y=p.y;ang=p.ang;}
@@ -89,17 +92,20 @@ function drawShips(){
     else if(sh.state==='repo'){const T=trackBetween(sh.port,sh.repoTo),p=pointOn(T,(1-sh.repoLeft/Math.max(1e-6,sh.repoTotal))*T.dist);x=p.x;y=p.y;ang=p.ang;}
     else{const c=sh.port,i=stackN[c]=(stackN[c]||0)+1,st=stackOf(c),[px,py]=PORT_XY(c);
       x=px;y=py;ox=st[0]+st[2]*(i-1);oy=st[1]+st[3]*(i-1);ang=st[2]<0?180:st[2]>0?0:90;}
-    el.hidden=false;
-    el.style.left=(x/W*100)+'%';el.style.top=(y/H*100)+'%';
-    el.style.transform=(ox||oy)?`translate(${ox}px,${oy}px)`:'';
-    el.querySelector('.hull').style.transform=`rotate(${ang}deg)`;
+    // placed by a transform in pixels, written only when it changes: moving a marker by left and top made the browser lay
+    // out the whole page every frame, most of the cost of a big fleet (0.36.0)
+    if(el.hidden)el.hidden=false;
+    setSt(el,'transform',`translate3d(${(x*VIEW.s).toFixed(1)}px,${(y*VIEW.s).toFixed(1)}px,0)`);
+    setSt(el._off,'transform',(ox||oy)?`translate(${ox}px,${oy}px)`:'');
+    setSt(el._hull,'transform',`rotate(${Math.round(ang)}deg)`);
     const sel=S.selShip===sh.id;
-    {const P=paintOf(sh),c=lum(P.funnel)>0.8?(P.band1||P.hull):P.funnel;el.querySelector('.hull').style.background=sh.state==='yard'||sh.state==='laid'||(!est&&sh.state==='sea'&&(sh.stopLeft>0||sh.limp||sh.towed))?'':c;}
-    el.className='shipm'+(sel?' sel':'')+(est?' est'+(sh.overdue?' overdue':''):'')+(!est&&sh.state==='sea'&&(sh.stopLeft>0||sh.limp||sh.towed)?' broken':'')+(sh.state==='yard'?' yard':'')+(sh.state==='laid'?' laid':'');
-    const tag=el.querySelector('.tag');const txt=sel||VIEW.z>=1.8?'SS '+sh.name+(est?' (reckoned)':''):'';if(tag.textContent!==txt)tag.textContent=txt;
+    {const P=paintOf(sh),c=lum(P.funnel)>0.8?(P.band1||P.hull):P.funnel;setSt(el._hull,'background',sh.state==='yard'||sh.state==='laid'||(!est&&sh.state==='sea'&&(sh.stopLeft>0||sh.limp||sh.towed))?'':c);}
+    const cls='shipm'+(sel?' sel':'')+(est?' est'+(sh.overdue?' overdue':''):'')+(!est&&sh.state==='sea'&&(sh.stopLeft>0||sh.limp||sh.towed)?' broken':'')+(sh.state==='yard'?' yard':'')+(sh.state==='laid'?' laid':'');if(el.className!==cls)el.className=cls;
+    const tag=el._tag;const txt=sel||VIEW.z>=1.8?'SS '+sh.name+(est?' (reckoned)':''):'';if(tag.textContent!==txt)tag.textContent=txt;
   }
   for(const id of Object.keys(MARKS))if(!seen.has(+id)){MARKS[id].remove();delete MARKS[id];}
-  drawRivals();
+  // the rivals' markers ten times a second: there are many, they are small, and they move slowly on the chart (0.36.0)
+  const now=performance.now();if(!drawShips.rt||now-drawShips.rt>100||VIEW.s!==drawShips.rs){drawShips.rt=now;drawShips.rs=VIEW.s;drawRivals();}
 }
 const RMARKS={};
 function rivalXY(x){const p=rivalPos(x);if(p.inPort){const a=jr(x.id)*6.283;return {x:p.x,y:p.y,ang:a*57.3,ox:Math.cos(a)*9,oy:Math.sin(a)*9};}return p;}
@@ -109,8 +115,8 @@ function drawRivals(){
     seen.add(x.id);let el=RMARKS[x.id];
     if(!el){el=document.createElement('div');el.className='shipm rival';el.dataset.act='rcard';el.dataset.id=x.id;el.innerHTML='<div class="hull"></div>';O.prepend(el);RMARKS[x.id]=el;}
     const p=rivalXY(x);
-    el.style.left=(p.x/W*100)+'%';el.style.top=(p.y/H*100)+'%';el.style.transform=p.ox?`translate(${p.ox.toFixed(1)}px,${p.oy.toFixed(1)}px)`:'';
-    const h=el.firstChild;h.style.transform=`rotate(${p.ang}deg)`;h.style.background=RIVAL_P[x.owner].col;
+    setSt(el,'transform',`translate3d(${(p.x*VIEW.s+(p.ox||0)).toFixed(1)}px,${(p.y*VIEW.s+(p.oy||0)).toFixed(1)}px,0)`);
+    const h=el.firstChild;setSt(h,'transform',`rotate(${Math.round(p.ang)}deg)`);setSt(h,'background',RIVAL_P[x.owner].col);
     const t=`SS ${x.name}, ${RIVALS[x.owner].name}`;if(el.title!==t)el.title=t;
   }
   for(const id of Object.keys(RMARKS))if(!seen.has(id)){RMARKS[id].remove();delete RMARKS[id];}

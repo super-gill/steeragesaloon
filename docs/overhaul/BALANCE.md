@@ -71,7 +71,7 @@ to the war. The 0.30.0 to 0.32.0 market figures were measured with it.
 | Small lines fail under control | Closed | The Line can lend a controlled line money at 5%; repaid when it is flush, lost if it fails | The Line can support a controlled line |
 | Takeover prices uneven | Accepted | Buying to 90% in a month costs about 1.8 times the market value (each purchase pushes the price); a 35% tender about 1.35 times. With a tender a middling line costs about its fleet's worth net of its cash; a profitable one more, for its earnings | About the fleet's worth in normal times |
 | Seat and control effects | Closed | Undercutting a rival's trade for four years: 16 rate wars in 6 games with no stake, 10 with a seat, 2 with control (both against Combine members, which cannot be controlled) | Fewer rate wars with a controlled leader |
-| Float proceeds may be generous | Closed | Half to the Line, half to the owner: 49% brings the Line about 0.37 of its worth, 75% about its worth | Part to the owner |
+| Float proceeds may be generous | Closed | Half to the Line, half to the owner, and since 0.35.5 priced on the new money only: 49% brings the Line about 0.27 of its worth, 75% about 0.48 | Part to the owner |
 | Board targets for a careless owner | Closed | Floating 60% and never paying a dividend: 1 removed, 3 taken over, 2 bankrupt in 10 (a careful owner: 1 removed, 0 taken over in 20) | Some removals for a careless owner |
 | Proxy fights may be easy | Closed | Against a well-run line with a tenth and ordinary standing, about 1 in 8; against a loss-making, troubled one about half | A gamble against a well-run line |
 | Bear raids roughly break even | Accepted | Better than the short alone in 3 of 4 to 3 of 6 games: a gamble, which is the point | Pays when well timed |
@@ -104,6 +104,13 @@ Two programs played 1900 to 1912 through `tools/play.js` (notes kept in `tools/p
 | New ships arrive laid up | Closed | They join the line they were ordered for | |
 | Reputation in a big fleet | Closed | Everyday knocks scale with the square root of six over the fleet (a quarter as hard at 70 ships, never under three tenths) | A big, well-run line keeps its name |
 | Wireless law only for the mails | Closed | 49 passengers at most out of an American port without wireless from July 1911 | |
+| Strikes and the 1912 disaster stopped (0.35.4 only) | Closed (0.35.5) | A comment hid the calls; `tools/lint.js` now guards against it | |
+| Slips booked for ever after a reload | Closed (0.35.5) | Relinked on loading | |
+| Float priced a third over worth | Closed (0.35.5) | 49% raises 0.54 of the Line's worth, 75% 0.97 | Shares trade near the issue price |
+| Leave and rejoin the conference to end wars | Closed (0.35.5) | Only wars against the Line end; a year before rejoining | |
+| Raising cover on an overdue ship | Closed (0.35.5) | From her next port | |
+| A floated Line's net worth counts the whole Line | Accepted | Net worth is the company's, as before; the owner's share and cash are on the ending page | |
+| Second-hand ships cost 1.25 to 1.5 times their worth | Accepted | The brokers' asking price; she is worth less on the books the day she is bought | |
 | Drydocking raises a ship's worth | Accepted | Worth follows condition; it is not a loop now a ship bought within the year sells for no more than she cost | |
 | Consols dip in a panic and recover | Accepted | A trade with real risk in the game's terms (the panic's size is not known in advance) | |
 | Consols count towards borrowing, cash does not | Accepted | Banks lent on securities | |

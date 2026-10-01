@@ -7,6 +7,12 @@
 const TRUST_NAME='International Ocean Combine',TRUST_SHORT='the Combine',TRUST_FROM=ym(1902,9);
 const CONF_FROM=ym(1908,0); // the North Atlantic conference forms in 1908; before it there is none to join
 const confOpen=()=>!newCal()||S.m>=CONF_FROM;
+/* joining ends the rate wars against the Line, not the lines' wars with each other, and a Line that leaves must wait a
+   year to come back (0.35.5: leaving and rejoining on the same day ended every war on every route) */
+const confRejoin=()=>(S.confLeft||-99)+12;
+function confJoin(){if(S.conf||!confOpen()||S.cash<3000*PX()||S.m<confRejoin())return false;S.cash-=3000*PX();S.conf=true;
+  for(const rk of Object.keys(S.wars))if(!S.wars[rk].lines)delete S.wars[rk];S.tension={};news('The Morven Line has joined the North Atlantic conference.','good');return true;}
+function confLeave(){if(!S.conf)return false;S.conf=false;S.confLeft=S.m;news('The Morven Line has left the conference. Expect retaliation if you undercut, and the conference will not take the Line back for a year.','bad');return true;}
 /* end a sentence on a name that may already end in a full stop (Co.) */
 const dotEnd=t=>t.endsWith('.')?t:t+'.';
 const trustMember=o=>!!(S.trust&&S.trust.members.includes(o)&&coAlive(o));
@@ -57,9 +63,10 @@ function trustMonth(){
   // an offer for the Morven Line, once it is worth having: about once in three years, never within two of a refusal
   if(!S.trustOffer&&!S.over&&S.ships.length>=3&&m>=T.next&&R()<0.03){
     if(typeof flMajority==='function'&&flMajority()){T.next=m+36;if(!S.fl.bid&&m<ym(1914,0))flBid('combine');} // a Line the public holds is bid for, not asked (until the war)
-    else{const amt=Math.round(Math.max(netWorth(),fleetValue()*0.5)*(1.3+R()*0.3)/1000)*1000;
+    // with part of the Line in the public's hands, the offer is for the owner's own shares (0.35.5)
+    else{const own=typeof flOwn==='function'?flOwn():1,amt=Math.round(Math.max(netWorth(),fleetValue()*0.5)*(1.3+R()*0.3)*own/1000)*1000;
     if(amt>0){S.trustOffer={amt,exp:m+2};T.offers++;
-      news(`${TRUST_SHORT[0].toUpperCase()+TRUST_SHORT.slice(1)} offers ${fmt(amt)} for the Morven Line. It is under Needs attention.`,'',true);}}}
+      news(`${TRUST_SHORT[0].toUpperCase()+TRUST_SHORT.slice(1)} offers ${fmt(amt)} for ${own<1?'your shares in ':''}the Morven Line. It is under Needs attention.`,'',true);}}}
   if(S.trustOffer&&m>=S.trustOffer.exp)trustRefuse(true);
 }
 /* the owner sells: the game ends with the Line in the Combine */

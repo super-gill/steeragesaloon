@@ -65,6 +65,7 @@ function shipStatus(sh){
   return {chip:'<span class="chip idle">Laid up</span>',short:`Laid up at ${PN[sh.port]}`,text:`Laid up at ${PN[sh.port]} on a skeleton crew. Assign her to a line to sail.`};
 }
 function renderHeader(){
+  document.body.classList.toggle('paused',!S||UI.speed===0||!!S.over);
   setHTML($('brand'),`<span class="eyebrow"><span class="long">Steerage &amp; Saloon · The Morven Line </span><span class="ver">v${GAME_VERSION}</span></span><div class="row" style="justify-content:flex-start;gap:12px"><h1>${dateLong(S.t)}</h1><button class="menubtn" data-act="menu" aria-expanded="${!!UI.menu}">Menu</button></div>`);
   setHTML($('clock'),`<span class="lbl">Clock</span><div class="seg" role="group" aria-label="Game speed">${SPEED_LABELS.map((l,i)=>`<button data-act="speed" data-v="${i}" aria-pressed="${UI.speed===i}" ${S.over?'disabled':''}>${l}</button>`).join('')}</div>`);
   setHTML($('stats'),`<div><dt>Cash</dt><dd class="${S.cash<0?'neg':''}">${fmt(S.cash)}</dd></div><div><dt>Bank debt</dt><dd>${fmt(S.debt)}</dd></div>
@@ -89,7 +90,7 @@ function alerts(){
     if(sh.dockWarn&&sh.state!=='yard')A.push({id:'dockwarn'+sh.id,k:'warn',t:`SS ${sh.name} is due a drydock the account cannot cover.`,b:[['Bank','tabgo','finance']]});
   }
   if(S.trustOffer)A.push({id:'trustoffer',noNote:true,k:'warn',t:`The ${TRUST_NAME} offers ${fmt(S.trustOffer.amt)} for the Morven Line, about ${Math.round(S.trustOffer.amt/Math.max(1,netWorth())*10)/10} times what it is worth. Selling ends the game. Refusing, or letting the offer lapse at the end of ${MONTHS[S.trustOffer.exp%12]}, brings a rate war on your busiest trades.`,b:[['Sell the Line','trustyes'],['Refuse','trustno']]});
-  if(S.offer)A.push({id:'offer',noNote:true,k:'good',t:`The Post Office offers ${fmt(S.offer.pay)} per round trip for the ${ROUTES[S.offer.route].name} mail, for up to two round trips a month.${wirelessRule()?' Only ships with wireless carry it.':''} Miss a month and you are warned; miss two and it goes.`,b:[['Accept','accept'],['Decline','decline']]});
+  if(S.offer)A.push({id:'offer',noNote:true,k:'good',t:`The Post Office offers ${fmt(S.offer.pay)} per round trip for the ${ROUTES[S.offer.route].name} mail, for up to two round trips a month.${wirelessRule()?' Only ships with wireless carry it.':''} It needs a sailing every month, so keep a ship on the line: miss a month and you are warned; miss two and it goes.`,b:[['Accept','accept'],['Decline','decline']]});
   for(const rk of Object.keys(S.lines)){
     const r=ROUTES[rk],t=S.tension[rk]||0;
     if(S.wars[rk])A.push({id:'war'+rk,k:'bad',t:`Rate war on ${r.name}, ${S.wars[rk].left} more month${S.wars[rk].left>1?'s':''}.`,b:[['View line','selline',rk]]});
@@ -113,7 +114,7 @@ function alerts(){
   return A.filter(a=>a.noNote||!seen[a.id]);
 }
 function renderOverview(){
-  const A=alerts(),ADV=shownAdvice();
+  const A=groupAlerts(alerts()),ADV=shownAdvice();
   const al=A.length?A.map(a=>`<div class="alert ${a.k}" data-key="${keyOf(a.t.slice(0,40))}" data-aid="${a.id}"${a.noNote?' data-sticky':''}><span>${a.t}</span><span class="btns">${a.b.map(([l,act,id])=>`<button class="btn" data-act="${act}" ${act==='tabgo'?`data-tab="${id}"`:id!==undefined?`data-id="${id}"`:''}>${l}</button>`).join('')}${a.noNote?'':'<button class="btn quiet" data-act="noted">Noted</button>'}</span></div>`).join('')
     :'';
   const props=(S.props||[]).map(p=>`<div class="alert prop" data-key="pr${keyOf(p.id)}"><span><strong>${DEPTS[p.dept].name} proposes:</strong> ${p.title}.<br><small class="note">${p.why}</small></span>
@@ -177,6 +178,25 @@ function wireHTML(list,anim){
 /* after acting on one suggestion, say which others it settled, so they do not seem to vanish */
 function advGoneHTML(){const g=UI.advGone;if(!g||UI.rev-g.rev>6)return '';
   return `<p class="note advgone">That change also settled ${g.titles.length===1?'another suggestion, which no longer applies':g.titles.length+' others, which no longer apply'}: ${g.titles.map(t=>esc(t)).join('; ')}.</p>`;}
+/* the owner's desk (0.36.1): only what needs the owner. What an acting department will see to under its standing orders
+   is summed up in a line; the rest shows the first eight, gravest first, with the others a click away */
+const SEV_RANK={bad:0,warn:1,tip:2};
+function deskHTML(ADV){
+  const mine=ADV.filter(h=>!handled(h)).sort((a,b)=>(SEV_RANK[a.sev]??3)-(SEV_RANK[b.sev]??3)||b.gain-a.gain),theirs=ADV.filter(handled);
+  const by={};for(const h of theirs)by[h.dept]=(by[h.dept]||0)+1;
+  const dl=Object.keys(by).length?`<p class="note deskline">Your departments are seeing to ${theirs.length} more: ${Object.keys(by).map(k=>`${DEPTS[k].name} ${by[k]}`).join(', ')}. Their standing orders are on the Company tab.</p>`:'';
+  const n=mine.length,show=UI.advAll?mine:mine.slice(0,8);
+  return dl+adviceHTML(show,theirs.length?'Nothing else needs you: the departments have the rest in hand.':'Head office has no complaints. The books look sound at current settings.')
+    +(n>8?`<div class="btns"><button class="btn quiet" data-act="advall">${UI.advAll?'Show the first eight':`Show all ${n}`}</button></div>`:'');
+}
+/* many ships with the same trouble make one line, not a dozen (0.36.1) */
+const ALERT_GROUP={laid:'laid up',rundown:'dangerously run down',nothresh:'run down with no service threshold',dockwarn:'due a drydock the account cannot cover',worn:'worn out'};
+function groupAlerts(A){const out=[],by={};
+  for(const a of A){const m=a.id.match(/^(laid|rundown|nothresh|dockwarn|worn)(\d+)$/);if(m){(by[m[1]]=by[m[1]]||[]).push(a);}else out.push(a);}
+  for(const g in by){const L=by[g];if(L.length<=3){out.unshift(...L);continue;}
+    const names=L.map(a=>{const sh=S.ships.find(x=>x.id===+a.id.slice(g.length));return sh?sh.name:'';}).filter(Boolean);
+    out.unshift({id:'grp'+g+L.length,k:L.some(a=>a.k==='bad')?'bad':'warn',t:`${L.length} ships are ${ALERT_GROUP[g]}: ${names.slice(0,4).join(', ')}${names.length>4?` and ${names.length-4} more`:''}.`,b:[['Fleet manager','fmopen']]});}
+  return out;}
 function trayHTML(nAttn,attn,ADV){
   const W=(S.wire||[]).filter(m=>UI.wireRoutine!==false||m.k!=='r');
   if(!UI.trayTab)UI.trayTab=nAttn?'attn':'wire';
@@ -185,10 +205,10 @@ function trayHTML(nAttn,attn,ADV){
   let body;
   if(UI.trayHold&&UI._tray&&UI._tray.tab===UI.trayTab&&UI._tray.rev===UI.rev)body=UI._tray.body; // the pointer is on it: hold still, until the player does something
   else{
-    body=UI.trayTab==='attn'?attn:UI.trayTab==='advice'?advGoneHTML()+adviceHTML(ADV,'Head office has no complaints. The books look sound at current settings.')
+    body=UI.trayTab==='attn'?attn:UI.trayTab==='advice'?advGoneHTML()+deskHTML(ADV)
       :`<div class="row">${newW?`<button class="btn quiet" data-act="wreadall">Decode all ${newW}</button>`:'<span></span>'}<label class="check"><input type="checkbox" data-wirert="1" ${UI.wireRoutine!==false?'checked':''}> Sailings and arrivals</label></div><div class="stack tape" style="gap:6px">${wireHTML(W.slice(0,30),true)}</div>`;
     UI._tray={tab:UI.trayTab,body,rev:UI.rev};}
-  return `<section class="sec tray"><div class="traytabs" role="tablist">${tab('attn','Needs attention',nAttn,'badge')}${tab('advice','Advice',ADV.length,'count')}${tab('wire','Wireless',newW,'badge wb')}</div>
+  return `<section class="sec tray"><div class="traytabs" role="tablist">${tab('attn','Needs attention',nAttn,'badge')}${tab('advice','Advice',ADV.filter(h=>!handled(h)).length,'count')}${tab('wire','Wireless',newW,'badge wb')}</div>
     <div class="traybody" id="traybody" data-key="tray-${UI.trayTab}">${body}</div></section>`;
 }
 /* advice for one ship or line sits behind a single row of constant height, opened on request */
@@ -228,7 +248,7 @@ function renderShipDetail(sh){
   else if(S.ships.length>1){
     if(UI.confirm==='sell'+sh.id)exitH=`<button class="btn danger" data-act="exit" data-k="sell">Confirm sale · ${fmt(sellV)}</button><button class="btn" data-act="cancel">Keep her</button>`;
     else if(UI.confirm==='scrap'+sh.id)exitH=`<button class="btn danger" data-act="exit" data-k="scrap">Confirm scrapping · ${fmt(scrapV)}</button><button class="btn" data-act="cancel">Keep her</button>`;
-    else exitH=`<button class="btn danger" data-act="askexit" data-k="sell" ${S.over?'disabled':''}>Sell · ${fmt(sellV)}</button><button class="btn danger" data-act="askexit" data-k="scrap" ${S.over?'disabled':''}>Scrap · ${fmt(scrapV)}</button>`;
+    else exitH=`<button class="btn danger" data-act="askexit" data-k="sell" ${S.over||sh.state==='req'?'disabled':''}>Sell · ${fmt(sellV)}</button><button class="btn danger" data-act="askexit" data-k="scrap" ${S.over||sh.state==='req'?'disabled':''}>Scrap · ${fmt(scrapV)}</button>`;
   }
   setHTML($('detailD'),`
     ${UI.fmBack?'<button class="btn" data-act="fmback" style="width:fit-content">‹ Back to the fleet manager</button>':''}
@@ -339,7 +359,7 @@ function cruiseCtlHTML(sh){
 function insHTML(sh){
   const i=insOf(sh),v=shipValue(sh),ins=insured(sh),ex=i.cover==='none'?0:v*INS_EXCESS[i.excess].x,paid=Math.max(0,ins-ex),bank=Math.min(paid,shipMortgage(sh)),rec=S.insLoss||0;
   const covers=INS_KEYS.map(k=>`<button data-act="inscover" data-v="${k}" aria-pressed="${i.cover===k}" ${k==='none'&&S.debt>0?'disabled title="The bank insists on cover while she is mortgaged"':''}>${INS_COVER[k].short}</button>`).join('');
-  return `<div class="ctl"><span class="lbl">Cover</span><div class="seg" role="group">${covers}</div>
+  return `${sh.insNext?`<p class="warnline">From her next port: ${INS_COVER[sh.insNext.cover].name.toLowerCase()}, ${INS_EXCESS[sh.insNext.excess].name.toLowerCase()} excess. The underwriters do not add cover to a ship at sea.</p>`:''}<div class="ctl"><span class="lbl">Cover</span><div class="seg" role="group">${covers}</div>
       <span class="note">${i.cover==='none'?'She is not insured: if she is lost, the Line loses her whole value.':i.cover==='mort'?'Only the bank\'s share is covered: a loss pays off her mortgage and nothing more, and salvage is not covered.':i.cover==='agreed'?'Insured for a quarter above her market value: a loss pays enough to replace her with a better ship.':'Insured for what she would fetch today.'}${S.debt>0?' While she is mortgaged the bank insists on cover for its share at least.':''}</span></div>
     <div class="ctl"><span class="lbl">Excess</span>${seg('insexcess','x',i.excess,INS_EXCESS.map(e=>e.name))}
       <span class="note">The part of any claim the Line pays itself. A higher excess makes the premium cheaper.</span></div>
@@ -616,7 +636,7 @@ function renderFinance(){
       ${S.call?`<p class="badline">Called loan: ${fmt(S.call.amt)} due by ${monthName(S.call.due)}. If the account cannot pay it, the bank seizes ships in port and sells them cheaply.</p>`:''}
       ${S.noLend>S.m?`<p class="warnline">No new lending until ${monthName(S.noLend)}.</p>`:''}
       <dl class="kv"><dt>Debt</dt><dd>${fmt(S.debt)}</dd><dt>Interest (${S.rateUp>S.m?'8.5':'6.5'}%)</dt><dd>${fmt(S.debt*(S.rateUp>S.m?0.085:0.065)/12)}/mo</dd>
-      <dt>Required repayment</dt><dd>${fmt(Math.round(S.debt*0.004))}/mo</dd><dt>Fleet value</dt><dd>${fmt(fleetValue())}</dd><dt>Can still borrow</dt><dd>${fmt(hr)}</dd></dl>
+      <dt>Required repayment</dt><dd>${fmt(Math.round(S.debt*0.004))}/mo</dd><dt>Fleet value</dt><dd>${fmt(fleetValue())}</dd><dt>Can still borrow</dt><dd>${S.noLend>S.m?`Nothing until ${monthName(S.noLend)}: the bank has stopped lending`:fmt(hr)}</dd></dl>
       <div class="btns">${[10000,100000,1000000].filter(v=>v<=Math.max(10000,hr,S.debt)).map(v=>`<button class="btn" data-act="borrow" data-id="${v}" ${hr<v||S.noLend>S.m||S.over?'disabled':''}>Borrow ${fmt(v)}</button>`).join('')}</div>
       <div class="btns">${[10000,100000,1000000].filter(v=>v<=Math.max(10000,S.debt)).map(v=>`<button class="btn" data-act="repay" data-id="${v}" ${S.cash<Math.min(v,S.debt)||S.debt<=0||S.over?'disabled':''}>Repay ${fmt(v)}</button>`).join('')}</div>
       <p class="note">The bank lends up to 70% of your fleet and property, and 90% of your government stock. Its overdraft runs to ${fmt(odLimit())} (£8,000 plus half your unused borrowing), at 8% a year; below that it forecloses.</p></section>
@@ -634,7 +654,7 @@ function renderFinance(){
 /* ---------- Company ---------- */
 function ownersByRoute(o){const c={};for(const y of S.rships)if(y.owner===o)c[y.route]=(c[y.route]||0)+1;return Object.keys(c).map(rk=>`${ROUTES[rk].name} ${c[rk]}`).join(' · ');}
 const confBtn=()=>S.conf?(UI.confirm==='leave'?`<div class="btns"><button class="btn danger" data-act="leave">Confirm: leave</button><button class="btn" data-act="cancel">Stay</button></div>`:`<button class="btn" data-act="leave" style="width:fit-content">Leave the conference</button>`)
-  :!confOpen()?`<p class="note" style="margin:0">There is no conference on the North Atlantic yet: the lines fight over every trade, and pools form and fall apart.</p>`:`<div class="row"><button class="btn" data-act="join" ${S.cash<3000*PX()||S.over?'disabled':''} style="width:fit-content">Join the conference · ${fmt(3000*PX())}</button><span class="meta">then ${fmt(350*PX())} a month; fare floor and steerage quota, no rate wars</span></div>`;
+  :!confOpen()?`<p class="note" style="margin:0">There is no conference on the North Atlantic yet: the lines fight over every trade, and pools form and fall apart.</p>`:`<div class="row"><button class="btn" data-act="join" ${S.cash<3000*PX()||S.m<confRejoin()||S.over?'disabled':''} style="width:fit-content">Join the conference · ${fmt(3000*PX())}</button><span class="meta">then ${fmt(350*PX())} a month; fare floor and steerage quota, no rate wars</span></div>`;
 /* the rival companies: what each is worth, what it made in the last year, how it is run, and the lines that have come and gone */
 function rivalsHTML(){
   const live=coLive().sort((a,b)=>coWorth(b)-coWorth(a));
@@ -661,15 +681,16 @@ function renderCompany(){
       :`<div class="meta">About ${fmt(dc.total+60)} a month to run at your present size: ${dc.staff} clerks, rent and a head of department. It grows with the fleet.</div>`;
     return `<div class="card" data-key="dp${k}"><div class="row"><strong>${d.name}</strong>${o?own:''}</div><p class="note" style="margin:0">${d.does}</p>${hd}
       ${o?`<div class="row"><div class="seg" role="group"><button data-act="deptmode" data-d='${JSON.stringify([k,0])}' aria-pressed="${!o.auto}">Advise</button><button data-act="deptmode" data-d='${JSON.stringify([k,1])}' aria-pressed="${!!o.auto}">Act</button></div>
-        <span class="meta">${o.auto?'Works through its advice every week. Big decisions come to you as proposals':'Advice only; you decide'}</span></div>`:buy('dept',k,'Open')}</div>`;}).join('');
+        <span class="meta">${o.auto?'Works through its advice every week under its standing orders. Big decisions come to you as proposals':'Advice only; you decide'}</span></div>
+        ${o.auto&&DEPT_ORDERS[k]?`<div class="orders"><span class="lbl">Standing orders: it may on its own</span>${DEPT_ORDERS[k].map(([g,l])=>`<label class="check"><input type="checkbox" data-dorder="${k}:${g}" ${o.orders&&o.orders[g]===false?'':'checked'}> ${l}</label>`).join('')}<span class="meta">What it may not do comes to you as advice. With ${S.ships.length} ships it can see to ${Math.max(1,Math.ceil(S.ships.length/12))*(1+Math.floor((o.head?o.head.comp:50)/100*1.5))} items a week.</span></div>`:''}`:buy('dept',k,'Open')}</div>`;}).join('');
 
   const conf=S.conf?`<p style="margin:0"><strong>Member of the North Atlantic conference.</strong></p>
       <ul class="note" style="padding-left:18px;margin:0"><li>Fares may not go below 95% of the line rate.</li><li>Third class limited to 80% of berths.</li><li>Pooled agents add 4% to third class demand.</li><li>No rate wars. Dues ${fmt(350*PX())} a month.</li></ul>
       ${UI.confirm==='leave'?`<div class="btns"><button class="btn danger" data-act="leave">Confirm: leave</button><button class="btn" data-act="cancel">Stay</button></div>`:`<button class="btn" data-act="leave" style="width:fit-content">Leave the conference</button>`}`
     :!confOpen()?`<p style="margin:0">There is <strong>no conference</strong> on the North Atlantic yet. Every line prices as it likes; the lines fight rate wars over the trades, patch up pools and fall out again. Undercutting the others still invites a war on you.</p>`
     :`<p style="margin:0">You sail as an <strong>independent</strong>. Price as you like, but undercutting the line rate raises conference tension and invites rate wars.</p>
-      <p class="note">Joining costs ${fmt(3000*PX())} plus ${fmt(350*PX())} a month. Members accept a fare floor and a steerage quota in exchange for peace.</p>
-      <button class="btn" data-act="join" ${S.cash<3000*PX()||S.over?'disabled':''} style="width:fit-content">Join for ${fmt(3000*PX())}</button>`;
+      <p class="note">Joining costs ${fmt(3000*PX())} plus ${fmt(350*PX())} a month. Members accept a fare floor and a steerage quota in exchange for peace.${S.m<confRejoin()?` Having left, the Line cannot rejoin until ${monthName(confRejoin())}.`:''}</p>
+      <button class="btn" data-act="join" ${S.cash<3000*PX()||S.m<confRejoin()||S.over?'disabled':''} style="width:fit-content">Join for ${fmt(3000*PX())}</button>`;
   const sp=S.safety===undefined?1:S.safety;
   const safety=`<section class="sec"><h2>Safety and training</h2><p class="note">One policy for the whole fleet. It decides how well crews fight a fire or a flood, how many people live when a ship is lost, and what a court of inquiry makes of it.</p>
     <div class="seg" role="group">${SAFETY.map((x,i)=>`<button data-act="safety" data-id="${i}" aria-pressed="${sp===i}">${x.name}</button>`).join('')}</div>
@@ -700,7 +721,9 @@ function MENU_HTML(){return `<div class="modal" role="dialog" aria-modal="true" 
       <label class="lbl" for="loadCode">Load a save code</label><textarea id="loadCode" data-keep="1" class="code" rows="2" placeholder="Paste a code here"></textarea>
       <div class="btns">${UI.confirm==='load'?`<button class="btn danger" data-act="loadcode">Confirm: replace this game</button><button class="btn" data-act="cancel">Cancel</button>`:`<button class="btn" data-act="askload">Load code</button>`}</div>
       ${UI.loadMsg?`<p class="${UI.loadMsg.ok?'note':'badline'}">${UI.loadMsg.t}</p>`:''}</section>
-    <section class="sec"><h2>Settings</h2><div class="ctl"><span class="lbl">On big events</span><div class="seg" role="group">${[['slow','Slow down'],['pause','Pause'],['off','Carry on']].map(([k,l])=>`<button data-act="eventmode" data-v="${k}" aria-pressed="${UI.eventMode===k}">${l}</button>`).join('')}</div><p class="note">Slow down: the clock drops to a crawl for a few seconds so you can read what happened, then picks up again on its own, or as soon as you act.</p></div></section>
+    <section class="sec"><h2>Settings</h2><div class="ctl"><span class="lbl">On big events</span><div class="seg" role="group">${[['slow','Slow down'],['pause','Pause'],['off','Carry on']].map(([k,l])=>`<button data-act="eventmode" data-v="${k}" aria-pressed="${UI.eventMode===k}">${l}</button>`).join('')}</div><p class="note">Slow down: the clock drops to a crawl for a few seconds so you can read what happened, then picks up again on its own, or as soon as you act.</p></div>
+      <div class="ctl"><span class="lbl">Interruptions</span><div class="seg" role="group">${[['auto','Auto'],['all','Every emergency'],['serious','Grave only'],['quiet','Quiet watch']].map(([k,l])=>`<button data-act="irqmode" data-v="${k}" aria-pressed="${(UI.irq||'auto')===k}">${l}</button>`).join('')}</div><p class="note">Which emergencies at sea stop the clock and ask for your orders. Every emergency: each serious one. Grave only: the masters handle the rest and the news says what they did. Auto: every emergency until the fleet is fifteen ships, then grave only. Quiet watch: grave emergencies only, and no other news slows the clock but the gravest.</p></div>
+      <div class="ctl"><span class="lbl">Frame times</span><div class="seg" role="group">${[[0,'Off'],[1,'On']].map(([v,l])=>`<button data-act="perfhud" data-v="${v}" aria-pressed="${!!UI.perf===!!v}">${l}</button>`).join('')}</div><p class="note">A readout in the corner of the chart: frames a second, and the milliseconds a frame spends on the simulation, head office's advice and drawing the screen. Useful with a big fleet.</p></div></section>
     <section class="sec"><h2>Game</h2><p class="note">Version <strong>${GAME_VERSION}</strong>, released ${GAME_BUILT}.</p><div class="btns">${UI.confirm==='new'?`<button class="btn danger" data-act="new">Confirm: start again</button><button class="btn" data-act="cancel">Keep playing</button>`:`<button class="btn" data-act="new">New game</button>`}</div></section></div></div>`;}
 function renderModal(){
   const el=$('modal');

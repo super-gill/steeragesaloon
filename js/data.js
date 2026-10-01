@@ -1,5 +1,5 @@
 /* ================= DATA ================= */
-const GAME_VERSION='0.35.4',GAME_BUILT='1 October 2026'; // bump on every release; see CHANGELOG.md
+const GAME_VERSION='0.36.1',GAME_BUILT='1 October 2026'; // bump on every release; see CHANGELOG.md
 /* ---------- the calendar ----------
    Month 0 is January 1900 and day 0 is 1 January 1900. ym(year,month) names a month (month 0 = January), so every date
    the game cares about reads as a date. History written for the 1921 game is kept exact by counting from M21. */
@@ -188,6 +188,14 @@ const DEPTS={
   traffic:{name:'Traffic Department',head:'Traffic Manager',cost:10000,rent:90,staff:[4,0.5,0.5],does:'Studies every trade for loads and returns. Moves ships between your lines, lays up losers, spends on advertising. Proposes new lines, ships to buy or build, and sales.'},
   marine:{name:'Marine Superintendent',head:'Marine Superintendent',cost:8000,rent:70,staff:[3,0.6,0],does:'Keeps the fleet in class. Sets dock thresholds and speeds, and books refits that pay for themselves.'},
   crew:{name:'Crewing Office',head:'Crewing Manager',cost:5000,rent:50,staff:[2,0.4,0],does:'Hires and keeps crews. Acting, it sets pay to hold morale, starts drills where skill is poor, and appoints better officers and masters; it finds more and better candidates, and shows every ship\'s crew in one table. Your own changes to a crew stand for three months.'}
+};
+/* standing orders (0.36.1): what an acting department may do on its own, by kind of advice. Each is on unless the owner
+   turns it off; what a department may not do stays on the owner's desk. [key, label, advice kinds] */
+const DEPT_ORDERS={
+  fares:[['fares','Set fares and answer the other lines',['fare','tension','match']],['table','Advertising and the table',['adv','service']]],
+  traffic:[['move','Move ships between lines',['move','unlay']],['layup','Lay ships up, and back in season',['layup']]],
+  marine:[['speed','Speeds and routing in war',['speed','zig','convoy']],['upkeep','Dock thresholds, upkeep and hull scrapes',['maint','thresh','dock','scrape']],['refits','Refits that pay for themselves',['oil','refurb','reefer','wireless','warcargo','dazzle','gun','replate','boats','watch','wtop']]],
+  crew:[['pay','Pay and drills',['pay','cpay','ctrain']],['officers','Masters and officers',['captain','off']]]
 };
 const CLERK_WAGE=14;
 const HOSTEL_PORTS=['GLA','LIV','SOU','HAM'];
