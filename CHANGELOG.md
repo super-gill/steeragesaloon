@@ -2,6 +2,12 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.36.3 (1 October 2026)
+A hotfix. A game saved under 0.36.1 failed to draw under 0.36.2: the panels were blank, the ships missing from the chart and the clock stopped. The fault could not be reproduced here, so this release makes the game survive it and say what it was.
+- Each part of the screen is drawn on its own. A fault in one panel no longer blanks the others or stops the clock: it shows a notice at the foot of the screen with a line to send to the developer.
+- A fault in the simulation pauses the clock and shows the same notice, instead of freezing the game.
+- Costs that grow with the fleet and the follow-ship camera move to 0.36.4.
+
 ## 0.36.2 (1 October 2026)
 Running a fleet by line.
 - New: each ship shows the line she was built for, and what about her build does not suit the line she is on. The Fleet Manager's Fittings view has a Built for column.

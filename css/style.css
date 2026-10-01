@@ -587,3 +587,7 @@ input[type=range]{width:100%;accent-color:var(--brass)}
 .devitem.now{border-left-color:var(--brass)}
 .devitem .row{justify-content:flex-start;gap:8px;flex-wrap:wrap}
 .devitem ul{margin:4px 0 0;padding-left:18px;font-size:13px}
+/* a fault drawing a panel (0.36.3) */
+.faultbar{position:fixed;left:12px;right:12px;bottom:12px;z-index:100;background:#7a1f1f;color:#fff;padding:10px 12px;border-radius:6px;font-size:13px;line-height:1.4;box-shadow:0 4px 18px rgba(0,0,0,.35)}
+.faultbar code{display:block;margin:6px 0;font-family:var(--mono);font-size:12px;white-space:pre-wrap;word-break:break-word;color:#ffe9c7}
+.faultbar .btn{margin-top:4px}

@@ -298,6 +298,10 @@ Each month the Shore tab also shows what each pier, hostel and booking agency is
 
 Money is in 1921 pounds, scaled by the price index. Head office suggests selling spare berths at piers and yards (which cost the fleet nothing) once they would earn £400 a month; hostels and agents are left to the player, since they help rivals on the Line's own routes.
 
+## Faults (0.36.3)
+
+`render` draws each part of the screen on its own (`RENDER_PARTS`); a fault in one is caught, written to the console and shown in a bar at the foot of the screen with the panel, the message and the first lines of the stack (`reportFault`), and the rest of the screen and the clock carry on. A fault in the simulation step pauses the clock and shows the same bar. Before, one fault stopped the frame loop: every panel went blank and the clock stopped.
+
 ## Running a fleet by line (0.36.2)
 
 - **Built for**: a ship the Line builds keeps the line she was designed for (`sh.designLine`, `builtFor`). Her page says so, and says where she is now; the Fleet Manager's Fittings view has a Built for column. `lineFit(sh, rk)` (in `js/naval.js`) names what about her build does not suit a line: short of range for its longest leg between coaling ports, or too deep or too long to lie alongside at one of its ports (`PORT_LIMIT`), where she works into lighters. The figures already charged for both; now the player can see why.

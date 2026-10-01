@@ -18,14 +18,14 @@ function perfShow(t){const P=PERF;if(!P.t0)P.t0=t;if(t-P.t0<1000)return;
 function frame(t){
   const dt=Math.min(0.1,(t-lastT)/1000),gap=t-lastT;lastT=t;const on=UI.perf,now=()=>on?performance.now():0;let q=now();
   if(UI.slow&&t>UI.slow.until){UI.slow=null;UI.dirty=true;}
-  if(S&&!S.over&&UI.speed>0){const er=emClock();let r=SPEEDS[UI.speed];if(er&&!UI.emNormal)r=Math.min(er,r);if(UI.slow)r=Math.min(UI.slow.rate,r);advance(dt*r);
+  if(S&&!S.over&&UI.speed>0){const er=emClock();let r=SPEEDS[UI.speed];if(er&&!UI.emNormal)r=Math.min(er,r);if(UI.slow)r=Math.min(UI.slow.rate,r);try{advance(dt*r);}catch(e){UI.speed=0;if(typeof reportFault==='function')reportFault('simulation (the clock is paused)',e);}
     if(er&&!UI.dirty&&t-(UI.emDrawn||0)>250){UI.emDrawn=t;setHTML($('emergw'),emergencyHTML());}}
   if(on){const x=now();PERF.sim+=x-q;q=x;}
-  if(UI.advMore){UI.advMore=false;advStep();} // head office's advice is still being worked out (0.36.0)
+  if(UI.advMore){UI.advMore=false;try{advStep();}catch(e){if(typeof reportFault==='function')reportFault('advice',e);}} // head office's advice is still being worked out (0.36.0)
   if(on){const x=now();PERF.adv+=x-q;q=x;}
   if(UI.dirty){render();UI.dirty=false;}
   if(on){const x=now();PERF.draw+=x-q;q=x;}
-  drawShips();animWire(t);
+  try{drawShips();animWire(t);}catch(e){if(typeof reportFault==='function')reportFault('ships on the chart',e);}
   if(on){const x=now();PERF.map+=x-q;PERF.n++;PERF.worst=Math.max(PERF.worst,gap);perfShow(t);}
   requestAnimationFrame(frame);
 }

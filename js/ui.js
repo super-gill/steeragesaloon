@@ -772,4 +772,15 @@ function ratchet(){
     el.style.minHeight='';const h=el.offsetHeight;if(h>el._min)el._min=h;if(el._min)el.style.minHeight=el._min+'px';
   }
 }
-function render(){renderHeader();renderTabs();renderMap();renderDesigner();setHTML($('emergw'),emergencyHTML());setHTML($('rcardw'),rivalCardHTML());if(UI.wide&&UI.tab!=='overview')renderOverview();PANE_RENDER[UI.tab]();renderModal();ratchet();}
+/* each part of the screen is drawn on its own: a fault in one panel shows a notice on screen and leaves the rest of the
+   game, and the clock, running (0.36.3; one fault used to blank every panel and stop the clock) */
+const RENDER_PARTS=[['header',()=>renderHeader()],['tabs',()=>renderTabs()],['chart',()=>renderMap()],['drawing office',()=>renderDesigner()],
+  ['emergency',()=>setHTML($('emergw'),emergencyHTML())],['rival card',()=>setHTML($('rcardw'),rivalCardHTML())],
+  ['overview',()=>{if(UI.wide&&UI.tab!=='overview')renderOverview();}],['tab',()=>PANE_RENDER[UI.tab]()],['menu',()=>renderModal()],['layout',()=>ratchet()]];
+function render(){for(const [k,f] of RENDER_PARTS){try{f();}catch(e){reportFault(k,e);}}}
+function reportFault(where,e){
+  try{console.error('Steerage & Saloon: fault drawing the '+where,e);}catch(x){}
+  const msg=`${where}: ${e&&e.message||e}`+(e&&e.stack?' · '+String(e.stack).split('\n').slice(1,3).map(l=>l.trim().replace(/^at /,'')).join(' · '):'');
+  if(UI.fault===msg)return;UI.fault=msg;
+  let el=document.getElementById('faultbar');if(!el){el=document.createElement('div');el.id='faultbar';el.className='faultbar';document.body.appendChild(el);}
+  el.innerHTML=`<strong>Something went wrong drawing the ${where} (v${GAME_VERSION}).</strong> The game carries on; please send this line to the developer: <code>${esc(msg)}</code> <button class="btn" onclick="this.parentNode.remove();UI.fault=null">Dismiss</button>`;}
