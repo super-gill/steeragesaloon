@@ -15,13 +15,13 @@ function mvRaidQty(o){const c=mvC(o);return Math.floor(Math.min(MV_RAID*c.n,mkFr
 const mvRaidCost=o=>Math.round(mvRaidQty(o)*mvC(o).px*(1+MV_RAID_PREM)*(1+MK_FEE_BUY));
 function mvRaid(o){const M=mkEnsure(),c=mvC(o);if(!c||c.gone||!mkRival(o)||mkShut()||mkStake(o)>=MK_CTRL||(M.me.short&&M.me.short[o]))return false;
   const q=mvRaidQty(o),cost=mvRaidCost(o);if(q<1||S.cash<cost)return false;const before=mkStake(o);
-  S.cash-=cost;const h=M.me.pos[o]||(M.me.pos[o]={n:0,cost:0});h.n+=q;h.cost+=cost;c.sh*=1.12;
+  S.cash-=cost;const h=M.me.pos[o]||(M.me.pos[o]={n:0,cost:0});h.n+=q;h.cost+=cost;c.sh*=1.12;mkOwnPush(o,0,1.12);
   news(`Dawn raid: before the market opens the Line's brokers buy ${Math.round(q/c.n*100)}% of ${mkName(o)} for ${fmt(cost)}. The City wakes to a bid battle.`,'good',true);
   mkThresholds(o,before);mvDefend(o,'raid');return true;}
 /* tender offer: a set price for all its shares, open a month, going through only if the Line ends with over half */
 function mvTender(o,prem){const M=mkEnsure(),c=mvC(o);if(!c||c.gone||!mkRival(o)||mkShut()||M.tender||mkStake(o)>=0.9||trustMember(o)||(M.me.short&&M.me.short[o]))return false;
   const price=c.px*(1+prem),need=Math.max(0,0.5*c.n-((M.me.pos[o]||{}).n||0))*price*(1+MK_FEE_BUY);if(S.cash<need)return false;
-  M.tender={o,prem,price,pre:c.px,due:S.m+1};c.sh*=1+prem*0.7;
+  M.tender={o,prem,price,pre:c.px,due:S.m+1};c.sh*=1+prem*0.7;mkOwnPush(o,0,1+prem*0.7);
   news(`The Morven Line offers ${pxTxt(price)} a share for every share in ${mkName(o)}, ${Math.round(prem*100)}% over the market, if it ends with over half. The offer closes in ${monthName(S.m+1)}.`,'',true);
   mvDefend(o,'tender');return true;}
 function mvTenderClose(){const M=S.ex,T=M.tender;if(!T||S.m<T.due)return;M.tender=null;const o=T.o,c=mvC(o);
@@ -50,14 +50,14 @@ function mvShort(id,pct){const M=mkEnsure(),c=mvC(id);if(!c||c.gone||id==='morve
   // (sell what you hold before selling short)
   const q=Math.floor(Math.min(pct*c.n,0.5*mkFree(id)-(s0?s0.n:0)));if(q<1)return false;
   const imp=Math.min(0.5,0.6*q/Math.max(1,mkFree(id))),gross=q*c.px*(1-imp/2),col=gross*(1-MK_FEE_SELL),margin=Math.round(gross*MV_SHORT_MARGIN);if(S.cash<margin)return false;
-  S.cash-=margin;c.px*=1-imp;c.e=(c.e||0)+Math.log(1-imp);const s=M.me.short[id]||(M.me.short[id]={n:0,col:0,margin:0});s.n+=q;s.col+=col;s.margin+=margin;
+  S.cash-=margin;c.px*=1-imp;c.e=(c.e||0)+Math.log(1-imp);mkOwnPush(id,Math.log(1-imp));const s=M.me.short[id]||(M.me.short[id]={n:0,col:0,margin:0});s.n+=q;s.col+=col;s.margin+=margin;
   news(`The Line sells short ${int(q)} borrowed shares in ${mkName(id)} for ${fmt(col)}, putting up ${fmt(margin)} as margin. It pays ${Math.round(MV_SHORT_FEE*100)}% a year to borrow them.`);return true;}
 const mvShortVal=s=>s.col+s.margin;
 function mvCover(id,forced){const M=S.ex,s=M.me.short&&M.me.short[id],c=mvC(id);if(!s)return false;if(mkShut()&&!forced)return false;
-  const imp=c&&!c.gone?Math.min(0.5,0.6*s.n/Math.max(1,mkFree(id)+s.n)):0,cost=c&&!c.gone?s.n*c.px*(1+imp/2)*(1+MK_FEE_BUY):0;if(c&&!c.gone){c.px*=1+imp;c.e=(c.e||0)+Math.log(1+imp);}
+  const imp=c&&!c.gone?Math.min(0.5,0.6*s.n/Math.max(1,mkFree(id)+s.n)):0,cost=c&&!c.gone?s.n*c.px*(1+imp/2)*(1+MK_FEE_BUY):0;if(c&&!c.gone){c.px*=1+imp;c.e=(c.e||0)+Math.log(1+imp);mkOwnPush(id,Math.log(1+imp));}
   S.cash+=s.margin;book('shares',s.col-cost);delete M.me.short[id];
   news(`${forced?'The broker buys in':'The Line buys back'} its short in ${mkName(id)} for ${fmt(cost)}: ${s.col>=cost?'a gain of '+fmt(s.col-cost):'a loss of '+fmt(cost-s.col)}.`,s.col>=cost?'good':'bad',!!forced);return true;}
-const mvShortsVal=()=>{const M=S.ex;if(!M||!M.me.short)return 0;let v=0;for(const id in M.me.short){const s=M.me.short[id],c=mvC(id);v+=mvShortVal(s)-(c&&!c.gone?s.n*c.px:0);}return v;};
+const mvShortsVal=()=>{const M=S.ex;if(!M||!M.me.short)return 0;let v=0;for(const id in M.me.short){const s=M.me.short[id],c=mvC(id);v+=mvShortVal(s)-(c&&!c.gone?s.n*mkFair(id):0);}return v;};
 /* each month: the lender's fee, a squeeze on a big short, and the broker's buy-in when the margin runs out */
 function mvShortMonth(){const M=S.ex;if(!M.me.short)return;
   for(const id of Object.keys(M.me.short)){const s=M.me.short[id],c=mvC(id);

@@ -76,6 +76,10 @@ to the war. The 0.30.0 to 0.32.0 market figures were measured with it.
 | Proxy fights may be easy | Closed | Against a well-run line with a tenth and ordinary standing, about 1 in 8; against a loss-making, troubled one about half | A gamble against a well-run line |
 | Bear raids roughly break even | Accepted | Better than the short alone in 3 of 4 to 3 of 6 games: a gamble, which is the point | Pays when well timed |
 | Long and short at once | Closed | Not allowed: sell first, or buy back the short first | Cannot dodge a buy-in |
+| Buying a stake looked free | Closed (0.35.2) | Buying 55% of a line at once (3 seeds): the cash went but net worth rose by about a quarter of it, the holding valued at the price the Line's own buying had pushed up by 1.57 times. Now net worth falls by about a quarter at once, and the holding's value three months on is about the same | A stake costs what the Line pays over the market |
+| Government stock too good | Closed (0.35.1) | A flat 3½% with no price risk: £100 bought in 1901 came to £169 by 1921. Now Consols at the real yield: £105 by 1921, £184 from 1929 to 1935. Careful owners unchanged (6 of 40 bankrupt to 1922) | Stock that can lose money |
+| Broker against the new stock | Accepted | With the stock now a real Consol the balanced account ends 1.8 times it (was 1.7 against the flat 3½%); preserve 1.4, growth 1.6. The benchmark moved, not the broker | About 1.3 to 1.6 |
+| Shipping shares' 1930s recovery | Open (0.36) | On 12 seeds over 40 years shares are back to 0.90 of worth by 1937, on the edge of the market check's 0.9; the same with the 0.34 code, so not from the stock change | Back to about worth by 1937 |
 | Rival moves among themselves | After 1.0.0 | Rivals raid and bid only for the Line | Rivals take each other over |
 
 ## The long run (for 0.36.0)

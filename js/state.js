@@ -28,6 +28,7 @@ function migrate(s){
   s.ships.concat(s.market||[]).forEach(sh=>{if(sh.autoDock===undefined)sh.autoDock=50;});
   const prev=S;S=s;
   s.pi=s.pi||1;s.gilts=s.gilts||0;
+  if(s.giltPar===undefined){s.giltPar=s.gilts>0?s.gilts/giltPrice()*100:0;} // 0.35.1: a holding from before becomes stock at today's price
   if(!s.rships)initRivals();
   // 0.4: shore establishment, milestones, captains and crew, upgrades, multi-stop voyages, new routes and rival lines
   s.shore=s.shore||{piers:{},agents:{},hostels:{},yards:{},bunker:null};s.miles=s.miles||{};s.depts=s.depts||{};s.wire=s.wire||[];s.orders=s.orders||[];s.bslips=s.bslips||{};s.yardNext=s.yardNext||534;s.wireQ=s.wireQ||[];s.ghosts=s.ghosts||[];

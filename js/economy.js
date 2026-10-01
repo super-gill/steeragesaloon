@@ -68,7 +68,7 @@ function panic(c){
   if(S.debt>20000*PX()){const amt=Math.round(S.debt*(c.bank?0.25:0.15)*(c.y1907?0.6:1)/100)*100;S.call={amt,due:m+(c.y1907?6:3)};
     news(`${c.bank?'The receivers':'The bank'} call in ${fmt(amt)} of the Morven Line's loans, due by ${monthName(S.call.due)}. There will be no new lending for a year, and interest is up two points.`,'bad',true);}
   S.noLend=m+12;S.rateUp=m+12;
-  if(S.gilts>0){const g=Math.round(S.gilts*0.12);S.gilts-=g;news(`Government stock has fallen: the Line's holding is worth ${fmt(g)} less.`,'bad');}
+  {const was=S.gilts||0;S.giltShock=(S.giltShock||0)+0.4;giltsMark();if(was>0)news(`Government stock has fallen in the panic: the Line's holding is worth ${fmt(was-S.gilts)} less for now.`,'bad');}
 }
 /* a called loan falls due: pay it, or the bank sells ships to cover it */
 function callDue(){
@@ -86,12 +86,28 @@ function callDue(){
     news(`The bank has seized SS ${x.name} and sold her at a forced sale for ${fmt(v)} against the called loan.`,'bad',true);}
   if(owe>0){S.cash-=owe;S.debt-=owe;news(`The rest of the called loan, ${fmt(owe)}, is taken from the account.`,'bad',true);}
 }
-/* government stock: safe from a failed bank, pays three and a half per cent, falls a little in a panic */
+/* government stock (0.35.1): Consols, a 2½% stock with no repayment date, so its price moves against interest rates.
+   The yield follows the real annual average (FRED series LTCYUKA, from the Bank of England), 2.5% in 1900, 3.4% in 1913,
+   5.4% at the 1920 top, 4.4% through the 1920s and 2.9% by 1935. Bought at the yield of the day it pays that yield; when
+   yields rise its price falls, and when they fall it rises. A panic adds to the yield for a few months and then fades.
+   It is safe if the Line's bank fails. S.giltPar is the stock held, at £100 a unit of par; S.gilts is its value today. */
+const GILT_Y={1899:2.38,1900:2.55,1901:2.69,1902:2.68,1903:2.79,1904:2.86,1905:2.81,1906:2.86,1907:3.00,1908:2.93,1909:3.02,
+  1910:3.12,1911:3.19,1912:3.32,1913:3.43,1914:3.48,1915:3.86,1916:4.32,1917:4.58,1918:4.43,1919:4.64,1920:5.37,1921:5.20,
+  1922:4.39,1923:4.30,1924:4.37,1925:4.44,1926:4.52,1927:4.56,1928:4.47,1929:4.57,1930:4.45,1931:4.40,1932:3.75,1933:3.38,
+  1934:3.08,1935:2.90,1936:2.94,1937:3.30,1938:3.41,1939:3.73,1940:3.38};
+const GILT_COUPON=2.5,GILT_FEE=0.0025;
+/* the yield in a (fractional) year: each year's average taken at mid-year, straight lines between */
+function giltYieldAt(y){const a=Math.floor(y-0.5),f=y-0.5-a,k=v=>GILT_Y[clamp(v,1899,1940)];return k(a)+(k(a+1)-k(a))*f;}
+const giltYield=()=>giltYieldAt(yearNow())+(S.giltShock||0);
+const giltPrice=()=>GILT_COUPON/giltYield()*100; // £ for £100 of stock
+function giltsMark(){S.gilts=Math.round((S.giltPar||0)*giltPrice()/100);if(S.gilts<1){S.gilts=0;S.giltPar=0;}}
 function insMonth(){S.insLoss=(S.insLoss||0)*0.96;} // claims fade from the underwriters' memory over a few years
-function giltsMonth(){if(S.gilts>0)book('invest',S.gilts*0.035/12);}
+function giltsMonth(){S.giltShock=(S.giltShock||0)*0.8;if(S.giltShock<0.01)S.giltShock=0;
+  if(S.giltPar>0)book('invest',S.giltPar*GILT_COUPON/100/12);giltsMark();}
 function gilts(buy,amt){
-  if(buy){amt=Math.min(amt,Math.floor(Math.max(0,S.cash)));if(amt<=0)return false;S.cash-=amt;S.gilts=(S.gilts||0)+amt;return true;}
-  amt=Math.min(amt,S.gilts||0);if(amt<=0)return false;const fee=Math.round(amt*0.005);S.gilts-=amt;S.cash+=amt-fee;return true;
+  if(buy){amt=Math.min(amt,Math.floor(Math.max(0,S.cash)));if(amt<=0)return false;S.cash-=amt;S.giltPar=(S.giltPar||0)+amt*(1-GILT_FEE)/giltPrice()*100;giltsMark();return true;}
+  giltsMark();amt=Math.min(amt,S.gilts||0);if(amt<=0)return false;const all=amt>=S.gilts-1;
+  S.giltPar=all?0:S.giltPar*(1-amt/S.gilts);S.cash+=Math.round(amt*(1-GILT_FEE));giltsMark();return true;
 }
 /* ---------- the tax man: excess profits over a threshold, each January ---------- */
 function taxMonth(net){

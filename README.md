@@ -168,7 +168,7 @@ Found on the Finance tab, under Shares. Nothing in it is needed to play: the mar
 - **Dealing** (`mkBuy`, `mkSell`): 1% to buy (commission and stamp duty), 0.5% to sell; an order moves the price against itself by 0.6 times the share of the company bought, and the move fades with the quick drift. Gains and losses on sales, dividends and margin interest go to the ledger as Shares and dividends.
 - **Margin**: the broker lends half of a purchase at 5.5% (`MK_LOAN_RATE`). When the loan passes three quarters of the shares' value he calls for money (under Needs attention); a month later, if the loan is still over three fifths, he sells enough of every holding to bring it back to half. A sale pays the loan down in proportion.
 - **Dividends**: a line pays once a year the dividend its directors vote in January out of its own cash (`coYearEnd`: half its profit, seven tenths for a heavy borrower, while it keeps two reserves in hand), reaching the shareholders in February; the companies next to shipping pay half their earnings, quarterly (0.30; in 0.29 a line's dividend was notional).
-- **Net worth and the bank**: shares at the market, less the margin loan, count in net worth, and half of that counts towards what the bank will lend.
+- **Net worth and the bank**: shares at the market, less the margin loan, count in net worth, and half of that counts towards what the bank will lend. The Line's own holdings (and its shorts) are valued at the price without its own push (`mkFair`, 0.35.2): each purchase or sale by the Line adds to `c.own` (the log of its price impact, fading by a tenth a month with the rest of the quick drift), and a dawn raid, a tender and crossing a fifth add to `c.ownS` (the City's excitement, fading like any other shock). Without this, buying half a line in a day put about a quarter of the money back on the books as a paper gain, which drained away over the months that followed.
 - **The investment account** (`mkFundOpen`): money and a brief (preserve 30% in shares, balanced 55%, growth 85%, the rest in government stock) for a City broker, at 1% a year of what he manages, or for the Investment Office. Each quarter the manager sets the share of shares by the brief, leaning a little against the mood by his skill, picks seven companies (eight for growth) by price against worth (read through noise, less for a better manager), keeps off lines in trouble and lines floated in the last two years, and reports. The account can be paid into, drawn on or closed at any time (selling at the market).
 - **The Investment Office** (`mkOfficeOpen`): £6,000 (1921 money) to open and a head and three clerks a month. It shows each company's price against its worth, advises each quarter (cheap companies, dear holdings, the mood, the margin loan) and can run the investment account with no broker's fee. Its head's ability, from muddled to first-rate, sets how well it reads worth and how well it runs the account. Each quarter two candidates are offered; appointing one costs three months of the old head's wages (0.34).
 
@@ -238,6 +238,28 @@ Clicking a ship's name opens her panel beside the table on a wide screen; on a p
 
 On a phone the table keeps the ship's name and one column a view; the rest are in her panel.
 
+## Government stock (`js/economy.js`, 0.35.1)
+
+The Line can hold Consols, a 2½% government stock with no repayment date (the Finance tab). Its yield follows the real annual average (the Bank of England's consol yield, [FRED series LTCYUKA](https://fred.stlouisfed.org/series/LTCYUKA)), each year's figure taken at mid-year with straight lines between (`GILT_Y`, `giltYieldAt`). Its price for £100 of stock is 2.5 divided by the yield, times 100 (`giltPrice`).
+
+| Year | Yield | Price for £100 |
+| --- | --- | --- |
+| 1900 | 2.55% | £98 |
+| 1913 | 3.43% | £73 |
+| 1920 | 5.37% | £47 |
+| 1929 | 4.57% | £55 |
+| 1935 | 2.90% | £86 |
+| 1939 | 3.73% | £67 |
+
+- **Holding**: `S.giltPar` is the stock held (par); `S.gilts` is its value today, marked each month and on every purchase or sale (`giltsMark`). Net worth and the bank's lending (90% of its value) use `S.gilts`.
+- **Income**: £2 10s a year on each £100 of stock, paid monthly into the "Government stock" ledger line. Bought at the yield of the day, it pays that yield.
+- **Dealing**: buying and selling each cost ¼% (`GILT_FEE`).
+- **A panic** adds 0.4 points to the yield (`S.giltShock`, about 11% off the price at 1900 yields), fading by a fifth a month.
+- **A failed bank** takes three quarters of the Line's cash above a small float, but not its stock.
+- **The broker's investment account** holds the same stock: its stock and the "same money in government stock" benchmark both grow by the stock's total return (price and interest) each month.
+
+What £100 of stock bought in one year and sold in another comes to, with its interest: 1901 to 1914 £112; 1901 to 1921 £105; 1914 to 1921 £91; 1921 to 1929 £155; 1929 to 1935 £184. Before 0.35.1 the stock paid a flat 3½% and never moved (1901 to 1921 £169, 1929 to 1935 £120). Old saves keep their holding's value: it becomes stock at the day's price.
+
 ## Outside work
 
 Each pier, repair yard, emigrant hostel, booking agency and freight canvasser the Line owns has a switch in `S.shore.sell` (keys such as `pier:NYC`, `yard:GLA`, `hostel:LIV`, `agency:british`, `fagent:africa`; absent means own use only, the default). Every month `outsideMonth` (called from the rivals' month with that month's `routeStats`) works out for every place, selling or not, what it would earn (`S.shore.est[key]`, shown on the Shore tab), and for those selling books the takings to the ledger as `shorein` and keeps twelve months in `S.shore.earn[key]`. The rival companies pay out of their cash, in proportion to their use.
@@ -288,7 +310,7 @@ Checked with the harness after any economic change. For the 1900 start (the over
 - Through the boom and the crash (0.34): 33 of the 33 lines solvent in 1914 still trading in 1922 (target at least 7 in 10). A ship held from 1913 is worth about 2.3 times her 1913 worth in 1913 money at the top and loses about three fifths by 1921 (target two to three times, half to two thirds lost). The bank lends on ships at their armistice worth in the boom.
 - The long run (`END=1939`, 0.34): the advisor strategy (8 seeds) has 1 bankrupt; the careful owner (20 seeds) has 8, 4 of them in the Depression. The careful result is open for 0.36 (see `docs/overhaul/BALANCE.md`).
 - Rival lines (`node tools/companies.js`, 0.34): about 5.6 failures a decade over 1900 to 1940; a trade may lie empty for a while in at most 1 game in 10.
-- The share market (`node tools/market.js 12`, 0.34): over 1901 to 1940 a broker's account against the same money in government stock ends about 1.4 times (preserve), 1.7 (balanced) and 1.5 (growth) (target 1.3 to 1.6); buying every company in 1901 and holding ends at about 1.07 times stock. An untouched market changes nothing.
+- The share market (`node tools/market.js 40 12`, 0.35.1): over 1901 to 1940 a broker's account against the same money in government stock ends about 1.4 times (preserve), 1.8 (balanced) and 1.6 (growth); buying every company in 1901 and holding ends at about 0.94 times stock. The stock itself now rises and falls with interest rates, so it is a harder benchmark before 1921 and an easier one after; before 0.35.1, with the stock at a flat 3½%, balanced was 1.7. Shipping shares fall below worth in 1921 (0.78) and 1931 and 1932 (0.60), and are back to about 1.07 of worth by 1925 but only 0.90 by 1937, on the edge of the check's 0.9. An untouched market changes nothing.
 - Floating (`FLOAT=0.6 END=1925 node tools/harness.js careful 20`, 0.34): a careful owner who floats 60% in 1906 is removed in 1 game in 20 and taken over in none; a careless one (no dividend) in 10 games: 1 removed, 3 taken over, 2 bankrupt. Half of what a float raises goes to the Line, half to the owner.
 - Owners who do not adapt to the war go under: by 1922 `idle` 35 in 40 and `cautious` 14 in 40 (0.34), nearly all in 1916 with a steerage ship and no cargo. Head office advises clearing the steerage for months beforehand. The advisor strategy (`advisor 20`) has none bankrupt by 1922 and ends 1914 about 11 times richer than the careful owner, from building new tonnage for the emigrant boom as head office advises; that gap is the reward for playing well.
 - An owner who does nothing (`idle`): 6 in 30 bankrupt, nearly all in 1914 once the boats law cuts the Morven's steerage. `cautious`: 3 in 30.

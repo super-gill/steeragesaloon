@@ -48,7 +48,7 @@ function run(seed) {
     {const nw0=netWorth(),c0=S.cash,lend=Math.round(20000*PX());ok('a loan to a controlled line',mkLend(o,lend)&&S.rivals[o].lineLoan>=lend&&Math.abs(netWorth()-nw0)<1,'net worth moved '+Math.round(netWorth()-nw0));}
     ok('no merger under three quarters',!mkMerge(o));
     buyTo(o,0.76);ok('special resolutions at three quarters',mkStake(o)>=0.75);
-    const co=S.rivals[o],fleet=coFleet(o).length,ships=S.ships.length,cost=mkMergeCost(o),stakeV=mkPosVal(S.ex.me)-(S.ex.me.pos[o]?0:0),mine=S.ex.me.pos[o].n*S.ex.cos[o].px;
+    const co=S.rivals[o],fleet=coFleet(o).length,ships=S.ships.length,cost=mkMergeCost(o),stakeV=mkPosVal(S.ex.me)-(S.ex.me.pos[o]?0:0),mine=S.ex.me.pos[o].n*mkFair(o); // the holding as the Line values it (0.35.2)
     const shipV=coFleet(o).reduce((a,y)=>a+coShipVal(y),0),refund=(S.rorders||[]).filter(q=>q.o===o).reduce((a,q)=>a+Math.round(coNewPrice(q.sh)*0.8),0);
     const expect=co.cash+shipV-co.debt-cost-mine+refund-(co.lineLoan||0),nw0=netWorth(); // the Line's own loan to it merges away
     ok('the merger goes through',mkMerge(o));

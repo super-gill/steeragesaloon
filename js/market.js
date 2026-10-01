@@ -99,6 +99,7 @@ function marketMonth(){
     const fr=c.f/PX();if(c.fr0===undefined)c.fr0=fr;if(fr>c.fr0){if(mkStake(id)<0.5&&id!=='morven')c.n*=Math.pow(fr/c.fr0,0.6);c.fr0=fr;}else c.fr0=Math.max(fr,c.fr0*0.995); // a board the Line controls issues no shares over its head
     // two drifts: a quick one that fades in months, and a slow one (fashion, reputation) that takes a decade
     c.e=0.9*(c.e||0)+0.6*sd*mnorm();c.w=0.995*(c.w||0)+0.6*sd*mnorm();c.sh=1+(c.sh-1)*0.85;
+    if(c.own)c.own=Math.abs(c.own)<1e-4?0:0.9*c.own;if(c.ownS)c.ownS=1+(c.ownS-1)*0.85; // the Line's own push on the price fades with the rest
     c.px=Math.max(0.004,c.f/c.n*M.mood*c.sh*Math.exp(c.e+(c.w||0))*(warring.has(id)?0.94:1)*(id==='morven'&&S.fl&&S.fl.founders?FL_FOUNDERS:1));
     c.hist.push(c.px);if(c.hist.length>120)c.hist.shift();}
   // the shipping share index: the lines together, January of the first year = 100
@@ -129,11 +130,16 @@ function mkPayDiv(id,d){const M=S.ex;if(!(d>0))return;if(typeof mvShortDiv==='fu
 function mkDeal(A,id,q){const c=S.ex.cos[id];if(!c||c.gone||!q||mkShut())return null;
   const h=A.pos[id]||{n:0,cost:0};if(q<0)q=-Math.min(-q,h.n);if(!q)return null;
   const imp=Math.min(0.5,0.6*Math.abs(q)/Math.max(1,mkFree(id)+(q<0?-q:0))),p=c.px*(q>0?1+imp/2:1-imp/2),gross=Math.abs(q)*p,fee=gross*(q>0?MK_FEE_BUY:MK_FEE_SELL);
-  c.px*=q>0?1+imp:1-imp;c.e=(c.e||0)+Math.log(q>0?1+imp:1-imp);A.pos[id]=h;
+  c.px*=q>0?1+imp:1-imp;c.e=(c.e||0)+Math.log(q>0?1+imp:1-imp);A.pos[id]=h;if(A===S.ex.me)mkOwnPush(id,Math.log(q>0?1+imp:1-imp));
   if(q>0){h.n+=q;h.cost+=gross+fee;return {cash:-(gross+fee),gain:0};}
   const basis=h.cost*(-q)/h.n;h.n+=q;h.cost-=basis;if(h.n<=0)delete A.pos[id];
   return {cash:gross-fee,gain:gross-fee-basis};}
-const mkPosVal=A=>Object.keys(A.pos).reduce((a,id)=>a+A.pos[id].n*(S.ex.cos[id]?S.ex.cos[id].px:0),0);
+/* the Line's own buying and selling moves a price, and the City's excitement at a stake or a bid moves it more. Its own
+   holdings are valued without that push (0.35.2): otherwise buying half a line put a quarter of the money spent straight
+   back on the books as a paper gain, until the price drifted back over the following months */
+function mkOwnPush(id,lg,sh){const c=S.ex.cos[id];if(!c)return;if(lg)c.own=(c.own||0)+lg;if(sh)c.ownS=(c.ownS||1)*sh;}
+const mkFair=id=>{const c=S.ex.cos[id];return c&&!c.gone?c.px/Math.exp(c.own||0)/(c.ownS||1):0;};
+const mkPosVal=A=>Object.keys(A.pos).reduce((a,id)=>a+A.pos[id].n*(S.ex.cos[id]?(A===S.ex.me?mkFair(id):S.ex.cos[id].px):0),0);
 /* the Line's own dealing, from the Market tab */
 function mkBuy(id,amt,margin){const M=mkEnsure(),c=M.cos[id];if(!c||c.gone||mkShut()||!(amt>0)||(M.me.short&&M.me.short[id]))return false; // buy back the short first
   const own=margin?amt*(1-MK_MARGIN):amt;if(S.cash<own)return false;
@@ -181,7 +187,7 @@ function mkFundTake(amt,close){const M=S.ex,F=M.fund;if(!F||mkShut())return fals
   if(close){news(`The investment account is closed. ${fmt(got)} comes back to the Line.`);if(F.cash>0)S.cash+=F.cash;M.fund=null;}
   else news(`${fmt(got)} is taken out of the investment account.`);return true;}
 function mkFundMonth(){const M=S.ex,F=M.fund;if(!F)return;
-  F.gilts*=1+0.035/12;F.giltEq*=1+0.035/12;
+  {const p=giltPrice(),tr=F.gp?(p+GILT_COUPON/12)/F.gp:1+GILT_COUPON/100/12;F.gp=p;F.gilts*=tr;F.giltEq*=tr;} // Consols' interest and their price together (0.35.1)
   const v=mkFundVal(F);if(F.mgr==='broker')F.cash-=v*MK_BROKER_FEE/12;
   if(F.cash<0){const g=Math.min(F.gilts,-F.cash);F.gilts-=g;F.cash+=g;}
   if(mkShut())return;
@@ -260,7 +266,7 @@ function mkBuyPct(id,pct){const M=mkEnsure(),c=M.cos[id];if(!c||c.gone||mkShut()
   news(`Bought ${int(q)} shares in ${mkName(id)}, ${Math.round(q/c.n*1000)/10}% of it, for ${fmt(-r.cash)}.`);mkThresholds(id,before);return true;}
 /* crossing a threshold is public: the City reads a bid into it */
 function mkThresholds(id,before){const k=mkStake(id),M=S.ex,n=mkName(id);
-  if(before<MK_SEAT&&k>=MK_SEAT&&!M.seen['s'+id]){M.seen['s'+id]=1;mkShock(id,1.08);news(`The Morven Line now holds ${Math.round(k*100)}% of ${n} and takes a seat on its board. The City expects a bid: its shares rise.`,'good',true);}
+  if(before<MK_SEAT&&k>=MK_SEAT&&!M.seen['s'+id]){M.seen['s'+id]=1;mkShock(id,1.08);mkOwnPush(id,0,1.08);news(`The Morven Line now holds ${Math.round(k*100)}% of ${n} and takes a seat on its board. The City expects a bid: its shares rise.`,'good',true);}
   if(before<MK_CTRL&&k>=MK_CTRL){const co=S.rivals[id];co.aggr0=co.aggr0||RIVAL_P[id].aggr;news(`The Morven Line controls ${n}: over half its shares. Its board now answers to you (Finance, Shares).`,'good',true);}
   if(before<MK_SPECIAL&&k>=MK_SPECIAL)news(`With ${Math.round(k*100)}% of ${n} the Line can pass special resolutions: merge it into the Line, or wind it up.`,'good');
   if(before<MK_BUYOUT&&k>=MK_BUYOUT)news(`The Line holds ${Math.round(k*100)}% of ${n}. The rest can be bought out${S.m>=MK_ACT1929?' at the market price, under the Companies Act':', by negotiation at a premium'}.`,'good');}
@@ -389,8 +395,9 @@ function exchangeHTML(){
   const pv=mkPosVal(A),held=Object.keys(A.pos);
   const mine=`<section class="sec"><h2>The Line's shares</h2>
     ${held.length?`<div class="tablewrap"><table class="mkt"><tr><th>Company</th><th class="r">Shares</th><th class="r">Price</th><th class="r">Value</th><th class="r">Gain</th></tr>
-      ${held.map(id=>{const h=A.pos[id],c=M.cos[id],v=h.n*c.px;return `<tr data-act="mksel" data-id="${id}"><td>${esc(mkName(id))}</td><td class="r num">${int(h.n)}</td><td class="r num">${pxTxt(c.px)}</td><td class="r num">${fmt(v)}</td><td class="r num ${v>=h.cost?'pos':'neg'}">${fmt(v-h.cost)}</td></tr>`;}).join('')}</table></div>`:'<p class="note">None. Pick a company below to buy.</p>'}
-    <dl class="kv"><dt>Shares at market</dt><dd>${fmt(pv)}</dd><dt>Broker's loan (margin)</dt><dd>${fmt(A.loan)}</dd>${A.loan>0?`<dt>Interest</dt><dd>${fmt(A.loan*MK_LOAN_RATE/12)}/mo</dd><dt>Loan to value</dt><dd>${Math.round(A.loan/Math.max(1,pv)*100)}%</dd>`:''}</dl>
+      ${held.map(id=>{const h=A.pos[id],c=M.cos[id],fp=mkFair(id),v=h.n*fp,pushed=Math.abs(fp/c.px-1)>0.02;return `<tr data-act="mksel" data-id="${id}"><td>${esc(mkName(id))}</td><td class="r num">${int(h.n)}</td><td class="r num">${pxTxt(c.px)}${pushed?`<div class="meta">${pxTxt(fp)} without your ${fp<c.px?'buying':'selling'}</div>`:''}</td><td class="r num">${fmt(v)}</td><td class="r num ${v>=h.cost?'pos':'neg'}">${fmt(v-h.cost)}</td></tr>`;}).join('')}</table></div>`:'<p class="note">None. Pick a company below to buy.</p>'}
+    ${held.some(id=>Math.abs(mkFair(id)/M.cos[id].px-1)>0.02)?'<p class="note">Your own dealing has moved some of these prices, and the City reads a bid into a big stake. The Line values its shares without that push, which fades over a few months: that is what they would fetch once the excitement is over.</p>':''}
+    <dl class="kv"><dt>Shares, valued</dt><dd>${fmt(pv)}</dd><dt>Broker's loan (margin)</dt><dd>${fmt(A.loan)}</dd>${A.loan>0?`<dt>Interest</dt><dd>${fmt(A.loan*MK_LOAN_RATE/12)}/mo</dd><dt>Loan to value</dt><dd>${Math.round(A.loan/Math.max(1,pv)*100)}%</dd>`:''}</dl>
     ${M.call?`<p class="badline">Margin call: pay in ${fmt(M.call.amt)} or sell by ${monthName(M.call.due)}.</p>`:''}
     ${A.loan>0?`<div class="btns">${[...amts,A.loan].filter((v,i,a)=>v<=A.loan&&a.indexOf(v)===i).map(v=>`<button class="btn" data-act="mkrepay" data-id="${Math.round(v)}" ${S.cash<v||S.over?'disabled':''}>Repay ${v===A.loan?'all':fmt(v)}</button>`).join('')}</div>`:''}</section>`;
   const rows=live.map(id=>{const c=M.cos[id],h=c.hist,chg=h.length>1?c.px/h[h.length-2]-1:0,yld=(c.dy||0)/c.px,val=mkVal(id);

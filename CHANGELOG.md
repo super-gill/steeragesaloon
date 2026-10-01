@@ -2,6 +2,18 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.35.2 (30 September 2026)
+- Fixed: buying a big stake looked free. The cash went, but the Line's own buying pushed the price up (by about half, for half a line bought at once) and the holding was valued at that price, so net worth rose. The shares are now valued at the price without the Line's own push, which fades over a few months: buying half a line at once now shows its real cost, about a quarter of what it spent, the premium paid for control. Buying in stages over months costs less, as it should. The same goes for a dawn raid, a tender and the Line's short sales.
+- The Shares view shows what each holding is worth without your own dealing, next to the market price, when the two differ.
+
+## 0.35.1 (30 September 2026)
+- Government stock was too good: a flat 3½% with no risk, whatever interest rates did. It is now Consols, a 2½% stock whose price follows the real yield year by year (2.5% in 1900, 3.4% in 1913, 5.4% in 1920, 4.4% in the 1920s, 2.9% by 1935). Bought when yields are low it loses value as they rise, as it did up to 1920: £100 bought in 1901 was worth about £51 in 1921, or £105 with its interest (it was £169 before). Bought in 1921 it gains as yields fall.
+- A panic knocks the stock down for a few months and it recovers, instead of losing 12% for good.
+- Buying and selling each cost ¼% (selling cost ½% before, buying nothing).
+- The Finance tab shows the yield, the price for £100 of stock, and how much stock you hold.
+- The broker's investment account holds the same stock, and its comparison with government stock uses it.
+- Old saves keep their holding's value, turned into stock at the day's price.
+
 ## 0.35.0 (30 September 2026)
 The fleet, for larger fleets: a compact Fleet tab and a Fleet Manager window.
 - The Fleet tab lists one short row a ship: a dot for where she is, her condition and last month's profit, grouped by line. Each line's heading gives its ships and profit and folds away.

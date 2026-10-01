@@ -621,8 +621,9 @@ function renderFinance(){
       <div class="btns">${[10000,100000,1000000].filter(v=>v<=Math.max(10000,S.debt)).map(v=>`<button class="btn" data-act="repay" data-id="${v}" ${S.cash<Math.min(v,S.debt)||S.debt<=0||S.over?'disabled':''}>Repay ${fmt(v)}</button>`).join('')}</div>
       <p class="note">The bank lends up to 70% of your fleet and property, and 90% of your government stock. Its overdraft runs to ${fmt(odLimit())} (£8,000 plus half your unused borrowing); below that it forecloses.</p></section>
     <section class="sec"><h2>Government stock</h2>
-      <p class="note">Consols pay 3½% a year and are safe if your bank fails. They fall a little in a panic, and selling costs ½%. Cash in the bank earns nothing${S.m>=ym(1936,0)?', and banks do fail':''}.</p>
-      <dl class="kv"><dt>Holding</dt><dd>${fmt(S.gilts||0)}</dd><dt>Interest</dt><dd>${fmt((S.gilts||0)*0.035/12)}/mo</dd></dl>
+      <p class="note">Consols pay £2 10s a year on each £100 of stock, for ever, and are safe if your bank fails. Their price moves against interest rates: when yields rise the stock falls, and when they fall it rises. A panic knocks it down for a few months. Buying or selling costs ¼%. Cash in the bank earns nothing${S.m>=ym(1936,0)?', and banks do fail':''}.</p>
+      <dl class="kv"><dt>Yield today</dt><dd>${giltYield().toFixed(2)}%</dd><dt>Price</dt><dd>£${giltPrice().toFixed(2)} for £100 of stock</dd>
+        ${S.giltPar>0?`<dt>Holding</dt><dd>${fmt(S.gilts||0)} <span class="meta">(£${int(Math.round(S.giltPar))} of stock)</span></dd><dt>Interest</dt><dd>${fmt(S.giltPar*GILT_COUPON/100/12)}/mo</dd>`:''}</dl>
       <div class="btns">${[10000,100000,1000000].filter(v=>v<=Math.max(10000,S.cash)).map(v=>`<button class="btn" data-act="giltbuy" data-id="${v}" ${S.cash<v||S.over?'disabled':''}>Buy ${fmt(v)}</button>`).join('')}</div>
       ${S.gilts>0?`<div class="btns">${[10000,100000,1000000].filter(v=>v<=S.gilts).map(v=>`<button class="btn" data-act="giltsell" data-id="${v}">Sell ${fmt(v)}</button>`).join('')}<button class="btn" data-act="giltsell" data-id="all">Sell all</button></div>`:''}</section>
     <section class="sec"><h2>Prices</h2>
