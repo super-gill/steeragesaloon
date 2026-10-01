@@ -89,7 +89,7 @@ function runGame(strategy, seed) {
         strat();}
       advance(1);
     }
-    return {over:S.over,fl:S.fl?{bids:S.fl.bids||0,conf:Math.round(S.fl.conf),own:S.fl.own/S.fl.n,floated:S.fl.floated}:null,bust:S.over==='bust'||S.over==='wound'?S.m-S.m0:null,wound:S.over==='wound',last:S.over?S.news.slice(0,8).map(n=>n.t):null,trace,keyN,cats,ships:S.ships.length,warLost,warReqLost,adj1919,warShips:warSet.size,sunk:globalThis.SUNK||[],final:Math.round(netWorth()),ships:S.ships.length,wars,byYear,fleetY,routes,firstYear:Math.round(first.reduce((a,b)=>a+b,0)),rep:Math.round(S.rep),lost,emerg:(S.emerg||[]).filter(e=>e.k!=='quar').length};
+    return {rescue:S.rescue?{kind:S.rescue.kind,need:S.rescue.need,m:S.rescue.m-S.m0,loan:Math.round(S.rescue.loan),share:ownerShare()}:null,over:S.over,fl:S.fl?{bids:S.fl.bids||0,conf:Math.round(S.fl.conf),own:S.fl.own/S.fl.n,floated:S.fl.floated}:null,bust:S.over==='bust'||S.over==='wound'?S.m-S.m0:null,wound:S.over==='wound',last:S.over?S.news.slice(0,8).map(n=>n.t):null,trace,keyN,cats,ships:S.ships.length,warLost,warReqLost,adj1919,warShips:warSet.size,sunk:globalThis.SUNK||[],final:Math.round(netWorth()),ships:S.ships.length,wars,byYear,fleetY,routes,firstYear:Math.round(first.reduce((a,b)=>a+b,0)),rep:Math.round(S.rep),lost,emerg:(S.emerg||[]).filter(e=>e.k!=='quar').length};
   })()`, ctx);
 }
 
@@ -105,6 +105,8 @@ function report(strategy, n) {
   const routes = {}; R.forEach(r => { for (const q in r.routes) routes[q] = (routes[q] || 0) + r.routes[q] / n; });
   console.log(`\n${strategy.toUpperCase()}  (${n} runs)`);
   console.log(`  bankrupt: ${busts.length}/${n}${busts.length ? ' (median month ' + pct(busts.map(b => b.bust), 0.5) + ')' : ''}`);
+  { const rs = R.filter(r => r.rescue); if (rs.length) { const kinds = {}; for (const r of rs) kinds[r.rescue.kind] = (kinds[r.rescue.kind] || 0) + 1;
+    console.log(`  rescued: ${rs.length}/${n} [${rs.map(r => r.rescue.kind[0] + r.rescue.m + ':' + k(r.rescue.need)).join(' ')}] (${Object.entries(kinds).map(([k, v]) => k + ' ' + v).join(', ')}; median month ${pct(rs.map(r => r.rescue.m), 0.5)}); then failed ${rs.filter(r => r.bust !== null).length}${rs.some(r => r.bust !== null) ? ' (after ' + rs.filter(r => r.bust !== null).map(r => r.bust - r.rescue.m).join(', ') + ' months)' : ''}; survivors' median net worth ${k(pct(rs.filter(r => r.bust === null).map(r => r.final), 0.5) || 0)}, loan left ${rs.filter(r => r.bust === null && r.rescue.loan > 0).length}`); } else console.log(`  rescued: 0/${n}`); }
   console.log(`  first-year profit: median ${k(pct(R.map(r => r.firstYear), 0.5))}, range ${k(pct(R.map(r => r.firstYear), 0))} to ${k(pct(R.map(r => r.firstYear), 1))}`);
   console.log(`  median net worth: ` + yrs.map(y => `${y} ${med(y)}`).join(' · '));
   if (+(process.env.END || 1915) >= 1919) { const ws = R.reduce((a, r) => a + r.warShips, 0), wl = R.reduce((a, r) => a + r.warLost, 0), rl = R.reduce((a, r) => a + r.warReqLost, 0); if (ws) console.log(`  war losses: ${wl} sunk trading and ${rl} on war service, of ${ws} ships in the fleets during the war (1 in ${Math.round(ws / Math.max(1, wl + rl))})`); }

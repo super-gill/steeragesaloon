@@ -13,13 +13,13 @@ const mvC=id=>S.ex.cos[id];
 /* dawn raid: up to a fifth of the company, in a day, at a tenth over the market; the price jumps after */
 function mvRaidQty(o){const c=mvC(o);return Math.floor(Math.min(MV_RAID*c.n,mkFree(o)));}
 const mvRaidCost=o=>Math.round(mvRaidQty(o)*mvC(o).px*(1+MV_RAID_PREM)*(1+MK_FEE_BUY));
-function mvRaid(o){const M=mkEnsure(),c=mvC(o);if(!c||c.gone||!mkRival(o)||mkShut()||mkStake(o)>=MK_CTRL||(M.me.short&&M.me.short[o]))return false;
+function mvRaid(o){const M=mkEnsure(),c=mvC(o);if(rescueFriend(o)||!c||c.gone||!mkRival(o)||mkShut()||mkStake(o)>=MK_CTRL||(M.me.short&&M.me.short[o]))return false;
   const q=mvRaidQty(o),cost=mvRaidCost(o);if(q<1||S.cash<cost)return false;const before=mkStake(o);
   S.cash-=cost;const h=M.me.pos[o]||(M.me.pos[o]={n:0,cost:0});h.n+=q;h.cost+=cost;c.sh*=1.12;mkOwnPush(o,0,1.12);
   news(`Dawn raid: before the market opens the Line's brokers buy ${Math.round(q/c.n*100)}% of ${mkName(o)} for ${fmt(cost)}. The City wakes to a bid battle.`,'good',true);
   mkThresholds(o,before);mvDefend(o,'raid');return true;}
 /* tender offer: a set price for all its shares, open a month, going through only if the Line ends with over half */
-function mvTender(o,prem){const M=mkEnsure(),c=mvC(o);if(!c||c.gone||!mkRival(o)||mkShut()||M.tender||mkStake(o)>=0.9||trustMember(o)||(M.me.short&&M.me.short[o]))return false;
+function mvTender(o,prem){const M=mkEnsure(),c=mvC(o);if(rescueFriend(o)||!c||c.gone||!mkRival(o)||mkShut()||M.tender||mkStake(o)>=0.9||trustMember(o)||(M.me.short&&M.me.short[o]))return false;
   const price=c.px*(1+prem),need=Math.max(0,0.5*c.n-((M.me.pos[o]||{}).n||0))*price*(1+MK_FEE_BUY);if(S.cash<need)return false;
   M.tender={o,prem,price,pre:c.px,due:S.m+1};c.sh*=1+prem*0.7;mkOwnPush(o,0,1+prem*0.7);
   news(`The Morven Line offers ${pxTxt(price)} a share for every share in ${mkName(o)}, ${Math.round(prem*100)}% over the market, if it ends with over half. The offer closes in ${monthName(S.m+1)}.`,'',true);
@@ -39,7 +39,7 @@ function mvProxyChance(o){const k=mkStake(o),co=S.rivals[o];
   // shareholders back a board that pays its way; a failing one they will throw out (0.34: a gamble against a well-run line)
   const bad=coProfit(o)<0,trouble=coHealth(o)[0]==='In trouble'||coHealth(o)[0]==='Stretched';
   return clamp(0.05+1.2*k+(S.rep-30)/100+(bad?0.25:0)+(trouble?0.15:0)-(!bad&&!trouble?0.1:0)-(trustMember(o)?1:0),0.02,0.9);}
-function mvProxy(o){const M=mkEnsure(),c=mvC(o);if(!c||c.gone||!mkRival(o)||mkStake(o)<MV_PROXY_MIN||mkInfl(o)>=2||(M.proxyNext&&M.proxyNext[o]>S.m))return false;
+function mvProxy(o){const M=mkEnsure(),c=mvC(o);if(rescueFriend(o)||!c||c.gone||!mkRival(o)||mkStake(o)<MV_PROXY_MIN||mkInfl(o)>=2||(M.proxyNext&&M.proxyNext[o]>S.m))return false;
   const cost=mvProxyCost(o);if(S.cash<cost)return false;book('shares',-cost);const p=mvProxyChance(o);
   if(mrand()<p){c.proxy=true;const co=S.rivals[o];co.aggr0=co.aggr0||RIVAL_P[o].aggr;
     news(`The Line wins the proxy fight at ${mkName(o)}'s meeting: the shareholders vote your nominees onto its board. You control it with ${Math.round(mkStake(o)*100)}%.`,'good',true);}
@@ -70,7 +70,7 @@ function mvShortDiv(id,d){const M=S.ex,s=M.me.short&&M.me.short[id];if(s&&d>0)bo
 function mvBearRoutes(o){return Object.keys(S.lines).filter(rk=>!S.wars[rk]&&routeOpen(rk,S.m)&&!isCruise(rk)&&coFleet(o).some(x=>x.route===rk));}
 // a bear raid needs a real short open, of at least 2% of the company (0.35.5; the size, and none in wartime, 0.35.6)
 const mvBearShort=o=>{const s=S.ex.me.short&&S.ex.me.short[o],c=mvC(o);return !!(s&&c&&s.n>=0.019*c.n);};
-function mvBear(o,rk){if(!mkRival(o)||atWar(S.m)||!mvBearRoutes(o).includes(rk)||!mvBearShort(o))return false;const L=S.lines[rk];
+function mvBear(o,rk){if(rescueFriend(o)||!mkRival(o)||atWar(S.m)||!mvBearRoutes(o).includes(rk)||!mvBearShort(o))return false;const L=S.lines[rk];
   for(const k of ['f','s','t','tt'])if(L.fares[k])L.fares[k]=Math.max(1,Math.round(L.fares[k]*0.75));
   S.wars[rk]={left:6,mult:0.72,multT:0.6,by:[o],bear:true};S.tension[rk]=0;mkShock(o,0.93);
   news(`The Morven Line cuts its fares on ${ROUTES[rk].name} by a quarter and starts a rate war with ${mkName(o)}.`,'',true);
@@ -107,7 +107,8 @@ function movesMonth(){if(!S.ex)return;mvTenderClose();mvShortMonth();for(const i
 
 /* ---------- on a company's card ---------- */
 function movesHTML(o){const M=S.ex,c=mvC(o),shut=mkShut(),k=mkStake(o),s=M.me.short&&M.me.short[o];let h='';
-  const rival=mkRival(o);
+  const rival=mkRival(o)&&!rescueFriend(o);
+  if(rescueFriend(o))h+=`<p class="note">${mkName(o)} rescued the Line and holds ${Math.round(S.rescue.stake*100)}% of it: under the terms the Line makes no move against it.</p>`;
   if(rival&&k<MK_CTRL){const rc=mvRaidCost(o);h+=`<div class="btns"><button class="btn" data-act="mvraid" data-id="${o}" ${shut||S.cash<rc||mvRaidQty(o)<1||S.over?'disabled':''}>Dawn raid: ${Math.round(Math.min(MV_RAID,mvRaidQty(o)/c.n)*100)}% today · ${fmt(rc)}</button></div>`;}
   if(rival&&k<0.9&&!trustMember(o)){const T=M.tender;h+=T&&T.o===o?`<p class="note">Your offer of ${pxTxt(T.price)} a share closes in ${monthName(T.due)}.</p>`:`<div class="btns">${[0.2,0.35,0.5].map(p=>{const need=Math.max(0,0.5*c.n-((M.me.pos[o]||{}).n||0))*c.px*(1+p);return `<button class="btn" data-act="mvtender" data-d='${JSON.stringify([o,p])}' ${shut||M.tender||S.cash<need||S.over?'disabled':''}>Tender ${Math.round(p*100)}% over · ${fmt(Math.max(0,mkFree(o))*c.px*(1+p))} if all accept</button>`;}).join('')}</div>`;}
   if(rival&&k>=MV_PROXY_MIN&&mkInfl(o)<2&&!trustMember(o)){const pc=mvProxyCost(o),wait=M.proxyNext&&M.proxyNext[o]>S.m;h+=`<div class="btns"><button class="btn" data-act="mvproxy" data-id="${o}" ${wait||S.cash<pc||S.over?'disabled':''}>Proxy fight · ${fmt(pc)} · about ${Math.round(mvProxyChance(o)*100)}% to win${wait?` (not before ${monthName(M.proxyNext[o])})`:''}</button></div>`;}

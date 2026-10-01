@@ -89,6 +89,7 @@ function alerts(){
     else if(!sh.autoDock&&sh.cond<50&&sh.state!=='yard'&&!sh.pendingYard)A.push({id:'nothresh'+sh.id,k:'warn',t:`SS ${sh.name} is at ${Math.round(sh.cond)}% and has no service threshold.`,b:[['Review','selship',sh.id]]});
     if(sh.dockWarn&&sh.state!=='yard')A.push({id:'dockwarn'+sh.id,k:'warn',t:`SS ${sh.name} is due a drydock the account cannot cover.`,b:[['Bank','tabgo','finance']]});
   }
+  if(S.rescue&&S.rescue.loan>0){const R=S.rescue;A.push({id:'rescue',noNote:true,k:'warn',t:`Rescue loan from ${R.kind==='treasury'?'the Treasury':'the banks'}: ${fmt(R.loan)} still owed at ${(R.rate*100).toFixed(1)}%. ${rescueTerms(R)} A quarter of any cash over three months' costs goes to repay it each month.`,b:[['Bank','tabgo','finance']]});}
   if(S.trustOffer)A.push({id:'trustoffer',noNote:true,k:'warn',t:`The ${TRUST_NAME} offers ${fmt(S.trustOffer.amt)} for the Morven Line, about ${Math.round(S.trustOffer.amt/Math.max(1,netWorth())*10)/10} times what it is worth. Selling ends the game. Refusing, or letting the offer lapse at the end of ${MONTHS[S.trustOffer.exp%12]}, brings a rate war on your busiest trades.`,b:[['Sell the Line','trustyes'],['Refuse','trustno']]});
   if(S.offer)A.push({id:'offer',noNote:true,k:'good',t:`The Post Office offers ${fmt(S.offer.pay)} per round trip for the ${ROUTES[S.offer.route].name} mail, for up to two round trips a month.${wirelessRule()?' Only ships with wireless carry it.':''} It needs a sailing every month, so keep a ship on the line: miss a month and you are warned; miss two and it goes.`,b:[['Accept','accept'],['Decline','decline']]});
   for(const rk of Object.keys(S.lines)){
@@ -529,9 +530,9 @@ function renderBrokers(){
       <div class="meta">${sh.berths.f} first, ${sh.berths.s} second, ${sh.berths.t} third · ${int(sh.cargo)} t cargo${sh.up&&sh.up.reefer?' (refrigerated)':''} · condition ${Math.round(sh.cond)}%${sh.up&&sh.up.wireless?' · wireless':''}</div>
       <div class="meta">Comes with ${sh.captain.name}${sh.captain.traits.length?' ('+sh.captain.traits.map(t=>CAPT_TRAITS[t].name.toLowerCase()).join(', ')+')':''}</div>
       ${sh.note?`<div class="meta">${sh.note}</div>`:''}
-      <button class="btn" data-act="buy" data-id="${sh.id}" ${S.cash<dep||S.over?'disabled':''} style="width:fit-content">Buy · ${T.mort?`${fmt(dep)} down, ${fmt(T.mort)} mortgaged`:`${fmt(dep)} cash`}</button></div>`;}).join('')
+      <button class="btn" data-act="buy" data-id="${sh.id}" ${S.cash<dep||S.over||rescueNoBuy()?'disabled':''} style="width:fit-content">Buy · ${T.mort?`${fmt(dep)} down, ${fmt(T.mort)} mortgaged`:`${fmt(dep)} cash`}</button></div>`;}).join('')
     :'<p class="note">Nothing on the lists. New ships come up every quarter.</p>';
-  setHTML($('pane-brokers'),orderBookHTML()+auctionHTML()+`<section class="sec"><h2>Ships for sale</h2><p class="note">The brokers send a new list every quarter. The bank mortgages up to 60% of the price, no more than it would lend with her in the fleet, and nothing while a panic has stopped lending; you pay the rest in cash. Bought ships arrive laid up where they lie.</p>${body}</section>`);
+  setHTML($('pane-brokers'),orderBookHTML()+auctionHTML()+`<section class="sec"><h2>Ships for sale</h2>${rescueNoBuy()?`<p class="warnline">Under the rescue terms the Line may buy no ship until half the banks' loan is repaid (${fmt(S.rescue.loan)} of ${fmt(S.rescue.loan0)} still owed).</p>`:''}<p class="note">The brokers send a new list every quarter. The bank mortgages up to 60% of the price, no more than it would lend with her in the fleet, and nothing while a panic has stopped lending; you pay the rest in cash. Bought ships arrive laid up where they lie.</p>${body}</section>`);
 }
 
 /* ---------- Shore ---------- */
@@ -651,10 +652,11 @@ function renderFinance(){
       ${S.call?`<p class="badline">Called loan: ${fmt(S.call.amt)} due by ${monthName(S.call.due)}. If the account cannot pay it, the bank seizes ships in port and sells them cheaply.</p>`:''}
       ${S.noLend>S.m?`<p class="warnline">No new lending until ${monthName(S.noLend)}.</p>`:''}
       <dl class="kv"><dt>Debt</dt><dd>${fmt(S.debt)}</dd><dt>Interest (${S.rateUp>S.m?'8.5':'6.5'}%)</dt><dd>${fmt(S.debt*(S.rateUp>S.m?0.085:0.065)/12)}/mo</dd>
-      <dt>Required repayment</dt><dd>${fmt(Math.round(S.debt*0.004))}/mo</dd><dt>Fleet value</dt><dd>${fmt(fleetValue())}</dd><dt>Can still borrow</dt><dd>${S.noLend>S.m?`Nothing until ${monthName(S.noLend)}: the bank has stopped lending`:fmt(hr)}</dd></dl>
+      <dt>Required repayment</dt><dd>${rescueMoratorium()?`None until ${monthName(S.rescue.m+36)} (the rescue)`:fmt(Math.round(S.debt*0.004))+'/mo'}</dd><dt>Fleet value</dt><dd>${fmt(fleetValue())}</dd><dt>Can still borrow</dt><dd>${S.noLend>S.m?`Nothing until ${monthName(S.noLend)}: the bank has stopped lending`:fmt(hr)}</dd></dl>
       <div class="btns">${[10000,100000,1000000].filter(v=>v<=Math.max(10000,hr,S.debt)).map(v=>`<button class="btn" data-act="borrow" data-id="${v}" ${hr<v||S.noLend>S.m||S.over?'disabled':''}>Borrow ${fmt(v)}</button>`).join('')}</div>
       <div class="btns">${[10000,100000,1000000].filter(v=>v<=Math.max(10000,S.debt)).map(v=>`<button class="btn" data-act="repay" data-id="${v}" ${S.cash<Math.min(v,S.debt)||S.debt<=0||S.over?'disabled':''}>Repay ${fmt(v)}</button>`).join('')}</div>
-      <p class="note">The bank lends up to 70% of your fleet and property, and 90% of your government stock. Its overdraft runs to ${fmt(odLimit())} (£8,000 plus half your unused borrowing), at 8% a year; below that it forecloses.</p></section>
+      <p class="note">The bank lends up to 70% of your fleet and property, and 90% of your government stock. Its overdraft runs to ${fmt(odLimit())} (£8,000 plus half your unused borrowing), at 8% a year; below that it forecloses. ${S.rescue?'Having been rescued once, the Line would not be rescued again.':'A Line that fails is often, not always, rescued once, at a lasting cost.'}</p></section>
+    ${rescueHTML()}
     <section class="sec"><h2>Government stock</h2>
       <p class="note">Consols pay £2 10s a year on each £100 of stock, for ever, and are safe if your bank fails. Their price moves against interest rates: when yields rise the stock falls, and when they fall it rises. A panic knocks it down for a few months. Buying or selling costs ¼%. Cash in the bank earns nothing${S.m>=ym(1936,0)?', and banks do fail':''}.</p>
       <dl class="kv"><dt>Yield today</dt><dd>${giltYield().toFixed(2)}%</dd><dt>Price</dt><dd>£${giltPrice().toFixed(2)} for £100 of stock</dd>
@@ -688,6 +690,12 @@ function rivalsHTML(){
     ${gone.length||born.length?`<details class="thist"><summary>Lines come and gone (${gone.length+born.length})</summary>${gone.length?`<span class="lbl">Failed</span><ul class="note" style="padding-left:18px;margin:0">${gone.join('')}</ul>`:''}${born.length?`<span class="lbl">Founded</span><ul class="note" style="padding-left:18px;margin:0">${born.join('')}</ul>`:''}</details>`:''}</section>`;
 }
 /* what head office costs and why (0.36.5) */
+/* the rescue's terms and what is left to repay (0.37.0) */
+function rescueHTML(){const R=S.rescue;if(!R)return '';const who=R.kind==='rival'?RIVALS[R.o].name:R.kind==='treasury'?'The Treasury':'A consortium of the City banks';
+  return `<section class="sec"><h2>Rescue</h2><p class="note">${who} rescued the Line in ${monthName(R.m)} with ${fmt(R.need)}. ${rescueTerms(R)||'Its loan is repaid and the restrictions are lifted.'}</p>
+    <dl class="kv">${R.stake?`<dt>${R.kind==='rival'?RIVALS[R.o].name:'The Treasury'}'s share</dt><dd>${Math.round(R.stake*100)}%</dd>`:''}<dt>Your share of the Line</dt><dd>${Math.round(ownerShare()*100)}%, worth ${fmt(Math.max(0,netWorth())*ownerShare())}</dd>
+    ${R.loan0?`<dt>Loan</dt><dd>${fmt(R.loan)} of ${fmt(R.loan0)} at ${(R.rate*100).toFixed(1)}%</dd>`:''}</dl>
+    ${R.loan>0?`<div class="btns">${[10000,100000].filter(v=>v<R.loan).concat([R.loan]).map(v=>`<button class="btn" data-act="rescuepay" data-id="${Math.ceil(v)}" ${S.cash<v||S.over?'disabled':''}>Repay ${fmt(v)}</button>`).join('')}</div>`:''}</section>`;}
 function officeHTML(){const o=officeParts(),p=PX(),tot=officeCost();
   return `<p class="note">Head office costs ${fmt(tot)} a month: ${fmt(Math.round(o.base*p))} for ${o.n} ship${o.n===1?'':'s'} of ${int(o.tons)} tons in all, ${o.lines} line${o.lines===1?'':'s'} and ${o.ports} ports${o.friction>0.005?`, and ${Math.round(o.friction*100)}% more for running a fleet this size from one office${o.depts<4?`; each department you keep takes a fifth of that off`:''}`:''}${o.conf?`, with ${fmt(Math.round(o.conf*p))} of conference dues`:''}.</p>`;}
 function renderCompany(){
@@ -751,9 +759,9 @@ function renderModal(){
   if(!S.over&&S.dis&&S.dis.show){setHTML(el,disModalHTML());return;}
   if(!S.over){el.innerHTML='';return;}
   const nw=netWorth(),sold=S.over==='sold',wound=S.over==='wound',flEnd=S.over==='removed'||S.over==='taken';
-  const v=sold?`The Morven Line now belongs to the ${TRUST_NAME}. Its ships keep their names and sail under the Combine's orders; you leave with ${fmt(S.soldFor)} for the shareholders.`:'The bank has foreclosed. The Morven Line is finished.';
+  const v=sold?`The Morven Line now belongs to the ${TRUST_NAME}. Its ships keep their names and sail under the Combine's orders; you leave with ${fmt(S.soldFor)} for the shareholders.`:S.rescue?`The bank has foreclosed for the second time. Rescued once, in ${monthName(S.rescue.m)}, the Morven Line finds no one to rescue it again, and it is finished.`:'The bank has foreclosed and no one would rescue the Line. The Morven Line is finished.';
   setHTML(el,`<div class="modal" role="dialog" aria-modal="true" aria-labelledby="mt"><div class="panel">${wound?woundHTML():flEnd?flEndHTML():`<h3 id="mt">${sold?'Sold to the Combine':'Foreclosed'}</h3><p style="margin:0">${v}</p>`}
-    <dl class="kv">${sold?`<dt>Sale price</dt><dd>${fmt(S.soldFor)}</dd>`:''}<dt>Net worth</dt><dd>${fmt(nw)}</dd><dt>Fleet</dt><dd>${S.ships.length}</dd><dt>Reputation</dt><dd>${Math.round(S.rep)}</dd><dt>Reached</dt><dd>${dateLong(S.t)}</dd></dl>
+    <dl class="kv">${sold?`<dt>Sale price</dt><dd>${fmt(S.soldFor)}</dd>`:''}<dt>Net worth</dt><dd>${fmt(nw)}</dd>${S.rescue&&S.rescue.stake?`<dt>Your share</dt><dd>${fmt(Math.max(0,nw)*ownerShare())}</dd>`:''}<dt>Fleet</dt><dd>${S.ships.length}</dd><dt>Reputation</dt><dd>${Math.round(S.rep)}</dd><dt>Reached</dt><dd>${dateLong(S.t)}</dd></dl>
     <button class="btn primary" data-act="newnow">Start a new line</button>
     <label class="lbl" for="loadCode2">Or load a save code</label><textarea id="loadCode2" data-keep="1" class="code" rows="2" placeholder="Paste a code here"></textarea>
     <button class="btn" data-act="loadcode" data-src="loadCode2" style="width:fit-content">Load code</button>${UI.loadMsg&&!UI.loadMsg.ok?`<p class="badline">${UI.loadMsg.t}</p>`:''}</div></div>`);

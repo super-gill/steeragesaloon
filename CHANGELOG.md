@@ -2,6 +2,16 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.37.0 (1 October 2026)
+Rescue instead of game over.
+- New: when the bank forecloses, the Line is usually rescued, once. Before the 1920s a consortium of the City banks lends at 7% (the mortgage holders write off a quarter, and the Line may buy or order no ship until half the loan is repaid), or a rival line with the money takes two fifths of the Line and may not then be raided. From 1921 a Line that matters to the country (an Admiralty-subsidised ship, a mail contract or 40,000 tons) goes to the Treasury: a loan at 3.5% for a quarter of the Line, and a government director who will not let a ship be sold until it is repaid. Every rescue stops the dividend while a loan is owed, puts off the mortgage repayments for three years and costs ten points of reputation. A second failure is final; a Line the court has found grossly negligent is still wound up.
+- The chance of a rescue is about three in four, better for a Line of good standing whose ships cover its debts, and poor for one that owes more than its fleet is worth.
+- The rescue sum is the overdraft plus six months of running costs. A Line that loses money every month is given time to put it right, not a cure: in the test games most small Lines rescued in the Depression failed again within two years.
+- The Bank tab has a Rescue section: who rescued the Line, the terms, what is owed, the owner's own share, and buttons to repay early. Needs attention shows the loan while it is owed. Net worth counts the loan as a debt.
+- Head office no longer advises buying or selling a ship that the rescue terms forbid, and the brokers' list says why buying is barred.
+- Not in this release: harder shocks. The long test (below) shows the Depression already finishing about half the careful test owners, so the panics and the Depression are left as they are until the test players' round 4 shows how a human player fares.
+- Balance: careful test owner to 1922, 7 of 40 bankrupt (3 rescued, 1 of them failed again); to 1939, 9 of 20 bankrupt (8 rescued, 5 of them failed again; 9 of 20 before the rescue).
+
 ## 0.36.5 (1 October 2026)
 Costs that grow with the fleet, fast ships that burn what they should, and a camera that follows a ship.
 - Head office now costs by tonnage, lines and ports, not a flat sum a hull: a fleet of big liners costs far more to run than one of small steamers. Past a dozen ships, running the fleet from one office costs more again; each department you keep takes a fifth of that off. A one-ship Line pays about what it did. The Company tab says what head office costs and why.

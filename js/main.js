@@ -115,6 +115,7 @@ document.addEventListener('click',e=>{
     case 'closeline':{const rk=b.dataset.id;delete S.lines[rk];delete S.mail[rk]; /* a rate war on the route goes on without the Line (0.35.4): closing and reopening used to end it */S.ships.forEach(x=>{if(x.line===rk){x.line=null;}});news(`The ${ROUTES[rk].name} service is closed.`);UI.confirm=null;break;}
     case 'buy':{const s2=S.market.find(x=>x.id===+b.dataset.id);if(s2&&buyShip(s2))S.selShip=s2.id;break;}
     case 'borrow':{const v=+b.dataset.id||10000;if(headroom()>=v&&!(S.noLend>S.m)){S.debt+=v;S.cash+=v;}break;}
+    case 'rescuepay':{const R=S.rescue;if(R&&R.loan>0){const x=Math.min(+b.dataset.id||10000,R.loan);if(S.cash>=x){R.loan-=x;S.cash-=x;if(R.loan<1){R.loan=0;news('The Line has repaid its rescue loan in full. The restrictions are lifted.','good',true);}}}break;}
     case 'repay':{const x=Math.min(+b.dataset.id||10000,S.debt);if(S.cash>=x){S.debt-=x;S.cash-=x;}break;}
     case 'trustyes':trustAccept();break;
     case 'trustno':trustRefuse(false);break;

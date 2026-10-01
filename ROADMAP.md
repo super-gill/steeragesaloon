@@ -13,6 +13,7 @@ The road from 0.35.5 to 1.0. 1.0 is the game complete from 1900 to the present d
 | World | `node tools/world.js 6` | PASS |
 | Desk | `node tools/desk.js 3` | PASS |
 | Forecasts | `node tools/forecast.js 6` | PASS |
+| Rescue | `node tools/rescue.js 3` | PASS |
 | UI smoke | the browser smoke and legacy-save scripts | no page errors |
 
 Each patch adds its own checks, listed below. Where a patch closes an exploit, the check goes into `tools/exploits.js` so it stays closed.
@@ -31,9 +32,9 @@ Players see a short version of this plan, and what each release brought, in the 
 | 0.36.3 (done) | Hotfix | A panel that fails to draw no longer blanks the game; a notice says what failed | Fault injected into one panel: the rest draws and the clock runs |
 | 0.36.4 (done) | Fixes from the phone | Menu button on phones; ships gone from the fleet recorded and shown; a silent ship's loss kept from the lists until posted missing | Header has no overlap at 320 to 430 px over three dates |
 | 0.36.5 (done) | Scale costs and the camera | KI-090: office and shore support by tonnage, lines and ports; a check of large-ship running costs against the sources; FR-01 follow-ship camera | Cost per ship at 10, 30 and 70 ships against the target curve; harness unchanged |
-| 0.37.0 | Rescue and harder shocks | KI-091 rescue (banks or a rival before the 1920s, the Treasury after; dilution, a government director, no dividend until repaid, a second failure final); KI-060, KI-061, KI-062 rebalanced with it; KI-063, KI-065 | Long harness to 1939: careful owners mostly survive, through rescue where needed; no seed is rescued twice and survives a third failure |
+| 0.37.0 (done) | Rescue | KI-091 rescue (banks or a rival before the 1920s, the Treasury after; a stake, a government director, no dividend until repaid, a second failure final). Harder shocks held back: the Depression already finishes about half the careful test owners (KI-060); KI-061, KI-062, KI-063, KI-065 left open | `tools/rescue.js`: every term holds, a second failure is final, no rescue after gross negligence; long harness to 1939 |
 | 0.37.1 | The war and the ship's hospital | KI-023 war freight to its history; KI-024 Admiralty hire and a choice of ships; KI-026 Excess Profits Duty on sale profits; FR-08 ship's surgeon and hospital standard; FR-11 a major disaster about once a decade, of several kinds | War-year profit against 1913 within the historical band; duty charged in the boom |
-| Test round 4 | Test players, 1927 to 1945 | Both test players on 0.37.1; findings into a patch 0.37.2 | |
+| Test round 4 | Test players, 1927 to 1945 | Both test players on 0.37.1; findings into a patch 0.37.2. Settle KI-060 and KI-061: whether the Depression and the panics should hit harder now the rescue is in | |
 | 0.40.0 | Milestone | 1900 to 1940 complete and balanced; every S1 and S2 issue closed | Full suite on 40 seeds |
 
 ## From 0.40 to 1.0

@@ -231,6 +231,7 @@ const STAGES={drawing:'In the drawing office',waiting:'Waiting for a slip',frami
    Commission (0.35.7) */
 const builderShut=k=>k==='elbe'&&newCal()&&S.m>=ym(1914,7)&&S.m<ym(1921,0);
 function placeOrder(d){
+  if(rescueNoBuy())return {ok:false,why:'Under the rescue terms the Line may order no ship until half the loan is repaid.'};
   if(builderShut(d.builder))return {ok:false,why:'Elbe-Werft takes no British orders until 1921: the German yards are building for the Reparations Commission.'};
   if(warNoBuild())return {ok:false,why:'The yards are working for the Admiralty. No new orders until the war is over.'};
   const st=designStats(d);if(st.warn.length)return {ok:false,why:st.warn[0]};

@@ -1,6 +1,6 @@
 # Known Issues
 
-Steerage & Saloon 0.36.5. This log records every known defect, loophole and open question that has not been fixed in a released version. Balance targets and accepted behaviour are in `docs/overhaul/BALANCE.md`; this file covers what is wrong or unfinished.
+Steerage & Saloon 0.37.0. This log records every known defect, loophole and open question that has not been fixed in a released version. Balance targets and accepted behaviour are in `docs/overhaul/BALANCE.md`; this file covers what is wrong or unfinished.
 
 **Severity**
 
@@ -68,12 +68,12 @@ Steerage & Saloon 0.36.5. This log records every known defect, loophole and open
 
 | ID | Sev | Status | Source | Issue |
 |---|---|---|---|---|
-| KI-060 | S2 | Planned (0.37) | Harness | Careful owners in the Depression: 8 of 20 careful seeds went bankrupt by 1939 (0.34). Since 0.36.2's realistic forecasts the careful owner does much better to 1922 (2 of 40 bankrupt); to be rebalanced with the rescue. See KI-091. |
-| KI-061 | S2 | Planned (0.36) | P2 | The 1907 bank failure is very large: 70% of one player's cash, £242k for another, after one news line of warning. |
+| KI-060 | S2 | Open | Harness | **Careful owners in the Depression.** 9 of 20 careful seeds are bankrupt by 1939 even with the rescue (0.37.0): 8 were rescued and 5 of those failed again, mostly small Lines of two or three ships losing money every month. The rescue gives time, not profit. Whether the Depression is too hard or the scripted owner too passive (it never cuts a losing fleet) needs the round 4 test players. |
+| KI-061 | S2 | Discuss | P2 | The 1907 bank failure is very large: 70% of one player's cash, £242k for another, after one news line of warning. Left as it is in 0.37.0: a Line it breaks is now usually rescued. |
 | KI-062 | S3 | Discuss | Harness | Rival failures run at 7.2 a decade against 6.3 for 0.34, and 11 to 13 a game in the 1920s. See KI-091. |
-| KI-063 | S3 | Planned (0.36) | Harness | Shipping shares recover to only 0.90 of worth by 1937. |
+| KI-063 | S3 | Open | Harness | Shipping shares recover to only 0.90 of worth by 1937. |
 | KI-064 | S3 | Open | P3 | Idle cash earns nothing. A real line would hold deposits at bank rate less a margin. |
-| KI-065 | S3 | Planned (0.36) | Harness | The advisor strategy finishes far ahead of the careful one (about 11×, and widening). |
+| KI-065 | S3 | Open | Harness | The advisor strategy finishes far ahead of the careful one (about 11×, and widening). |
 
 ## Text and presentation
 
@@ -86,7 +86,7 @@ Steerage & Saloon 0.36.5. This log records every known defect, loophole and open
 | ID | Status | Question |
 |---|---|---|
 | KI-090 | Done (0.36.5) | **Large fleets are supported, not discouraged.** Done: performance, delegation, running by line. Costs that scale with tonnage, lines, ports and fleet size: 0.36.5. Decided: make them playable (KI-001), hand routine work to masters and departments (standing orders, an inbox that shows only the owner's decisions and summarises the rest), let the player run a fleet by line, and make shore support scale with the fleet properly. Office cost today is `600 + 250n + 18n^1.6` a month (n = ships): it counts hulls only (a tramp costs the same as a 45,000-ton liner) and ignores the number of lines and ports. |
-| KI-091 | Planned (0.37) | **Rescue instead of game over (accepted).** An insolvent Line gets a likely, not certain, rescue: a bank consortium or rival line before the 1920s, the Treasury after, with lasting costs (dilution, a government director, no dividends until repaid, possibly a forced merger; a second failure is final). With a safety net the game can hit harder (KI-060, KI-061 to be rebalanced together). Rival failures can use the same machinery. |
+| KI-091 | Done (0.37.0) | **Rescue instead of game over.** Done: banks, a rival or the Treasury, once; see the README. Not done: a forced merger, and rival lines rescued by the same rules (they keep their own reconstruction). An insolvent Line gets a likely, not certain, rescue: a bank consortium or rival line before the 1920s, the Treasury after, with lasting costs (dilution, a government director, no dividends until repaid, possibly a forced merger; a second failure is final). With a safety net the game can hit harder (KI-060, KI-061 to be rebalanced together). Rival failures can use the same machinery. |
 | KI-092 | Discuss | **Desktop app (Electron).** Pinned; not needed for 0.40. It runs the same engine, so it does not fix KI-001. It would give file saves and backups without the browser's storage limits, no throttling when the window is in the background, a database (SQLite) for long histories, and a Steam-style installer. |
 | KI-093 | Fixed (0.36.2) | **Advice moves ships off the line they were built for, and the player loses track.** Count the design line in move advice, show built-for and mismatches in the fleet manager and line view, and warn when ordering a ship for a line already near its trade's capacity. Replaces KI-048. |
 

@@ -341,7 +341,7 @@ function reparations(){
     value:Math.round(x.grt*CO_PRICE*PX()*Math.max(0.25,1-(yearOfM(S.m)-x.built)/35)*warShips(S.m)/1000)*1000,bid:0}))};
   news(`Under the peace treaty the German lines hand over every big ship they have. ${rest.length?`${rest.length} go to the Allied lines; `:''}${lots.map(l=>'SS '+l.name).join(' and ')} ${lots.length>1?'are':'is'} to be auctioned by the Reparations Commission, bids by ${monthName(AUCTION_CLOSE)}. See Buy and build.`,'hist',true);
 }
-function auctionBid(i,k){const A=S.war&&S.war.auction;if(!A)return;const L=A.lots[i];if(!L)return;const amt=Math.round(L.value*[0.8,1,1.3][k]/1000)*1000;
+function auctionBid(i,k){const A=S.war&&S.war.auction;if(!A||rescueNoBuy())return;const L=A.lots[i];if(!L)return;const amt=Math.round(L.value*[0.8,1,1.3][k]/1000)*1000;
   if(S.cash+headroom()<amt*0.3)return;L.bid=amt;}
 function auctionClose(){
   const A=S.war.auction;S.war.auction=null;

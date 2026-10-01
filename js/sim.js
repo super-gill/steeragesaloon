@@ -268,6 +268,7 @@ function saleCap(sh){return sh.paid&&S.m-(sh.acq||0)<12?Math.round(sh.paid*shipI
 function saleValue(sh){return Math.min(sh.saleAmt||Math.round(shipValue(sh)*0.9),saleCap(sh));}
 const scrapValue=sh=>Math.round(sh.grt*2*PX());
 function exitShip(sh,how){
+  if(how!=='scrap'&&rescueNoSale())return false; // the government director will not let her go (0.37.0)
   if(sh.state==='req'||sh.state==='lost')return false; // a requisitioned ship is the Admiralty's until she is handed back (0.35.6)
   const v=how==='scrap'?scrapValue(sh):saleValue(sh);
   S.cash+=v;const adm=admRepay(sh);fleetGone(sh,how==='scrap'?'scrapped':'sold',how==='scrap'?`broken up for ${fmt(v)}`:`sold for ${fmt(v)}`);S.ships=S.ships.filter(x=>x!==sh);
@@ -324,17 +325,18 @@ function dailyTick(){
   const m=mOf(S.t);if(m!==S.m){const pm=S.m;S.m=m;monthRoll(pm);}
   if(S.cash<0&&!S.odWarn){S.odWarn=true;news(`The account is overdrawn. The bank will foreclose below ${fmt(-odLimit())}.`,'bad');}
   if(S.cash>0)S.odWarn=false;
-  if(S.cash<-odLimit()&&!S.over){S.over=S.gross&&S.t-S.gross.t<730?'wound':'bust';UI.speed=0;save();} // claims after gross negligence: the court winds it up
+  // the bank forecloses: after gross negligence the court winds the Line up; otherwise it is usually rescued, once (0.37.0)
+  if(S.cash<-odLimit()&&!S.over){const neg=S.gross&&S.t-S.gross.t<730;if(neg||!rescueTry()){S.over=neg?'wound':'bust';UI.speed=0;save();}} // claims after gross negligence: the court winds it up
 }
 function monthRoll(pm){
-  const repay=Math.min(S.debt,Math.round(S.debt*0.004));S.debt-=repay;S.cash-=repay;
+  const repay=rescueMoratorium()?0:Math.min(S.debt,Math.round(S.debt*0.004));S.debt-=repay;S.cash-=repay;
   // dividends paid to the public are a share of profit, not a cost: the year's profit, the board's targets and the duty leave them out (0.35.5)
   const net=Object.values(S.mtd.cat).reduce((a,b)=>a+b,0);
   const shipAcc=S.mtd.ships||{};for(const sh of S.ships){if(sh.state==='lost')continue;const v=Object.values(shipAcc[sh.id]||{}).reduce((x,y)=>x+y,0);(sh.pl=sh.pl||[]).push(Math.round(v));if(sh.pl.length>12)sh.pl.shift();
     const c={};for(const k in shipAcc[sh.id]||{})c[k]=Math.round(shipAcc[sh.id][k]);(sh.plc=sh.plc||[]).push(c);if(sh.plc.length>12)sh.plc.shift();}
   S.lastMonth={m:pm,cat:S.mtd.cat,lines:S.mtd.lines,ships:shipAcc,net,repay,capex:S.mtd.capex||0};
   {const r=o=>{const q={};for(const k in o)q[k]=Math.round(o[k]);return q;};(S.plHist=S.plHist||[]).push({m:pm,cat:r(S.mtd.cat),lines:r(S.mtd.lines)});if(S.plHist.length>12)S.plHist.shift();}S.mtd=blankLedger();
-  inflate();giltsMonth();insMonth();taxMonth(net-(S.lastMonth.cat.divpaid||0));crashMonth();if(typeof seasonNews==='function')seasonNews(S.m);unionMonth();combineMonth();
+  inflate();giltsMonth();insMonth();taxMonth(net-(S.lastMonth.cat.divpaid||0));crashMonth();rescueMonth();if(typeof seasonNews==='function')seasonNews(S.m);unionMonth();combineMonth();
   S.lastPax=S.pax;S.pax={};
   for(const id in RIVALS)S.rivalIdx[id]=clamp((S.rivalIdx[id]||1)+(Math.random()-0.5)*0.04,0.93,1.06);
   S.hist.push(Math.round(S.cash));if(S.hist.length>240)S.hist.splice(0,S.hist.length-240);
@@ -406,15 +408,15 @@ const MAIL_LEGS=4; // mail sailings a contract pays for each month
 /* buying a ship off the brokers' list (0.35.4): the bank mortgages up to 60% of the price, but no more than it would lend
    with her in the fleet (70% of her worth plus the Line's unused borrowing), and nothing while a panic has stopped lending */
 function buyTerms(m){const mort=S.noLend>S.m?0:Math.max(0,Math.min(Math.round(m.price*0.6),Math.round(0.7*shipValue(m)+headroom())));return {mort,dep:m.price-mort};}
-function buyShip(m){const t=buyTerms(m);if(S.cash<t.dep)return false;S.cash-=t.dep;S.debt+=t.mort;delete m.price;m.acq=S.m;m.paid=t.dep+t.mort;m.mk0=shipIdx();S.ships.push(m);S.market=S.market.filter(x=>x!==m);
+function buyShip(m){if(rescueNoBuy())return false;const t=buyTerms(m);if(S.cash<t.dep)return false;S.cash-=t.dep;S.debt+=t.mort;delete m.price;m.acq=S.m;m.paid=t.dep+t.mort;m.mk0=shipIdx();S.ships.push(m);S.market=S.market.filter(x=>x!==m);
   news(`Bought SS ${m.name}, lying at ${PN[m.port]}${t.mort?`, ${fmt(t.mort)} of it on mortgage`:', for cash'}.`,'good');return true;}
 /* the monthly bill for keeping the fleet and office going, before fuel and port costs */
-const runningCost=()=>S.ships.reduce((a,x)=>a+crewCost(x)+(x.captain?x.captain.wage:0)+insCost(x)+MAINT_COST[x.maint]*x.grt/8000,0)+600+250*S.ships.length+shoreUpkeep();
+const runningCost=()=>S.ships.reduce((a,x)=>a+crewCost(x)+(x.captain?x.captain.wage:0)+insCost(x)+MAINT_COST[x.maint]*x.grt/8000,0)+officeCost()+shoreUpkeep()*PX(); // head office as charged (0.37.0)
 const fleetValue=()=>S.ships.reduce((a,s)=>a+shipValue(s),0);
 // property ashore is worth about half what it cost at today's prices (0.35.4: it was valued at 1921 prices, so before 1921 buying it raised net worth)
 const shoreValue=()=>{const s=S.shore,x=PX();let v=0;for(const p in s.piers)v+=PIER_COST[p]*0.6;for(const y in s.yards)v+=150000*0.5*x;if(s.slip)v+=OWN_SLIP_COST*0.5*x;for(const h in s.hostels)v+=35000*0.5*x;for(const p in s.sheds||{})v+=SHED_COST*0.5*x;for(const p in s.cold||{})v+=COLD_COST*0.5*x;return v;};
 const ordersValue=()=>(S.orders||[]).reduce((a,o)=>a+(o.paid||0),0); // ships on the stocks, at what has been paid on them (0.35.4)
-const netWorth=()=>S.cash+(S.gilts||0)+fleetValue()+shoreValue()+ordersValue()-S.debt-admDebt()+mkWorth(); // shares at the market, less the margin loan
+const netWorth=()=>S.cash+(S.gilts||0)+fleetValue()+shoreValue()+ordersValue()-S.debt-admDebt()-((S.rescue&&S.rescue.loan)||0)+mkWorth(); // shares at the market, less the margin loan
 const headroom=()=>Math.max(0,0.7*(fleetValue()/(newCal()&&S.m>ARMISTICE&&S.m<M21?Math.max(1,warShips(S.m)/warShips(ARMISTICE)):1)+shoreValue())+0.9*(S.gilts||0)+0.5*Math.max(0,mkWorth())-S.debt-admDebt()); // in the 1919 and 1920 boom the bank lends on ships at no more than their worth at the armistice // government stock is the best security a bank can hold
 const odLimit=()=>8000+0.5*headroom(); // the bank forecloses when cash falls below minus this
 function news(t,k,pauseIt){

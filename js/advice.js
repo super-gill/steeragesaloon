@@ -135,7 +135,8 @@ function advice(budget){
   ADV_BUDGET=budget===undefined?Infinity:budget;ADV_T0=performance.now();ADV_SHORT=false;
   MOD_EPOCH++;SVC_PASS=null; // a fresh pass (0.36.0: a cached answer no longer throws away every ship's cached figures)
   const A=[],mo=S.m%12,reserve=3*runningCost();
-  const raised=new Set(),add=h=>{raised.add(h.id);if((S.dismiss[h.id]||-1)>=S.m)return;h.dept=deptOf(h);h.info=!h.act.some(a=>DOING.includes(a[1]));A.push(h);};
+  const raised=new Set(),add=h=>{raised.add(h.id);if((S.dismiss[h.id]||-1)>=S.m)return;if(/^sell:/.test(h.id)&&rescueNoSale()||/^buy/.test(h.id)&&rescueNoBuy())return; // not under the rescue terms (0.37.0)
+  h.dept=deptOf(h);h.info=!h.act.some(a=>DOING.includes(a[1]));A.push(h);};
   // ---- last month review ----
   const LM=S.lastMonth;
   if(LM&&LM.net<0){

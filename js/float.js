@@ -55,7 +55,7 @@ function flTargets(){const F=S.fl,c=flC(),last=F.lastProfit,I=S.ex.idx[S.ex.idx.
 /* January: last year's profit decides the dividend and is judged against the targets */
 function floatJanuary(profit){const F=S.fl;if(!F||!flOn())return;const c=flC();F.lastProfit=profit;
   const pay=Math.max(0,profit)*MK_DIV[F.pay].pay,out=Math.round(pay*F.pub/F.n);
-  if(out>0){book('divpaid',-out);F.paid++;}c.dy=pay/F.n;
+  if(out>0&&!rescueNoDiv()){book('divpaid',-out);F.paid++;}c.dy=rescueNoDiv()?0:pay/F.n; // none while a rescue loan is owed (0.37.0)
   const T=F.targets,res=[];let d=0;
   if(T){const yld=pay/F.n/Math.max(1e-6,c.px);
     const I=S.ex.idx[S.ex.idx.length-1],rel=(c.px/T.px0)/((I?I[1]:100)/T.idx0);

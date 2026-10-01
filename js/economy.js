@@ -284,3 +284,52 @@ function inquiry(q){
   (S.inqDone=S.inqDone||[]).unshift({name:q.name,t:S.t,findings:F,blame,total,rep,gross});if(S.inqDone.length>12)S.inqDone.length=12;
   if(gross){S.gross={t:S.t,name:q.name,dead:q.dead,F,total,cover:q.cover};if(netWorth()<0||S.cash<-odLimit())woundUp();}
 }
+/* ---------- rescue (0.37.0) ----------
+   When the bank forecloses, the Line is usually rescued rather than wound up, as Royal Mail was reconstructed in 1931 and
+   Cunard carried through the 1930s on a Treasury loan. Once only: a second failure is final. The rescuer depends on the
+   era and the Line:
+   - the Treasury, from 1921, for a Line that matters to the country (an Admiralty-subsidised ship, a mail contract, or
+     40,000 tons afloat): a loan at 3.5% and a quarter of the Line, with a government director who will not let ships be
+     sold until the loan is repaid; no dividend until then;
+   - a rival line with the cash: two fifths of the Line for its money, no loan; the Line may not raid it;
+   - otherwise a consortium of banks: a loan at 7%, no dividend, and no ships bought or built until half is repaid; the
+     mortgage holders write off a quarter of their loans (as Royal Mail's debenture holders did in 1932).
+   Whoever rescues it, the bank reschedules the Line's mortgages: no repayment for three years (rescueMoratorium).
+   The chance of a rescue rises with the Line's standing and with how far its ships cover what it owes. The rescuer's
+   share is the owner's no longer: the owner's own stake (ownerShare) is what the game's score counts from then on. */
+const RESCUE_BY={bank:'a consortium of the City banks',treasury:'the Treasury'};
+function rescueNeed(){return Math.max(0,-S.cash)+6*runningCost();}
+function rescueChance(){if(S.rescue||!S.ships.length)return 0;const owe=S.debt+Math.max(0,-S.cash),cover=(fleetValue()+shoreValue())/Math.max(1,owe);
+  return clamp(0.72+0.005*(S.rep-40)+(cover>=1.2?0.15:cover>=0.8?0:-0.2),0.15,0.92);}
+function rescueWho(need){
+  const tons=S.ships.reduce((a,x)=>a+x.grt,0),national=S.ships.some(x=>x.adm)||Object.keys(S.mail||{}).length>0||tons>=40000;
+  if(S.m>=ym(1921,0)&&national)return {kind:'treasury'};
+  const rich=coLive().filter(o=>!RIVAL_P[o].kind&&!(typeof trustMember==='function'&&trustMember(o))&&S.rivals[o]&&S.rivals[o].cash>=need*1.5).sort((a,b)=>S.rivals[b].cash-S.rivals[a].cash)[0];
+  if(rich&&Math.random()<0.5)return {kind:'rival',o:rich};
+  return {kind:'bank'};}
+function rescueTry(){
+  if(S.rescue){news('The bank forecloses. Having been rescued once, the Morven Line finds no one to rescue it again.','hist',2);return false;}
+  if(Math.random()>=rescueChance())return false;
+  const need=Math.round(rescueNeed()/1000)*1000,w=rescueWho(need),R={kind:w.kind,o:w.o||null,m:S.m,need,stake:0,loan:0,loan0:0,rate:0};
+  if(w.kind==='treasury'){Object.assign(R,{stake:0.25,loan:need,loan0:need,rate:0.035,veto:true,noDiv:true});}
+  else if(w.kind==='rival'){Object.assign(R,{stake:0.4});S.rivals[w.o].cash-=need;}
+  else{Object.assign(R,{loan:need,loan0:need,rate:0.07,noDiv:true,noBuy:true});R.cut=Math.round(S.debt*0.25);S.debt-=R.cut;}
+  S.cash+=need;S.call=null;S.rescue=R;S.rep=clamp(S.rep-10,0,100);
+  const by=w.kind==='rival'?RIVALS[w.o].name:RESCUE_BY[w.kind];
+  news(`The Morven Line is rescued. ${by[0].toUpperCase()+by.slice(1)} puts up ${fmt(need)}${R.stake?` for ${Math.round(R.stake*100)}% of the Line`:''}${R.loan?`${R.stake?', as a loan at ':' as a loan at '}${(R.rate*100).toFixed(1)}%`:''}.${R.cut?` The mortgage holders write off ${fmt(R.cut)}, a quarter of what the Line owes them.`:''} ${rescueTerms(R)} The bank puts off repayments on its mortgages for three years. A second failure will be final.`,'hist',2);
+  return true;}
+function rescueTerms(R){const t=[];if(R.noDiv&&R.loan>0)t.push('no dividend until the loan is repaid');if(R.veto&&R.loan>0)t.push('a government director who will not let a ship be sold until then');
+  if(R.noBuy&&R.loan>R.loan0*0.5)t.push('no ship bought or built until half the loan is repaid');if(R.kind==='rival')t.push(`no raids on ${RIVALS[R.o].name}, which now holds ${Math.round(R.stake*100)}% of the Line`);
+  return t.length?`The terms: ${t.join('; ')}.`:'';}
+/* monthly: interest on the rescue loan, and a quarter of any surplus over three months' running costs to repay it */
+function rescueMonth(){const R=S.rescue;if(!R||!(R.loan>0))return;book('interest',-R.loan*R.rate/12);
+  const spare=S.cash-3*runningCost();if(spare>0){const p=Math.min(R.loan,Math.round(spare*0.25));S.cash-=p;R.loan-=p;
+    if(R.loan<1){R.loan=0;news(`The Line has repaid its rescue loan to ${R.kind==='treasury'?'the Treasury':'the banks'}. ${R.stake?`${RESCUE_BY[R.kind]||'The rescuer'} keeps its ${Math.round(R.stake*100)}% of the Line.`:'The restrictions are lifted.'}`,'good',true);}}}
+/* what the rescue still forbids */
+const rescueNoSale=()=>!!(S.rescue&&S.rescue.veto&&S.rescue.loan>0);
+const rescueNoBuy=()=>!!(S.rescue&&S.rescue.noBuy&&S.rescue.loan>S.rescue.loan0*0.5);
+const rescueFriend=o=>!!(S.rescue&&S.rescue.kind==='rival'&&S.rescue.o===o);
+const rescueMoratorium=()=>!!(S.rescue&&S.m<S.rescue.m+36);
+const rescueNoDiv=()=>!!(S.rescue&&S.rescue.noDiv&&S.rescue.loan>0);
+/* the owner's own share of the Line: after a rescuer's stake and any public float */
+const ownerShare=()=>(1-((S.rescue&&S.rescue.stake)||0))*(S.fl&&S.fl.n?S.fl.own/S.fl.n:1);
