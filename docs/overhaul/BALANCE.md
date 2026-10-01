@@ -84,6 +84,34 @@ to the war. The 0.30.0 to 0.32.0 market figures were measured with it.
 | Shipping shares' 1930s recovery | Open (0.36) | On 12 seeds over 40 years shares are back to 0.90 of worth by 1937, on the edge of the market check's 0.9; the same with the 0.34 code, so not from the stock change | Back to about worth by 1937 |
 | Rival moves among themselves | After 1.0.0 | Rivals raid and bid only for the Line | Rivals take each other over |
 
+## The first test players (0.35.4)
+
+Two programs played 1900 to 1912 through `tools/play.js` (notes kept in `tools/play/`, not in the repository): one carefully, one hunting exploits (it reached £10 million by 1912). `node tools/exploits.js` sets each loophole up and checks it stays closed.
+
+| Issue | Status | Measure now | Target |
+| --- | --- | --- | --- |
+| Fares with no ceiling | Closed | Liverpool to New York at 100 times the rate earned £5.1m a month; now less than at the rate from ten times. Alone on a route the best fare is about 1.5 times the rate while the ships are full (x1 £9.8k, x1.5 £15.9k, x3 £7.0k a month on Glasgow to Halifax) | Dear fares lose money |
+| Rival shares below their cash | Closed | Prices floor at 0.85 of break-up value; buying 76% of a cash-rich line and merging leaves the Line £29k to £215k down in cash (3 seeds). Net worth still rises by 15% to 55% of the spend, since merged ships count at their going-concern worth, not the breaker's seven tenths | No same-day cash from a merger |
+| Close and reopen ends rate wars | Closed | The war goes on | |
+| Free overdraft | Closed | 8% a year | |
+| Shore property at 1921 prices | Closed | A shed bought lowers net worth by about half its cost | |
+| Bank limits on bought ships, and in a panic | Closed | `buyTerms` | |
+| Mail per hull | Closed | Two round trips a month at most | |
+| Admiralty subsidy laid up, foreign yards | Closed | | |
+| Flipping a receiver's bargain | Closed | No gain within the year | |
+| Dear First hides cheap Third | Closed | Each class counts at most 1.1 times the rate | |
+| Dividend capture | Closed | The price drops by the dividend | |
+| New ships arrive laid up | Closed | They join the line they were ordered for | |
+| Reputation in a big fleet | Closed | Everyday knocks scale with the square root of six over the fleet (a quarter as hard at 70 ships, never under three tenths) | A big, well-run line keeps its name |
+| Wireless law only for the mails | Closed | 49 passengers at most out of an American port without wireless from July 1911 | |
+| Drydocking raises a ship's worth | Accepted | Worth follows condition; it is not a loop now a ship bought within the year sells for no more than she cost | |
+| Consols dip in a panic and recover | Accepted | A trade with real risk in the game's terms (the panic's size is not known in advance) | |
+| Consols count towards borrowing, cash does not | Accepted | Banks lent on securities | |
+| Head office forecasts optimistic, ships piled on one line | Open (0.36) | The careful player saw about half the forecast on three moves; move advice sends every ship to the same line without counting the ones already sent | Forecasts within a fifth |
+| Conference floor not enforced on fares the Fares Office sets | Open (0.36) | First and Third at 16 and 3 against a 95% floor of 16.15 and 3.8 | |
+| The 1907 bank failure | Open (0.36) | Took 70% of the careful player's cash on one news line of warning; head office now warns, but the loss is large | Survivable for a careful owner |
+| Rival failures | Open (0.36) | On the same 20 seeds, 6.3 a decade with the 0.34 code and 7.2 now (1920s 11.4 to 13.5 a game); the check's limit is 6, which the 0.34 code also misses on 20 seeds | A few a decade |
+
 ## The long run (for 0.36.0)
 
 | Issue | Status | Measure now | Target |

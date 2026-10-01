@@ -128,7 +128,7 @@ function fmExitPlan(how){
   const L=fmSelected().filter(sh=>!sh.pendingExit),keep=S.ships.filter(sh=>!sh.pendingExit&&!L.includes(sh)).length,out=[],skip=[];
   for(const sh of L){if(sh.state==='req'){skip.push([sh,'on war service']);continue;}out.push(sh);}
   if(!keep&&out.length){const k=out.sort((a,b)=>shipValue(b)-shipValue(a)).shift();skip.push([k,'the Line must keep one ship']);}
-  const sum=out.reduce((a,sh)=>a+(how==='scrap'?sh.grt*2:Math.round(shipValue(sh)*0.9)),0);
+  const sum=out.reduce((a,sh)=>a+(how==='scrap'?scrapValue(sh):saleValue(sh)),0);
   return {out,skip,sum};
 }
 function fmExit(how){const P=fmExitPlan(how);for(const sh of P.out)doAction(how==='scrap'?'scrapship':'sellship',[sh.id]);

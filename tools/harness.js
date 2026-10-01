@@ -15,7 +15,7 @@ Math.random=(function(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul
 const H={
   openLine(rk){if(S.lines[rk]||S.cash<2500)return false;book('office',-2500,rk);S.lines[rk]={fares:defaultFares(rk),service:1,adv:1,last:[null,null]};return true;},
   assign(sh,rk){sh.line=rk||null;if(sh.line&&sh.state==='laid'){sh.state='port';sh.portLeft=1;}},
-  buy(m){const dep=Math.round(m.price*0.4);if(S.cash<dep)return null;S.cash-=dep;S.debt+=m.price-dep;delete m.price;S.ships.push(m);S.market=S.market.filter(x=>x!==m);return m;},
+  buy(m){return buyShip(m)?m:null;}, // the screen's terms (0.35.4)
   bestRoute(sh){let b=null;for(const rk of Object.keys(ROUTES)){if(!routeOpen(rk,S.m))continue;const q=econYear(sh,rk);/* a sensible buyer looks at the year ahead, not one month */if(!b||q.pm>b.pm)b={rk,pm:q.pm};}return b;},
   apply(h){const a=h.act[0];if(!a)return;const [l,act,...d]=a;
     if(['setfare','setfares','setlineopt','setship','moveship','setyard','sellship','hire','buyship','openmove','shorebuy'].includes(act))doAction(act,d);
@@ -34,7 +34,7 @@ const H={
     for(const x of S.ships)if(!x.reserve&&S.m>=RESERVE_FROM&&S.m<WAR_FROM)x.reserve=true;},
   /* after the Board of Trade's ruling a sensible owner fits boats for all before the law bites */
   boats(){if(!newCal()||S.m<BOAT_NEWS)return;for(const x of S.ships)if(!hasBoats(x)&&paxBerths(x)>0&&!x.pendingYard&&x.state!=='yard'&&S.cash>refitCost(x,'boats')*2)doAction('setyard',[x.id,'boats']);},
-  expand(buffer,prudent){buffer=Math.max(buffer,prudent?3*runningCost():0);for(const m of S.market.slice()){const dep=Math.round(m.price*0.4);if(S.cash-dep<buffer)continue;
+  expand(buffer,prudent){buffer=Math.max(buffer,prudent?3*runningCost():0);for(const m of S.market.slice()){const dep=buyTerms(m).dep;if(S.cash-dep<buffer)continue;
       const b=H.bestRoute(m);if(!b||b.pm<500)continue;const sh=H.buy(m);if(!sh)continue;if(!S.lines[b.rk])H.openLine(b.rk);if(S.lines[b.rk])H.assign(sh,b.rk);return true;}return false;}
 };
 const STRATS={
@@ -54,7 +54,7 @@ if(typeof PROT==='undefined'||PROT!=='0')H.warProt();
     if(S.cash<-0.35*odLimit()&&S.ships.length>1&&!S.ships.some(x=>x.pendingExit)){const w=S.ships.filter(x=>x.state==='port'||x.state==='laid'||x.state==='sea').map(x=>({x,y:(x.pl||[]).reduce((a,v)=>a+v,0)/Math.max(1,shipValue(x))})).sort((a,b)=>a.y-b.y)[0];if(w)doAction('sellship',[w.x.id]);}
     if(S.crash||S.call)return;
     if(S.debt>0&&S.cash>12*run){const r=Math.min(S.debt,Math.floor((S.cash-12*run)/1000)*1000);if(r>0){S.cash-=r;S.debt-=r;}} // pay down the mortgage when flush
-    if(S.debt-Math.max(0,S.cash)<0.35*fleetValue()&&shipMkt()<=1.3)for(const m of S.market.slice()){const dep=Math.round(m.price*0.4);if(S.cash-dep<Math.max(12000*PX(),6*run))continue;
+    if(S.debt-Math.max(0,S.cash)<0.35*fleetValue()&&shipMkt()<=1.3)for(const m of S.market.slice()){const dep=buyTerms(m).dep;if(S.cash-dep<Math.max(12000*PX(),6*run))continue;
       const b=H.bestRoute(m);if(!b||b.pm*12<m.price/8)continue;const sh=H.buy(m);if(!sh)continue;if(!S.lines[b.rk])H.openLine(b.rk);if(S.lines[b.rk])H.assign(sh,b.rk);break;}
     // twice a year: a ship that lost money over the year goes where she would pay, or is sold; a worn-out one is sold
     if(S.m%6===0)for(const x of S.ships.slice()){if(S.ships.length<2)break;const loss=(x.pl||[]).length>=12&&x.pl.reduce((a,v)=>a+v,0)<0;
@@ -63,7 +63,7 @@ if(typeof PROT==='undefined'||PROT!=='0')H.warProt();
     H.expand(12000,true);},
   undercutter(){for(const rk in S.lines){const L=S.lines[rk],r=ROUTES[rk];L.fares.t=Math.round(r.ref.t*0.75);L.fares.s=Math.round(r.ref.s*0.85);}H.expand(10000);},
   liverpool(){if(!S.lines.liv){if(H.openLine('liv'))S.ships.forEach(s=>H.assign(s,'liv'));}
-    else{for(const m of S.market.slice()){const dep=Math.round(m.price*0.4);if(S.cash-dep>10000){const sh=H.buy(m);if(sh)H.assign(sh,'liv');break;}}}}
+    else{for(const m of S.market.slice()){const dep=buyTerms(m).dep;if(S.cash-dep>10000){const sh=H.buy(m);if(sh)H.assign(sh,'liv');break;}}}}
 };
 `;
 

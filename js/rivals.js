@@ -100,7 +100,11 @@ const speedAppeal=(knots,rk,c)=>{const p=ROUTES[rk].prestige,k=(c==='f'||c==='s'
 /* how fares move demand. Below the line rate a cut wins passengers at the usual rate; above it they walk to the next
    line's office far more readily, since the same crossing is on sale for less a few doors down. The kink is what
    holds everyone near the conference rate. */
-const fareDemand=(ratio,c)=>clamp(Math.pow(ratio,ratio>=1?E[c]:E[c]*2.6),0.03,1.8);
+const fareDemand=(ratio,c)=>clamp(Math.pow(ratio,ratio>=1?E[c]:E[c]*2.6),1e-6,1.8); // no floor (0.35.4): at ten times the rate almost nobody books
+/* the travellers' way out: another port, another route, or staying at home. It takes a share of the route as if it were
+   another line holding 15% (OUTSIDE_A) of the route's capacity at the line rate, so a line alone on a route cannot raise its fares
+   for ever: before 0.35.4 its fare cancelled out of its own share and ten times the rate brought the same passengers */
+const OUTSIDE_A=0.15;
 function rivalAppeal(o,rk,c,x){
   const f=rivalFare(o,rk,c);
   return fareDemand(1/f,c)*RIVAL_P[o].prestige*(x?speedAppeal(x.knots,rk,c):1)*outAppeal(rk,c); // shared hostels and agents help them
@@ -109,7 +113,8 @@ function rivalAppeal(o,rk,c,x){
 function rivalFare(o,rk,c){const war=S.wars[rk];return (S.rivalIdx[o]||1)*((S.rfare&&S.rfare[rk])||1)*(war?warMult(war,c,o):1);}
 /* a rate war's cut: steerage can fall by half in a war between lines, cabins less; lines not in the fight hold their fares a little better */
 const warMult=(w,c,o)=>{const m=(c==='t'||c==='tt')&&w.multT?w.multT:w.mult;return w.by&&o&&!w.by.includes(o)?1-(1-m)*0.7:m;};
-function ourFareRatio(rk){const r=ROUTES[rk];let a=0,b=0;for(const c of ['f','s','t']){a+=r.base[c]*effFare(rk,c)/r.ref[c];b+=r.base[c];}return a/b;}
+// a class priced far above the rate cannot hide a cut in another from the rivals (0.35.4): each class counts at no more than a tenth over
+function ourFareRatio(rk){const r=ROUTES[rk];let a=0,b=0;for(const c of ['f','s','t']){a+=r.base[c]*Math.min(1.1,effFare(rk,c)/r.ref[c]);b+=r.base[c];}return a/b;}
 function ourAppeal(sh,rk,c){
   const L=S.lines[rk],r=ROUTES[rk];
   const pf=fareDemand(r.ref[c]/effFare(rk,c),c);
@@ -170,7 +175,7 @@ function ownersOn(rk){const o={};for(const x of S.rships)if(x.route===rk)o[x.own
 function topRival(rk){const o=ownersOn(rk);const k=Object.keys(o).sort((a,b)=>o[b]*RIVAL_P[b].aggr-o[a]*RIVAL_P[a].aggr)[0];return k||(RIVAL_START[rk]||[]).map(q=>q[0]).find(coAlive)||coLive()[0];}
 function routeAggr(rk){const o=ownersOn(rk);let w=0,a=0;for(const k in o){w+=o[k];a+=o[k]*RIVAL_P[k].aggr;}return w?a/w:0.6;}
 function pressure(rk,fares,ourPax,n,m){
-  let sum=0;for(const c of ['f','s','t'])sum+=fares[c]/ROUTES[rk].ref[c];
+  let sum=0;for(const c of ['f','s','t'])sum+=Math.min(1.1,fares[c]/ROUTES[rk].ref[c]);
   const ratio=sum/3,rp=rivalPax(rk,m),share=ourPax/Math.max(1,ourPax+rp);
   const p=(Math.max(0,0.97-ratio)*250+Math.max(0,share-0.2)*150+Math.max(0,n-1)*6)*routeAggr(rk);
   return {p:clamp(p,0,100),share,ratio,rp};

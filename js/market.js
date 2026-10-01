@@ -101,6 +101,8 @@ function marketMonth(){
     c.e=0.9*(c.e||0)+0.6*sd*mnorm();c.w=0.995*(c.w||0)+0.6*sd*mnorm();c.sh=1+(c.sh-1)*0.85;
     if(c.own)c.own=Math.abs(c.own)<1e-4?0:0.9*c.own;if(c.ownS)c.ownS=1+(c.ownS-1)*0.85; // the Line's own push on the price fades with the rest
     c.px=Math.max(0.004,c.f/c.n*M.mood*c.sh*Math.exp(c.e+(c.w||0))*(warring.has(id)?0.94:1)*(id==='morven'&&S.fl&&S.fl.founders?FL_FOUNDERS:1));
+    // no line sells for much less than it would fetch broken up: below that someone buys it to wind it up (0.35.4)
+    if(!R&&S.rivals[id]&&!c.gone){const lv=mkWindValue(id)/c.n;if(lv>0)c.px=Math.max(c.px,0.85*lv);}
     c.hist.push(c.px);if(c.hist.length>120)c.hist.shift();}
   // the shipping share index: the lines together, January of the first year = 100
   const lines=Object.keys(M.cos).filter(id=>mkRival(id)&&!M.cos[id].gone),cap=lines.reduce((a,id)=>a+mkCap(id),0),fnd=lines.reduce((a,id)=>a+mkFund(id,m),0);
@@ -110,7 +112,9 @@ function marketMonth(){
   // the companies next to shipping pay each quarter; a line pays once a year, the dividend its directors vote in January
   // (coYearEnd, out of its own cash), reaching the shareholders in February
   if(m%3===2)for(const id in M.cos){const c=M.cos[id],R=MK_REL_BY[id];if(c.gone||!R)continue;const e=0.5*R.e0*PX()*R.drv(m);c.dy=e/c.n;mkPayDiv(id,e/4/c.n);}
-  if(m%12===1)for(const id in M.cos){const c=M.cos[id],co=S.rivals[id];if(c.gone||MK_REL_BY[id]||!co)continue;c.dy=(co.div||0)/c.n;mkPayDiv(id,c.dy);}
+  // the shares go ex-dividend: the price drops by the dividend and the City marks the line's worth down at once (0.35.4: a
+  // month's holding over the payment collected the year's dividend while the price lagged)
+  if(m%12===1)for(const id in M.cos){const c=M.cos[id],co=S.rivals[id];if(c.gone||MK_REL_BY[id]||!co)continue;c.dy=(co.div||0)/c.n;mkPayDiv(id,c.dy);if(c.dy>0){c.px=Math.max(0.004,c.px-c.dy);c.f=Math.min(c.f===undefined?Infinity:c.f,mkFund(id,m));}}
   mkControlMonth();if(typeof floatMonth==='function')floatMonth();if(typeof movesMonth==='function')movesMonth();mkLoanMonth();mkFundMonth();mkOfficeMonth();
 }
 function mkShock(id,f,why){const c=S.ex.cos[id];if(!c||c.gone)return;c.sh*=f;
@@ -305,7 +309,7 @@ function mkTakeShip(o,sid){if(mkInfl(o)<2)return false;const x=S.rships.find(y=>
   news(`SS ${sh.name} passes from ${mkName(o)} to the Morven Line at a fair price, ${fmt(price)}.${sh.line?'':' She lies laid up until you give her a line.'}`,'good');return true;}
 /* special resolution: merge. The other shareholders are paid their share of what it is worth; its ships, trades, cash
    and debts become the Line's */
-const mkMergeCost=o=>Math.round((1-mkStake(o))*S.ex.cos[o].n*Math.max(mkVal(o),0));
+const mkMergeCost=o=>Math.round((1-mkStake(o))*S.ex.cos[o].n*Math.max(mkVal(o),mkFair(o),0)); // the minority are paid its worth or the market, whichever is more (0.35.4)
 function mkMerge(o){const M=S.ex,c=M.cos[o],co=S.rivals[o];if(!c||c.gone||mkStake(o)<MK_SPECIAL)return false;
   const cost=mkMergeCost(o);if(S.cash+co.cash<cost)return false;
   const n=mkName(o),fleet=coFleet(o),routes=[...new Set(fleet.map(x=>x.route))];let opened=0;

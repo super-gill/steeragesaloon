@@ -89,7 +89,7 @@ function alerts(){
     if(sh.dockWarn&&sh.state!=='yard')A.push({id:'dockwarn'+sh.id,k:'warn',t:`SS ${sh.name} is due a drydock the account cannot cover.`,b:[['Bank','tabgo','finance']]});
   }
   if(S.trustOffer)A.push({id:'trustoffer',noNote:true,k:'warn',t:`The ${TRUST_NAME} offers ${fmt(S.trustOffer.amt)} for the Morven Line, about ${Math.round(S.trustOffer.amt/Math.max(1,netWorth())*10)/10} times what it is worth. Selling ends the game. Refusing, or letting the offer lapse at the end of ${MONTHS[S.trustOffer.exp%12]}, brings a rate war on your busiest trades.`,b:[['Sell the Line','trustyes'],['Refuse','trustno']]});
-  if(S.offer)A.push({id:'offer',noNote:true,k:'good',t:`The Post Office offers ${fmt(S.offer.pay)} per round trip for the ${ROUTES[S.offer.route].name} mail.${wirelessRule()?' Only ships with wireless carry it.':''} Miss a month and you are warned; miss two and it goes.`,b:[['Accept','accept'],['Decline','decline']]});
+  if(S.offer)A.push({id:'offer',noNote:true,k:'good',t:`The Post Office offers ${fmt(S.offer.pay)} per round trip for the ${ROUTES[S.offer.route].name} mail, for up to two round trips a month.${wirelessRule()?' Only ships with wireless carry it.':''} Miss a month and you are warned; miss two and it goes.`,b:[['Accept','accept'],['Decline','decline']]});
   for(const rk of Object.keys(S.lines)){
     const r=ROUTES[rk],t=S.tension[rk]||0;
     if(S.wars[rk])A.push({id:'war'+rk,k:'bad',t:`Rate war on ${r.name}, ${S.wars[rk].left} more month${S.wars[rk].left>1?'s':''}.`,b:[['View line','selline',rk]]});
@@ -221,7 +221,7 @@ function renderShipDetail(sh){
     ${UI.view==='cut'?legendHTML(sh):''}</div>`);
   const pB=sh.cond<75?(75-sh.cond)/100*0.175:0;
   const lines=Object.keys(S.lines);
-  const sellV=Math.round(shipValue(sh)*0.9),scrapV=sh.grt*2;
+  const sellV=saleValue(sh),scrapV=scrapValue(sh);
   let exitH='';
   if(sh.pendingExit)exitH=`<p class="warnline">To be ${sh.pendingExit==='scrap'?'scrapped':'sold'} when she next reaches port.</p><button class="btn" data-act="unexit">Cancel</button>`;
   else if(sh.state==='req')exitH='<span class="note">She cannot be sold while she is on war service.</span>';
@@ -409,7 +409,7 @@ function renderLineDetail(rk){
     <p class="note">${r.blurb} ${cargoText(rk)}${r.winter?(r.winter.months.includes(S.m%12)?' The St Lawrence is frozen: sailings run to Saint John until May.':' From December to April the St Lawrence freezes and sailings run to Saint John.'):''}</p>
     ${advRow('line'+rk,shownAdvice().filter(h=>h.scope==='line'&&h.ref===rk),'this line')}
     ${war?`<p class="badline">${war.lines?`${war.by.map(o=>RIVALS[o].name).join(' and ')} are at war here: steerage at about ${Math.round(war.multT*100)}% of the line rate, cabins ${Math.round(war.mult*100)}%, the other lines following part of the way`:war.trust?`The Combine's lines have cut steerage to ${Math.round(war.multT*100)}% of the line rate and cabins to ${Math.round(war.mult*100)}% to punish your refusal`:`The ${confOpen()?'conference ':''}lines have cut fares to ${Math.round(war.mult*100)}% of the line rate`}, for ${war.left} more month${war.left>1?'s':''}.</p>`:''}
-    ${S.mail[rk]?`<p class="note">Mail contract: ${fmt(S.mail[rk].pay)} per round trip. ${wirelessRule()?'Only ships with wireless carry it; ships':'Ships'} at economical speed or broken down do not earn it.${ships.some(mailShip)?'':' <strong>None of her ships has wireless: the contract will be lost.</strong>'}</p>`
+    ${S.mail[rk]?`<p class="note">Mail contract: ${fmt(S.mail[rk].pay)} per round trip, up to two a month. ${wirelessRule()?'Only ships with wireless carry it; ships':'Ships'} at economical speed or broken down do not earn it.${ships.some(mailShip)?'':' <strong>None of her ships has wireless: the contract will be lost.</strong>'}</p>`
       :r.cruise||r.group==='Trades'?'':`<p class="note">Mail: ${S.rep<40?`the Post Office tenders for the mails from reputation 40 (you are at ${Math.round(S.rep)}).`:ships.some(mailShip)?'the Post Office invites tenders for this mail every few months; the offer comes to Needs attention.':'tenders need a ship with wireless on the line.'}</p>`}
     <div class="tablewrap"><table><thead><tr><th>Class</th><th>Fare £</th><th class="r">Line rate</th><th class="r">Last out</th><th class="r">Last home</th></tr></thead><tbody>${rows}</tbody></table></div>
     ${L.last[0]||L.last[1]?`<p class="note">Last out: ${L.last[0]?'SS '+L.last[0].name:'none yet'}. Last home: ${L.last[1]?'SS '+L.last[1].name:'none yet'}.</p>`:''}
@@ -488,15 +488,15 @@ function marketHTML(rk,estPax,n){
 
 /* ---------- Brokers ---------- */
 function renderBrokers(){
-  const body=S.market.length?S.market.map(sh=>{const dep=Math.round(sh.price*0.4);return `<div class="card" data-key="m${sh.id}">
+  const body=S.market.length?S.market.map(sh=>{const T=buyTerms(sh),dep=T.dep;return `<div class="card" data-key="m${sh.id}">
       <div class="row"><strong>SS ${sh.name}</strong><span class="num">${fmt(sh.price)}</span></div>
       <div class="meta">Built ${sh.built} · ${int(sh.grt)} grt · ${sh.knots} knots · ${sh.fuel} · lying at ${PN[sh.port]}</div>
       <div class="meta">${sh.berths.f} first, ${sh.berths.s} second, ${sh.berths.t} third · ${int(sh.cargo)} t cargo${sh.up&&sh.up.reefer?' (refrigerated)':''} · condition ${Math.round(sh.cond)}%${sh.up&&sh.up.wireless?' · wireless':''}</div>
       <div class="meta">Comes with ${sh.captain.name}${sh.captain.traits.length?' ('+sh.captain.traits.map(t=>CAPT_TRAITS[t].name.toLowerCase()).join(', ')+')':''}</div>
       ${sh.note?`<div class="meta">${sh.note}</div>`:''}
-      <button class="btn" data-act="buy" data-id="${sh.id}" ${S.cash<dep||S.over?'disabled':''} style="width:fit-content">Buy · ${fmt(dep)} down, ${fmt(sh.price-dep)} mortgaged</button></div>`;}).join('')
+      <button class="btn" data-act="buy" data-id="${sh.id}" ${S.cash<dep||S.over?'disabled':''} style="width:fit-content">Buy · ${T.mort?`${fmt(dep)} down, ${fmt(T.mort)} mortgaged`:`${fmt(dep)} cash`}</button></div>`;}).join('')
     :'<p class="note">Nothing on the lists. New ships come up every quarter.</p>';
-  setHTML($('pane-brokers'),orderBookHTML()+auctionHTML()+`<section class="sec"><h2>Ships for sale</h2><p class="note">The brokers send a new list every quarter. The bank mortgages 60% of the price; you pay the rest in cash. Bought ships arrive laid up where they lie.</p>${body}</section>`);
+  setHTML($('pane-brokers'),orderBookHTML()+auctionHTML()+`<section class="sec"><h2>Ships for sale</h2><p class="note">The brokers send a new list every quarter. The bank mortgages up to 60% of the price, no more than it would lend with her in the fleet, and nothing while a panic has stopped lending; you pay the rest in cash. Bought ships arrive laid up where they lie.</p>${body}</section>`);
 }
 
 /* ---------- Shore ---------- */
@@ -619,7 +619,7 @@ function renderFinance(){
       <dt>Required repayment</dt><dd>${fmt(Math.round(S.debt*0.004))}/mo</dd><dt>Fleet value</dt><dd>${fmt(fleetValue())}</dd><dt>Can still borrow</dt><dd>${fmt(hr)}</dd></dl>
       <div class="btns">${[10000,100000,1000000].filter(v=>v<=Math.max(10000,hr,S.debt)).map(v=>`<button class="btn" data-act="borrow" data-id="${v}" ${hr<v||S.noLend>S.m||S.over?'disabled':''}>Borrow ${fmt(v)}</button>`).join('')}</div>
       <div class="btns">${[10000,100000,1000000].filter(v=>v<=Math.max(10000,S.debt)).map(v=>`<button class="btn" data-act="repay" data-id="${v}" ${S.cash<Math.min(v,S.debt)||S.debt<=0||S.over?'disabled':''}>Repay ${fmt(v)}</button>`).join('')}</div>
-      <p class="note">The bank lends up to 70% of your fleet and property, and 90% of your government stock. Its overdraft runs to ${fmt(odLimit())} (£8,000 plus half your unused borrowing); below that it forecloses.</p></section>
+      <p class="note">The bank lends up to 70% of your fleet and property, and 90% of your government stock. Its overdraft runs to ${fmt(odLimit())} (£8,000 plus half your unused borrowing), at 8% a year; below that it forecloses.</p></section>
     <section class="sec"><h2>Government stock</h2>
       <p class="note">Consols pay £2 10s a year on each £100 of stock, for ever, and are safe if your bank fails. Their price moves against interest rates: when yields rise the stock falls, and when they fall it rises. A panic knocks it down for a few months. Buying or selling costs ¼%. Cash in the bank earns nothing${S.m>=ym(1936,0)?', and banks do fail':''}.</p>
       <dl class="kv"><dt>Yield today</dt><dd>${giltYield().toFixed(2)}%</dd><dt>Price</dt><dd>£${giltPrice().toFixed(2)} for £100 of stock</dd>

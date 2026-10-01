@@ -104,8 +104,8 @@ document.addEventListener('click',e=>{
     case 'unexit':if(sh){sh.pendingExit=null;sh.saleAmt=null;}break;
     case 'openline':{const rk=b.dataset.id,fee=Math.round(2500*PX());if(S.cash>=fee&&!S.lines[rk]&&routeOpen(rk,S.m)){book('office',-fee,rk);S.lines[rk]={fares:defaultFares(rk),service:1,adv:1,last:[null,null]};news(`The Morven Line opens a ${ROUTES[rk].name} service.`,'good');}break;}
     case 'askclose':UI.confirm='close'+b.dataset.id;break;
-    case 'closeline':{const rk=b.dataset.id;delete S.lines[rk];delete S.mail[rk];delete S.wars[rk];S.ships.forEach(x=>{if(x.line===rk){x.line=null;}});news(`The ${ROUTES[rk].name} service is closed.`);UI.confirm=null;break;}
-    case 'buy':{const s2=S.market.find(x=>x.id===+b.dataset.id);if(s2){const dep=Math.round(s2.price*0.4);if(S.cash>=dep){S.cash-=dep;S.debt+=s2.price-dep;delete s2.price;s2.acq=S.m;S.ships.push(s2);S.market=S.market.filter(x=>x!==s2);S.selShip=s2.id;news(`Bought SS ${s2.name}, lying at ${PN[s2.port]}. Assign her to a line.`,'good');}}break;}
+    case 'closeline':{const rk=b.dataset.id;delete S.lines[rk];delete S.mail[rk]; /* a rate war on the route goes on without the Line (0.35.4): closing and reopening used to end it */S.ships.forEach(x=>{if(x.line===rk){x.line=null;}});news(`The ${ROUTES[rk].name} service is closed.`);UI.confirm=null;break;}
+    case 'buy':{const s2=S.market.find(x=>x.id===+b.dataset.id);if(s2&&buyShip(s2))S.selShip=s2.id;break;}
     case 'borrow':{const v=+b.dataset.id||10000;if(headroom()>=v&&!(S.noLend>S.m)){S.debt+=v;S.cash+=v;}break;}
     case 'repay':{const x=Math.min(+b.dataset.id||10000,S.debt);if(S.cash>=x){S.debt-=x;S.cash-=x;}break;}
     case 'trustyes':trustAccept();break;

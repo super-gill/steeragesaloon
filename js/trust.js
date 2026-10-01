@@ -71,7 +71,8 @@ function trustRefuse(lapsed){
   const n={};for(const x of S.ships)if(x.line&&!isCruise(x.line)&&ACTIVE.includes(x.state))n[x.line]=(n[x.line]||0)+1;
   const rks=Object.keys(n).sort((a,b)=>n[b]-n[a]).slice(0,2);
   for(const rk of rks)if(!S.conf)S.wars[rk]={left:6+Math.floor(Math.random()*5),mult:0.75,multT:0.6,trust:true,by:trustMembers()};
-  news(`${lapsed?'The Line lets the offer lapse. ':''}${TRUST_SHORT[0].toUpperCase()+TRUST_SHORT.slice(1)} answers with a rate war${rks.length?` on ${rks.map(rk=>ROUTES[rk].name).join(' and ')}`:''}: its lines will carry at a loss to break you.`,'bad',true);
+  if(S.conf)news(`${lapsed?'The Line lets the offer lapse. ':''}${TRUST_SHORT[0].toUpperCase()+TRUST_SHORT.slice(1)} is displeased, but the conference shields its members: there is no rate war.`,'',true);
+  else news(`${lapsed?'The Line lets the offer lapse. ':''}${TRUST_SHORT[0].toUpperCase()+TRUST_SHORT.slice(1)} answers with a rate war${rks.length?` on ${rks.map(rk=>ROUTES[rk].name).join(' and ')}`:''}: its lines will carry at a loss to break you.`,'bad',true);
 }
 /* the Combine on the Company tab */
 function trustHTML(){

@@ -41,7 +41,7 @@ const SC = {
   proxy: `const o=target();let g=0;while(mkStake(o)<0.15&&g++<10)mkBuyPct(o,0.05);S.rep=60;const p=mvProxyChance(o);const r=mvProxy(o);ok('a proxy fight is fought',r,'chance '+Math.round(p*100)+'%');
     ok('won gives control on a tenth, lost costs standing and a wait',S.ex.cos[o].proxy?mkInfl(o)===2:(S.rep<60&&!mvProxy(o)));`,
   shortFall: `const o=target();const c=S.ex.cos[o];ok('a short is opened',mvShort(o,0.05));const px0=c.px,col=S.ex.me.short[o].col;c.sh*=0.7;to(S.m+1);const px1=c.px,sq=/squeeze/.test(S.news.slice(0,20).map(n=>n.t).join(' '));const cash1=S.cash,s=S.ex.me.short[o];mvCover(o);ok('a short gains when the price falls',!s||sq||S.cash-cash1-(s?s.margin:0)>0,'price '+px0.toFixed(2)+' to '+px1.toFixed(2)+(sq?', squeezed':'')+', sold for '+Math.round(col)+', gain on cover '+Math.round(S.cash-cash1-(s?s.margin:0)));`,
-  shortRise: `const o=target();const c=S.ex.cos[o];mvShort(o,0.05);c.sh*=1.8;to(S.m+1);ok('a short is bought in when the price climbs',!(S.ex.me.short&&S.ex.me.short[o]));`,
+  shortRise: `const o=target();const c=S.ex.cos[o];mvShort(o,0.05);c.sh*=2.2;to(S.m+1);ok('a short is bought in when the price climbs',!(S.ex.me.short&&S.ex.me.short[o]));`,
   shortFlat: `const o=target();const cash0=S.cash;mvShort(o,0.05);mvCover(o);ok('opening and closing a short at once loses money',S.cash<cash0,Math.round(S.cash-cash0));`,
   bear: `const o=target();let rk=mvBearRoutes(o)[0];if(!rk){rk=coFleet(o)[0].route;S.lines[rk]={fares:defaultFares(rk),service:1,adv:1,last:[null,null]};}
     const f0=S.lines[rk].fares.f;mvShort(o,0.02);ok('a bear raid starts a rate war',mvBear(o,rk)&&S.wars[rk]&&S.wars[rk].by.includes(o));ok('the Line cuts its own fares',S.lines[rk].fares.f<f0);

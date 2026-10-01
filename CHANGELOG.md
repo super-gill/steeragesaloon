@@ -2,6 +2,26 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.35.4 (1 October 2026)
+The first test players' fixes. Two programs played 1900 to 1912 through the new command-line player (`tools/play.js`); one played carefully, one hunted for exploits and reached £10 million. Everything they found is fixed here, and `tools/exploits.js` checks that it stays fixed.
+- Fixed: fares had no ceiling. Above about twice the rate a class kept a fixed sliver of its passengers however dear it was, so ten times the rate earned ten times as much; and a line alone on a route had its fare cancel out altogether. Demand now falls away with no floor, and travellers can always go another way: alone on a route, about one and a half times the rate pays best while the ships are full, and ten times earns nothing.
+- Fixed: rival lines' shares could sell for half the cash in their banks, so buying three quarters and merging paid for itself the same day. A line's shares no longer sell much below what it would fetch broken up, and the other shareholders are paid at least the market price in a merger.
+- Fixed: closing and reopening a service ended any rate war on it, even the Combine's. The war goes on without you.
+- Fixed: an overdraft cost nothing. It now costs 8% a year.
+- Fixed: property ashore was valued at 1921 prices, so before 1921 buying a yard, slip, hostel, shed or cold store raised net worth and borrowing. It is now valued at today's prices.
+- Fixed: buying a second-hand ship ignored the bank's limit, and a panic's "no new lending" did not stop ship mortgages. The bank now lends on a purchase only within its limit and not in a panic; the Buy button shows the terms. On delivery a new ship is mortgaged only if the Line is short of cash.
+- Fixed: a mail contract paid every ship on the line, so a slow tramp earned what a liner did. It pays for up to two round trips a month.
+- Fixed: the Admiralty paid its subsidy on a laid-up ship and accepted a German-built one.
+- Fixed: a receiver's bargain could be bought at seven tenths of her worth and sold the same day at nine tenths. A ship sells for no more than she cost within the year.
+- Fixed: a class priced far above the rate hid a cut in another from the rivals.
+- Fixed: holding a rival's shares for a month collected its whole dividend. The price now drops when the shares go ex-dividend.
+- Fixed: a new ship ordered for a line arrived laid up. She joins her line on delivery.
+- Fixed: in a big fleet the everyday knocks to the Line's name (breakdowns, fines, quarantines) ground reputation to nothing whatever the service; they now count for less the bigger the fleet.
+- Fixed: the American wireless law of 1911 was applied only to the mails. Without wireless a ship leaving an American port now carries 49 passengers at most, and head office warns a year ahead.
+- Fixed: money paid on ships on the stocks vanished from net worth until delivery.
+- Head office now warns when the City whispers about the Line's bank, and no longer suggests the conference before it can be joined.
+- Fixed text: Prohibition agents in New York before 1920 (now United States customs), film stars before 1912 (now a celebrated actress of the London stage), Mrs Stanley Baldwin launching ships before 1923, a launch sponsor without a capital letter, a fare "cut" that was a rise, and a Combine rate war announced against a conference member that never came.
+
 ## 0.35.3 (1 October 2026)
 - Fixed: buying a company's shares a little at a time could make billions. Each purchase moved the price against the shares still on offer, so as they ran out the last few lifted it by half each time, and buying by amount had no limit, so the Line could hold more shares than the company had. Twenty-nine purchases of £20,000 pushed a price up 51,000 times and selling sold into it: £6.5 million became £2.8 billion. A deal now moves the price against all the company's tradable shares, and the Line can buy no more than are on offer: buying a whole company a little at a time lifts its price under two times, and selling it straight back loses money.
 - Fixed: winding up a line the Line had lent to paid the loan back twice: once as the loan, and again in the shareholders' share of its cash.

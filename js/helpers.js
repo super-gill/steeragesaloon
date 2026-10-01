@@ -115,6 +115,9 @@ function coalPrice(m,held){if(m<M21)return preYear(PRE_COAL,m)*(m>=ym(1914,0)?1.
 /* oil is dear at first; by the mid-twenties it costs about nine-tenths of coal for the same miles, and saves stokers and days in port besides */
 function oilPrice(m){m-=M21;return (m<12?3.6:m<24?3.0:m<48?2.7-0.75*(m-24)/24:1.95)*(m>=354?0.78:1)*(1+0.03*Math.sin(m*0.9));}
 function repF(c,rep,r){const x=rep-30;if(c==='f')return clamp(1+x/(r.prestige>1.2?50:70),0.4,1.8);if(c==='s')return clamp(1+x/150,0.6,1.4);if(c==='t')return clamp(1+x/500,0.85,1.15);return clamp(1+x/100,0.5,1.6);}
+/* the day-to-day knocks and credits to the Line's name (a breakdown, a fine, a quarantine, a rescue) count for less in a big
+   fleet: one ship in seventy matters less than one in six (0.35.4; before, a big line's name was ground to nothing) */
+function repHit(n){const k=S.ships.filter(x=>x.state!=='lost').length;S.rep=clamp(S.rep+n*clamp(Math.sqrt(6/Math.max(1,k)),0.3,1),0,100);}
 const repWord=r=>r<15?'Disreputable':r<30?'Unknown':r<45?'Respectable':r<60?'Well regarded':r<75?'Fashionable':'Illustrious';
 function shipValue(sh){return sh.base*PX()/(sh.pi0||1)*Math.pow(sh.cond/100,0.7)*Math.max(0.15,1-fatOf(sh)*0.0085)*shipMkt();}
 /* the ship's company: deck and engine-room hands by size and fuel (stokers for coal), and stewards by the passengers carried.

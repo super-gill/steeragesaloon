@@ -230,10 +230,11 @@ function advice(){MOD_EPOCH++;
     if(sh.fuel==='coal'&&yearNow()>=OIL_FROM&&yearNow()-sh.built<28)yard('oil',{fuel:'oil'},`Convert SS ${sh.name} to oil`,'Oil firing cuts her stokehold crew and her bunker bill.');
     if((sh.berths.f+sh.berths.s)>0&&(sh.fit||0)<50)yard('refurb',{fit:100},`Refurbish SS ${sh.name}`,`Her saloons are tired (fittings ${Math.round(sh.fit||0)}%), and first and second class notice.`);
     if(!(sh.up&&sh.up.reefer)&&COMM[ROUTES[r0].cargo.home.c].reefer)yard('reefer',{up:{...sh.up,reefer:true}},`Fit refrigerated holds to SS ${sh.name}`,`Her route's homeward cargo, ${COMM[ROUTES[r0].cargo.home.c].name.toLowerCase()}, needs cold holds; without them she takes only a sliver of it.`);
-    if(!(sh.up&&sh.up.wireless)&&S.m>=ym(1909,0)&&(S.mail[r0]&&wirelessRule()||S.rep>=35||S.m>=ym(1937,8))&&canSpend(refitCost(sh,'wireless'))&&!inVisit('wireless'))
-      add({id:`wireless:${sh.id}`,scope:'ship',ref:sh.id,sev:'tip',gain:150,title:`Fit wireless to SS ${sh.name}`,
-        why:`${S.m>=ym(1937,8)?(S.m>=ym(1940,0)?'Under the Ocean Aid Convention she may carry no passengers without it. ':'From 1940 the Ocean Aid Convention bars passenger ships without wireless. '):''}${wirelessRule()?`Only ships with wireless can carry the mails${S.m<ym(1940,0)?' or tell you when she is in trouble':''}${S.mail[r0]?', and this route has a contract':''}.`:'From July 1911 American law will require wireless on any ship leaving an American port with fifty or more aboard, and only ships with it will carry the mails. Meanwhile it lets her report from sea and call for help.'} Without it, nothing is heard of her at sea unless a passing ship sees her lamps. ${money(refitCost(sh,'wireless'))} and a week in the yard.`,
-        act:[[sh.pendingYard?'Add it to her yard visit':'Book it','setyard',sh.id,'wireless']]});
+    if(!(sh.up&&sh.up.wireless)&&S.m>=ym(1909,0)&&(S.mail[r0]&&S.m>=ym(1910,6)||S.m>=ym(1910,6)&&(r0&&ROUTES[r0]?ROUTES[r0].calls:[]).some(p=>['NYC','NOL','GAL'].includes(p))||S.rep>=35||S.m>=ym(1937,8))&&canSpend(refitCost(sh,'wireless'))&&!inVisit('wireless'))
+      {const us=S.m>=ym(1910,6)&&(r0&&ROUTES[r0]?ROUTES[r0].calls:[]).some(p=>['NYC','NOL','GAL'].includes(p));
+      add({id:`wireless:${sh.id}`,scope:'ship',ref:sh.id,sev:us||S.mail[r0]?'warn':'tip',gain:us||S.mail[r0]?900:150,title:`Fit wireless to SS ${sh.name}`,
+        why:`${S.m>=ym(1937,8)?(S.m>=ym(1940,0)?'Under the Ocean Aid Convention she may carry no passengers without it. ':'From 1940 the Ocean Aid Convention bars passenger ships without wireless. '):''}${wirelessRule()?`Only ships with wireless can carry the mails, or more than forty-nine passengers out of an American port${S.m<ym(1940,0)?', or tell you when she is in trouble':''}${S.mail[r0]?', and this route has a contract':''}.`:'From July 1911 American law will require wireless on any ship leaving an American port with fifty or more aboard, and only ships with it will carry the mails. Meanwhile it lets her report from sea and call for help.'} Without it, nothing is heard of her at sea unless a passing ship sees her lamps. ${money(refitCost(sh,'wireless'))} and a week in the yard.`,
+        act:[[sh.pendingYard?'Add it to her yard visit':'Book it','setyard',sh.id,'wireless']]});}
     // boats, the night watch, and what a court would find if she were lost
     if(newCal()&&!hasBoats(sh)&&paxBerths(sh)>0&&S.m>=BOAT_NEWS&&!inVisit('boats'))
       add({id:`boats:${sh.id}`,scope:'ship',ref:sh.id,sev:S.m>=BOAT_LAW?'bad':'warn',gain:S.m>=BOAT_LAW?900:500,title:`Fit boats for all to SS ${sh.name}`,
@@ -271,7 +272,7 @@ function advice(){MOD_EPOCH++;
   const rc=runningCost();
   if(S.cash<1.5*rc&&S.ships.length>1)add({id:'reserve',scope:'co',sev:'warn',gain:6e5,title:'Your cash reserve is thin',
     why:`You hold ${money(S.cash)} against running costs of about ${money(rc)} a month, before coal and port bills. One bad month could put you in the bank's hands. Borrow while you can, lay up a loss-making ship, or hold off on buying.`,act:[['Bank','tabgo','finance']]});
-  const deps=S.market.map(m=>Math.round(m.price*0.4));
+  const deps=S.market.map(m=>buyTerms(m).dep);
   const fleetV=S.ships.reduce((a,x)=>a+shipValue(x),0);
   // at the top of the boom head office says why it will not advise buying or building
   if(shipMkt()>1.3&&newCal()&&S.m<M21)add({id:'boomwait',scope:'co',sev:'tip',gain:1,title:'Hold off buying and building until the boom breaks',
@@ -279,7 +280,7 @@ function advice(){MOD_EPOCH++;
   // not at the top of the 1919 and 1920 boom: ships bought at two and a half times their worth lose most of it in the crash
   if(S.market.length&&shipMkt()<=1.3&&S.cash-reserve>Math.min(...deps)&&(!S.ships.length||S.debt<0.6*fleetV)){
     let best=null;
-    for(const m of S.market){const dep=Math.round(m.price*0.4);if(fatOf(m)>=70||S.cash-reserve<dep||S.debt+m.price-dep>0.62*(fleetV+m.price))continue;
+    for(const m of S.market){const dep=buyTerms(m).dep;if(fatOf(m)>=70||S.cash-reserve<dep||S.debt+m.price-dep>0.62*(fleetV+m.price))continue;
       for(const rk of Object.keys(ROUTES)){const q=econYear(m,rk);const pay=q.pm-(m.price-dep)*0.065/12;if(!best||pay>best.pay)best={m,rk,pay,dep};}}
     // only when cash is really piling up: well over a year of running costs beyond the deposit
     if(best&&best.pay>(slump(S.m)>0.3?1500:500)&&S.cash-best.dep>12*rc)add({id:`buy:${best.m.name}`,scope:'co',sev:'tip',gain:best.pay,title:'Put idle cash to work',
@@ -320,7 +321,10 @@ function advice(){MOD_EPOCH++;
     why:'With four ships or more, departments pay their way: a Fares Office, a Traffic Department, a Marine Superintendent and a Crewing Office can each act on their own advice every month. See the Company tab.',act:[['Head office','tabgo','company']]});
   if(S.rep<25&&Object.values(S.lines).some(l=>l.service===0))add({id:'rep-low',scope:'co',sev:'warn',gain:300,title:'Your name is suffering',
     why:'Spartan tables lower your standing, and standing is what first class passengers buy. Consider Standard service.',act:[]});
-  if(!S.conf&&Object.keys(S.wars).length)add({id:'conf-war',scope:'co',sev:'tip',gain:200,title:'The conference is an option',
+  // the City's whispers: a bank in trouble takes most of the cash on deposit with it, and Consols are safe (0.35.4)
+  if(S.crash&&S.crash.stage==='rumour'&&S.crash.bank&&S.cash>3*runningCost()+5000*PX())add({id:'bankrun'+S.crash.m0,scope:'co',sev:'bad',gain:S.cash*0.5,title:'Move spare cash out of the bank',
+    why:`${BANK_NAME[0].toUpperCase()+BANK_NAME.slice(1)} is said to be overextended. If it fails it takes most of the cash on deposit with it; government stock is safe. Keep a few months' running costs in the account and put the rest into Consols until the whispers pass.`,act:[['Finance','tabgo','finance']]});
+  if(!S.conf&&confOpen()&&Object.keys(S.wars).length)add({id:'conf-war',scope:'co',sev:'tip',gain:200,title:'The conference is an option',
     why:'Members cannot be targeted by rate wars. The price is a fare floor at 95% of the line rate and a cap on steerage. Worth it if you keep provoking wars.',act:[['Conference','tabgo','company']]});
   for(const id in S.dismiss)if(S.dismiss[id]===UNTIL_CLEAR&&!raised.has(id))delete S.dismiss[id]; // the situation has passed: it may be raised afresh
   A.sort((a,b)=>b.gain-a.gain);
@@ -378,8 +382,7 @@ function doAction(act,d){MOD_EPOCH++;
     case 'deptmode':{const [k,auto]=d;if(!S.depts[k])return false;S.depts[k].auto=!!auto;return true;}
     case 'openmove':{const [id,rk]=d;const x=ship(id);if(!x)return false;if(!S.lines[rk]){const fee=Math.round(2500*PX());if(S.cash<fee||!routeOpen(rk,S.m))return false;book('office',-fee,rk);S.lines[rk]={fares:defaultFares(rk),service:1,adv:1,last:[null,null]};news(`The Morven Line opens a ${ROUTES[rk].name} service.`,'good');}
       return doAction('moveship',[id,rk]);}
-    case 'buyship':{const [name,rk]=d;const m=S.market.find(q=>q.name===name);if(!m)return false;const dep=Math.round(m.price*0.4);if(S.cash<dep)return false;
-      S.cash-=dep;S.debt+=m.price-dep;delete m.price;m.acq=S.m;S.ships.push(m);S.market=S.market.filter(q=>q!==m);news(`Bought SS ${m.name}, lying at ${PN[m.port]}.`,'good');
+    case 'buyship':{const [name,rk]=d;const m=S.market.find(q=>q.name===name);if(!m||!buyShip(m))return false;
       if(rk)doAction('openmove',[m.id,rk]);return true;}
     case 'newhead':{const [k,i]=d;const o=S.depts[k];if(!o||!o.cands||!o.cands[i])return false;const sev=o.head?o.head.wage*3:0;if(S.cash<sev)return false;
       if(sev)book('office',-sev);const h=o.cands[i];news(`${o.head?o.head.name+' leaves with three months\' pay. ':''}${h.name} becomes ${DEPTS[k].head}.`);o.head=h;o.cands.splice(i,1);return true;}
@@ -463,7 +466,8 @@ function deptWeek(){
       // no second thoughts on the same item inside three weeks
       if(o.last[key]>S.t-21)continue;
       // fares set by eye, not to the shilling
-      if(act==='setfare'&&R()<(1-c)*0.8)d[2]=Math.max(1,Math.round(d[2]*(0.9+R()*0.2)));
+      if(act==='setfare'&&R()<(1-c)*0.8){const cur=(S.lines[d[0]]||{fares:{}}).fares[d[1]],up=d0[2]>cur;d[2]=Math.max(1,Math.round(d[2]*(0.9+R()*0.2)));
+        if(cur!==undefined){if(up&&d[2]<=cur)d[2]=cur+1;if(!up&&d[2]>=cur)d[2]=Math.max(1,cur-1);}} // by eye, but never the wrong way (0.35.4)
       if(doAction(act,d)){done++;if(act==='moveship'){movedNow=true;o.moved[d[0]]=S.t;}o.last[key]=S.t;
         news(`${DEPTS[k].name}: ${h.title}${act==='setfare'&&d[2]!==d0[2]?` (set at £${d[2]})`:''}.`);S.dismiss[h.id]=S.m;ADV_CACHE.key=null;}}
   }

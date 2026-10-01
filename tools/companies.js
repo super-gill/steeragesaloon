@@ -25,9 +25,9 @@ function run(seed, years) {
     newGame();UI.autoPause=false;UI.speed=1;
     const fails=[],entrants=[],yearly=[],empty={};let lastM=-1;
     const on=news;news=function(t,k,p){if(/has failed|been wound up/.test(t))fails.push(YEAR0+Math.floor(S.m/12)+': '+t);if(/new line|starts sailing|enters the/.test(t)&&/Line|Company|Co\\./.test(t))entrants.push(YEAR0+Math.floor(S.m/12)+': '+t);return on(t,k,p);};
-    const expand=()=>{for(const m of S.market.slice()){const dep=Math.round(m.price*0.4);if(S.cash-dep<Math.max(12000,3*runningCost()))continue;
+    const expand=()=>{for(const m of S.market.slice()){const dep=buyTerms(m).dep;if(S.cash-dep<Math.max(12000,3*runningCost()))continue;
       let b=null;for(const rk of Object.keys(ROUTES)){const q=econ(m,rk);if(!b||q.pm>b.pm)b={rk,pm:q.pm};}if(!b||b.pm<500)continue;
-      S.cash-=dep;S.debt+=m.price-dep;delete m.price;S.ships.push(m);S.market=S.market.filter(x=>x!==m);
+      if(!buyShip(m))continue;
       if(!S.lines[b.rk]&&S.cash>2500){book('office',-2500,b.rk);S.lines[b.rk]={fares:defaultFares(b.rk),service:1,adv:1,last:[null,null]};}
       if(S.lines[b.rk]){m.line=b.rk;}return;}};
     while(!S.over&&S.m-S.m0<${years}*12){

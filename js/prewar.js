@@ -71,14 +71,14 @@ const ribandRep=()=>S.riband&&S.riband.o==='morven'?5:0;
    return she must be available as an armed merchant cruiser in war (the war years come in 0.26) and her loan is repaid
    before she can be sold. */
 const ADM_FROM=ym(1903,6),ADM_RATE=0.0275,ADM_TERM=240,ADM_SUB=0.045;
-const admEligible=d=>newCal()&&S.m>=ADM_FROM&&d.knots>=24&&d.grt>=20000;
+const admEligible=d=>newCal()&&S.m>=ADM_FROM&&d.knots>=24&&d.grt>=20000&&!['elbe','liguria'].includes(d.builder); // built in a British yard, as the 1903 agreement required (0.35.4)
 /* the Line's debt to the Admiralty, on ships in service and on the stocks */
 const admDebt=()=>S.ships.reduce((a,x)=>a+(x.adm?x.adm.bal:0),0)+(S.orders||[]).reduce((a,o)=>a+(o.admBal||0),0);
 /* each month: the loan's interest and a twentieth-of-a-year of its principal, and the subsidy */
 function admMonth(){
   for(const sh of S.ships){const a=sh.adm;if(!a||sh.state==='lost')continue;
     if(a.bal>0){const pr=Math.min(a.bal,a.bal0/ADM_TERM),int=a.bal*ADM_RATE/12;a.bal-=pr;S.cash-=pr;book('interest',-int,sh.line,sh);}
-    book('subsidy',a.sub,sh.line,sh);}
+    if((ACTIVE.includes(sh.state)&&sh.line)||sh.state==='yard')book('subsidy',a.sub,sh.line,sh);} // paid while she sails, not laid up (0.35.4)
 }
 /* before she leaves the fleet her Admiralty loan is paid off out of what she fetches */
 function admRepay(sh){const a=sh.adm;if(!a||a.bal<=0)return 0;const p=a.bal;S.cash-=p;a.bal=0;return p;}

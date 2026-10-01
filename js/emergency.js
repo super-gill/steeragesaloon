@@ -202,13 +202,13 @@ const DECIDE={
       fx:(e,sh)=>{if(sh.state==='port')sh.portLeft=Math.max(1,sh.portLeft-(e.days-1));book('port',-Math.round(e.steer*e.days*0.8+300),sh.legRoute||sh.line,sh);return 'Steerage landed to the quarantine station. Ship released tomorrow.';}},
     protest:{label:'Protest to the health officer',hint:()=>`Your name carries weight with the port${S.rep>60?'':', though perhaps not enough'}. If he will not budge, he adds a day for the trouble.`,
       fx:(e,sh)=>{if(Math.random()<0.2+S.rep/220){if(sh.state==='port')sh.portLeft=Math.max(1,sh.portLeft-Math.floor(e.days/2));return 'Health officer relents. Quarantine halved.';}
-        if(sh.state==='port')sh.portLeft+=1;S.rep=clamp(S.rep-1,0,100);return 'Health officer will not move. A day added for the trouble.';}}
+        if(sh.state==='port')sh.portLeft+=1;repHit(-1);return 'Health officer will not move. A day added for the trouble.';}}
   },dflt:()=> 'accept'}
 };
 /* things only the office can do, at any time, once each: they do not wait for the master to ask */
 const OFFICE={
     distress:{label:'Call every ship within 500 miles',owner:true,hint:e=>e.resp.length?'More ships on the way. The newspapers will hear of it.':'No ship is near her yet. This widens the call. The newspapers will hear of it.',
-      fx:(e,sh)=>{const h=addResponders(e,sh,500,3);S.rep=clamp(S.rep-1,0,100);return h.length?`General call answered by ${h.map(n=>'SS '+n.name).join(', ')}.`:'General call sent. Nothing answering yet.';}},
+      fx:(e,sh)=>{const h=addResponders(e,sh,500,3);repHit(-1);return h.length?`General call answered by ${h.map(n=>'SS '+n.name).join(', ')}.`:'General call sent. Nothing answering yet.';}},
     tugs:{label:'Send salvage tugs, no cure no pay',owner:true,ok:(e,sh)=>nearestPort(shipXY(sh)).d<600,hint:(e,sh)=>{const n=nearestPort(shipXY(sh));return `Ocean tugs from ${PN[n.k]}, about ${Math.round(n.d/11)} h away. Pumps and a tow. Costs a salvage award only if she is saved.`;},
       fx:(e,sh)=>{const n=nearestPort(shipXY(sh));e.salvage=true;e.resp.push({name:TUGS[e.id%TUGS.length],line:'salvage tug, '+PN[n.k],tug:true,radio:true,eta:S.t+n.d/11/24+1/24,arrived:false});return `Salvage tug ${TUGS[e.id%TUGS.length]} sailing from ${PN[n.k]}.`;}}
 };
@@ -242,7 +242,7 @@ function emergencyStep(e,sh,step){
   if(D.type==='war'){if(e.dec&&S.t>=e.dec.until)emDecide(e,null,'master');if(e.after&&S.t>=e.after.at)warResolve(e,sh);return;}
   for(const r of e.resp)if(!r.arrived&&S.t>=r.eta){r.arrived=true;
     emSay(e,null,r.navy?`${r.name} alongside SS ${e.ship}. Boarding party sent across.`:r.tug?`Tug ${r.name} alongside SS ${e.ship}. Salvage pumps going aboard.`:`SS ${r.name} standing by SS ${e.ship}${D.type==='water'||D.type==='fire'?'. Boats lowered, pumps and hoses passed across':''}.`,'good',r.navy?'Naval wireless':r.tug?'Tug\'s wireless':`SS ${r.name}'s wireless`);
-    if(r.own)S.rep=clamp(S.rep+1,0,100);}
+    if(r.own)repHit(+1);}
   const help=e.resp.reduce((a,r)=>a+(r.arrived?(r.tug?2.5:1):0),0);
   // worse damage is harder to get on top of: control comes more slowly and never as fully without help
   const sv=e.sev||1,cap=Math.min(100,e.cap+e.capA-SEV_CAP[sv]+help*(D.type==='unrest'?35:D.type==='sick'?6:12));
@@ -323,13 +323,13 @@ function emEnd(e,sh,how){
       emSay(e,sh,`${D.type==='water'?'Leak held':'Fire out'}. Surveyor's report: frames buckled and the hull strained through. Not worth repairing.`,'bad');
       if(sh.load){book('fares',-Math.round(sh.load.paxRev*0.3),rk,sh);}writeOff(e,sh,'after her '+D.name.toLowerCase());return;}
     sh.brk=null;book('yard',-Math.round(sh.grt*(0.2+sev*0.8)*(e.flooded?1.3:1)),rk,sh);sh.cond=clamp(sh.cond-sev*15,5,95);sh.pendingYard=sev>0.5?'repair':'engine';sh.limp=sev>0.3;sh.limpF=0.6;
-    S.rep=clamp(S.rep-Math.round(sev*4),0,100);sh.stopLeft=e.delay||0;
+    repHit(-Math.round(sev*4));sh.stopLeft=e.delay||0;
     emSay(e,sh,`${D.type==='water'?'Leak under control':'Fire out'}. Proceeding at reduced speed${help?', escorted':''}. ${sev>0.5?'Damage heavy. Will need the yard.':'Damage moderate.'}`,'good');}
   if(D.type==='sick'){const dd=DISEASE[e.dis]||DISEASE.flu,pool=e.crew?crewOf(sh):souls,ill=Math.round(pool*e.peak/100*0.45),dead=Math.round(ill*dd.mort*(e.iso?0.7:1)*crewMods(sh).sick);
-    e.dead=dead;const sg=offOf(sh).surg;S.rep=clamp(S.rep-(dead>10?dd.rep+2:dead?dd.rep:(sg&&sg.skill>=60?-1:0)),0,100); // an outbreak with no deaths is no scandal; a good surgeon's handling of it is praised
+    e.dead=dead;const sg=offOf(sh).surg;repHit(-(dead>10?dd.rep+2:dead?dd.rep:(sg&&sg.skill>=60?-1:0))); // an outbreak with no deaths is no scandal; a good surgeon's handling of it is praised
     if(!e.landed)sh.quarantine={dis:e.dis,iso:!!e.iso,quiet:!!e.quiet,peak:e.peak};
     emSay(e,sh,`Outbreak over. ${ill} were ill. ${dead?dead+' died.':'No deaths.'}${e.landed?' Sick landed ashore.':e.quiet?'':' Expect quarantine on arrival.'}`,dead?'bad':'good');}
-  if(D.type==='unrest'){sh.stopLeft=0;if(!e.settle){const c=Math.round(800+R()*2000);book('crew',-c,rk,sh);S.rep=clamp(S.rep-3,0,100);}
+  if(D.type==='unrest'){sh.stopLeft=0;if(!e.settle){const c=Math.round(800+R()*2000);book('crew',-c,rk,sh);repHit(-3);}
     emSay(e,sh,e.settle?'Order restored. Proceeding.':e.k==='piracy'?`Order restored. Ringleaders in irons. ${e.seized?'Mail and valuables taken.':'Nothing lost.'} Proceeding.`:`Order restored. Ringleaders in irons for the courts. Proceeding with a scratch stokehold.`,'good');
     if(e.k==='mutiny')sh.morale=Math.max(sh.morale,45);}
   news(`SS ${e.ship}: ${D.type==='sick'?DISEASE[e.dis].name+' aboard':D.name.toLowerCase()} ${how==='saved'?'survived':'ended'}.${e.dead?' '+e.dead+' dead.':''}`,how==='saved'&&!e.dead?'':'bad');
@@ -340,7 +340,7 @@ function startQuarantine(sh,rk){
   let found=true;
   if(q.quiet){found=Math.random()<0.45+(q.peak||30)/200;
     if(!found){news(`SS ${sh.name} passed the port doctor at ${PN[sh.port]}.`);return;}
-    S.rep=clamp(S.rep-dd.rep*2,0,100);news(`The health officer at ${PN[sh.port]} found ${dd.name} aboard SS ${sh.name} that her master had not reported. The newspapers have it.`,'bad',false);}
+    repHit(-dd.rep*2);news(`The health officer at ${PN[sh.port]} found ${dd.name} aboard SS ${sh.name} that her master had not reported. The newspapers have it.`,'bad',false);}
   const days=Math.max(2,Math.round(dd.qd*(q.iso?0.6:1)*(q.quiet?1.5:1)));
   sh.portLeft+=days;book('port',-Math.round(400+soulsOf(sh)*0.5),rk,sh);
   const steer=sh.load&&sh.load.pax.t?sh.load.pax.t.n:0;

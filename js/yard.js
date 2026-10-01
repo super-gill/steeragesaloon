@@ -267,8 +267,8 @@ function ordersMonth(){
       if(o.stage==='plating'&&o.prog>=0.62){
         if(!bill(o,0.3,'at the launch')){o.prog=0.62;continue;}
         o.stage='fitting';o.launched=S.m;if(o.slip){o.slip.who=null;o.slip.until=S.m;o.slip=null;}
-        const sp=LAUNCH_SPONSORS[Math.floor(Math.random()*LAUNCH_SPONSORS.length)];
-        logOrder(o,`Launched by ${sp}.`);news(`SS ${o.d.name} is launched at ${B.name}. ${sp} names her before a crowd of thousands, and she takes the water cleanly.`,'good',true);}
+        const SP=LAUNCH_SPONSORS.filter(x=>S.m>=ym(1923,0)||!/Baldwin/.test(x)),sp=SP[Math.floor(Math.random()*SP.length)];
+        logOrder(o,`Launched by ${sp}.`);news(`SS ${o.d.name} is launched at ${B.name}. ${sp[0].toUpperCase()+sp.slice(1)} names her before a crowd of thousands, and she takes the water cleanly.`,'good',true);}
       if(o.stage==='fitting'&&o.prog>=1){o.stage='trials';o.left=1;logOrder(o,'Fitting out complete. Trials next.');}
       continue;}
     if(o.stage==='trials'){o.left--;if(o.left>0)continue;
@@ -289,10 +289,12 @@ function deliver(o,st,kn,B){
   const pool=(S.capPool||[]).slice().sort((a,b)=>b.exp-a.exp);if(pool.length){sh.captain=pool[0];S.capPool=S.capPool.filter(q=>q!==pool[0]);}
   if(o.adm&&o.admBal>0){sh.adm={bal:o.admBal,bal0:o.admBal,sub:Math.round(o.price*ADM_SUB/12)};o.admBal=0;}
   sh.paint=livFill(lineLiv());sh.acq=S.m;S.ships.push(sh);S.orders=S.orders.filter(x=>x!==o);
+  const toLine=d.line&&S.lines[d.line]&&routeOpen(d.line,S.m)?d.line:null;if(toLine)doAction('moveship',[sh.id,toLine]); // she joins the line she was ordered for (0.35.4)
   if(d.builder==='own')S.shore.slipBuilt=(S.shore.slipBuilt||0)+1;
   // the bank takes a mortgage on the new ship as on any other
-  const mort=Math.min(Math.round(o.price*0.5),Math.max(0,Math.round(headroom())));if(mort>0){S.debt+=mort;S.cash+=mort;}
-  news(`SS ${d.name} made ${kn} knots on the measured mile and is handed over at ${PN[B.port]}.${sh.adm?` The Admiralty's loan on her stands at ${fmt(Math.round(sh.adm.bal))}, and it pays ${fmt(sh.adm.sub*12)} a year while she sails.`:''}${mort>0?` The bank advances ${fmt(mort)} on her mortgage.`:''} ${sh.captain?sh.captain.name+' takes command.':''} Assign her to a line.`,'good',true);
+  // only when the Line needs it, and never while a panic has stopped lending (0.35.4: it was advanced to a Line with millions in hand)
+  const mort=S.noLend>S.m||S.cash>=o.price*0.5?0:Math.min(Math.round(o.price*0.5),Math.max(0,Math.round(headroom())));if(mort>0){S.debt+=mort;S.cash+=mort;}
+  news(`SS ${d.name} made ${kn} knots on the measured mile and is handed over at ${PN[B.port]}.${sh.adm?` The Admiralty's loan on her stands at ${fmt(Math.round(sh.adm.bal))}, and it pays ${fmt(sh.adm.sub*12)} a year while she sails.`:''}${mort>0?` The bank advances ${fmt(mort)} on her mortgage.`:''} ${sh.captain?sh.captain.name+' takes command.':''} ${toLine?`She joins the ${ROUTES[toLine].name} service.`:'Assign her to a line.'}`,'good',true);
   wire(sh,`SS ${d.name} handed over at ${PN[B.port]}. Trials ${kn} knots. Ready for service.`,'good');
 }
 
