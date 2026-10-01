@@ -255,7 +255,7 @@ function yardJobDone(sh,k){
   if(k==='paint'){sh.dazzle=false;sh.paint=livFill(lineLiv());news(`SS ${sh.name} comes out of dry dock in the Line's colours.`);}
   if(k==='lux'){sh.up.lux=true;sh.fit=100;news(`SS ${sh.name} returns with luxury first-class suites.`,'good');}
   if(k==='fac')applyFacPlan(sh);
-  if(k==='hatch'||k==='heavy'||k==='deep'){sh.up[k]=true;news(`SS ${sh.name} returns with ${YARD_NAME[k]}.`,'good');}
+  if(k==='hatch'||k==='heavy'||k==='deep'||k==='hosp'){sh.up[k]=true;news(`SS ${sh.name} returns with ${YARD_NAME[k]}.`,'good');}
   if(EQUIP[k]){sh.up[k]=true;(sh.upR=sh.upR||{})[k]=true;news(`SS ${sh.name} returns with ${EQUIP[k].name.toLowerCase()}.`,'good');}
   if(UPGRADES[k]&&k!=='lux'){sh.up[k]=true;news(`SS ${sh.name} returns with ${UPGRADES[k].name.toLowerCase()}.`,'good');}
 }
@@ -271,8 +271,8 @@ function exitShip(sh,how){
   if(how!=='scrap'&&rescueNoSale())return false; // the government director will not let her go (0.37.0)
   if(sh.state==='req'||sh.state==='lost')return false; // a requisitioned ship is the Admiralty's until she is handed back (0.35.6)
   const v=how==='scrap'?scrapValue(sh):saleValue(sh);
-  S.cash+=v;const adm=admRepay(sh);fleetGone(sh,how==='scrap'?'scrapped':'sold',how==='scrap'?`broken up for ${fmt(v)}`:`sold for ${fmt(v)}`);S.ships=S.ships.filter(x=>x!==sh);
-  news((how==='scrap'?`SS ${sh.name} sold to the breakers for ${fmt(v)}.`:`SS ${sh.name} sold for ${fmt(v)}.`)+(adm?` ${fmt(Math.round(adm))} of it repays her Admiralty loan.`:''));
+  S.cash+=v;const epdG=how==='scrap'?0:epdSale(sh,v);const adm=admRepay(sh);fleetGone(sh,how==='scrap'?'scrapped':'sold',how==='scrap'?`broken up for ${fmt(v)}`:`sold for ${fmt(v)}`);S.ships=S.ships.filter(x=>x!==sh);
+  news((how==='scrap'?`SS ${sh.name} sold to the breakers for ${fmt(v)}.`:`SS ${sh.name} sold for ${fmt(v)}.`)+(adm?` ${fmt(Math.round(adm))} of it repays her Admiralty loan.`:'')+(epdG>0?` ${fmt(epdG)} over her worth counts towards Excess Profits Duty next January.`:''));
   if(S.selShip===sh.id)S.selShip=S.ships[0]?S.ships[0].id:null;
 }
 function moveAll(step){

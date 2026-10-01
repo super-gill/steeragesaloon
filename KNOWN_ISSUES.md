@@ -1,6 +1,6 @@
 # Known Issues
 
-Steerage & Saloon 0.37.0. This log records every known defect, loophole and open question that has not been fixed in a released version. Balance targets and accepted behaviour are in `docs/overhaul/BALANCE.md`; this file covers what is wrong or unfinished.
+Steerage & Saloon 0.37.1. This log records every known defect, loophole and open question that has not been fixed in a released version. Balance targets and accepted behaviour are in `docs/overhaul/BALANCE.md`; this file covers what is wrong or unfinished.
 
 **Severity**
 
@@ -48,9 +48,9 @@ Steerage & Saloon 0.37.0. This log records every known defect, loophole and open
 
 | ID | Sev | Status | Source | Issue |
 |---|---|---|---|---|
-| KI-023 | S2 | Planned (0.36) | P3 | **War freight falls far short of its own text.** The news promises about three times 1913 freight and "every hold fills". The model gives about ×1.2 rate and ×1.25 volume: one ship filled 32% of her hold at £0.85/t in 1915, and 1915 profit was £73k against £377k in 1913. As a result, Excess Profits Duty never applied in either test game. |
-| KI-024 | S2 | Planned (0.36) | P3 | **Admiralty hire is low, and the player cannot choose.** One hire was £1,602 a month against £6k earned in trade. `reserve` is refused once war starts, and `offership` needs the reserve list, so a player who never joined it loses the best earners first. |
-| KI-026 | S2 | Open | P3 | **Excess Profits Duty never charges in practice.** The standard rises with prices (£1.07m in 1916 to £1.72m in 1919). Gains on ship sales are never profit, including about £4m in 1919-20. Historically the duty did take boom sale profits. |
+| KI-023 | S2 | Fixed (0.37.1) | P3 | War freight fell far short of its own text. Rates now follow the free market to 1916, the Ministry's control from 1917 and the 1919-20 boom; checked by `tools/warprofit.js`. |
+| KI-024 | S2 | Fixed (0.37.1) | P3 | The player could not choose which ships went to war service without the reserve list. Ships can now be offered at any time in the war. The hire was left as it is: it matches the Blue Book rates against the open market. |
+| KI-026 | S2 | Fixed (0.37.1) | P3 | Excess Profits Duty never charged: its standard rose with prices, and sale gains were not profit. Both fixed. |
 
 ## Advice and departments
 
@@ -79,7 +79,7 @@ Steerage & Saloon 0.37.0. This log records every known defect, loophole and open
 
 | ID | Sev | Status | Source | Issue |
 |---|---|---|---|---|
-| KI-083 | S4 | Planned (0.36) | Harness | Stale war-outbreak text. |
+| KI-083 | S4 | Fixed (0.37.1) | Harness | Stale war-outbreak text: it promised every hold would fill and freight would reach three times its pre-war worth. |
 
 ## Design questions
 
@@ -103,10 +103,10 @@ New features must fit the theme and be at least roughly historical. After 1939 t
 | FR-05 | Ross | Accept, later era | **Cruise ships grow from the 1980s**, with new artwork for each era's large ships. Historical (73,000 GT in 1988, 100,000 GT by 1996, 137,000 GT by 1999). Needs the later decades designed first (FR-12). |
 | FR-06 | Ross | Reject as stated | **Private superyachts.** A shipping line is not a yacht builder, and it is outside the game's subject. Possible alternative in any era: an owner's yacht as a prestige purchase (shipowners did keep them), affecting reputation and society events, not trade. |
 | FR-07 | Ross | Accept, later era | **Casinos from about 1970** (historical: casinos at sea grew with Caribbean cruising in the 1970s). **Discos** in the 1970s, renamed **nightclubs** later: acceptable as era names for the same facility; the 1989 date is arbitrary, so it can be fixed to the end of the 1980s. |
-| FR-08 | Ross | Adapt (0.37) | **Medical bays.** Not historical as an optional extra: emigrant ships had to carry a surgeon long before 1900. Proposed: a surgeon is required with steerage from the start; the hospital's standard is optional and improves the outcome of epidemics and quarantine (the existing quarantine emergency), with better hospitals standard from the 1940s. |
+| FR-08 | Ross | Done (0.37.1) | **Medical bays.** Not historical as an optional extra: emigrant ships had to carry a surgeon long before 1900. Proposed: a surgeon is required with steerage from the start; the hospital's standard is optional and improves the outcome of epidemics and quarantine (the existing quarantine emergency), with better hospitals standard from the 1940s. |
 | FR-09 | Ross | Accept, later era | **"Fredrick"**, a parody of a long-running American entertainment company, launches very large family cruise ships. Historical parallel (a family cruise line from an entertainment company, late 1990s). Parody only: no real names, characters or marks. Better timed to the late 1980s or 1990s than the early 1980s. |
 | FR-10 | Ross | Adapt | **Soviet cruising, 1970s to early 1990s.** The competitor half is historical: Soviet state lines ran cheap ships chartered to Western cruise operators and undercut on price, and this ended abruptly after 1991. Soviet citizens were not a cruise market, so this should be a budget competitor and a source of cheap charters, not a new market. |
-| FR-11 | Ross | Accept (0.37) | **A major disaster about once a decade**, not only one type (fire, collision, grounding, capsize, hijacking). Historical: Morro Castle 1934, Andrea Doria 1956, Lakonia 1963, Achille Lauro 1985, Herald of Free Enterprise 1987, Estonia 1994, Costa Concordia 2012. Goes with the rescue mechanism (KI-091). |
+| FR-11 | Ross | Done (0.37.1) | **A major disaster about once a decade**, not only one type (fire, collision, grounding, capsize, hijacking). Historical: Morro Castle 1934, Andrea Doria 1956, Lakonia 1963, Achille Lauro 1985, Herald of Free Enterprise 1987, Estonia 1994, Costa Concordia 2012. Goes with the rescue mechanism (KI-091). |
 | FR-12 | Dev | Accept (0.5x on) | **Design the decades after 1966** before adding late-era content, researched and built the way 1900 to 1930 was (sources first, then trades, ships and events). FR-03, 04, 05, 07, 09 and 10 depend on it. |
 
 ## Test tooling

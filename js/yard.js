@@ -306,6 +306,7 @@ function deliver(o,st,kn,B){
   sh.acq=S.m;sh.paid=o.price;sh.mk0=o.mk0||null; // her first year she sells for no more than her price, moved with the market (0.35.6)
   sh.up.wireless=!!d.extras.wireless;sh.up.lux=d.quality>=2;sh.fac={...(d.fac||{})};sh.cruiser=!!(PURPOSES[d.purpose]&&PURPOSES[d.purpose].cruiser);
   for(const k of ['stab','fins','aircon','pool','cinema','rphone','radar','hatch','heavy','deep','boats'])if(d.extras[k])sh.up[k]=true;
+  if(yearNow()>=1935&&paxBerths(sh)>=60)sh.up.hosp=true; // an isolation hospital is built into every passenger ship from 1935 (0.37.1)
   const pool=(S.capPool||[]).slice().sort((a,b)=>b.exp-a.exp);if(pool.length){sh.captain=pool[0];S.capPool=S.capPool.filter(q=>q!==pool[0]);}
   if(o.adm&&o.admBal>0){sh.adm={bal:o.admBal,bal0:o.admBal,sub:Math.round(o.price*ADM_SUB/12)};o.admBal=0;}
   sh.paint=livFill(lineLiv());sh.acq=S.m;S.ships.push(sh);S.orders=S.orders.filter(x=>x!==o);

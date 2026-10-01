@@ -93,7 +93,7 @@ function marketFor(rk,opens){
 /* ---------- market maths ---------- */
 const turnPair=rk=>{const c=ROUTES[rk].cruise;return c?c.turn+(c.home!==undefined?c.home:TURN_DAYS):2*TURN_DAYS;};
 const sailings=(knots,rk,sm=1)=>{const r=ROUTES[rk];return 30/(2*r.dist/(knots*sm*24)+turnPair(rk)+(r.cruise?1:2)*(r.calls.length-2)*CALL_DAYS);}; // round trips per month
-function marketM(rk,c,dir,m){const r=ROUTES[rk];if(!routeOpen(rk,m))return 0;return S.mkt[rk][c]*r.base[c]*(dir===0?dirW(rk,c):1-dirW(rk,c))*seasonOf(rk,c,m)*histMod(c,rk,m)*(dir===1&&(c==='t'||c==='tt')?preReturn(m):1);}
+function marketM(rk,c,dir,m){const r=ROUTES[rk];if(!routeOpen(rk,m))return 0;return S.mkt[rk][c]*r.base[c]*(dir===0?dirW(rk,c):1-dirW(rk,c))*seasonOf(rk,c,m)*histMod(c,rk,m)*(dir===1&&(c==='t'||c==='tt')?preReturn(m):1)*greatFear(rk,m);}
 function rivalBerths(x,c){if(isCruise(x.route)){const st=ROUTES[x.route].cruise.steerage;return c==='tt'?(st?0:x.berths.t):c==='t'?(st?x.berths.t:0):x.berths[c];}if(c==='tt')return S.m>=ym(1925,0)?Math.round(x.berths.t*0.25):0;if(c==='t'&&S.m>=ym(1925,0))return Math.round(x.berths.t*0.75);return x.berths[c];}
 /* speed sells cabins, above all on prestige routes: an old 14-knot steamer cannot hold first class against 20-knot giants */
 const speedAppeal=(knots,rk,c)=>{const p=ROUTES[rk].prestige,k=(c==='f'||c==='s')?Math.max(0,(p-0.8)*1.8):Math.max(0,(p-0.8)*0.4);return Math.pow(knots/16,k);};

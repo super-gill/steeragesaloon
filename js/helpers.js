@@ -172,7 +172,7 @@ const ACTIVE=['sea','port','repo'];
 const shipsOn=rk=>S.ships.filter(x=>x.line===rk);
 /* wireless is a dear novelty in 1900, four times its later price, and comes down to it by 1911 */
 const wirelessNovelty=()=>{const y=yearNow();return y<1905?4:y<1911?4-3*(y-1905)/6:1;};
-const REFIT_BASE={scrape:g=>g*0.22,cruise:g=>g*2.4+12000,hatch:g=>g*1.2,heavy:()=>9000,deep:g=>g*0.9,stab:g=>g*1.6,rphone:()=>7000,aircon:g=>g*1.3,radar:()=>32000,fins:g=>g*2,replate:g=>g*3,dock:g=>g*1.1,oil:g=>g*3.5,reefer:g=>g*3+5000,wireless:()=>2500*wirelessNovelty(),turbines:g=>g*5,lux:g=>g*2,refurb:g=>g*1.2,gear:g=>g*0.8,boats:g=>g*0.12+1500,paint:g=>g*0.1+300,warcargo:g=>g*0.12+400,uncargo:g=>g*0.12+400,dazzle:g=>g*0.05+200,gun:g=>g*0.04+800};
+const REFIT_BASE={scrape:g=>g*0.22,cruise:g=>g*2.4+12000,hatch:g=>g*1.2,heavy:()=>9000,deep:g=>g*0.9,stab:g=>g*1.6,rphone:()=>7000,aircon:g=>g*1.3,radar:()=>32000,fins:g=>g*2,replate:g=>g*3,dock:g=>g*1.1,oil:g=>g*3.5,reefer:g=>g*3+5000,wireless:()=>2500*wirelessNovelty(),turbines:g=>g*5,lux:g=>g*2,refurb:g=>g*1.2,gear:g=>g*0.8,boats:g=>g*0.12+1500,paint:g=>g*0.1+300,warcargo:g=>g*0.12+400,uncargo:g=>g*0.12+400,dazzle:g=>g*0.05+200,gun:g=>g*0.04+800,hosp:g=>g*0.25+1500};
 /* a cruise conversion: steerage becomes a smaller number of Tourist cabins and a few more in first and second */
 const cruiseBerths=b=>{const t=b.t||0;return {...b,t:0,tt:(b.tt||0)+Math.round(t*0.3),s:(b.s||0)+Math.round(t*0.06),f:(b.f||0)+Math.round(t*0.04)};};
 const atOwnYard=sh=>S.shore&&S.shore.yards[sh.port]&&sh.state!=='sea'&&sh.state!=='repo';

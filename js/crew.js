@@ -76,7 +76,7 @@ function crewModsRaw(sh){
     appT:(1+(ct-50)/1500)*(1+0.015*man('cat')),
     spend:off.purser?0.9+off.purser.skill/400:1,
     smuggle:off.purser?1.3-off.purser.skill/200:1,
-    sick:off.surg?1.25-off.surg.skill/200:paxBerths(sh)>=60?1.4:1,
+    sick:(off.surg?1.25-off.surg.skill/200:paxBerths(sh)>=60?1.4:1)*(sh.up&&sh.up.hosp?0.75:1), // an isolation hospital (0.37.1)
     turn:man('deck')<0||man('eng')<0?0.5:0};
 }
 /* monthly: morale and skill settle toward what pay, manning, training and officers earn; officers age */

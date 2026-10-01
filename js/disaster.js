@@ -97,6 +97,7 @@ function disasterMonth(){
   for(const sh of S.ships){if(sh.state==='laid')continue;const b=potBlame(sh);
     if(b.blame>=6&&!(sh.gwarn>m-12)){sh.gwarn=m;news(`The underwriters write about SS ${sh.name}: ${b.F.slice(0,3).join('; ')}. If she were lost with lives now, a court would call it gross negligence, and they would not pay.`,'bad',true);}}
   if(!newCal())return;
+  greatMonth();
   if(m===ym(1912,2)&&!S.dis){const d=24+Math.floor(Math.random()*30);S.dis={state:'wait',from:Math.floor(S.t)+d,until:Math.floor(S.t)+d+7};}
   if(m===BOAT_NEWS)news(`The Board of Trade rules that from July 1913 every British ship must carry boats for everyone aboard. A ship without them will carry only as many as her boats hold. Fitting them takes about a week in the yard.`,'bad',true);
   if(m===ym(1913,4)){const n=S.ships.filter(x=>!hasBoats(x)&&paxBerths(x)>0).length;
@@ -337,3 +338,49 @@ function safeHTML(sh){
       <span class="note">A second operator keeps the watch through the night, for ${fmt(16.8*PX()*slumpK('wage'))} a month. Without one, a call for help after dark goes unheard, and the ice warnings other ships pass on at night never reach her bridge.</span>`;
   return `<div class="ctl"><span class="lbl">Lifeboats</span>${boats}</div><div class="ctl"><span class="lbl">Wireless watch</span>${watch}</div>`;
 }
+
+/* ---------- the great disasters (0.37.1) ----------
+   About once a decade from 1920, a passenger ship somewhere is lost with heavy loss of life, and not always in the same
+   way: fire (as the Morro Castle burned in 1934), collision (the Empress of Ireland, 1914), foundering with her cargo
+   shifted in a gale (the Vestris, 1928), stranding in darkness (the Hong Moh, 1921), and from 1970 armed men among the
+   passengers. The ship is chosen across every passenger ship at sea, the rivals' and the Line's, weighted by how she is
+   run: a worn, old, badly manned ship without boats for all is several times likelier to be the one. Aboard one of the
+   Line's ships it is a grave emergency like any other, and a well-found ship with a good master may yet come through.
+   Aboard a rival's she is lost; for half a year after, fewer people book on that trade (greatFear). */
+const GREAT_FROM=1920;
+const GREAT={
+  fire:{em:'fire',lost:'burns out',dead:0.3,how:'Fire broke out in a writing room in the small hours and ran through her panelling before the alarm was raised.'},
+  collision:{em:'collision',lost:'sinks after a collision in fog',dead:0.55,how:'A collier struck her amidships in fog; she rolled over in fourteen minutes, before most of her boats could be lowered.'},
+  founder:{em:'seam',lost:'founders in a gale',dead:0.3,how:'Her cargo shifted in a gale and she took a list she could not recover; she was abandoned too late, and the boats were badly handled.'},
+  stranding:{em:'wreck',lost:'is wrecked on a reef',dead:0.4,how:'She ran onto a reef in darkness, off her course, and broke her back in the surf.'},
+  hijack:{em:'piracy',from:1970,lost:'is seized by armed men',dead:0.02,how:'Armed men who boarded as passengers seized her bridge and held her for days.'}};
+const greatDecade=y=>Math.max(GREAT_FROM,Math.floor(y/10)*10);
+function greatPlan(fromYear){const d=greatDecade(fromYear);return ym(d,0)+Math.floor(Math.random()*120);}
+/* how likely a ship is to be the one: the Line's ships by how they are kept and manned; a rival's is an average ship */
+function greatRisk(sh){
+  return (sh.cond<50?1.6:sh.cond<65?1.2:0.8)*(fatOf(sh)>75?1.6:1)*(hasBoats(sh)?1:1.5)*(radioOf(sh)?1:1.3)*((sh.morale||60)<45?1.3:1)*(sh.captain&&sh.captain.exp>=12?0.85:1);}
+function greatMonth(){
+  if(!newCal())return;const m=S.m,y=Math.floor(yearOfM(m));if(y<GREAT_FROM)return; // nothing drawn before 1920, so earlier years play as they did
+  const G=S.great=S.great||{next:greatPlan(Math.max(y,GREAT_FROM)),done:[]};
+  if(G.inq&&m>=G.inq.m){const q=G.inq;G.inq=null;
+    news(`The inquiry into the loss of SS ${q.name} reports. ${GREAT[q.k].how} It calls for ${q.k==='fire'?'fire doors, patrols and detectors on every passenger ship':q.k==='collision'?'slower speeds in fog and better bulkheads':q.k==='founder'?'cargo properly secured, and boat drills that are drills':q.k==='stranding'?'closer attention to the navigation of passenger ships':'searches of passengers\' baggage'}.`,'hist',true);}
+  if(m<G.next)return;
+  G.next=greatPlan(greatDecade(y)+10);
+  const kinds=Object.keys(GREAT).filter(k=>!GREAT[k].from||y>=GREAT[k].from),k=kinds[Math.floor(Math.random()*kinds.length)],K=GREAT[k];
+  const mine=S.ships.filter(x=>x.state==='sea'&&!x.em&&paxBerths(x)>=200).map(x=>({x,w:greatRisk(x),own:true}));
+  const theirs=S.rships.filter(x=>!isCruise(x.route)||y>=1925).filter(x=>(x.berths.f||0)+(x.berths.s||0)+(x.berths.t||0)>=200).map(x=>({x,w:1,own:false}));
+  const all=mine.concat(theirs),tot=all.reduce((a,q)=>a+q.w,0);if(!tot)return;
+  let r=Math.random()*tot,pick=all[all.length-1];for(const q of all){r-=q.w;if(r<=0){pick=q;break;}}
+  G.done.push({m,k,name:pick.x.name,own:pick.own});
+  if(pick.own){const sh=pick.x;startEmergency(sh,K.em);const e=(S.emerg||[]).find(z=>z.id===sh.em);
+    if(e){e.sev=3;e.rateM=SEV_RATE[3];e.threat=Math.max(e.threat,SEV_T0[3]);e.great=k;}
+    return;} // her own court of inquiry follows, as for any loss
+  const x=pick.x,o=x.owner,aboard=Math.round(((x.berths.f||0)+(x.berths.s||0)+(x.berths.t||0))*(0.55+Math.random()*0.25))+Math.round(x.grt/45)+40,dead=Math.round(aboard*K.dead*(0.7+Math.random()*0.6));
+  const grp=ROUTES[x.route]?ROUTES[x.route].group:null;
+  news(`SS ${x.name} of the ${RIVALS[o].name} ${K.lost} on ${ROUTES[x.route]?ROUTES[x.route].name:'her passage'}. ${dead?`${int(dead)} of the ${int(aboard)} aboard are lost.`:'Her passengers are freed after four days.'}`,'hist',true);
+  dropRival(x);if(S.rivals[o])S.rivals[o].cash-=Math.round(dead*400*PX());if(S.ex&&typeof mkShock==='function')mkShock(o,0.85);
+  if(grp&&dead>=50)G.fear={group:grp,until:m+6};
+  G.inq={m:m+5,k,name:x.name};
+}
+/* for half a year after a great loss, fewer people book on that trade, on every line */
+const greatFear=(rk,m)=>{const F=S.great&&S.great.fear;return F&&m<F.until&&ROUTES[rk].group===F.group?0.92:1;};

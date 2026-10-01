@@ -113,7 +113,8 @@ const RF_JOBS=[ // yard jobs the refit office offers, by section
     ['heavy','Heavy-lift derricks',sh=>sh.cargo>1500&&!(sh.up&&sh.up.heavy),'Locomotives, boilers and machinery: general cargo and manufactures pay about 12% more.'],
     ['deep','Deep tanks',sh=>sh.cargo>1500&&!(sh.up&&sh.up.deep),'Tanks for palm oil and other liquids in bulk: palm oil pays about 30% more.'],
     ['reefer','Refrigerated holds',sh=>sh.cargo>500&&!(sh.up&&sh.up.reefer),'Carries chilled beef and bananas.']]],
-  ['Passenger spaces',[['tourist','Tourist Third refit',sh=>S.m>=ym(1925,0)&&sh.berths.tt===0&&sh.berths.t>0,'Half her steerage rebuilt as Tourist Third Cabin for students and teachers.'],
+  ['Passenger spaces',[['hosp','An isolation hospital and dispensary',sh=>paxBerths(sh)>=60&&!(sh.up&&sh.up.hosp),'The law asks only for a sick bay. A ward that keeps the sick apart, with a dispensary and a nurse under the surgeon: sickness spreads and kills less, and port health officers shorten a quarantine.'],
+    ['tourist','Tourist Third refit',sh=>S.m>=ym(1925,0)&&sh.berths.tt===0&&sh.berths.t>0,'Half her steerage rebuilt as Tourist Third Cabin for students and teachers.'],
     ['lux','Luxury suites and a grand saloon',sh=>!(sh.up&&sh.up.lux),'First class appeal up a fifth.'],
     ['cruise','Convert her for cruising',sh=>!sh.cruiser&&CL.reduce((a,c)=>a+(sh.berths[c]||0),0)>=60,sh=>`Steerage out, cabins in, sun decks and a white hull: cruise passengers like her a quarter more. ${sh.berths.t?`Her ${int(sh.berths.t)} steerage berths become about ${int(Math.round(sh.berths.t*0.3))} Tourist cabins and a few more in first and second: she can no longer carry emigrants.`:'She keeps her berths.'}`]]]
 ];
@@ -145,7 +146,7 @@ function rfPatch(sh,rf){
     if(k==='refurb')p.fit=100;if(k==='paint')p.paint=livFill(lineLiv());if(k==='oil')p.fuel='oil';if(k==='replate')p.fat=Math.max(0,fatOf(sh)-[25,15,8,4][Math.min(3,sh.replates||0)]);
     if(k==='cruise'){p.berths=cruiseBerths(p.berths);p.cruiser=true;}
     if(k==='tourist'){const cv=Math.round(p.berths.t*0.5);p.berths.t-=cv;p.berths.tt+=Math.round(cv*0.6);}
-    if(['turbines','wireless','gear','reefer','lux','hatch','heavy','deep','boats'].includes(k))p.up[k]=true;
+    if(['turbines','wireless','gear','reefer','lux','hatch','heavy','deep','boats','hosp'].includes(k))p.up[k]=true;
     if(EQUIP[k]){p.up[k]=true;p.upR[k]=true;}}
   return p;
 }

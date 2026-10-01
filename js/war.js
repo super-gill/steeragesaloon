@@ -18,7 +18,9 @@ const WAR_FROM=ym(1914,7),ARMISTICE=ym(1918,10),US_WAR=ym(1917,3),RESERVE_FROM=y
 const atWar=m=>{m=m===undefined?S.m:m;return newCal()&&m>=WAR_FROM&&m<=ARMISTICE;};
 /* a curve of [month, value] points, straight lines between, flat beyond the ends */
 function curveAt(P,m){if(m<=P[0][0])return P[0][1];for(let i=1;i<P.length;i++)if(m<=P[i][0]){const [a,x]=P[i-1],[b,y]=P[i];return x+(y-x)*(m-a)/Math.max(1,b-a);}return P[P.length-1][1];}
-const WAR_FREIGHT=[[ym(1914,6),1],[ym(1914,7),1.1],[ym(1915,0),1.15],[ym(1916,0),1.2],[ym(1917,0),1.1],[ym(1918,10),1.05],[ym(1919,0),1.2],[ym(1919,6),1.3],[ym(1920,3),1.3],[ym(1920,7),1.15],[ym(1920,10),1.05],[ym(1920,11),1]]; // 0.33: trimmed, war growth was twice the target
+// over and above prices (0.37.1): free-market rates through 1916; the Ministry of Shipping's control from 1917 holds the liner
+// rates near their 1913 worth in real terms; decontrol in 1919 and the boom to the spring of 1920, then the crash
+const WAR_FREIGHT=[[ym(1914,6),1],[ym(1914,7),1.25],[ym(1915,0),1.4],[ym(1916,0),1.4],[ym(1916,11),1.4],[ym(1917,1),0.8],[ym(1918,10),0.8],[ym(1919,2),1.9],[ym(1919,8),2.3],[ym(1920,3),2.5],[ym(1920,7),1.7],[ym(1920,10),1.15],[ym(1920,11),1]];
 const WAR_COAL=[[ym(1914,6),1],[ym(1914,7),1.2],[ym(1916,0),1.55],[ym(1918,0),1.8],[ym(1919,0),1.6],[ym(1920,11),1.1]];
 const WAR_WAGE=[[ym(1914,6),1],[ym(1914,9),1.1],[ym(1916,0),1.25],[ym(1918,0),1.4],[ym(1919,6),1.3],[ym(1920,11),1.1]];
 const WAR_SHIPS=[[ym(1914,6),1],[ym(1914,7),1.05],[ym(1915,0),1.2],[ym(1916,0),1.4],[ym(1917,0),1.6],[ym(1919,0),1.8],[ym(1919,9),2.3],[ym(1920,3),2.6],[ym(1920,8),2.3],[ym(1920,10),1.8],[ym(1920,11),1.3]]; // over and above prices, which themselves more than double; the bubble tops out in the spring of 1920 and the crash comes that winter
@@ -35,7 +37,7 @@ const warCoal=m=>pre21(m)?curveAt(WAR_COAL,m):1;
 const warWage=m=>pre21(m)?curveAt(WAR_WAGE,m):1;
 const warShips=m=>pre21(m)?curveAt(WAR_SHIPS,m):1;
 /* in wartime there is cargo for every hold */
-const warCargoVol=m=>atWar(m)?1.25:pre21(m)?1.1:1;
+const warCargoVol=m=>atWar(m)?1.25:pre21(m)?(m<ym(1920,8)?1.2:1.05):1; // after the armistice, a world short of ships until the crash (0.37.1)
 const reqShare=m=>atWar(m)?curveAt(REQ_SHARE,m):0;
 /* passengers in wartime, as a multiple of what they would have been: the collapse takes two or three months */
 function warPax(c,rk,m){
@@ -76,7 +78,7 @@ function warMonth(){
   if(atWar(m))warSeaMonth();
 }
 function warBegins(){
-  const W=S.war;W.base=Math.max(0,netWorth());W.julyNet=S.yearNet||0;W.show=true;
+  const W=S.war;W.base=Math.max(0,netWorth());W.julyNet=S.yearNet||0;W.show=true;for(const sh of S.ships)sh.v14=Math.round(shipValue(sh)); // her worth for the duty on a sale (0.37.1)
   for(const rk of Object.keys(S.wars))delete S.wars[rk]; // no rate wars in a real one
   news('War. Britain declares war on Germany. Emigrants cancel, cabin passengers stay at home, the German ships run for neutral ports, and freight rates are climbing by the day.','hist',true);
   if(typeof UI!=='undefined'){UI.warPrev=UI.speed;if(UI.autoPause!==false)UI.speed=0;UI.dirty=true;}
@@ -121,8 +123,10 @@ function reqStart(sh){
   wire(sh,`SS ${sh.name} taken up by the Admiralty as ${REQ_NAME[d.role]}. Crew signed on for war service.`,'');
 }
 /* the Line asks: which ships go (called from the Needs attention card) */
-function reqChoose(id){const W=S.war;if(!W||!W.ask)return;const sh=S.ships.find(x=>x.id===id);if(!sh||sh.state==='req'||sh.reqDue)return;
-  reqTake([sh],true,'Offered by the Line');W.ask.n--;if(W.ask.n<=0)W.ask=null;W.gw=(W.gw||0)+1;}
+/* or offers her unasked, at any time in the war (0.37.1): she counts towards what the Admiralty wants, earns the volunteer's
+   better hire, and a line that has offered a ship chooses the rest itself, as one on the reserve list does */
+function reqChoose(id){const W=S.war;if(!W||!atWar())return;const sh=S.ships.find(x=>x.id===id);if(!sh||sh.state==='req'||sh.reqDue||sh.state==='lost')return;
+  reqTake([sh],true,'Offered by the Line');if(W.ask){W.ask.n--;if(W.ask.n<=0)W.ask=null;}W.gw=(W.gw||0)+1;}
 /* each month on service: the hire, hard wear, a little standing for the Line */
 function reqWear(sh){
   if(reqLoss(sh))return;
@@ -145,16 +149,24 @@ function warCargoOff(sh){const w=sh.wcSave;if(!w)return;sh.berths.t=w.t;sh.berth
 
 /* ---------- Excess Profits Duty ---------- */
 const EPD_RATE={1914:0.5,1915:0.5,1916:0.6,1917:0.8,1918:0.8,1919:0.4,1920:0.6};
+/* a ship sold in the duty's years (August 1914 to 1920): what she fetched over her worth in July 1914, or what the Line
+   paid for her if it bought her since, is profit for the duty (0.37.1). In 1919 and 1920 most of the boom's gains on
+   ships were made this way, and the duty took them. */
+const epdYear=m=>newCal()&&m>=WAR_FROM&&EPD_RATE[Math.floor(yearOfM(m))]!==undefined;
+function epdSale(sh,v){if(!epdYear(S.m))return 0;const W=S.war=S.war||{};
+  const basis=sh.v14!==undefined?sh.v14:sh.paid?sh.paid:Math.round(shipValue(sh)/Math.max(1,warShips(S.m)));
+  const g=Math.max(0,v-basis);if(g>0){const y=Math.floor(yearOfM(S.m));W.gain=W.gain||{};W.gain[y]=(W.gain[y]||0)+g;}return g;}
 /* each January: the year's profit is recorded; in the war years the duty is taken on what it earned above the standard */
 function epdJanuary(profit){
   if(!newCal())return;const y=Math.floor(yearOfM(S.m))-1;S.annual=S.annual||{};S.annual[y]=Math.round(profit);
   const rate=EPD_RATE[y];if(!rate)return;
   const pre=[1911,1912,1913].map(k=>S.annual[k]).filter(v=>v!==undefined),avg=pre.length?pre.reduce((a,b)=>a+b,0)/pre.length:0;
   const base=(S.war&&S.war.base)||Math.max(0,netWorth());
-  let std=Math.max(avg,0.06*base)*PX()/piAt(ym(1913,6)); // the standard, carried forward at the day's prices
+  let std=Math.max(avg,0.06*base); // the standard: the pre-war profit in pounds, not carried up with prices (0.37.1; as the Act had it)
   let earned=profit;if(y===1914){earned=profit-((S.war&&S.war.julyNet)||0);std*=5/12;} // the duty runs from August 1914
+  const gain=Math.round(((S.war&&S.war.gain)||{})[y]||0);earned+=gain; // gains on ships sold count as profit (0.37.1)
   const tax=Math.round(Math.max(0,earned-std)*rate/100)*100;
-  if(tax>0){book('tax',-tax);news(`Excess Profits Duty on ${y}: the Line earned ${fmt(Math.round(earned))} against a standard of ${fmt(Math.round(std))}. The Treasury takes ${Math.round(rate*100)}% of the excess, ${fmt(tax)}.`,'bad',true);}
+  if(tax>0){book('tax',-tax);news(`Excess Profits Duty on ${y}: the Line earned ${fmt(Math.round(earned))}${gain>0?`, ${fmt(gain)} of it on ships sold,`:''} against a standard of ${fmt(Math.round(std))}. The Treasury takes ${Math.round(rate*100)}% of the excess, ${fmt(tax)}.`,'bad',true);}
   else news(`Excess Profits Duty on ${y}: the Line earned no more than its standard of ${fmt(Math.round(std))}. Nothing to pay.`);
 }
 
@@ -165,9 +177,9 @@ function warModalHTML(){
     <h3 id="mt">War</h3>
     <p style="margin:0">${dateLong(S.t)}. Britain is at war with Germany. Everything the Line has built its trade on changes today.</p>
     <p style="margin:0"><strong>Passengers vanish.</strong> Emigration stops; within two or three months the cabin trade is down to a fifth or less. Hamburg is closed, and so are the cruises.</p>
-    <p style="margin:0"><strong>Freight pays.</strong> Every hold fills, at rates that will climb to about three times their worth before the war. A liner can clear her steerage decks for cargo in the refit office, and put them back after.</p>
-    <p style="margin:0"><strong>The state takes ships.</strong> The Admiralty will take a growing share of the fleet for its own service, at a fixed hire well below what freight pays. ${nr?`The Line has ${nr===1?'one ship':nr+' ships'} on its reserve list: you will choose which go, and be paid better.`:'The Line put no ships on the reserve list: the Admiralty will take the biggest and fastest.'}</p>
-    <p style="margin:0"><strong>The Treasury takes its share.</strong> Excess Profits Duty takes half of what the Line earns above its pre-war profits, and more as the war goes on. Coal and wages climb, every ship still trading pays the state's war-risk insurance, no yard will take a new order until the war is over; second-hand ships fetch ever more.</p>
+    <p style="margin:0"><strong>Freight pays.</strong> There is more cargo than ships, and by 1916 a ship's freight earns four or five times what it did in 1913, in the money of the day, until the Ministry of Shipping controls the rates in 1917. A liner can clear her steerage decks for cargo in the refit office, and put them back after.</p>
+    <p style="margin:0"><strong>The state takes ships.</strong> The Admiralty will take a growing share of the fleet for its own service, at a fixed hire well below what freight pays. ${nr?`The Line has ${nr===1?'one ship':nr+' ships'} on its reserve list: you will choose which go, and be paid better.`:'The Line put no ships on the reserve list: offer one on the Company tab before the Admiralty asks, or it will take the biggest and fastest.'}</p>
+    <p style="margin:0"><strong>The Treasury takes its share.</strong> Excess Profits Duty takes half of what the Line earns above its pre-war profits, and more as the war goes on, gains on ships sold among them. Coal and wages climb, every ship still trading pays the state's war-risk insurance, no yard will take a new order until the war is over; second-hand ships fetch ever more.</p>
     <p class="note" style="margin:0">The dangers at sea, submarines and raiders, come in the next release. For now the war is an economic one.</p>
     <button class="btn primary" data-act="warclose">To work</button></div></div>`;
 }
@@ -178,9 +190,9 @@ function warHTML(){
   if(!newCal()||S.m<RESERVE_FROM)return '';
   const W=S.war||{},live=S.ships.filter(x=>x.state!=='lost');
   const rows=live.map(sh=>{const st=sh.state==='req'?`<span class="chip bad">${esc(REQ_NAME[sh.req.role].replace(/^an? /,''))}</span> <span class="meta">${fmt(reqHire(sh))} a month</span>`
-      :sh.reqDue?'<span class="chip bad">Called up</span>':atWar()?(W.ask?`<button class="btn" data-act="reqpick" data-id="${sh.id}">Offer her</button>`:''):`<label class="check"><input type="checkbox" data-reserve="${sh.id}" ${sh.reserve?'checked':''}> On the reserve list</label>`;
+      :sh.reqDue?'<span class="chip bad">Called up</span>':atWar()?`<button class="btn" data-act="reqpick" data-id="${sh.id}" ${S.over?'disabled':''}>Offer her · about ${fmt(Math.round(sh.grt*REQ_RATE[reqRole(sh)]*PX()*1.15))} a month</button>`:`<label class="check"><input type="checkbox" data-reserve="${sh.id}" ${sh.reserve?'checked':''}> On the reserve list</label>`;
     return `<div class="uprow"><div><strong>SS ${esc(sh.name)}</strong><div class="meta">${int(sh.grt)} tons · ${knotsOf(sh)} knots${sh.adm?' · Admiralty terms':''}</div></div>${st}</div>`;}).join('');
-  const intro=atWar()?`The Admiralty has ${reqCount()} of the Line's ships on war service and wants about ${Math.round(reqShare(S.m)*live.length)}. ${W.ask?`It needs ${W.ask.n} more: offer the ships you would rather lose, or it chooses in a month.`:''}`
+  const intro=atWar()?`The Admiralty has ${reqCount()} of the Line's ships on war service and wants about ${Math.round(reqShare(S.m)*live.length)}. ${W.ask?`It needs ${W.ask.n} more: offer the ships you would rather lose, or it chooses in a month.`:reserveN()+goodwill()>0?'You may offer ships before it asks, and choose which go when it does.':'Offer a ship before it asks and you will choose which go; otherwise it takes the biggest and fastest. The hire is a fixed rate, well below what freight pays, with crew and coal found by the state.'}`
     :S.m<WAR_FROM?'Ships on the list may be called up if war comes. A line that volunteers chooses which ships go and is paid better. Ships built on Admiralty terms go first whatever you choose.'
     :'The war is over. Requisitioned ships come home through 1919.';
   return `<section class="sec"><h2>${atWar()?'War service':'The Admiralty\'s reserve list'}</h2><p class="note">${intro}</p><div class="stack" style="gap:2px">${rows}</div></section>`;

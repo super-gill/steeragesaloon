@@ -350,7 +350,7 @@ function startQuarantine(sh,rk){
   if(q.quiet){found=Math.random()<0.45+(q.peak||30)/200;
     if(!found){news(`SS ${sh.name} passed the port doctor at ${PN[sh.port]}.`);return;}
     repHit(-dd.rep*2);news(`The health officer at ${PN[sh.port]} found ${dd.name} aboard SS ${sh.name} that her master had not reported. The newspapers have it.`,'bad',false);}
-  const days=Math.max(2,Math.round(dd.qd*(q.iso?0.6:1)*(q.quiet?1.5:1)));
+  const days=Math.max(2,Math.round(dd.qd*(q.iso?0.6:1)*(q.quiet?1.5:1)*(sh.up&&sh.up.hosp?0.7:1))); // a ship with her own isolation hospital is let go sooner (0.37.1)
   sh.portLeft+=days;book('port',-Math.round(400+soulsOf(sh)*0.5),rk,sh);
   const steer=sh.load&&sh.load.pax.t?sh.load.pax.t.n:0;
   const e={id:(S.emNext=(S.emNext||0)+1),sid:sh.id,ship:sh.name,k:'quar',t0:S.t,sev:1,peak:0,ctrl:0,cap:0,capA:0,rateM:1,saveA:0,rate:0,resp:[],known:true,over:null,
