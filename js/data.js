@@ -1,5 +1,5 @@
 /* ================= DATA ================= */
-const GAME_VERSION='0.37.1',GAME_BUILT='1 October 2026'; // bump on every release; see CHANGELOG.md
+const GAME_VERSION='0.37.2',GAME_BUILT='1 October 2026'; // bump on every release; see CHANGELOG.md
 /* ---------- the calendar ----------
    Month 0 is January 1900 and day 0 is 1 January 1900. ym(year,month) names a month (month 0 = January), so every date
    the game cares about reads as a date. History written for the 1921 game is kept exact by counting from M21. */
@@ -11,7 +11,7 @@ const START=ym(1900,0); // every new game starts here; games begun in 1921 (0.19
 const newCal=()=>typeof S!=='undefined'&&!!S&&S.m0!==undefined&&S.m0<M21;
 /* the UK price level, 1921 = 1 (ONS long-run RPI, rebased), for each year 1900 to 1940; prices follow it year by year */
 const PI_YEAR=[.398,.398,.398,.403,.403,.403,.403,.407,.407,.411,.416,.416,.429,.424,.424,.476,.563,.706,.861,.948,1.095,
-  1.000,.861,.810,.805,.805,.801,.779,.779,.771,.749,.719,.701,.684,.684,.688,.693,.719,.727,.749,.874];
+  1.000,.861,.810,.805,.805,.801,.779,.779,.771,.749,.719,.701,.684,.684,.688,.693,.719,.727,.749,.772]; // 1940: in this game's world there is no war, so not the wartime jump (0.37.2)
 /* the price level in a month: each year's figure at mid-year, straight lines between; after 1940, three per cent a year */
 function piAt(m){const y=YEAR0+m/12-0.5,i=Math.floor(y-YEAR0),n=PI_YEAR.length;
   if(i<0)return PI_YEAR[0];if(i>=n-1)return PI_YEAR[n-1]*Math.pow(1.03,y-(YEAR0+n-1));
@@ -74,8 +74,8 @@ const ROUTES={
        dirw:{f:1,s:1,t:1,tt:1},season:[1,1,.95,.75,.4,.25,.2,.2,.3,.55,.85,1],cruise:{cname:'the West Indies',turn:1,spend:2,months:[11,0,1,2]},
        blurb:'Ten days from New York to Nassau and Havana and back, for Americans escaping the winter. Rum is legal in Havana.'},
   cnw:{group:'Cruises',prestige:0.8,ref:{f:10,s:6,t:3,tt:4},base:{f:40,s:60,t:150,tt:0},cargo:{out:{c:'general',t:0},home:{c:'general',t:0}},war:0,
-       dirw:{f:1,s:1,t:1,tt:1},season:[.35,.35,.45,.6,.85,1,1,1,.85,.6,.45,.4],cruise:{cname:'cruises to nowhere',turn:0.4,home:1,spend:2,bar:{f:3.5,s:2.5,t:1.6,tt:2},steerage:true,months:[4,5,6,7,8],from:ym(1920,0),until:ym(1934,0)},
-       blurb:'Two nights from New York to beyond the limit, where the bar can open, and back. Cheap, crowded and very profitable, until Prohibition ends in December 1933.'}
+       dirw:{f:1,s:1,t:1,tt:1},season:[.35,.35,.45,.6,.85,1,1,1,.85,.6,.45,.4],cruise:{cname:'cruises to nowhere',turn:0.4,home:1,spend:2,bar:{f:3.5,s:2.5,t:1.6,tt:2},steerage:true,months:[4,5,6,7,8],from:ym(1928,0),until:ym(1934,0)},
+       blurb:'Two nights from New York to beyond the limit, where the bar can open, and back. Cheap, crowded and very profitable from 1928, until Prohibition ends in December 1933.'}
 };
 /* geography: a route (or its winter variant) as sailed in a given month */
 const geoKey=(rk,m)=>{const w=ROUTES[rk].winter;return w&&w.months.includes(((m%12)+12)%12)?w.key:rk;};
@@ -233,7 +233,7 @@ const HIST=[
   {m:ym(1926,2),t:'The coal owners and miners are deadlocked. The newspapers talk of a general strike by May: bunker coal may soon be very dear.'},
   {m:ym(1926,4),t:'General Strike. The miners are locked out and bunker coal prices soar.'},
   {m:ym(1926,11),t:'The coal dispute is over. Bunker prices ease.'},
-  {m:ym(1929,9),t:'Wall Street has crashed. Expect bookings to fall, first class hardest.'},
+  {m:ym(1929,10),t:'In the last days of October, Wall Street crashed. Expect bookings to fall, first class hardest.'},
   {m:ym(1930,0),t:'Bookings for next season are falling away, and the other lines are already shading their fares to fill berths.'},
   {m:ym(1930,5),t:'The United States raises its tariffs sharply. Cargo is getting scarce on every route.'},
   {m:ym(1931,8),t:'Britain leaves the gold standard. Freight rates and fares are in turmoil.'},

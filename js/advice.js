@@ -179,14 +179,14 @@ function advice(budget){
         add({id:`fare:${rk}:${c}`,scope:'line',ref:rk,sev:'tip',gain,
           title:`${up?'Raise':'Cut'} ${CL_NAME[c]} to £${best.f} on ${r.name}`,
           why:up?`${ld&&ld.n>=ld.cap*0.95?'Your '+CL_NAME[c].toLowerCase()+' berths are selling out, so you are turning passengers away. ':''}The market will bear more than £${L.fares[c]}.`
-                :`${ld?`Only ${ld.n} of ${ld.cap} ${CL_NAME[c].toLowerCase()} berths sold outbound last time. `:''}At £${L.fares[c]} against a line rate of £${ref}, you are pricing passengers off your ships.`,
+                :`${ld&&ld.n<ld.cap*0.95?`Only ${ld.n} of ${ld.cap} ${CL_NAME[c].toLowerCase()} berths sold outbound last time. `:''}At £${L.fares[c]} against a line rate of £${ref}, you are pricing passengers off your ships.`,
           act:[[`Set £${best.f}`,'setfare',rk,c,best.f]]});
       }
     })();return A2;}))add(h);
     if(!S.conf&&!S.wars[rk]&&curNext>=40){
       let fix=null;for(let k=1;k<=12&&!fix;k++){const f={};for(const c of ['f','s','t'])f[c]=Math.max(L.fares[c],Math.round(r.ref[c]*(0.94+k*0.02)));if(nextT(f)<40)fix=f;}
       add({id:`tension:${rk}`,scope:'line',ref:rk,sev:'warn',gain:5e5,title:`Calm the conference on ${r.name}`,
-        why:`Tension will be about ${Math.round(curNext)} next month, and above 40 a rate war can break out, cutting rival fares by a quarter for months. Your fares below the line rate${ships.length>1?' and your extra ships':''} are what provoke them.${fix?` Fares of £${fix.f} / £${fix.s} / £${fix.t} would bring it back under 40.`:' Consider joining the conference, or accept the risk.'}`,
+        why:`Tension will be about ${Math.round(curNext)} next month, and above 40 a rate war can break out, cutting rival fares by a quarter for months. ${(()=>{const P=pressure(rk,L.fares,lineEcon(rk,{}).pax,n,S.m),why=[];if(P.ratio<0.97)why.push('your fares below the line rate');if(P.share>0.2)why.push(`your share of the trade (${Math.round(P.share*100)}% of its passengers)`);if(n>1)why.push('your extra ships');return why.length?why.join(', ').replace(/, ([^,]*)$/,' and $1')[0].toUpperCase()+why.join(', ').replace(/, ([^,]*)$/,' and $1').slice(1)+' are what provoke them.':'';})()}${fix?` Fares of £${fix.f} / £${fix.s} / £${fix.t} would bring it back under 40.`:' Fares alone will not calm it: consider joining the conference, fewer ships there, or accept the risk.'}`,
         act:fix?[['Set those fares','setfares',rk,fix.f,fix.s,fix.t]]:[['Conference','tabgo','company']]});
     }
     // advertising and the table are judged against the line as it stands now, the same way as each option;
@@ -202,7 +202,10 @@ function advice(budget){
         if(k==='service'&&v<L[k]&&serviceRep(rk,L[k])>=40&&serviceRep(rk,v)<40)continue; // below 40 the Post Office will not tender
         const pm=judge(v);if(pm>best.pm)best={v,pm};}
       const gain=best.pm-cur;
-      if(best.v!==L[k]&&gain>=150){
+      // a table or advertising changed in the last six months is left to settle: a table takes months to move the Line's name,
+      // and judging it again each month flipped it to and fro (0.37.2; KI-045)
+      const settled=!(L.set&&L.set[k]!==undefined&&S.m-L.set[k]<6);
+      if(best.v!==L[k]&&gain>=150&&settled){
         const nm=k==='adv'?['no advertising','£300 advertising','£800 advertising','£1,500 advertising'][best.v]:['a Spartan table','a Standard table','a Lavish table'][best.v];
         add({id:`${k}:${rk}`,scope:'line',ref:rk,sev:'tip',gain,title:`Try ${nm} on ${r.name}`,
           why:k==='adv'?(best.v>L.adv?'More advertising would fill enough extra berths to pay for itself.':'Your advertising costs more than the extra passengers it brings.')
@@ -236,7 +239,7 @@ function advice(budget){
     const mailLast=!!S.mail[r0]&&!S.ships.some(x=>x!==sh&&x.line===r0&&x.state!=='laid');
     const best=cruising||mailLast?null:bestLine(sh,r0);
     // a ship on the line she was built for stays unless another pays clearly more: twice the usual margin (0.36.2)
-    const bf=builtFor(sh),home=bf===r0,need=Math.max(400,Math.abs(curY.pm)*0.15)*(home?2:1),unfit=best?lineFit(sh,best.rk):[];
+    const bf=builtFor(sh),home=bf===r0,need=Math.max(400,Math.abs(curY.pm)*0.15)*(home?2:1)*(S.m-(sh.movedAt??-99)<12?2:1),unfit=best?lineFit(sh,best.rk):[];
     if(best&&best.pm>0&&best.pm-curY.pm>=need&&(S.lines[best.rk]||best.pm>300))add({id:`move:${sh.id}:${best.rk}`,scope:'ship',ref:sh.id,sev:'tip',gain:best.pm-curY.pm,
       title:`Move SS ${sh.name} to ${ROUTES[best.rk].name}`,
       why:`Averaged over the coming year she would make about ${money(best.pm)} a month there, against ${money(curY.pm)} on ${ROUTES[r0].name}, at current fares.${home?` She was built for ${ROUTES[r0].name}.`:''}${unfit.length?` There she would be ${unfit.join('; ')}; the figure allows for it.`:''}${!S.lines[best.rk]?' You would need to open that line first (£2,500).':''} Check conference tension there before you commit.`,
@@ -255,7 +258,7 @@ function advice(budget){
       title:`Lay SS ${sh.name} up for the winter`,
       why:`She is losing about ${money(-cur.pm)} a month in the winter trade. Laid up on a skeleton crew she would cost only ${money(idle)}. Bring her back in March.`,
       act:[['Lay up at next port','moveship',sh.id,'']]});
-    if(!cruiseProg(sh).length&&!(sh.cp||[]).length&&!isCruise(r0)&&CL.reduce((q,c)=>q+(sh.berths[c]||0),0)>=100&&[7,8,9,10,2,3,4].includes(mo)){
+    if(!mailLast&&!cruiseProg(sh).length&&!(sh.cp||[]).length&&!isCruise(r0)&&CL.reduce((q,c)=>q+(sh.berths[c]||0),0)>=100&&[7,8,9,10,2,3,4].includes(mo)){
       const best=cruiseEst(sh).slice().sort((p,q)=>(q.pm-q.home)-(p.pm-p.home))[0];
       if(best&&best.pm>0&&best.pm-best.home>=800)add({id:`wcr:${sh.id}`,scope:'ship',ref:sh.id,sev:'tip',gain:best.pm-best.home,title:`Send SS ${sh.name} cruising in ${cruiseMonthsText(best.rk)}`,
         why:`In those months she would make about ${money(best.pm)} a month cruising ${ROUTES[best.rk].cruise.cname}, against ${money(best.home)} on ${ROUTES[r0].name}. She goes back to her line when the season ends.${S.lines[best.rk]?'':` It means opening the cruise (${money(2500*PX())}).`}${sh.cruiser?'':' A cruise conversion would make her better at it.'}`,
@@ -335,11 +338,15 @@ function advice(budget){
         why:`${sh.captain.name} is ${sh.captain.traits.map(t=>CAPT_TRAITS[t].name.toLowerCase()).join(' and ')||'inexperienced'}. ${pick.name} (${pick.exp} years in command${pick.traits.length?', '+pick.traits.map(t=>CAPT_TRAITS[t].name.toLowerCase()).join(', '):''}) is available at £${pick.wage} a month.`,
         act:[['Appoint him','hire',sh.id,pick.id]]});}
   })();return A1;}))add(h);
-  // one ship advised onto each line a month: every ship's figures assume the others stay put, so advising them all at once
+  // one ship advised onto each line a month (and onto each cruise, 0.37.2): every ship's figures assume the others stay put, so advising them all at once
   // piled the fleet onto whichever line looked best and then disappointed (0.36.2). The best move for each line stays;
   // the rest are looked at again next month with her there.
-  {const best={};for(const h of A){if(!/^(move|unlay|home):/.test(h.id))continue;const a=h.act[0],rk=a&&a[3];if(!rk)continue;if(!best[rk]||h.gain>best[rk].gain)best[rk]=h;}
-   for(let i=A.length-1;i>=0;i--){const h=A[i];if(!/^(move|unlay|home):/.test(h.id))continue;const a=h.act[0],rk=a&&a[3];if(rk&&best[rk]!==h)A.splice(i,1);}}
+  {const best={};for(const h of A){if(!/^(move|unlay|home|wcr):/.test(h.id))continue;const a=h.act[0],rk=a&&a[3];if(!rk)continue;if(!best[rk]||h.gain>best[rk].gain)best[rk]=h;}
+   for(let i=A.length-1;i>=0;i--){const h=A[i];if(!/^(move|unlay|home|wcr):/.test(h.id))continue;const a=h.act[0],rk=a&&a[3];if(rk&&best[rk]!==h)A.splice(i,1);}}
+  // a man in the pool can be appointed to one ship only: where he is advised for several, the best stays (0.37.2)
+  {const best={},key=h=>{const a=h.act[0];return a&&a[1]==='appoint'?'o'+a[4]:a&&a[1]==='hire'?'c'+a[3]:null;};
+   for(const h of A){const q=key(h);if(q&&(!best[q]||h.gain>best[q].gain))best[q]=h;}
+   for(let i=A.length-1;i>=0;i--){const q=key(A[i]);if(q&&best[q]!==A[i])A.splice(i,1);}}
   // ---- rivals, then the company: one unit, so a pass in pieces does not work them out again every frame (0.36.0) ----
   for(const h of advUnit('co',()=>{const A1=[],add=h=>A1.push(h);(()=>{
   for(const q of S.rmoves.filter(q=>q.m>=S.m-1&&q.kind==='add'&&S.lines[q.rk]))
@@ -374,7 +381,8 @@ function advice(budget){
   const calls={};for(const sh of S.ships)if(sh.line&&ACTIVE.includes(sh.state)){const r=ROUTES[sh.line],rt=sailings(knotsOf(sh),sh.line);
     r.calls.forEach((p,i)=>{const end=i===0||i===r.calls.length-1;calls[p]=(calls[p]||0)+rt*(end?1:2)*sh.grt*(end?0.08:0.04);});}
   const early=S.m-(S.m0??M21)<12&&S.ships.length<2;
-  if(!early)for(const p in calls){if(S.shore.piers[p]||!PIER_COST[p])continue;const save=calls[p]*0.6-350,cost=PIER_COST[p];
+  if(!early)for(const p in calls){if(S.shore.piers[p]||!PIER_COST[p]||p==='QUE'||p==='MOV')continue; // tender anchorages (0.37.2)
+    const save=calls[p]*0.6-350,cost=PIER_COST[p];
     if(save>0&&cost/save<=48&&canSpend(cost))add({id:`pier:${p}`,scope:'co',sev:'tip',gain:save,title:`Build a pier at ${PN[p]}`,
       why:`Your ships pay about ${money(calls[p])} a month in dues there. Your own pier cuts that by 60% and takes a day off each turnaround. ${money(cost)}, repaid in about ${Math.ceil(cost/save)} months.`,act:[['Build it','shorebuy','pier',p],['Shore','tabgo','shore']]});}
   if(!early)for(const a in AGENCY){if(S.shore.agents[a])continue;const cost=AGENCY[a].cost;if(!canSpend(cost))continue;
@@ -437,7 +445,7 @@ function doAction(act,d){MOD_EPOCH++;
     case 'setfare':{const [rk,c,v]=d;if(S.lines[rk]){S.lines[rk].fares[c]=floorFare(rk,c,v);return true;}return false;}
     case 'setfares':{const [rk,f,s2,t]=d;if(S.lines[rk]){Object.assign(S.lines[rk].fares,{f:floorFare(rk,'f',f),s:floorFare(rk,'s',s2),t:floorFare(rk,'t',t)});return true;}return false;}
     case 'linehands':{const [rk,v]=d;if(!S.lines[rk])return false;S.lines[rk].hands=!!v;return true;}
-    case 'setlineopt':{const [rk,k,v]=d;if(S.lines[rk]){S.lines[rk][k]=v;return true;}return false;}
+    case 'setlineopt':{const [rk,k,v]=d;if(S.lines[rk]){if(S.lines[rk][k]!==v)(S.lines[rk].set=S.lines[rk].set||{})[k]=S.m;S.lines[rk][k]=v;return true;}return false;}
     case 'setship':{const [id,k,v]=d;const x=ship(id);if(x){x[k]=v;return true;}return false;}
     case 'setwc':case 'cruiseadd':{const [id,rk]=d;const x=ship(id);if(!x)return false;cruiseProg(x);
       if(!rk){x.cp=[];return true;} // she finishes the cruise she is on, then goes back to her line
@@ -447,7 +455,7 @@ function doAction(act,d){MOD_EPOCH++;
       if(cruiseFor(x,S.m)){if(x.state==='laid'){x.state='port';x.portLeft=1;}if(x.state==='port')cruiseSeason(x);} // in season: she switches now if she is in port
       return true;}
     case 'cruisedrop':{const [id,rk]=d;const x=ship(id);if(!x)return false;cruiseProg(x);x.cp=(x.cp||[]).filter(k=>k!==rk);return true;}
-    case 'moveship':{const [id,rk]=d;const x=ship(id);if(!x)return false;const was=x.line;if(onProgramme(x)&&rk!==x.line&&x.ownerSet===S.t){x.wcHold=S.m+6;delete x.homeLine;} /* the owner's own choice wins this season */x.line=rk||null;if(x.line&&x.state==='laid'){x.state='port';x.portLeft=1;}if(was!==x.line)mailLeft(was);return true;}
+    case 'moveship':{const [id,rk]=d;const x=ship(id);if(!x)return false;const was=x.line;if(rk&&rk!==was)x.movedAt=S.m;if(onProgramme(x)&&rk!==x.line&&x.ownerSet===S.t){x.wcHold=S.m+6;delete x.homeLine;} /* the owner's own choice wins this season */x.line=rk||null;if(x.line&&x.state==='laid'){x.state='port';x.portLeft=1;}if(was!==x.line)mailLeft(was);return true;}
     case 'setyard':{const [id,k]=d;const x=ship(id);if(!x||!yardJobOk(x,k))return false;if(x.pendingYard||x.state==='yard')return addYardJob(x,k);
       if(x.state==='sea'||x.state==='repo'){x.pendingYard=k;return true;}if(S.cash>=refitCost(x,k)){enterYard(x,k);return true;}return false;}
     case 'crewset':{const [id,dp,k,v]=d;const x=ship(id);if(!x||!CDEPT[dp]||!['man','pay','train'].includes(k))return false;cwOf(x)[dp][k]=clamp(v|0,0,2);if(k==='pay')x.pay=cwOf(x).deck.pay;return true;}

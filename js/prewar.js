@@ -57,7 +57,8 @@ const bunkerHeld=()=>!!(S.shore&&S.shore.bunker&&S.shore.bunker.until>=S.m);
 function blueRiband(){
   const na=rk=>ROUTES[rk].group==='North Atlantic';let best=null;
   for(const x of S.rships)if(na(x.route)&&x.knots>=22&&(!best||x.knots>best.knots))best={name:x.name,knots:x.knots,o:x.owner};
-  for(const x of S.ships)if(x.line&&na(x.line)&&ACTIVE.includes(x.state)){const k=knotsOf(x);if(k>=22&&(!best||k>best.knots))best={name:x.name,knots:+k.toFixed(1),o:'morven'};}
+  for(const x of S.ships)if(x.line&&na(x.line)&&(ACTIVE.includes(x.state)||x.state==='yard')){const k=knotsOf(x); // a holder in dry dock keeps it (0.37.2)
+    if(k>=22&&(!best||k>best.knots))best={name:x.name,knots:+k.toFixed(1),o:'morven'};}
   const prev=S.riband;if(!best){S.riband=null;return;}
   if(!prev||prev.name!==best.name){S.riband=best;
     if(prev)news(best.o==='morven'?`SS ${best.name} takes the Blue Riband for the Morven Line at ${best.knots} knots. The newspapers are full of her.`:`${RIVALS[best.o]?RIVALS[best.o].name:'A rival line'}'s SS ${best.name} takes the Blue Riband at ${best.knots} knots${prev.o==='morven'?' from the Morven Line':''}.`,best.o==='morven'?'good':prev.o==='morven'?'bad':'',best.o==='morven'||prev.o==='morven');}

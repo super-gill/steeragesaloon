@@ -355,7 +355,7 @@ const GREAT={
   stranding:{em:'wreck',lost:'is wrecked on a reef',dead:0.4,how:'She ran onto a reef in darkness, off her course, and broke her back in the surf.'},
   hijack:{em:'piracy',from:1970,lost:'is seized by armed men',dead:0.02,how:'Armed men who boarded as passengers seized her bridge and held her for days.'}};
 const greatDecade=y=>Math.max(GREAT_FROM,Math.floor(y/10)*10);
-function greatPlan(fromYear){const d=greatDecade(fromYear);return ym(d,0)+Math.floor(Math.random()*120);}
+function greatPlan(fromYear){const d=greatDecade(fromYear),a=Math.max(ym(d,0),S.m+3),b=ym(d+10,0);return a<b?a+Math.floor(Math.random()*(b-a)):b+Math.floor(Math.random()*120);} // never in the first months after a save from before 0.37.1 is loaded (0.37.2)
 /* how likely a ship is to be the one: the Line's ships by how they are kept and manned; a rival's is an average ship */
 function greatRisk(sh){
   return (sh.cond<50?1.6:sh.cond<65?1.2:0.8)*(fatOf(sh)>75?1.6:1)*(hasBoats(sh)?1:1.5)*(radioOf(sh)?1:1.3)*((sh.morale||60)<45?1.3:1)*(sh.captain&&sh.captain.exp>=12?0.85:1);}

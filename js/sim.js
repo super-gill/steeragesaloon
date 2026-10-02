@@ -92,7 +92,7 @@ function depart(sh){
   if(sh.pendingYard){const k=sh.pendingYard;sh.pendingYard=null;enterYard(sh,k);return;}
   cruiseSeason(sh);
   const rk=sh.line,L=rk&&S.lines[rk];
-  if(!L){sh.state='laid';news(`SS ${sh.name} laid up at ${PN[P]}.`);return;}
+  if(!L){sh.state='laid';news(`SS ${sh.name} laid up ${atPort(P)}.`);return;}
   const r=ROUTES[rk],m=mOf(S.t),gk=geoKey(rk,m),[A,B]=geoEnds(gk);
   if(P!==A&&P!==B){
     const to=laneDist(P,A)<=laneDist(P,B)?A:B,d=laneDist(P,to);
@@ -225,7 +225,7 @@ function enterYard(sh,k){
   const add=[];for(const x of sh.yardAdd||[]){if(x===k)continue;const cx=bundleCost(sh,x);if(S.cash>=cx){if(cx)book('yard',-cx,'_idle',sh);add.push(x);}
     else news(`The account cannot cover ${YARD_NAME[x]} for SS ${sh.name} (${fmt(cx)}); the yard leaves it out.`,'bad');}
   sh.yardAdd=add;sh.state='yard';sh.yardKind=k;sh.yardLeft=bundleDays([k,...add].map(x=>yardDays(sh,x)));
-  news(`SS ${sh.name} enters the yard at ${PN[sh.port]} for ${[k,...add].map(x=>YARD_NAME[x]).join(', ')}${c?' ('+fmt(c+add.reduce((a,x)=>a+bundleCost(sh,x),0))+')':''}${atOwnYard(sh)?', at your own yard':''}.`);
+  news(`SS ${sh.name} enters the yard ${atPort(sh.port)} for ${[k,...add].map(x=>YARD_NAME[x]).join(', ')}${c?' ('+fmt(c+add.reduce((a,x)=>a+bundleCost(sh,x),0))+')':''}${atOwnYard(sh)?', at your own yard':''}.`);
 }
 /* add a job to a ship already booked into the yard, or already there */
 function addYardJob(sh,k){
@@ -326,7 +326,7 @@ function dailyTick(){
   if(S.cash<0&&!S.odWarn){S.odWarn=true;news(`The account is overdrawn. The bank will foreclose below ${fmt(-odLimit())}.`,'bad');}
   if(S.cash>0)S.odWarn=false;
   // the bank forecloses: after gross negligence the court winds the Line up; otherwise it is usually rescued, once (0.37.0)
-  if(S.cash<-odLimit()&&!S.over){const neg=S.gross&&S.t-S.gross.t<730;if(neg||!rescueTry()){S.over=neg?'wound':'bust';UI.speed=0;save();}} // claims after gross negligence: the court winds it up
+  if(S.cash<-odLimit()&&!S.over&&!bankRealise()){const neg=S.gross&&S.t-S.gross.t<730;if(neg||!rescueTry()){S.over=neg?'wound':'bust';UI.speed=0;save();}} // claims after gross negligence: the court winds it up
 }
 function monthRoll(pm){
   const repay=rescueMoratorium()?0:Math.min(S.debt,Math.round(S.debt*0.004));S.debt-=repay;S.cash-=repay;
@@ -347,7 +347,8 @@ function monthRoll(pm){
     else S.mail[rk].strikes=0;
     if(S.mail[rk]){S.mail[rk].ok=false;S.mail[rk].legs=0;}
   }
-  for(const rk of Object.keys(S.wars)){const w=S.wars[rk];w.left--;if(w.left<=0){delete S.wars[rk];S.tension[rk]=20;if(!w.quiet)news(warEndText(rk,w),S.lines[rk]?'good':'');}}
+  // a war whose leaders no longer sail the trade ends (0.37.2)
+  for(const rk of Object.keys(S.wars)){const w=S.wars[rk];if(!w.bear&&!w.lines&&!combineOn(rk)&&(w.by||[]).length&&!w.by.some(o=>S.rships.some(x=>x.owner===o&&x.route===rk)))w.left=0;else w.left--;if(w.left<=0){delete S.wars[rk];S.tension[rk]=20;if(!w.quiet)news(warEndText(rk,w),S.lines[rk]?'good':'');}}
   lineWarsMonth();trustMonth();prewarMonth();admMonth();disasterMonth();warMonth();bubbleMonth();if(!(typeof MKT_OFF!=='undefined'&&MKT_OFF))marketMonth(); // the early years (trust.js, prewar.js)
   for(const rk of Object.keys(ROUTES)){
     const n=shipsOn(rk).filter(x=>ACTIVE.includes(x.state)).length;
@@ -371,7 +372,7 @@ function monthRoll(pm){
   // reputation drifts toward the standing your service, speed, captains and shore establishment earn
   S.stain=(S.stain||0)*0.97;
   const target=repTarget();if(target!==null)S.rep=clamp(S.rep+(target-S.rep)*0.12,0,100);
-  if(S.shore.bunker&&S.shore.bunker.until===S.m-1)news('Your bunker contract has expired. Coal and oil are back at market prices.','bad');
+  if(S.shore.bunker&&S.shore.bunker.until===S.m-1&&!S.shore.bunker.told&&(S.shore.bunker.told=true))news('Your bunker contract has expired. Coal and oil are back at market prices.','bad');
   if(S.offer&&S.offer.exp<=S.m){(S.mailNo=S.mailNo||{})[S.offer.route]=S.m+12;S.offer=null;} // let lapse: not offered again for a year (0.35.7)
   // a cruise that has ended (Prohibition's repeal ends the cruises to nowhere): its ships are laid up and the line closes
   for(const rk of Object.keys(S.lines))if(!routeOpen(rk,S.m)){delete S.lines[rk];for(const x of S.ships){if(x.line===rk){x.line=null;delete x.homeLine;}if(x.cp)x.cp=x.cp.filter(k=>k!==rk);}
@@ -416,11 +417,15 @@ const fleetValue=()=>S.ships.reduce((a,s)=>a+shipValue(s),0);
 // property ashore is worth about half what it cost at today's prices (0.35.4: it was valued at 1921 prices, so before 1921 buying it raised net worth)
 const shoreValue=()=>{const s=S.shore,x=PX();let v=0;for(const p in s.piers)v+=PIER_COST[p]*0.6;for(const y in s.yards)v+=150000*0.5*x;if(s.slip)v+=OWN_SLIP_COST*0.5*x;for(const h in s.hostels)v+=35000*0.5*x;for(const p in s.sheds||{})v+=SHED_COST*0.5*x;for(const p in s.cold||{})v+=COLD_COST*0.5*x;return v;};
 const ordersValue=()=>(S.orders||[]).reduce((a,o)=>a+(o.paid||0),0); // ships on the stocks, at what has been paid on them (0.35.4)
-const netWorth=()=>S.cash+(S.gilts||0)+fleetValue()+shoreValue()+ordersValue()-S.debt-admDebt()-((S.rescue&&S.rescue.loan)||0)+mkWorth(); // shares at the market, less the margin loan
-const headroom=()=>Math.max(0,0.7*(fleetValue()/(newCal()&&S.m>ARMISTICE&&S.m<M21?Math.max(1,warShips(S.m)/warShips(ARMISTICE)):1)+shoreValue())+0.9*(S.gilts||0)+0.5*Math.max(0,mkWorth())-S.debt-admDebt()); // in the 1919 and 1920 boom the bank lends on ships at no more than their worth at the armistice // government stock is the best security a bank can hold
+const netWorth=()=>S.cash+(S.gilts||0)+fleetValue()+shoreValue()+ordersValue()-S.debt-admDebt()-((S.rescue&&S.rescue.loan)||0)+((S.liq&&S.liq.left)||0)+mkWorth(); // shares at the market, less the margin loan
+// what the bank will still lend: 70% of the fleet and property, and on stock and shares (government stock at 90%, shares at
+// half) no more than twice the Line's own worth, since no bank lends a shipping line ten times its capital on stock (0.37.2).
+// In the 1919 and 1920 boom the bank lends on ships at no more than their worth at the armistice, and in the Depression on
+// their normal worth (0.37.2)
+const headroom=()=>Math.max(0,0.7*(fleetValue()/(newCal()&&S.m>ARMISTICE&&S.m<M21?Math.max(1,warShips(S.m)/warShips(ARMISTICE)):1)/(newCal()?1-SLUMP_SHIP*slump(S.m):1)+shoreValue())+Math.min(0.9*(S.gilts||0)+0.5*Math.max(0,mkWorth()),2*Math.max(0,netWorth()))-S.debt-admDebt());
 const odLimit=()=>8000+0.5*headroom(); // the bank forecloses when cash falls below minus this
 function news(t,k,pauseIt){
-  S.news.unshift({d:Math.floor(S.t),t,k:k||''});if(S.news.length>80)S.news.length=80;
+  S.news.unshift({d:Math.floor(S.t),t,k:k||''});if(S.news.length>150)S.news.length=150;
   if(pauseIt)eventClock(t,pauseIt===2);
 }
 /* on big news the clock slows (or pauses, or carries on, as the owner prefers); it picks up again once the owner acts or the moment passes */

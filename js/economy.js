@@ -13,6 +13,7 @@ for(const k in AGENCY)PX0.agency[k]=AGENCY[k].cost*2;
 for(const k in DEPTS)PX0.dept[k]=DEPTS[k].cost;
 for(const k in COMM)PX0.comm[k]=COMM[k].rate;
 function applyPrices(){
+  if(PN.QUE)PN.QUE=newCal()&&S.m<ym(1920,0)?'Queenstown':'Cobh'; // renamed in 1920 (0.37.2); the price tables are reset on every load and month, so the name is too
   const p=PX();
   for(const k in ROUTES)for(const c in PX0.ref[k])ROUTES[k].ref[c]=Math.max(1,Math.round(PX0.ref[k][c]*p));
   PX0.adv.forEach((v,i)=>ADV_COST[i]=Math.round(v*p));PX0.maint.forEach((v,i)=>MAINT_COST[i]=Math.round(v*p));
@@ -52,9 +53,10 @@ function crashF(m){ // how hard the panic is biting, 0 to 1
   const k=m-c.panicAt;return k<6?1:Math.max(0,1-(k-6)/Math.max(1,c.rec-6));
 }
 function crashMod(c,m){const f=crashF(m);return f?1-f*S.crash.depth*{f:1.2,s:1,t:0.8,tt:1}[c]:1;}
-const shipMkt=()=>(1-(S.crash&&S.crash.y1907?0.25:0.4)*crashF(S.m))*warShips(S.m); // second-hand ship prices in a panic (the 1907 panic was an American one, and milder here)
+const shipMkt=()=>(1-(S.crash&&S.crash.y1907?0.25:0.4)*crashF(S.m))*warShips(S.m)*(newCal()?1-SLUMP_SHIP*slump(S.m):1); // and in the Depression (0.37.2): two fifths off at the trough, as second-hand tonnage went for little more than scrap // second-hand ship prices in a panic (the 1907 panic was an American one, and milder here)
 function crashMonth(){
   const m=S.m,c=S.crash;
+  if(S.liq&&m>=S.liq.next){const p=Math.min(S.liq.left,S.liq.per);S.cash+=p;S.liq.left-=p;S.liq.next=m+3;news(`The liquidators of ${BANK_NAME} pay the Line ${fmt(p)}${S.liq.left>1?`; ${fmt(S.liq.left)} is still to come`:', the last of it'}.`,'good');if(S.liq.left<1)S.liq=null;}
   if(S.call&&m>=S.call.due)callDue();
   if(!c){const since=m-(S.lastCrash||ym(1931,0));if(m<ym(1936,0)||since<96)return;
     if(Math.random()<0.004+Math.min(0.02,(since-96)*0.0004)){
@@ -68,8 +70,11 @@ function crashMonth(){
 function panic(c){
   const m=S.m;
   news(`Black ${MONTHS[m%12]}. Panic on the exchanges in London and New York. Emigrants cancel, first class stays at home, freight is cut, and nobody will pay a fair price for a ship.`,'bad',true);
-  if(c.bank){const keep=5000*PX(),lost=Math.round(Math.max(0,S.cash-keep)*0.75);
-    if(lost>0){book('crash',-lost);news(`${BANK_NAME[0].toUpperCase()+BANK_NAME.slice(1)} has closed its doors. The liquidators will pay about five shillings in the pound. The Morven Line loses ${fmt(lost)}.`,'bad',true);}
+  // the bank fails (0.37.2): the deposit is frozen; the liquidators pay fifteen shillings in the pound over eighteen months, so a
+  // quarter is lost and the rest comes back slowly. Before, three quarters was lost on the day (KI-061)
+  if(c.bank){const keep=5000*PX(),dep=Math.round(Math.max(0,S.cash-keep)),lost=Math.round(dep*0.25),back=dep-lost;
+    if(dep>0){S.cash-=back;book('crash',-lost);S.liq={left:(S.liq?S.liq.left:0)+back,per:Math.round(((S.liq?S.liq.left:0)+back)/6),next:m+3};
+      news(`${BANK_NAME[0].toUpperCase()+BANK_NAME.slice(1)} has closed its doors with ${fmt(dep)} of the Morven Line's money. The liquidators expect to pay fifteen shillings in the pound over eighteen months: ${fmt(lost)} is lost, and ${fmt(back)} will come back a quarter at a time.`,'bad',true);}
     else news(`${BANK_NAME[0].toUpperCase()+BANK_NAME.slice(1)} has closed its doors. The Morven Line had little on deposit.`,'bad',true);}
   if(S.debt>20000*PX()){const amt=Math.round(S.debt*(c.bank?0.25:0.15)*(c.y1907?0.6:1)/100)*100;S.call={amt,due:m+(c.y1907?6:3)};
     news(`${c.bank?'The receivers':'The bank'} call in ${fmt(amt)} of the Morven Line's loans, due by ${monthName(S.call.due)}. There will be no new lending for a year, and interest is up two points.`,'bad',true);}
@@ -101,15 +106,24 @@ function callDue(){
 const GILT_Y={1899:2.38,1900:2.55,1901:2.69,1902:2.68,1903:2.79,1904:2.86,1905:2.81,1906:2.86,1907:3.00,1908:2.93,1909:3.02,
   1910:3.12,1911:3.19,1912:3.32,1913:3.43,1914:3.48,1915:3.86,1916:4.32,1917:4.58,1918:4.43,1919:4.64,1920:5.37,1921:5.20,
   1922:4.39,1923:4.30,1924:4.37,1925:4.44,1926:4.52,1927:4.56,1928:4.47,1929:4.57,1930:4.45,1931:4.40,1932:3.75,1933:3.38,
-  1934:3.08,1935:2.90,1936:2.94,1937:3.30,1938:3.41,1939:3.73,1940:3.38};
+  1934:3.08,1935:2.90,1936:2.94,1937:3.30,1938:3.41,1939:3.73,1940:3.38,
+  // after 1940 (0.37.2): the long yield as it ran, broadly, in a world without the war: cheap money into the 1940s, rising
+  // through the 1950s and 60s, the inflation of the 1970s, and down again from the 1990s; filled in year by year below
+  1945:3.2,1950:3.6,1955:4.2,1960:5.4,1965:6.4,1970:9.0,1975:14.0,1980:12.0,1985:10.5,1990:10.5,1995:8.0,2000:4.8,2005:4.4,
+  2010:4.0,2015:2.5,2020:1.0,2023:4.0,2030:4.5};
+(()=>{const ks=Object.keys(GILT_Y).map(Number).sort((a,b)=>a-b);for(let i=1;i<ks.length;i++)for(let y=ks[i-1]+1;y<ks[i];y++)GILT_Y[y]=+(GILT_Y[ks[i-1]]+(GILT_Y[ks[i]]-GILT_Y[ks[i-1]])*(y-ks[i-1])/(ks[i]-ks[i-1])).toFixed(2);})();
+const GILT_LAST=2030;
 const GILT_COUPON=2.5,GILT_FEE=0.0025;
 /* the yield in a (fractional) year: each year's average taken at mid-year, straight lines between */
-function giltYieldAt(y){const a=Math.floor(y-0.5),f=y-0.5-a,k=v=>GILT_Y[clamp(v,1899,1940)];return k(a)+(k(a+1)-k(a))*f;}
-const giltYield=()=>giltYieldAt(yearNow())+(S.giltShock||0);
+function giltYieldAt(y){const a=Math.floor(y-0.5),f=y-0.5-a,k=v=>GILT_Y[clamp(v,1899,GILT_LAST)];return k(a)+(k(a+1)-k(a))*f;}
+/* the market does not follow the table exactly (0.37.2; KI-016): a wander of a few tenths of a per cent either side, drawn only
+   while the Line holds stock, so a holding's path cannot be known in advance */
+const giltYield=()=>Math.max(0.5,giltYieldAt(yearNow())+(S.giltShock||0)+(S.giltNoise||0));
 const giltPrice=()=>GILT_COUPON/giltYield()*100; // £ for £100 of stock
 function giltsMark(){S.gilts=Math.round((S.giltPar||0)*giltPrice()/100);if(S.gilts<1){S.gilts=0;S.giltPar=0;}}
 function insMonth(){S.insLoss=(S.insLoss||0)*0.96;} // claims fade from the underwriters' memory over a few years
 function giltsMonth(){S.giltShock=(S.giltShock||0)*0.8;if(S.giltShock<0.01)S.giltShock=0;
+  if(S.giltPar>0){const z=Math.sqrt(-2*Math.log(Math.random()||1e-9))*Math.cos(2*Math.PI*Math.random());S.giltNoise=0.9*(S.giltNoise||0)+0.12*z*giltYieldAt(yearNow())/4;}else S.giltNoise=(S.giltNoise||0)*0.5;
   if(S.giltPar>0)book('invest',S.giltPar*GILT_COUPON/100/12);giltsMark();}
 function gilts(buy,amt){
   if(buy){amt=Math.min(amt,Math.floor(Math.max(0,S.cash)));if(amt<=0)return false;S.cash-=amt;S.giltPar=(S.giltPar||0)+amt*(1-GILT_FEE)/giltPrice()*100;giltsMark();return true;}
@@ -120,9 +134,13 @@ function gilts(buy,amt){
 function taxMonth(net){
   S.yearNet=(S.yearNet||0)+net;
   if(S.m%12!==0)return;const profit=S.yearNet;S.yearNet=0;epdJanuary(profit);if(typeof floatJanuary==='function')floatJanuary(profit);
-  const thr=150000*PX();if(S.m<ym(1925,0)||profit<=thr)return;
-  const tax=Math.round((profit-thr)*0.3/100)*100;book('tax',-tax);
-  news(`Income tax: on ${fmt(profit)} earned last year the Inland Revenue takes ${fmt(tax)}, three tenths of what is over the allowance.`,'bad'); // not the wartime duty (0.35.7)
+  // a year's loss is carried forward against later profits, as the Income Tax Acts allowed (0.37.2)
+  if(S.m>=ym(1925,0)&&profit<0){S.taxLoss=(S.taxLoss||0)-profit;return;}
+  const relief=Math.min(S.taxLoss||0,Math.max(0,profit)),taxable=profit-relief;
+  const thr=150000*PX();if(S.m<ym(1925,0)||taxable<=thr){if(S.m>=ym(1925,0))S.taxLoss=(S.taxLoss||0)-relief;return;}
+  S.taxLoss=(S.taxLoss||0)-relief;
+  const tax=Math.round((taxable-thr)*0.3/100)*100;book('tax',-tax);
+  news(`Income tax: on ${fmt(profit)} earned last year${relief>0?`, less ${fmt(relief)} of earlier losses,`:''} the Inland Revenue takes ${fmt(tax)}, three tenths of what is over the allowance.`,'bad'); // not the wartime duty (0.35.7)
 }
 /* ---------- the unions: a big, rich line gets asked for more ---------- */
 const HOME_PORTS=['GLA','LIV','SOU','AVO'];
@@ -130,7 +148,7 @@ function unionMonth(){
   const m=S.m,n=S.ships.length;
   if(S.union&&m>=S.union.until){unionAnswer(false,true);return;}
   if(S.union||S.strike||m<ym(1923,6)||n<3||m-(S.lastUnion??S.m0??M21)<24)return;
-  const rich=S.lastMonth&&S.lastMonth.net>30000*PX()?1.6:S.lastMonth&&S.lastMonth.net>0?1:0.5;
+  const rich=(S.lastMonth&&S.lastMonth.net>30000*PX()?1.6:S.lastMonth&&S.lastMonth.net>0?1:0.5)*(1-0.85*slump(m)); // no union asks for more at the bottom of a slump (0.37.2)
   if(Math.random()<0.004*Math.pow(n,0.75)*rich){
     const pct=[5,8,10,12][Math.floor(Math.random()*4)];S.union={pct,until:m+1};S.lastUnion=m;
     news(`The National Union of Seamen claims ${pct}% more for Morven Line crews${n>=15?', pointing to the Line\'s profits':''}. They want an answer within the month.`,'bad',true);}
@@ -160,9 +178,9 @@ function combineMonth(){
   if(ours<0.8*big||Math.random()>0.06)return;
   const top=Object.keys(S.lines).map(rk=>[rk,shipsOn(rk).length]).sort((a,b)=>b[1]-a[1]).slice(0,3).map(q=>q[0]);
   S.combine={until:m+18+Math.floor(Math.random()*12),rk:top};
-  for(const o of coLive())S.rivals[o].cash+=400000*PX();
+  const inIt=coLive().filter(o=>S.rships.some(x=>x.owner===o&&top.includes(x.route)));for(const o of inIt)S.rivals[o].cash+=400000*PX(); // the pooled funds go to the lines on the trades it fights (0.37.2; before, to every line)
   news(`The other Atlantic lines have formed a combine against the Morven Line: pooled funds, new tonnage and fighting rates on ${top.map(k=>ROUTES[k].name).join(', ')}.${S.conf?' The conference has expelled the Morven Line.':''}`,'bad',true);
-  S.conf=false;
+  if(S.conf)S.confLeft=m;S.conf=false; // expelled: the conference will not have it back for a year, nor while the combine lasts (0.37.2)
 }
 const combineOn=rk=>!!(S.combine&&S.combine.rk.includes(rk));
 /* ---------- the aeroplane ----------
@@ -299,7 +317,7 @@ function inquiry(q){
    share is the owner's no longer: the owner's own stake (ownerShare) is what the game's score counts from then on. */
 const RESCUE_BY={bank:'a consortium of the City banks',treasury:'the Treasury'};
 function rescueNeed(){return Math.max(0,-S.cash)+6*runningCost();}
-function rescueChance(){if(S.rescue||!S.ships.length)return 0;const owe=S.debt+Math.max(0,-S.cash),cover=(fleetValue()+shoreValue())/Math.max(1,owe);
+function rescueChance(){if(S.rescue||!S.ships.length)return 0;const owe=S.debt+Math.max(0,-S.cash),cover=(fleetValue()/(newCal()?1-SLUMP_SHIP*slump(S.m):1)+shoreValue())/Math.max(1,owe); // ships at their normal worth, as the banks judge them in the Depression (0.37.2)
   return clamp(0.72+0.005*(S.rep-40)+(cover>=1.2?0.15:cover>=0.8?0:-0.2),0.15,0.92);}
 function rescueWho(need){
   const tons=S.ships.reduce((a,x)=>a+x.grt,0),national=S.ships.some(x=>x.adm)||Object.keys(S.mail||{}).length>0||tons>=40000;
@@ -307,14 +325,24 @@ function rescueWho(need){
   const rich=coLive().filter(o=>!RIVAL_P[o].kind&&!(typeof trustMember==='function'&&trustMember(o))&&S.rivals[o]&&S.rivals[o].cash>=need*1.5).sort((a,b)=>S.rivals[b].cash-S.rivals[a].cash)[0];
   if(rich&&Math.random()<0.5)return {kind:'rival',o:rich};
   return {kind:'bank'};}
+/* before it forecloses, the bank sells what it holds as security and can sell in a day: government stock, the investment
+   account and shares. A Line that is short of cash but rich in stock is not insolvent, and is not rescued (0.37.2) */
+function bankRealise(){const want=()=>-odLimit()*0.5-S.cash;let sold=0;const c0=S.cash;
+  if(want()>0&&(S.gilts||0)>0){gilts(false,Math.min(S.gilts,want()+50000*PX()));}
+  if(want()>0&&S.ex&&S.ex.fund&&typeof mkFundTake==='function')mkFundTake(want()+50000*PX(),false);
+  if(want()>0&&S.ex&&S.ex.me)for(const o of Object.keys(S.ex.me.pos||{})){if(want()<=0)break;if(typeof mkSell==='function')mkSell(o,1);}
+  sold=S.cash-c0;if(sold>0)news(`The bank, finding the Line's account far overdrawn, sells ${fmt(sold)} of its stock and shares to cover it.`,'bad',true);
+  return S.cash>=-odLimit();}
 function rescueTry(){
   if(S.rescue){news('The bank forecloses. Having been rescued once, the Morven Line finds no one to rescue it again.','hist',2);return false;}
   if(Math.random()>=rescueChance())return false;
   const need=Math.round(rescueNeed()/1000)*1000,w=rescueWho(need),R={kind:w.kind,o:w.o||null,m:S.m,need,stake:0,loan:0,loan0:0,rate:0};
   if(w.kind==='treasury'){Object.assign(R,{stake:0.25,loan:need,loan0:need,rate:0.035,veto:true,noDiv:true});}
   else if(w.kind==='rival'){Object.assign(R,{stake:0.4});S.rivals[w.o].cash-=need;}
-  else{Object.assign(R,{loan:need,loan0:need,rate:0.07,noDiv:true,noBuy:true});R.cut=Math.round(S.debt*0.25);S.debt-=R.cut;}
-  S.cash+=need;S.call=null;S.rescue=R;S.rep=clamp(S.rep-10,0,100);
+  else{Object.assign(R,{loan:need,loan0:need,rate:0.07,noDiv:true,noBuy:true});
+    // the mortgage holders write off only what their security will not cover, and never more than a quarter (0.37.2)
+    const short=S.debt+Math.max(0,-S.cash)-0.8*(fleetValue()+shoreValue());R.cut=Math.round(clamp(short,0,0.25*S.debt));S.debt-=R.cut;}
+  S.cash+=need;S.call=null;S.rescue=R;S.rep=clamp(S.rep-10,0,100);if(R.loan>0)S.noLend=Math.max(S.noLend||0,S.m+1); // the banks lend nothing more while the rescue is owed
   const by=w.kind==='rival'?RIVALS[w.o].name:RESCUE_BY[w.kind];
   news(`The Morven Line is rescued. ${by[0].toUpperCase()+by.slice(1)} puts up ${fmt(need)}${R.stake?` for ${Math.round(R.stake*100)}% of the Line`:''}${R.loan?`${R.stake?', as a loan at ':' as a loan at '}${(R.rate*100).toFixed(1)}%`:''}.${R.cut?` The mortgage holders write off ${fmt(R.cut)}, a quarter of what the Line owes them.`:''} ${rescueTerms(R)} The bank puts off repayments on its mortgages for three years. A second failure will be final.`,'hist',2);
   return true;}
@@ -322,7 +350,7 @@ function rescueTerms(R){const t=[];if(R.noDiv&&R.loan>0)t.push('no dividend unti
   if(R.noBuy&&R.loan>R.loan0*0.5)t.push('no ship bought or built until half the loan is repaid');if(R.kind==='rival')t.push(`no raids on ${RIVALS[R.o].name}, which now holds ${Math.round(R.stake*100)}% of the Line`);
   return t.length?`The terms: ${t.join('; ')}.`:'';}
 /* monthly: interest on the rescue loan, and a quarter of any surplus over three months' running costs to repay it */
-function rescueMonth(){const R=S.rescue;if(!R||!(R.loan>0))return;book('interest',-R.loan*R.rate/12);
+function rescueMonth(){const R=S.rescue;if(!R||!(R.loan>0))return;book('interest',-R.loan*R.rate/12);S.noLend=Math.max(S.noLend||0,S.m+1);
   const spare=S.cash-3*runningCost();if(spare>0){const p=Math.min(R.loan,Math.round(spare*0.25));S.cash-=p;R.loan-=p;
     if(R.loan<1){R.loan=0;news(`The Line has repaid its rescue loan to ${R.kind==='treasury'?'the Treasury':'the banks'}. ${R.stake?`${RESCUE_BY[R.kind]||'The rescuer'} keeps its ${Math.round(R.stake*100)}% of the Line.`:'The restrictions are lifted.'}`,'good',true);}}}
 /* what the rescue still forbids */

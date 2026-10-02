@@ -3,7 +3,11 @@
      - a failing Line with a sound fleet is rescued (the chance forced to a certainty), keeps trading, and owes the rescuer;
      - the terms hold: the banks' "no ship bought or built", the Treasury's veto on sales, no dividend, no repayments on the
        mortgages for three years, the rescue loan counted against net worth, and no raid on a rival that holds a stake;
-     - a second failure is final, and a Line found grossly negligent is wound up with no rescue.
+     - a second failure is final, and a Line found grossly negligent is wound up with no rescue;
+     - (0.37.2, from test round 4) failing on purpose does not pay: the bank sells a Line's government stock before it
+       forecloses, and no rescue writes off debt that the security covers; stock-backed borrowing is limited to twice the
+       Line's worth; a rescued Line can neither borrow to pay off the rescue nor merge a line into it; the rescuing rival's
+       shares cannot be bought; and a Line expelled by the combine cannot rejoin the conference while it lasts.
    Usage:  node tools/rescue.js [seeds]   (default 3) */
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const ROOT = path.join(__dirname, '..');
@@ -47,6 +51,23 @@ function run(seed) {
     // 4: gross negligence: wound up, no rescue
     setup(1909);S.rescue=null;yes();S.gross={t:S.t,name:'x',dead:1,F:0,total:0,cover:0};fail();no();
     ok('a Line found grossly negligent is wound up, not rescued',S.over==='wound'&&!S.rescue,S.over);
+    // 5: borrow on Consols to the limit, then fall short of cash: the bank sells the stock; no rescue, no write-off
+    {setup(1931);S.rescue=null;yes();S.debt=0;S.cash=5e6;gilts(true,5e6);let g=0;while(g++<60){const h=headroom();if(h<1000)break;S.debt+=h;S.cash+=h;gilts(true,h);}
+     const lev=S.debt/Math.max(1,netWorth()),nw0=netWorth(),d0=S.debt;fail();no();
+     ok('borrowing on stock stops at about twice what the Line is worth',lev<=2.3,'debt '+lev.toFixed(2)+' times net worth');
+     ok('a Line rich in stock is not rescued: the bank sells the stock',!S.rescue&&!S.over,(S.rescue?'rescued, '+fmt(S.rescue.cut||0)+' written off':'no rescue')+', debt '+fmt(d0)+' then '+fmt(S.debt)+', net worth '+fmt(nw0)+' then '+fmt(netWorth()));}
+    // 6: a rescued Line: no borrowing to pay it off, no merger
+    {setup(1912);yes();S.rescue=null;fail();no();const R=S.rescue;
+     if(R&&R.loan>0){const h=headroom();const lent=h>=1000&&!(S.noLend>S.m);ok('a rescued Line cannot borrow from the bank to repay the rescue',!lent,'headroom '+fmt(h)+', no lending until '+monthName(S.noLend||0));
+       mkEnsure();const o=coLive().find(q=>!RIVAL_P[q].kind&&S.ex.cos[q]&&!S.ex.cos[q].gone);if(o&&rescueNoBuy()){S.ex.me.pos[o]={n:Math.ceil(S.ex.cos[o].n*0.8),cost:0};ok('no merger while the banks forbid buying ships',!mkMerge(o),RIVALS[o].name);}}
+     else ok('a rescued Line cannot borrow from the bank to repay the rescue',true,'rescued by '+(R?R.kind:'nobody'));}
+    // 7: the rival that rescued the Line: its shares are not for sale to the Line
+    {setup(1912);S.rescue=null;mkEnsure();const o=coLive().find(q=>!RIVAL_P[q].kind&&S.ex.cos[q]&&!S.ex.cos[q].gone);
+     if(o){S.rescue={kind:'rival',o,m:S.m,need:1,stake:0.4,loan:0,loan0:0,rate:0};S.cash=1e7;ok('shares in the rescuing rival cannot be bought',!mkBuy(o,10000)&&!mkBuyPct(o,0.05),RIVALS[o].name);}}
+    // 8: the combine expels the Line from the conference, and it may not rejoin while the combine lasts
+    {setup(1930);S.conf=true;S.combine=null;S.lastCombine=-999;while(S.ships.length<12){refreshMarket();const m=S.market.shift();if(!m)break;delete m.price;m.line='liv';S.ships.push(m);}
+     for(const x of S.ships)x.grt=Math.max(x.grt,60000);const R0=Math.random;Math.random=()=>0.01;combineMonth();Math.random=R0;
+     ok('a Line expelled by the combine cannot rejoin the conference at once',!!S.combine&&!S.conf&&!confJoin(),S.combine?'combine to '+monthName(S.combine.until):'no combine formed');}
     return out;})()`, ctx);
 }
 const n = +process.argv[2] || 3; let bad = 0; const tally = {};

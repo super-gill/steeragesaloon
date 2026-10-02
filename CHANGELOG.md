@@ -2,6 +2,21 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.37.2 (2 October 2026)
+Fixes from test round 4, two players over 1927 to 1945.
+- Fixed (S1): a rich Line could fail on purpose and come out £50m better off. It borrowed against Consols until the bank would lend no more, let interest push the account past its limit, and was rescued by the banks, who wrote off a quarter of its debt though its stock covered every penny. Now the bank sells a Line's government stock, investment account and shares before it forecloses, so a Line rich in stock is not rescued; the mortgage holders write off only what the fleet and property will not cover; and the bank lends on stock and shares no more than twice what the Line is worth.
+- Fixed (S1, KI-016): Consols followed a fixed table, so a geared holding was a sure thing. Their yield now wanders a few tenths of a per cent either side of the table, and the table runs on past 1940 (it stopped, freezing prices).
+- Fixed: the rescue terms could be dodged. A rescued Line can no longer borrow from the bank while it owes the rescue, merge a line into its fleet or buy one out while it may not buy ships, or buy shares in, merge or wind up the rival that rescued it.
+- Fixed: rejoining the conference the day after the combine expelled the Line cancelled the combine's rate wars. The Line may not rejoin while the combine lasts, nor for a year after being expelled. The combine's pooled funds go to the lines on the trades it fights, not to every line.
+- Fixed: the 1920s great disaster struck in the first month after loading a game saved before 0.37.1. It now comes at least three months on.
+- Fixed: mortgage insurance was charged on all the Line's borrowing, including money borrowed on stock: five small ships cost £740k a month. It now covers what the fleet secures.
+- The Depression (KI-060): second-hand ships lose two fifths of their worth at the trough (they did not fall at all), though the banks keep lending on their normal worth. Steerage to New York and Canada falls to about a third and recovers only by 1942, as America and Canada shut their doors to immigrants in 1930-31.
+- A failed bank (KI-061) now freezes the deposit and pays fifteen shillings in the pound over eighteen months, instead of taking three quarters of it on the day. A rumour about the Line's bank stays under Needs attention until it passes.
+- Advice: a table or advertising changed in the last six months is left alone (the Fares Office flipped tables every few weeks); a ship moved in the last year needs twice the margin to be moved again; only one ship at a time is advised onto each cruise (17 at once lost £491k in a test); no cruising for the only ship that keeps a mail contract; one advice per officer in the pool; the conference warning names what is really raising tension.
+- Losses are carried forward against later years' income tax. A rate war ends when its leaders no longer sail the trade. The Blue Riband stays with a holder in dry dock.
+- History and text: prices in 1940 follow the trend (there is no war in this world, so not the wartime jump); Queenstown is Cobh from 1920; cruises to nowhere from 1928; no union claims at the bottom of the slump; the Wall Street crash is news in November; no piers offered at the tender anchorages; "laid up off New York", not "at the open sea"; a comma in the launch text; the bunker notice once.
+- Balance: careful test owner to 1922, 6 of 40 bankrupt; to 1939, 10 of 20 (9 before), 5 rescued and 3 of those failed again.
+
 ## 0.37.1 (1 October 2026)
 The war as it was, the ship's hospital, and a great disaster about once a decade.
 - War freight (KI-023): rates over the price level climb to 1.4 times by 1915 and hold through 1916, so a trading ship's freight earns four to six times 1913 in the money of the day (tramp rates rose four to nine times, liner rates less). From February 1917 the Ministry of Shipping's control holds them to 0.8; the boom after the armistice takes them to 2.5 in the spring of 1920 with a fifth more cargo offered, then the crash. In the test fleets a trading ship returned 68% a year on her 1913 worth in 1916, 37% in 1917-18 together and 33% in 1919; before, she lost money in 1919 and 1920.

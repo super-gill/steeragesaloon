@@ -145,7 +145,7 @@ function mkOwnPush(id,lg,sh){const c=S.ex.cos[id];if(!c)return;if(lg)c.own=(c.ow
 const mkFair=id=>{const c=S.ex.cos[id];return c&&!c.gone?c.px/Math.exp(c.own||0)/(c.ownS||1):0;};
 const mkPosVal=A=>Object.keys(A.pos).reduce((a,id)=>a+A.pos[id].n*(S.ex.cos[id]?(A===S.ex.me||A===S.ex.fund?mkFair(id):S.ex.cos[id].px):0),0);
 /* the Line's own dealing, from the Market tab */
-function mkBuy(id,amt,margin){const M=mkEnsure(),c=M.cos[id];if(!c||c.gone||mkShut()||!(amt>0)||(M.me.short&&M.me.short[id]))return false; // buy back the short first
+function mkBuy(id,amt,margin){const M=mkEnsure(),c=M.cos[id];if(rescueFriend(id)||!c||c.gone||mkShut()||!(amt>0)||(M.me.short&&M.me.short[id]))return false; // buy back the short first
   const own=margin?amt*(1-MK_MARGIN):amt;if(S.cash<own)return false;
   const q=Math.floor(Math.min(amt/(c.px*(1+MK_FEE_BUY+0.3*amt/Math.max(1,c.n*c.px))),mkFree(id)));if(q<1)return false; // no more than the shares on offer (0.35.3)
   const r=mkDeal(M.me,id,q);if(!r)return false;S.cash+=r.cash;
@@ -268,7 +268,7 @@ const mkInflOn=rk=>S.ex?mkInfl(topRival(rk)):0;
 const MK_DIV={none:{name:'None',pay:0},normal:{name:'Normal',pay:0.5},generous:{name:'Generous',pay:0.9}};
 const MK_STRAT={retrench:{name:'Retrench',aggr:0.6},steady:{name:'Steady',aggr:1},expand:{name:'Expand',aggr:1.35}};
 /* buy a share of the company outright, from what is on the market */
-function mkBuyPct(id,pct){const M=mkEnsure(),c=M.cos[id];if(!c||c.gone||mkShut()||MK_REL_BY[id]||(M.me.short&&M.me.short[id]))return false;
+function mkBuyPct(id,pct){const M=mkEnsure(),c=M.cos[id];if(rescueFriend(id)||!c||c.gone||mkShut()||MK_REL_BY[id]||(M.me.short&&M.me.short[id]))return false;
   const q=Math.floor(Math.min(pct*c.n,mkFree(id)));if(q<1)return false;
   const est=q*c.px*(1+MK_FEE_BUY+0.3*q/mkDepth(id));if(S.cash<est)return false;
   const before=mkStake(id),r=mkDeal(M.me,id,q);if(!r)return false;S.cash+=r.cash;
@@ -307,14 +307,14 @@ function mkAdopt(x,o){const age=Math.max(0,yearOfM(S.m)-x.built),fat=clamp(age*1
   // booked at what the market paid for her: the break-up value at the share-price floor (0.35.6)
   sh.acq=S.m;sh.paid=Math.round(0.6*coShipVal(x));sh.mk0=shipIdx();if(S.lines[x.route]&&routeOpen(x.route,S.m)){sh.line=x.route;sh.state='port';sh.portLeft=2;}
   S.ships.push(sh);dropRival(x);return sh;}
-function mkTakeShip(o,sid){if(mkInfl(o)<2)return false;const x=S.rships.find(y=>y.id===sid&&y.owner===o);if(!x)return false;
+function mkTakeShip(o,sid){if(mkInfl(o)<2||rescueNoBuy())return false;const x=S.rships.find(y=>y.id===sid&&y.owner===o);if(!x)return false;
   const price=Math.round(coShipVal(x)/100)*100;if(S.cash<price)return false;
   S.cash-=price;S.rivals[o].cash+=price;const sh=mkAdopt(x,o);RW_CACHE.k=null;
   news(`SS ${sh.name} passes from ${mkName(o)} to the Morven Line at a fair price, ${fmt(price)}.${sh.line?'':' She lies laid up until you give her a line.'}`,'good');return true;}
 /* special resolution: merge. The other shareholders are paid their share of what it is worth; its ships, trades, cash
    and debts become the Line's */
 const mkMergeCost=o=>Math.round((1-mkStake(o))*S.ex.cos[o].n*Math.max(mkVal(o),mkFair(o),0)); // the minority are paid its worth or the market, whichever is more (0.35.4)
-function mkMerge(o){const M=S.ex,c=M.cos[o],co=S.rivals[o];if(!c||c.gone||mkStake(o)<MK_SPECIAL)return false;
+function mkMerge(o){const M=S.ex,c=M.cos[o],co=S.rivals[o];if(rescueNoBuy()||rescueFriend(o)||!c||c.gone||mkStake(o)<MK_SPECIAL)return false;
   const cost=mkMergeCost(o);if(S.cash+co.cash<cost)return false;mkPayDeclared(o);
   const n=mkName(o),fleet=coFleet(o),routes=[...new Set(fleet.map(x=>x.route))];let opened=0;
   for(const rk of routes)if(!S.lines[rk]&&routeOpen(rk,S.m)){S.lines[rk]={fares:defaultFares(rk),service:1,adv:1,last:[null,null]};opened++;}
@@ -333,7 +333,7 @@ function mkLend(o,amt){if(mkInfl(o)<2||!(amt>0)||S.cash<amt)return false;const c
   news(`The Line lends ${mkName(o)} ${fmt(amt)} at 5%, to be repaid when it can.`);return true;}
 /* a dividend voted in January is paid in February; a line merged or wound up in between pays it first (0.35.5: it was lost) */
 function mkPayDeclared(o){const c=S.ex.cos[o],co=S.rivals[o];if(c&&co&&co.div>0&&S.m%12===0){c.dy=co.div/c.n;mkPayDiv(o,c.dy);co.div=0;}}
-function mkWindUp(o){const M=S.ex,c=M.cos[o],co=S.rivals[o];if(!c||c.gone||mkStake(o)<MK_SPECIAL)return false;mkPayDeclared(o);
+function mkWindUp(o){const M=S.ex,c=M.cos[o],co=S.rivals[o];if(rescueFriend(o)||!c||c.gone||mkStake(o)<MK_SPECIAL)return false;mkPayDeclared(o);
   const loan=Math.min(co.lineLoan||0,Math.max(0,mkWindValue(o)+(co.lineLoan||0)));if(loan>0){S.cash+=loan;co.cash-=loan;co.lineLoan=0;} // repaid out of its cash, so the shareholders do not get it again (0.35.3)
   const net=Math.max(0,mkWindValue(o)),perSh=net/c.n,k=mkStake(o),n=mkName(o),fleet=coFleet(o),routes=[...new Set(fleet.map(x=>x.route))];
   for(const x of fleet)dropRival(x);S.rorders=(S.rorders||[]).filter(q=>q.o!==o);
@@ -345,7 +345,7 @@ function mkWindUp(o){const M=S.ex,c=M.cos[o],co=S.rivals[o];if(!c||c.gone||mkSta
   news(`${n} is wound up on the Line's resolution. Its ${fleet.length} ships are sold and its debts paid; the Line's ${Math.round(k*100)}% brings ${fmt(got)}.`,'good',true);return true;}
 /* at nine tenths: the rest bought out, at the market under the 1929 Act, before it at a quarter over */
 const mkBuyoutCost=o=>{const c=S.ex.cos[o];return Math.round((c.n-((S.ex.me.pos[o]||{}).n||0))*c.px*(S.m>=MK_ACT1929?1:1.25));};
-function mkBuyout(o){const M=S.ex,c=M.cos[o];if(!c||c.gone||mkStake(o)<MK_BUYOUT)return false;const cost=mkBuyoutCost(o);if(S.cash<cost)return false;
+function mkBuyout(o){const M=S.ex,c=M.cos[o];if(rescueNoBuy()||rescueFriend(o)||!c||c.gone||mkStake(o)<MK_BUYOUT)return false;const cost=mkBuyoutCost(o);if(S.cash<cost)return false;
   const h=M.me.pos[o],rest=c.n-h.n;S.cash-=cost;h.n=c.n;h.cost+=cost;const F=M.fund;if(F&&F.pos[o]){F.cash+=F.pos[o].n*c.px*(S.m>=MK_ACT1929?1:1.25);delete F.pos[o];}
   news(`The Line buys the last ${int(rest)} shares in ${mkName(o)} for ${fmt(cost)}. It is wholly owned.`,'good');return true;}
 

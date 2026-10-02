@@ -285,7 +285,7 @@ function ordersMonth(){
         if(!bill(o,0.3,'at the launch')){o.prog=0.62;continue;}
         o.stage='fitting';o.launched=S.m;if(o.slip){o.slip.who=null;o.slip.until=S.m;o.slip=null;}
         const SP=LAUNCH_SPONSORS.filter(x=>S.m>=ym(1923,0)||!/Baldwin/.test(x)),sp=SP[Math.floor(Math.random()*SP.length)];
-        logOrder(o,`Launched by ${sp}.`);news(`SS ${o.d.name} is launched at ${B.name}. ${sp[0].toUpperCase()+sp.slice(1)} names her before a crowd of thousands, and she takes the water cleanly.`,'good',true);}
+        logOrder(o,`Launched by ${sp}.`);news(`SS ${o.d.name} is launched at ${B.name}. ${sp[0].toUpperCase()+sp.slice(1)}${sp.includes(', ')?',':''} names her before a crowd of thousands, and she takes the water cleanly.`,'good',true);}
       if(o.stage==='fitting'&&o.prog>=1){o.stage='trials';o.left=1;logOrder(o,'Fitting out complete. Trials next.');}
       continue;}
     if(o.stage==='trials'){o.left--;if(o.left>0)continue;

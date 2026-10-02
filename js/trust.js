@@ -10,7 +10,7 @@ const confOpen=()=>!newCal()||S.m>=CONF_FROM;
 /* joining ends the rate wars against the Line, not the lines' wars with each other, and a Line that leaves must wait a
    year to come back (0.35.5: leaving and rejoining on the same day ended every war on every route) */
 const confRejoin=()=>(S.confLeft||-99)+12;
-function confJoin(){if(S.conf||!confOpen()||S.cash<3000*PX()||S.m<confRejoin())return false;S.cash-=3000*PX();S.conf=true;
+function confJoin(){if(S.conf||S.combine||!confOpen()||S.cash<3000*PX()||S.m<confRejoin())return false;S.cash-=3000*PX();S.conf=true;
   for(const rk of Object.keys(S.wars))if(!S.wars[rk].lines)delete S.wars[rk];S.tension={};news('The Morven Line has joined the North Atlantic conference.','good');return true;}
 function confLeave(){if(!S.conf)return false;S.conf=false;S.confLeft=S.m;news('The Morven Line has left the conference. Expect retaliation if you undercut, and the conference will not take the Line back for a year.','bad');return true;}
 /* end a sentence on a name that may already end in a full stop (Co.) */

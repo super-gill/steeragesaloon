@@ -62,7 +62,7 @@ var PL = (function () {
     combine: yes => { if (!S.trustOffer) return false; if (yes) trustAccept(); else trustRefuse(false); return true; },
     // ---- the war
     reserve: (id, on) => { const x = ship(id); if (!x || atWar()) return false; x.reserve = !!on; return true; },
-    offership: id => { if (!S.war || !S.war.ask) return false; reqChoose(+id); return true; },
+    offership: id => { if (!S.war || !atWar()) return false; reqChoose(+id); return true; },
     waroffer: (sid, yes) => { if (!S.war || !S.war.offers) return false; offerTake(+sid, !!yes); return true; },
     auction: (i, kk) => { if (!S.war || !S.war.auction) return false; auctionBid(+i, +kk); return true; },
     // ---- shares (Finance, Shares)
@@ -70,6 +70,7 @@ var PL = (function () {
     sharespct: (o, pct) => mkBuyPct(o, +pct),
     sellshares: (o, frac) => mkSell(o, +frac),
     repaymargin: amt => mkRepay(+amt),
+    rescuepay: amt => { const R = S.rescue; if (!R || !(R.loan > 0)) return false; const x = Math.min(+amt, R.loan); if (S.cash < x) return false; R.loan -= x; S.cash -= x; return true; },
     lend: (o, amt) => mkLend(o, +amt),
     merge: o => mkMerge(o),
     windup: o => mkWindUp(o),
@@ -108,7 +109,7 @@ var PL = (function () {
    cancelorder(yardNo) · cruise(id,rk) / uncruise(id,rk) · insurance(id,'none'|'mort'|'value'|'agreed',excess 0-2) · insall(cover,excess)
    hire(id,captainId) · crew(id,'deck'|'eng'|'cat','man'|'pay'|'train',0-2) · appoint(id,role,candidateId)
  shore/office: shore(kind,key) kinds pier, agency, fagent, shed, cold, hostel, yard, slip, bunker, dept · shoresell(key,on) · dept(key) · deptmode(key,act) · newhead(key,i) · propose(id,yes) · safety(0-2)
- money: borrow(amt) · repay(amt) · gilts(amt) [negative sells] · giltsall()
+ money: borrow(amt) · repay(amt) · rescuepay(amt) · gilts(amt) [negative sells] · giltsall()
  trade: join() · leave() [the conference] · mail(yes) · union(yes) · combine(yes) [selling to the Combine ENDS the game]
  war: reserve(id,on) · offership(id) · waroffer(shipId,yes) · auction(lot,0-2)
  shares: shares(o,amt,margin) · sharespct(o,pct) · sellshares(o,frac) · repaymargin(amt) · lend(o,amt) · merge(o) · windup(o) · buyout(o) · control(o,'div'|'strat'|'keep',v) · peace(o)

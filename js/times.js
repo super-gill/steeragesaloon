@@ -10,7 +10,7 @@ const SEASON_NOTE={
   Summer:'the season: first and second class are at their peak, eastbound as well as westbound',
   Autumn:'the tourists go home and cabin bookings fall away towards winter'};
 /* which history headlines belong to which condition, so the history can mark those still in force */
-const TIMES_TAG={[ym(1921,5)]:'quota',[ym(1924,6)]:'quota',[ym(1926,2)]:'strike',[ym(1926,4)]:'strike',[ym(1929,9)]:'dep',[ym(1930,0)]:'dep',[ym(1930,5)]:'dep',[ym(1931,8)]:'dep',[ym(1932,0)]:'dep',[ym(1936,5)]:'air',[ym(1937,8)]:'era',[ym(1938,9)]:'oceanaid',[ym(1939,6)]:'era',[ym(1941,3)]:'era',[ym(1944,4)]:'era',[ym(1946,8)]:'era',[ym(1952,3)]:'air',[ym(1958,9)]:'air',[ym(1962,4)]:'air'};
+const TIMES_TAG={[ym(1921,5)]:'quota',[ym(1924,6)]:'quota',[ym(1926,2)]:'strike',[ym(1926,4)]:'strike',[ym(1929,10)]:'dep',[ym(1930,0)]:'dep',[ym(1930,5)]:'dep',[ym(1931,8)]:'dep',[ym(1932,0)]:'dep',[ym(1936,5)]:'air',[ym(1937,8)]:'era',[ym(1938,9)]:'oceanaid',[ym(1939,6)]:'era',[ym(1941,3)]:'era',[ym(1944,4)]:'era',[ym(1946,8)]:'era',[ym(1952,3)]:'air',[ym(1958,9)]:'air',[ym(1962,4)]:'air'};
 
 const capF=s=>s[0].toUpperCase()+s.slice(1);
 const pctTxt=v=>{const p=Math.round(v*100);return p===0?'unchanged':p>0?`up ${p}%`:`down ${-p}%`;};
@@ -55,9 +55,9 @@ function timesConditions(m,rk){
   if(k>=0&&k<106){const f=k<12?0.85:k>=24?1+0.035*(Math.min(k,105)-24)/12:1;
     if(f<0.97)add('postwar','After the post-war crash',`Cabin passengers are ${pctTxt(f-1)} on a normal year: the boom has collapsed and people are nervous of spending.`,'bad');
     else if(f>1.03)add('growth','Prosperous times',`Wealthier Americans are crossing to Europe in growing numbers: first and second class ${pctTxt(f-1)} on 1922.`,'good');}
-  const dep=['f','s','t'].map(c=>depression(c,m));
+  const dep=['f','s','t'].map(c=>depression(c,m,rk||'liv'));
   if(dep[0]<0.99){const sl=slump(m);
-    add('dep','The Depression',`First class ${pctTxt(dep[0]-1)}, second ${pctTxt(dep[1]-1)}, steerage ${pctTxt(dep[2]-1)}; cargo ${pctTxt(cargoMod(m)-1)}.${sl>0.05?` Costs have come down with it: coal ${pctTxt(-SLUMP_CUT.fuel*sl)}, wages ${pctTxt(-SLUMP_CUT.wage*sl)}, port dues ${pctTxt(-SLUMP_CUT.dues*sl)}.`:''}`,'bad');}
+    add('dep','The Depression',`First class ${pctTxt(dep[0]-1)}, second ${pctTxt(dep[1]-1)}, steerage ${pctTxt(dep[2]-1)}; cargo ${pctTxt(cargoMod(m)-1)}; second-hand ships ${pctTxt(-SLUMP_SHIP*slump(m))}.${sl>0.05?` Costs have come down with it: coal ${pctTxt(-SLUMP_CUT.fuel*sl)}, wages ${pctTxt(-SLUMP_CUT.wage*sl)}, port dues ${pctTxt(-SLUMP_CUT.dues*sl)}.`:''}`,'bad');}
   if(typeof crashF==='function'&&crashF(m)>0)add('panic','A panic in the City',`First class ${pctTxt(crashMod('f',m)-1)}, steerage ${pctTxt(crashMod('t',m)-1)}, second-hand ships ${pctTxt(shipMkt()-1)}. The bank is nervous.`,'bad');
   const e=eraMod('f',rk,m);if(Math.abs(e-1)>0.02){const y=yearOfM(m);add('era',y>=1937.7&&y<1938.8?'A recession in America':'The long boom',`First class ${pctTxt(e-1)} on the underlying trade.`,e<1?'bad':'good');}
   const a=airShare(rk,'f',m);if(a>0.005)add('air','Competition from the air',`About ${Math.round(a*100)}% of first class ${a>0.1?'now flies':'goes by air'} on this route.`,'bad');

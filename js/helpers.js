@@ -74,7 +74,7 @@ function histLegacy(c,rk,m){
     else if(rk==='rpl'&&m>=110) x*=0.6; // Argentina closes its doors in the Depression
   } else { if(m<12)x*=0.85; if(m>=24)x*=1+0.035*(Math.min(m,105)-24)/12; }
   if(ROUTES[rk].cruise){const y=1921+m/12;x*=y<1926?0.7+0.06*(y-1921):Math.min(1.12,1+0.03*(y-1926));if(y>=1934)x*=1.15;}
-  x*=depression(c,m0)*eraMod(c,rk,m0)*crashMod(c,m0)*(1-airShare(rk,c,m0));
+  x*=depression(c,m0,rk)*eraMod(c,rk,m0)*crashMod(c,m0)*(1-airShare(rk,c,m0));
   return x;
 }
 /* the invented years after the Depression: recession, airships, a reopened America, the long boom, cruising, jets held at bay */
@@ -90,18 +90,24 @@ function eraMod(c,rk,m){
   return x;
 }
 /* the Depression: sharp fall from late 1929, trough 1932-33, slow recovery from 1934 */
-function depression(c,m){
+function depression(c,m,rk){
   m-=M21;
   if(m<106)return 1;
-  const deep={f:.45,s:.62,t:.75,tt:.5}[c];
+  // emigration to North America all but stopped (0.37.2): the United States turned away anyone likely to need relief from
+  // September 1930, and Canada admitted almost no one but farmers with capital from 1930-31. Steerage there falls to a third
+  // and comes back only slowly, through to 1942
+  const g=rk&&ROUTES[rk]?ROUTES[rk].group:'',na=c==='t'&&(g==='North Atlantic'||g==='Canada');
+  const deep=na?0.35:{f:.45,s:.62,t:.75,tt:.5}[c];
   if(m<120)return 1-(1-deep)*Math.min(1,(m-105)/14);
   if(m<156)return deep;
-  return Math.min(1,deep+(1-deep)*(m-156)/48);
+  return Math.min(1,deep+(1-deep)*(m-156)/(na?96:48));
 }
 /* how deep the slump is, 0 to 1, for rates that fall with it */
 const slump=m=>{m-=M21;return m<106?0:m<120?(m-105)/14:m<156?1:Math.max(0,1-(m-156)/48);};
 /* in a slump the costs of running ships fall too: coal, wages, dues and insurance all come down at the trough */
 const SLUMP_CUT={fuel:0.25,wage:0.10,dues:0.15,ins:0.10};
+/* and second-hand ships fetch less: two fifths off at the trough (0.37.2) */
+const SLUMP_SHIP=0.4;
 const slumpK=(k,m)=>1-SLUMP_CUT[k]*slump(m===undefined?(typeof S!=='undefined'&&S?S.m:0):m);
 /* cargo on the 1900 calendar: world trade grows about 3% a year before the war, then the 1921 game's cargo history */
 const cargoPre=m=>1+0.03*preYears(m);
@@ -130,7 +136,7 @@ const crewCost=sh=>crewCostOf(sh);
 const INS_COVER={none:{name:'None',short:'None'},mort:{name:'The mortgage only',short:'Mortgage'},value:{name:'Her market value',short:'Market value'},agreed:{name:'An agreed value, a quarter above market',short:'Agreed value'}};
 const INS_KEYS=['none','mort','value','agreed'];
 const INS_EXCESS=[{name:'None',k:1.15,x:0,own:0.1},{name:'Standard',k:1,x:0.02,own:1},{name:'High',k:0.8,x:0.08,own:2.5}];
-const shipMortgage=sh=>{if(!(S.debt>0))return 0;const fv=S.ships.reduce((a,x)=>a+shipValue(x),0)||1;return Math.min(S.debt,S.debt*shipValue(sh)/fv);};
+const shipMortgage=sh=>{if(!(S.debt>0))return 0;const fv=S.ships.reduce((a,x)=>a+shipValue(x),0)||1,on=Math.min(S.debt,0.7*fv);return on*shipValue(sh)/fv;}; // her share of what the fleet secures, not of money borrowed on stock or shares (0.37.2)
 function insOf(sh){const i=sh.ins||(sh.ins={...(S.insDefault||{cover:'value',excess:1})});return {cover:i.cover==='none'&&S.debt>0?'mort':i.cover,excess:i.excess===undefined?1:i.excess};}
 /* the underwriters will not raise a ship's cover while she is at sea: more cover, or a lower excess, starts when she next
    reaches port (0.35.5: cover could be raised on a ship already overdue, before she was posted missing) */
@@ -169,6 +175,8 @@ function gcDist(p,q){const a=CHART.lonlat[p],b=CHART.lonlat[q],rad=Math.PI/180;
   const la1=a[1]*rad,la2=b[1]*rad,dl=(b[0]-a[0])*rad,dp=la2-la1;
   const h=Math.sin(dp/2)**2+Math.cos(la1)*Math.cos(la2)*Math.sin(dl/2)**2;return 2*6371*Math.asin(Math.sqrt(h))/1.852;}
 const ACTIVE=['sea','port','repo'];
+/* where a ship lies, in a sentence: a cruise to nowhere ends out at sea, not at a port (0.37.2) */
+const atPort=p=>p==='OFF'?'off New York':'at '+PN[p];
 const shipsOn=rk=>S.ships.filter(x=>x.line===rk);
 /* wireless is a dear novelty in 1900, four times its later price, and comes down to it by 1911 */
 const wirelessNovelty=()=>{const y=yearNow();return y<1905?4:y<1911?4-3*(y-1905)/6:1;};
