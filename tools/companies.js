@@ -5,6 +5,7 @@
    fleets, cash, debt, failures and new lines, year by year. Usage:
      node tools/companies.js               40 years, 10 seeds
      node tools/companies.js 40 20 verbose  40 years, 20 seeds, print each seed's failures
+     QUIET=1 node tools/companies.js 40 10  the Morven Line stays at one ship, so the rivals are measured on their own (0.39.0)
    Pass/fail checks (printed at the end): no line ever holds more than 65% of all rival tonnage,
    no route is left without a rival for more than two years outside a slump in more than one game in ten (0.34: Hamburg can lie dead in the quota years) (in a slump the
    promoters wait for better times, so a small cruise trade may lie empty), and failures happen at a few
@@ -31,7 +32,7 @@ function run(seed, years) {
       if(!S.lines[b.rk]&&S.cash>2500){book('office',-2500,b.rk);S.lines[b.rk]={fares:defaultFares(b.rk),service:1,adv:1,last:[null,null]};}
       if(S.lines[b.rk]){m.line=b.rk;}return;}};
     while(!S.over&&S.m-S.m0<${years}*12){
-      if(S.m!==lastM){lastM=S.m;if(S.cash<20000)S.cash=20000;expand(); // a benefactor keeps the Morven Line afloat: this check is about the rivals
+      if(S.m!==lastM){lastM=S.m;if(S.cash<20000)S.cash=20000;if(!${!!process.env.QUIET})expand(); // a benefactor keeps the Morven Line afloat: this check is about the rivals
         for(const rk in ROUTES){if(!routeOpen(rk,S.m))continue;const n=S.rships.filter(x=>x.route===rk).length;empty[rk]=n?0:(empty[rk]||0)+(slump(S.m)>0.2?0:1);/* slump months do not count: promoters wait for better times */if(empty[rk]>24){empty.flag=(empty.flag||0)+1;(empty.where=empty.where||{})[rk]=YEAR0+Math.floor(S.m/12);}}
         if(S.m%12===0){const by={};for(const x of S.rships)by[x.owner]=(by[x.owner]||0)+x.grt;
           const tot=Object.values(by).reduce((a,b)=>a+b,0),top=Math.max(0,...Object.values(by));

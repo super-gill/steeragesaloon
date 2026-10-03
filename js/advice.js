@@ -88,7 +88,7 @@ function serviceEcon(rk,v){const L=S.lines[rk],was=L.service,rep=S.rep;const t=s
 const WINTER=[10,11,0,1];
 const money=v=>fmt(Math.round(v/10)*10);
 const canSpend=cost=>S.cash-cost>=3*runningCost();
-const idleCost=sh=>0.25*crewCost(sh)+(sh.captain?sh.captain.wage:0)+insCost(sh);
+const idleCost=sh=>0.08*crewCost(sh)+(sh.captain?sh.captain.wage*0.5:0)+insCost(sh)*0.3; // laid up: shipkeepers, half pay, port risks (0.38.0)
 const DEPT_OF={wcr:'traffic',cpay:'crew',ctrain:'crew',off:'crew',review:'sec',reserve:'sec',buy:'traffic',build:'traffic','rep-mail':'sec','rep-low':'sec','conf-war':'sec',pier:'sec',agency:'sec',bunker:'sec',dept:'sec',
   fare:'fares',tension:'fares',adv:'fares',service:'fares',match:'fares',
   move:'traffic',home:'traffic',unlay:'traffic',layup:'traffic',sell:'traffic',rin:'traffic',
@@ -154,13 +154,15 @@ function advice(budget){
     // once you stop undercutting, so compare fares at the rivals' settled response, not this month's
     const settled=(rk,f)=>{S.rfare=S.rfare||{};const had=S.rfare[rk];const L2=S.lines[rk],save=L2.fares;L2.fares={...save,...f};
       const ratio=ourFareRatio(rk);L2.fares=save;S.rfare[rk]=Math.min(1-0.12*slump(S.m),ratio<0.97?Math.max(0.68,ratio+0.04):1);
-      try{return lineEcon(rk,{fares:f});}finally{if(had===undefined)delete S.rfare[rk];else S.rfare[rk]=had;}};
+      // over this month and the month six on, so the advice does not flip with the season (0.39.0; KI-070)
+      const t0=S.t;try{const a=lineEcon(rk,{fares:f});S.t=tOfM(S.m+6);const b=lineEcon(rk,{fares:f});return {pm:(a.pm+b.pm)/2,pax:(a.pax+b.pax)/2};}finally{S.t=t0;if(had===undefined)delete S.rfare[rk];else S.rfare[rk]=had;}};
     const base=settled(rk,{}),t=S.tension[rk]||0,n=ships.filter(x=>ACTIVE.includes(x.state)).length||1;
     const nextT=f=>{const q=lineEcon(rk,{fares:f});return t+(pressure(rk,{...L.fares,...f},q.pax,n,S.m).p-t)*0.35;};
     const curNext=S.conf?0:nextT({});
     // each class is a unit of its own: the search over fares is the heaviest part of the advice (0.36.0)
     for(const c of CL)for(const h of advUnit('fare:'+rk+':'+c,()=>{const A2=[],add=h=>A2.push(h);(()=>{
       if(!ships.some(s=>s.berths[c]))return;
+      if(L.set&&L.set['fare'+c]!==undefined&&S.m-L.set['fare'+c]<3)return; // a fare changed in the last three months is left to settle (0.39.0)
       const ref=r.ref[c],lo=S.conf?confFloor(rk,c):Math.round(ref*0.6),hi=Math.round(ref*1.6),step=Math.max(1,Math.round(ref*0.05));
       let best={f:L.fares[c],pm:base.pm,tn:curNext}; // the same as settled(rk,{}), worked out once
       // every other step first, then the steps either side of the best (0.36.0: half the work, the same answer on a
@@ -179,7 +181,7 @@ function advice(budget){
         add({id:`fare:${rk}:${c}`,scope:'line',ref:rk,sev:'tip',gain,
           title:`${up?'Raise':'Cut'} ${CL_NAME[c]} to £${best.f} on ${r.name}`,
           why:up?`${ld&&ld.n>=ld.cap*0.95?'Your '+CL_NAME[c].toLowerCase()+' berths are selling out, so you are turning passengers away. ':''}The market will bear more than £${L.fares[c]}.`
-                :`${ld&&ld.n<ld.cap*0.95?`Only ${ld.n} of ${ld.cap} ${CL_NAME[c].toLowerCase()} berths sold outbound last time. `:''}At £${L.fares[c]} against a line rate of £${ref}, you are pricing passengers off your ships.`,
+                :`${ld&&ld.n<ld.cap*0.95?`Only ${ld.n} of ${ld.cap} ${CL_NAME[c].toLowerCase()} berths sold outbound last time. `:''}${L.fares[c]>ref?`At £${L.fares[c]} against a line rate of £${ref}, you are pricing passengers off your ships.`:`Over the coming months a lower fare would fill more berths than it gives away.`}`,
           act:[[`Set £${best.f}`,'setfare',rk,c,best.f]]});
       }
     })();return A2;}))add(h);
@@ -213,7 +215,8 @@ function advice(budget){
           act:[['Apply','setlineopt',rk,k,best.v]]});
       }
     })();return A2;}))add(h);
-    if(S.rfare&&S.rfare[rk]<0.95&&!S.conf)
+    // only when the Line itself is under the rate: if the rivals cut on their own, there is no cut of ours to undo (0.38.0)
+    if(S.rfare&&S.rfare[rk]<0.95&&!S.conf&&['f','s','t'].some(c=>L.fares[c]&&r.ref[c]&&L.fares[c]<r.ref[c]*0.97))
       add({id:`match:${rk}`,scope:'line',ref:rk,sev:'tip',gain:220,title:`Rivals have matched your fares on ${r.name}`,
         why:`Their fares are down to ${Math.round(S.rfare[rk]*100)}% of the line rate. Your cut no longer wins you passengers; it just lowers everyone's income. Raising fares back towards the line rate lets the whole route recover.`,act:[['View line','selline',rk]]});
   })();return A1;}))add(h);
@@ -224,7 +227,7 @@ function advice(budget){
     if(sh.state==='laid'){
       const best=bestLine(sh,null);
       const idleC=idleCost(sh),val=Math.round(shipValue(sh)*0.9);
-      if(best&&best.pm<0&&S.ships.length>1&&!sh.pendingExit&&!(sh.acq>S.m-18)&&!WINTER.includes(mo))add({id:`sell:${sh.id}`,scope:'ship',ref:sh.id,sev:'warn',gain:idleC+val*0.065/12,
+      if(best&&best.pm<0&&S.ships.length>1&&!sh.pendingExit&&!(sh.acq>S.m-18)&&!WINTER.includes(mo))add({id:`sell:${sh.id}`,scope:'ship',ref:sh.id,sev:'warn',gain:idleC+val*loanRate()/12,
         title:`Sell SS ${sh.name}`,
         why:`Even laid up she costs ${money(idleC)} a month, and no route would pay her way over the coming year. Selling her raises about ${money(val)}${S.debt>0?', which could pay down the mortgage and its interest':''}. Ships are cheap in a slump, so you may be selling low.`,
         act:[['Sell her','sellship',sh.id]]});
@@ -300,6 +303,9 @@ function advice(budget){
         why:`If she is sunk the state pays four fifths of her value; the rest, about ${money(v*0.2)}, would be the Line's loss. The top-up costs about ${money(v*0.2*warInsRate(S.m)*2.5*(1+0.2*((S.war&&S.war.losses)||0)))} a month.`,act:[['Take it','setship',sh.id,'warTop',1]]});}
     if(atWar()&&!sh.wcSave&&(sh.berths.t||0)+(sh.berths.tt||0)>=100){const t=sh.berths.t||0,tt=sh.berths.tt||0;
       yard('warcargo',{berths:{...sh.berths,t:0,tt:0},cargo:Math.round(sh.cargo+t*WC_T+tt*WC_TT)},`Clear SS ${sh.name}'s steerage for cargo`,`The emigrants have stopped coming and every hold fills at war rates. Her steerage decks would take about ${int(t*WC_T+tt*WC_TT)} more tons; they can be put back after the war for the same price.`);}
+    // Tourist Third (0.38.0): head office never suggested it, though it was the answer to the emigrant trade's end
+    if(S.m>=ym(1925,0)&&!(sh.berths.tt>0)&&(sh.berths.t||0)>=100&&!isCruise(r0)){const cv=Math.round(sh.berths.t*0.5);
+      yard('tourist',{berths:{...sh.berths,t:sh.berths.t-cv,tt:(sh.berths.tt||0)+Math.round(cv*0.6)}},`Give SS ${sh.name} Tourist Third Cabin`,`Half her steerage rebuilt as about ${int(Math.round(cv*0.6))} Tourist Third cabins for students, teachers and tourists, who travel when the emigrants no longer can.`);}
     if(sh.fuel==='coal'&&yearNow()>=OIL_FROM&&yearNow()-sh.built<28)yard('oil',{fuel:'oil'},`Convert SS ${sh.name} to oil`,'Oil firing cuts her stokehold crew and her bunker bill.');
     if((sh.berths.f+sh.berths.s)>0&&(sh.fit||0)<50)yard('refurb',{fit:100},`Refurbish SS ${sh.name}`,`Her saloons are tired (fittings ${Math.round(sh.fit||0)}%), and first and second class notice.`);
     if(!(sh.up&&sh.up.reefer)&&COMM[ROUTES[r0].cargo.home.c].reefer)yard('reefer',{up:{...sh.up,reefer:true}},`Fit refrigerated holds to SS ${sh.name}`,`Her route's homeward cargo, ${COMM[ROUTES[r0].cargo.home.c].name.toLowerCase()}, needs cold holds; without them she takes only a sliver of it.`);
@@ -366,7 +372,7 @@ function advice(budget){
     let best=null;
     for(const m of S.market){const dep=buyTerms(m).dep;if(fatOf(m)>=70||S.cash-reserve<dep||S.debt+m.price-dep>0.62*(fleetV+m.price))continue;
       for(const rk of Object.keys(ROUTES)){if(!routeOpen(rk,S.m))continue;const q=econYear(m,rk); // never a closed trade (0.35.6)
-        const pay=q.pm-(m.price-dep)*0.065/12;if(!best||pay>best.pay)best={m,rk,pay,dep};}}
+        const pay=q.pm-(m.price-dep)*loanRate()/12;if(!best||pay>best.pay)best={m,rk,pay,dep};}}
     // only when cash is really piling up: well over a year of running costs beyond the deposit
     if(best&&best.pay>(slump(S.m)>0.3?1500:500)&&S.cash-best.dep>12*rc)add({id:`buy:${best.m.name}`,scope:'co',sev:'tip',gain:best.pay,title:'Put idle cash to work',
       why:`SS ${best.m.name} (${money(best.dep)} down) could earn about ${money(best.pay)} a month on ${ROUTES[best.rk].name}, averaged over a year of seasons and after mortgage interest. You would still hold three months of running costs in reserve.`,
@@ -379,7 +385,7 @@ function advice(budget){
     act:[['Open the drawing office','build',bi.d]]});
   // piers where your ships call often enough to repay one within four years
   const calls={};for(const sh of S.ships)if(sh.line&&ACTIVE.includes(sh.state)){const r=ROUTES[sh.line],rt=sailings(knotsOf(sh),sh.line);
-    r.calls.forEach((p,i)=>{const end=i===0||i===r.calls.length-1;calls[p]=(calls[p]||0)+rt*(end?1:2)*sh.grt*(end?0.08:0.04);});}
+    r.calls.forEach((p,i)=>{const end=i===0||i===r.calls.length-1;calls[p]=(calls[p]||0)+rt*(end?1:2)*sh.grt*(end?(r.cruise?0.03:0.08):(r.cruise?0.02:0.04));});}
   const early=S.m-(S.m0??M21)<12&&S.ships.length<2;
   if(!early)for(const p in calls){if(S.shore.piers[p]||!PIER_COST[p]||p==='QUE'||p==='MOV')continue; // tender anchorages (0.37.2)
     const save=calls[p]*0.6-350,cost=PIER_COST[p];
@@ -442,7 +448,7 @@ function doAction(act,d){MOD_EPOCH++;
   const ship=id=>S.ships.find(q=>q.id===id);
   switch(act){
     // inside the conference no fare is set below its floor, by head office or a department (0.36.2)
-    case 'setfare':{const [rk,c,v]=d;if(S.lines[rk]){S.lines[rk].fares[c]=floorFare(rk,c,v);return true;}return false;}
+    case 'setfare':{const [rk,c,v]=d;if(S.lines[rk]){const L=S.lines[rk],nv=floorFare(rk,c,v);if(L.fares[c]!==nv)(L.set=L.set||{})['fare'+c]=S.m;L.fares[c]=nv;return true;}return false;}
     case 'setfares':{const [rk,f,s2,t]=d;if(S.lines[rk]){Object.assign(S.lines[rk].fares,{f:floorFare(rk,'f',f),s:floorFare(rk,'s',s2),t:floorFare(rk,'t',t)});return true;}return false;}
     case 'linehands':{const [rk,v]=d;if(!S.lines[rk])return false;S.lines[rk].hands=!!v;return true;}
     case 'setlineopt':{const [rk,k,v]=d;if(S.lines[rk]){if(S.lines[rk][k]!==v)(S.lines[rk].set=S.lines[rk].set||{})[k]=S.m;S.lines[rk][k]=v;return true;}return false;}
@@ -461,7 +467,7 @@ function doAction(act,d){MOD_EPOCH++;
     case 'crewset':{const [id,dp,k,v]=d;const x=ship(id);if(!x||!CDEPT[dp]||!['man','pay','train'].includes(k))return false;cwOf(x)[dp][k]=clamp(v|0,0,2);if(k==='pay')x.pay=cwOf(x).deck.pay;return true;}
     case 'appoint':{const [id,r,cid]=d;const x=ship(id);if(!x)return false;return appointOfficer(x,r,cid);}
     case 'scrapship':{const [id]=d;const x=ship(id);if(!x||S.ships.length<2)return false;if(x.state==='sea'||x.state==='repo')x.pendingExit='scrap';else exitShip(x,'scrap');return true;}
-    case 'sellship':{const [id]=d;const x=ship(id);if(!x||S.ships.length<2||x.state==='req')return false;if(x.state==='sea'||x.state==='repo')x.pendingExit='sell';else exitShip(x,'sell');return true;}
+    case 'sellship':{const [id]=d;const x=ship(id);if(!x||S.ships.length<2||x.state==='req'||rescueNoSale())return false;if(x.state==='sea'||x.state==='repo')x.pendingExit='sell';else exitShip(x,'sell');return true;}
     case 'hire':{const [id,cid]=d;const x=ship(id),c=(S.capPool||[]).find(q=>q.id===cid);if(!x||!c)return false;
       const old=x.captain;x.captain=c;S.capPool=S.capPool.filter(q=>q!==c);if(old&&old.age<63)S.capPool.push(old);news(`${c.name} takes command of SS ${x.name}.`);return true;}
     case 'shorebuy':{const [kind,key]=d,c=shoreCost(kind,key),sh=S.shore;if(!c||S.cash<c)return false;

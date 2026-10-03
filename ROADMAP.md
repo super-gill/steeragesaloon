@@ -8,7 +8,7 @@ The road from 0.35.5 to 1.0. 1.0 is the game complete from 1900 to the present d
 |---|---|---|
 | Lint | `node tools/lint.js` | clean |
 | Exploits | `node tools/exploits.js 3` | PASS |
-| Careful harness | `END=1922 node tools/harness.js careful 40` | about 6 of 40 bankrupt |
+| Careful harness | `END=1922 node tools/harness.js careful 40` | 3 to 6 of 40 bankrupt |
 | Markets | `node tools/stakes.js`, `tools/float.js 3`, `tools/moves.js 3` | PASS |
 | World | `node tools/world.js 6` | PASS |
 | Desk | `node tools/desk.js 3` | PASS |
@@ -16,6 +16,7 @@ The road from 0.35.5 to 1.0. 1.0 is the game complete from 1900 to the present d
 | Rescue | `node tools/rescue.js 3` | PASS |
 | War profit | `node tools/warprofit.js 4` | PASS |
 | Disasters | `node tools/disasters.js 4` | PASS |
+| Rival lines | `QUIET=1 node tools/companies.js 40 6` | PASS |
 | UI smoke | the browser smoke and legacy-save scripts | no page errors |
 
 Each patch adds its own checks, listed below. Where a patch closes an exploit, the check goes into `tools/exploits.js` so it stays closed.
@@ -38,7 +39,9 @@ Players see a short version of this plan, and what each release brought, in the 
 | 0.37.1 (done) | The war and the ship's hospital | KI-023 war freight to its history; KI-024 ships offered at any time in the war; KI-026 Excess Profits Duty on the pre-war standard and on sale gains; FR-08 isolation hospital; FR-11 a great disaster about once a decade, of several kinds; KI-083 text | `tools/warprofit.js`: 1916 returns 30-80% on 1913 worth, 1917-18 lower and in profit, the boom pays, the duty charged, sale gains taxed; `tools/disasters.js`: one great disaster a decade, several kinds, own ships a minority, the hospital works |
 | Test round 4 (done) | Test players, 1927 to 1945 | Two players on 0.37.1 from the round 3 games' January 1927 saves; notes in `tools/play/` (not in the repository) | |
 | 0.37.2 (done) | Fixes from round 4 | Failing on purpose (S1); KI-016 Consols; rescue terms; combine and conference; KI-061 bank failure; KI-045 advice memory; the Depression made harder (KI-060, still open); cruise advice; tax losses carried forward; text | `tools/rescue.js` gains eight checks: failing on purpose, stock-backed borrowing, no borrowing or merging under the terms, the rescuing rival's shares, the conference under the combine |
-| 0.38 | Balancing 1900 to 1940 | KI-060 the Depression against a human player; KI-047 Tourist Third; KI-062 rival failures; KI-063, KI-065, KI-066 to KI-068 | Long harness to 1939 with careful owners mostly surviving |
+| 0.38.0 (done) | Balancing 1900 to 1940 | The loader (no more mixed versions); KI-060 the Depression against a human player; Tourist Third advised; cheap lay-up; KI-066 loans by Bank Rate; income tax at the standard rate; KI-067, KI-068; test player P5 twice | Small Line played 1927-1940 by a test player on the new code: survives the Depression on sensible play; the scripted careful owner no longer the target |
+| 0.39.0 (done) | Open items before the milestone | KI-062 rival failures; KI-063 shipping shares; KI-069 bargains; KI-070 fare advice; passenger space dearer. KI-047 and KI-065 left for research | `QUIET=1 node tools/companies.js 40 6`: about 2 failures a decade; `tools/market.js`: PASS |
+| 0.39.1 | Costs and earnings | Research pass (sources first, as 1900 to 1930 was built): building costs per ton by type of ship, running costs, and liner companies' earnings and returns, 1900 to 1939; then KI-047 and KI-065 | A new ship's return on cost and the advisor's growth within bands set from the sources |
 | 0.40.0 | Milestone | 1900 to 1940 complete and balanced; every S1 and S2 issue closed | Full suite on 40 seeds |
 
 ## From 0.40 to 1.0

@@ -24,6 +24,7 @@ document.addEventListener('click',e=>{
     case 'selline':S.selLine=b.dataset.id;UI.tab='lines';(S.tutSeen=S.tutSeen||{}).lines=true;break;
     case 'tabgo':UI.tab=(UI.wide&&b.dataset.tab==='overview')?UI.tab:b.dataset.tab;(S.tutSeen=S.tutSeen||{})[b.dataset.tab]=true;break;
     case 'tutoff':if(S.tut)S.tut.off=true;break;
+    case 'agentdrop':{const [k,a]=JSON.parse(b.dataset.d);if(S.shore[k]&&S.shore[k][a]){delete S.shore[k][a];news(`The Line dismisses its ${(k==='agents'?AGENCY:FAGENCY)[a].name.toLowerCase()}. What it paid to appoint them is not returned.`);}break;} // agents can be let go (0.38.0)
     case 'setfare':case 'setfares':case 'setlineopt':case 'linehands':case 'setship':case 'moveship':case 'setyard':case 'sellship':case 'hire':case 'shorebuy':case 'shoresell':case 'deptmode':case 'openmove':case 'buyship':case 'newhead':case 'propyes':case 'propno':case 'build':case 'scrapship':case 'crewset':case 'appoint':case 'setwc':case 'cruiseadd':case 'cruisedrop':
       {const d=JSON.parse(b.dataset.d||'[]');if(a==='moveship'||a==='openmove'||a==='setship'||a==='setwc'||a==='cruiseadd'||a==='cruisedrop'){const x=S.ships.find(q=>q.id===d[0]);if(x)x.ownerSet=S.t;}if(a==='crewset'||a==='appoint'){const x=S.ships.find(q=>q.id===d[0]);if(x)x.crewSet=S.t;}const big=S.ships.length>25,bef=big?[]:advice().map(h=>[h.id,h.title]);doAction(a,d);ADV_CACHE.key=null;UI.rev++;
         // with a big fleet the screen works the advice out over the next frames instead (0.36.0)

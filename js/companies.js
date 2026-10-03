@@ -36,7 +36,9 @@ const coYear=(o,f)=>(S.rivals[o].h||[]).reduce((a,q)=>a+q[f],0);
 const coProfit=o=>{const h=S.rivals[o].h||[];return h.length?coYear(o,'net')*12/h.length:0;};
 /* keep about three months' costs in the bank; borrow up to the character's share of the fleet's value */
 const coReserve=o=>3*Math.max(20000*PX(),(S.rivals[o].h||[]).slice(-3).reduce((a,q)=>a+q.cost,0)/Math.max(1,Math.min(3,(S.rivals[o].h||[]).length)));
-const coMaxDebt=o=>RIVAL_P[o].lev*coValue(o);
+// the banks lend on a line's ships at their normal worth through a slump, as they do the Morven Line's (0.39.0; KI-062)
+const coBankValue=o=>coValue(o)/(newCal()?1-SLUMP_SHIP*slump(S.m):1);
+const coMaxDebt=o=>RIVAL_P[o].lev*coBankValue(o);
 const coShort=o=>S.rivals[o].cash<0||S.rivals[o].debt>coMaxDebt(o)*0.95;
 function coCanPay(o,price,fight){const co=S.rivals[o],room=Math.max(0,coMaxDebt(o)+price*RIVAL_P[o].lev-co.debt);
   return co.cash-coReserve(o)*(fight?0.5:1)+room>=price;}
@@ -87,8 +89,8 @@ function coFinance(o,stats){
     if(buyer){coPay(buyer,p);x.owner=buyer;rivalMove(o,x.route,'sold',x.name);S.rmoves[0].to=buyer;}
     else{dropRival(x);rivalMove(o,x.route,'sold',x.name);}
   }
-  const worth=coWorth(o);
-  if(worth<0||co.cash<-Math.max(60000*PX(),0.12*coValue(o))||!coFleet(o).length)coFail(o);
+  const worth=co.cash+coBankValue(o)-co.debt; // judged by its bankers on the ships' normal worth (0.39.0)
+  if(worth<0||co.cash<-Math.max(60000*PX(),0.12*coBankValue(o))||!coFleet(o).length)coFail(o);
 }
 /* January: the directors pay the shareholders a share of last year's profit, and a flush line renews its oldest ship */
 function coYearEnd(o){
@@ -113,8 +115,10 @@ function coBuyer(x,seller){
 function coFail(o){
   // a great line is not let go at the first failure: its bankers reconstruct it once, writing down its debts and
   // selling its two oldest ships, and it sails on
-  if(!S.rivals[o].rescued&&coFleet(o).length>=8&&!S.rivals[o].born){const co=S.rivals[o];co.rescued=S.m;
-    co.debt=Math.round(co.debt*0.6);for(const x of coFleet(o).sort((a,b)=>a.built-b.built).slice(0,2)){co.cash+=coShipVal(x)*0.6;dropRival(x);rivalMove(o,x.route,'sold',x.name);}
+  // (0.39.0: a line of four ships or more, not only eight: middling lines were reconstructed too, and the 1920s and 30s lost
+  // eight or nine lines a decade without it)
+  if(!S.rivals[o].rescued&&coFleet(o).length>=4&&!S.rivals[o].born){const co=S.rivals[o];co.rescued=S.m;
+    co.debt=Math.round(co.debt*0.6);for(const x of coFleet(o).sort((a,b)=>a.built-b.built).slice(0,coFleet(o).length>=8?2:1)){co.cash+=coShipVal(x)*0.6;dropRival(x);rivalMove(o,x.route,'sold',x.name);}
     co.cash=Math.max(co.cash,coReserve(o));
     news(`${RIVALS[o].name} is in difficulties. Its bankers reconstruct it: debts written down, two old ships sold, and it sails on.`,'',false);return;}
   const co=S.rivals[o],m=S.m,R=Math.random,name=RIVALS[o].name,fleet=coFleet(o).sort((a,b)=>b.built-a.built);
@@ -132,7 +136,14 @@ function coFail(o){
   else news(`${name} has failed and is in the hands of the receivers. Of its ${n} ship${n===1?'':'s'}, ${[sold?`${sold} ${sold===1?'goes':'go'} to ${sold===1?'another line':'other lines'}`:'',ours?`${ours} ${ours===1?'is':'are'} offered through the brokers`:'',broken?`${broken} ${broken===1?'goes':'go'} for scrap or abroad`:''].filter(Boolean).join(', ')}.${mine?' Its trade is up for grabs.':''}`,mine?'good':'',true);
   // promoters come back to a failed line's trades within a year, but where lines keep failing they wait longer (0.34)
   const again=S.coFails.filter(q=>m-q.m<120&&q.routes.some(rk=>routes.includes(rk))).length*(routes.some(rk=>S.rships.some(x=>x.route===rk&&x.owner!==o))?1:0); // an empty trade is never kept waiting
-  S.coQueue.push({at:m+(again>=2?12+Math.floor(R()*18):4+Math.floor(R()*9)),kind:RIVAL_P[o].kind||'liner',routes,flag:RIVALS[o].flag});
+  // a line promoted in play that fails is not replaced while its trades still have other lines: one-ship promotions failing
+  // and being refloated made eight or nine failures a decade between the wars (0.39.0; KI-062)
+  const stillSailed=routes.every(rk=>S.rships.some(x=>x.route===rk&&x.owner!==o));
+  if(!(S.rivals[o].born&&stillSailed))S.coQueue.push({at:m+(again>=2?12+Math.floor(R()*18):4+Math.floor(R()*9)),kind:RIVAL_P[o].kind||'liner',routes,flag:RIVALS[o].flag});
+  // a big line's main trade does not lie open to the Morven Line alone for years: a second promoter takes it on within
+  // months (0.38.0; KI-068: after a 23-ship line failed, its main trade had no rival for two years)
+  if(n>=8){const cnt={};for(const x of fleet)cnt[x.route]=(cnt[x.route]||0)+1;const main=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0];
+    if(main)S.coQueue.push({at:m+3+Math.floor(R()*6),kind:RIVAL_P[o].kind||'liner',routes:[main],fill:main,flag:RIVALS[o].flag});}
 }
 /* a failed line's ship, offered cheaply to the Morven Line by the receivers */
 function coToMarket(x,o){

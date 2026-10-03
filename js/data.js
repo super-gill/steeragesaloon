@@ -1,5 +1,5 @@
 /* ================= DATA ================= */
-const GAME_VERSION='0.37.2',GAME_BUILT='1 October 2026'; // bump on every release; see CHANGELOG.md
+const GAME_VERSION='0.39.0',GAME_BUILT='1 October 2026'; // bump on every release; see CHANGELOG.md
 /* ---------- the calendar ----------
    Month 0 is January 1900 and day 0 is 1 January 1900. ym(year,month) names a month (month 0 = January), so every date
    the game cares about reads as a date. History written for the 1921 game is kept exact by counting from M21. */
@@ -73,8 +73,8 @@ const ROUTES={
   cwx:{group:'Cruises',prestige:0.8,ref:{f:56,s:32,t:13,tt:21},base:{f:75,s:45,t:0,tt:45},cargo:{out:{c:'general',t:0},home:{c:'general',t:0}},war:0,
        dirw:{f:1,s:1,t:1,tt:1},season:[1,1,.95,.75,.4,.25,.2,.2,.3,.55,.85,1],cruise:{cname:'the West Indies',turn:1,spend:2,months:[11,0,1,2]},
        blurb:'Ten days from New York to Nassau and Havana and back, for Americans escaping the winter. Rum is legal in Havana.'},
-  cnw:{group:'Cruises',prestige:0.8,ref:{f:10,s:6,t:3,tt:4},base:{f:40,s:60,t:150,tt:0},cargo:{out:{c:'general',t:0},home:{c:'general',t:0}},war:0,
-       dirw:{f:1,s:1,t:1,tt:1},season:[.35,.35,.45,.6,.85,1,1,1,.85,.6,.45,.4],cruise:{cname:'cruises to nowhere',turn:0.4,home:1,spend:2,bar:{f:3.5,s:2.5,t:1.6,tt:2},steerage:true,months:[4,5,6,7,8],from:ym(1928,0),until:ym(1934,0)},
+  cnw:{group:'Cruises',prestige:0.8,ref:{f:10,s:6,t:3,tt:4},base:{f:30,s:45,t:110,tt:0},cargo:{out:{c:'general',t:0},home:{c:'general',t:0}},war:0,
+       dirw:{f:1,s:1,t:1,tt:1},season:[.35,.35,.45,.6,.85,1,1,1,.85,.6,.45,.4],cruise:{cname:'cruises to nowhere',turn:0.4,home:1,spend:1.6,bar:{f:2.8,s:2,t:1.3,tt:1.6},steerage:true,months:[4,5,6,7,8],from:ym(1928,0),until:ym(1934,0)},
        blurb:'Two nights from New York to beyond the limit, where the bar can open, and back. Cheap, crowded and very profitable from 1928, until Prohibition ends in December 1933.'}
 };
 /* geography: a route (or its winter variant) as sailed in a given month */

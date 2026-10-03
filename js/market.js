@@ -94,7 +94,7 @@ function marketMonth(){
     if(mkShut(m)){c.hist.push(c.px);if(c.hist.length>120)c.hist.shift();continue;}
     // the price: the company's worth (smoothed, since the market looks through a month's accounts), the mood, the
     // news, and a drift of its own that fades slowly (so a gap from worth is no sure thing to trade on)
-    const R=MK_REL_BY[id],sd=R?R.sd:0.045;{const F0=mkFund(id,m);c.f=c.f===undefined?F0:c.f+(F0<c.f?0.45:0.2)*(F0-c.f);} // the City marks a company down faster than up
+    const R=MK_REL_BY[id],sd=R?R.sd:0.045;{const F0=mkFund(id,m);c.f=c.f===undefined?F0:c.f+(F0<c.f?0.35:0.3)*(F0-c.f);} // the City marks a company down a little faster than up (0.39.0: 0.45 and 0.2 before, which on a worth that is noisy month to month held shares at about two thirds of it; KI-063)
     // growth beyond the rise in prices is paid for in part with new shares, so a holder keeps only part of it
     const fr=c.f/PX();if(c.fr0===undefined)c.fr0=fr;if(fr>c.fr0){if(mkStake(id)<0.5&&id!=='morven')c.n*=Math.pow(fr/c.fr0,0.6);c.fr0=fr;}else c.fr0=Math.max(fr,c.fr0*0.995); // a board the Line controls issues no shares over its head
     // two drifts: a quick one that fades in months, and a slow one (fashion, reputation) that takes a decade
@@ -107,7 +107,7 @@ function marketMonth(){
   // the shipping share index: the lines together, January of the first year = 100
   const lines=Object.keys(M.cos).filter(id=>mkRival(id)&&!M.cos[id].gone),cap=lines.reduce((a,id)=>a+mkCap(id),0),fnd=lines.reduce((a,id)=>a+mkFund(id,m),0);
   if(!M.idx0&&cap>0)M.idx0={cap,fnd};
-  if(M.idx0){M.idx.push([m,Math.round(cap/M.idx0.cap*1000)/10,Math.round(fnd/M.idx0.fnd*1000)/10]);if(M.idx.length>600)M.idx.shift();}
+  if(M.idx0){M.idx.push([m,Math.round(cap/M.idx0.cap*1000)/10,Math.round(fnd/M.idx0.fnd*1000)/10,Math.round(cap/Math.max(1,fnd)*100)/100]);if(M.idx.length>600)M.idx.shift();}
   // dividends each quarter, at the end of March, June, September and December
   // the companies next to shipping pay each quarter; a line pays once a year, the dividend its directors vote in January
   // (coYearEnd, out of its own cash), reaching the shareholders in February
@@ -211,14 +211,16 @@ function mkRebalance(F){const M=S.ex,sk=mkSkill(),B=MK_BRIEF[F.brief];
     const pref=F.brief==='preserve'?(MK_STEADY.includes(k)?0.25:-0.15):F.brief==='growth'?(MK_STEADY.includes(k)?-0.1:0.1):0;
     return Math.log(Math.max(0.05,r))+noise+pref+(F.brief==='preserve'?4*(c.dy||0)/c.px:0);};
   const nP=F.brief==='growth'?8:7,ranked=ids.map(id=>[id,score(id)]).sort((a,b)=>b[1]-a[1]),pick=ranked.slice(0,nP).map(x=>x[0]),keep=new Set(ranked.slice(0,nP+3).map(x=>x[0]));
-  const each=tot*w/pick.length;
+  // no more than a twenty-fifth of any company: a big account that bought small lines whole paid its own price impact both
+  // ways and lost money in a rising market (0.38.0; KI-067). What it cannot place stays in government stock
+  const each=tot*w/pick.length,cap=id=>Math.min(each,0.04*mkCap(id));
   // sell what has fallen out of favour, then trim and top up
   for(const id of Object.keys(F.pos))if(!keep.has(id)){const r=mkDeal(F,id,-F.pos[id].n);if(r)F.cash+=r.cash;}
-  for(const id of Object.keys(F.pos)){const cur=F.pos[id].n*M.cos[id].px,tgt=pick.includes(id)?each:Math.min(cur,each);
+  for(const id of Object.keys(F.pos)){const cur=F.pos[id].n*M.cos[id].px,tgt=pick.includes(id)?cap(id):Math.min(cur,cap(id));
     if(cur>tgt*1.15){const r=mkDeal(F,id,-Math.floor((cur-tgt)/M.cos[id].px));if(r)F.cash+=r.cash;}}
-  const giltT=tot*(1-w)*0.97;if(F.gilts>giltT){F.cash+=(F.gilts-giltT)*0.995;F.gilts=giltT;}
-  for(const id of pick){const cur=(F.pos[id]?F.pos[id].n:0)*M.cos[id].px;if(cur<each*0.85){
-      const spend=Math.min(each-cur,F.cash-tot*0.02);if(spend<=0)continue;const q=Math.floor(spend/(M.cos[id].px*(1+MK_FEE_BUY+0.3*spend/Math.max(1,mkCap(id)))));
+  const eqT=Math.min(tot*w,pick.reduce((a,id)=>a+cap(id),0)),giltT=(tot-eqT)*0.97;if(F.gilts>giltT){F.cash+=(F.gilts-giltT)*0.995;F.gilts=giltT;}
+  for(const id of pick){const cur=(F.pos[id]?F.pos[id].n:0)*M.cos[id].px;if(cur<cap(id)*0.85){
+      const spend=Math.min(cap(id)-cur,F.cash-tot*0.02);if(spend<=0)continue;const q=Math.floor(spend/(M.cos[id].px*(1+MK_FEE_BUY+0.3*spend/Math.max(1,mkCap(id)))));
       if(q>0){const r=mkDeal(F,id,q);if(r)F.cash+=r.cash;}}}
   if(F.cash>tot*0.03){const g=F.cash-tot*0.03;F.cash-=g;F.gilts+=g;}}
 
@@ -300,12 +302,12 @@ function mkPeace(o){if(mkInfl(o)<2)return false;let n=0;
   if(n)news(`On the Line's instructions ${mkName(o)} ends its rate war${n>1?'s':''}. Fares recover.`,'good');return n>0;}
 /* a rival ship becomes the Line's: valued as the rival's books value her, in her old owner's colours */
 function mkAdopt(x,o){const age=Math.max(0,yearOfM(S.m)-x.built),fat=clamp(age*1.8,0,95),cond=75;
-  const base=Math.round(coShipVal(x)/(PX()*Math.pow(cond/100,0.7)*Math.max(0.15,1-fat*0.0085)*shipMkt()));
+  const base=Math.round(coShipVal(x)/(PX()*Math.pow(cond/100,0.35)*Math.max(0.15,1-fat*0.0085)*shipMkt()));
   const port=(x.v&&x.v.port)||ROUTES[x.route].calls[0];
   const sh=makeShip({name:S.ships.some(y=>y.name===x.name)?freshName(x.name):x.name,built:x.built,grt:x.grt,knots:x.knots,berths:{f:0,s:0,t:0,tt:0,...x.berths},cargo:x.cargo||0,fuel:x.fuel||(x.built>=1925?'oil':'coal'),base,note:`Late of ${mkName(o)}.`},cond,port);
   if(typeof rivalLiv==='function')sh.paint={...rivalLiv(o),name:`${mkName(o)}'s colours`};
   // booked at what the market paid for her: the break-up value at the share-price floor (0.35.6)
-  sh.acq=S.m;sh.paid=Math.round(0.6*coShipVal(x));sh.mk0=shipIdx();if(S.lines[x.route]&&routeOpen(x.route,S.m)){sh.line=x.route;sh.state='port';sh.portLeft=2;}
+  sh.acq=S.m;sh.paid=Math.round(0.6*coShipVal(x));sh.mk0=shipIdx();sh.merged=true;if(S.lines[x.route]&&routeOpen(x.route,S.m)){sh.line=x.route;sh.state='port';sh.portLeft=2;}
   S.ships.push(sh);dropRival(x);return sh;}
 function mkTakeShip(o,sid){if(mkInfl(o)<2||rescueNoBuy())return false;const x=S.rships.find(y=>y.id===sid&&y.owner===o);if(!x)return false;
   const price=Math.round(coShipVal(x)/100)*100;if(S.cash<price)return false;

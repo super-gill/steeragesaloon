@@ -61,7 +61,9 @@ function blueRiband(){
     if(k>=22&&(!best||k>best.knots))best={name:x.name,knots:+k.toFixed(1),o:'morven'};}
   const prev=S.riband;if(!best){S.riband=null;return;}
   if(!prev||prev.name!==best.name){S.riband=best;
-    if(prev)news(best.o==='morven'?`SS ${best.name} takes the Blue Riband for the Morven Line at ${best.knots} knots. The newspapers are full of her.`:`${RIVALS[best.o]?RIVALS[best.o].name:'A rival line'}'s SS ${best.name} takes the Blue Riband at ${best.knots} knots${prev.o==='morven'?' from the Morven Line':''}.`,best.o==='morven'?'good':prev.o==='morven'?'bad':'',best.o==='morven'||prev.o==='morven');}
+    // the holder left service and a slower ship inherits it: no record crossing to report (0.38.0)
+    if(prev&&best.knots<=prev.knots)news(`With SS ${prev.name} out of service, the Blue Riband passes to ${best.o==='morven'?'the Morven Line\'s':RIVALS[best.o]?RIVALS[best.o].name+'\'s':'a rival\'s'} SS ${best.name}, the fastest ship now on the Atlantic at ${best.knots} knots.`,best.o==='morven'?'good':'');
+    else if(prev)news(best.o==='morven'?`SS ${best.name} takes the Blue Riband for the Morven Line at ${best.knots} knots. The newspapers are full of her.`:`${RIVALS[best.o]?RIVALS[best.o].name:'A rival line'}'s SS ${best.name} takes the Blue Riband at ${best.knots} knots${prev.o==='morven'?' from the Morven Line':''}.`,best.o==='morven'?'good':prev.o==='morven'?'bad':'',best.o==='morven'||prev.o==='morven');}
 }
 /* the prestige of holding it: reputation drifts towards a higher mark while the Line holds it */
 const ribandRep=()=>S.riband&&S.riband.o==='morven'?5:0;

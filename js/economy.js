@@ -53,7 +53,7 @@ function crashF(m){ // how hard the panic is biting, 0 to 1
   const k=m-c.panicAt;return k<6?1:Math.max(0,1-(k-6)/Math.max(1,c.rec-6));
 }
 function crashMod(c,m){const f=crashF(m);return f?1-f*S.crash.depth*{f:1.2,s:1,t:0.8,tt:1}[c]:1;}
-const shipMkt=()=>(1-(S.crash&&S.crash.y1907?0.25:0.4)*crashF(S.m))*warShips(S.m)*(newCal()?1-SLUMP_SHIP*slump(S.m):1); // and in the Depression (0.37.2): two fifths off at the trough, as second-hand tonnage went for little more than scrap // second-hand ship prices in a panic (the 1907 panic was an American one, and milder here)
+const shipMkt=()=>(1-(S.crash&&S.crash.y1907?0.25:0.4)*crashF(S.m))*warShips(S.m)*(newCal()?1-SLUMP_SHIP*slump(S.m):1); // and in the Depression (0.37.2): three tenths off at the trough, as second-hand tonnage went begging // second-hand ship prices in a panic (the 1907 panic was an American one, and milder here)
 function crashMonth(){
   const m=S.m,c=S.crash;
   if(S.liq&&m>=S.liq.next){const p=Math.min(S.liq.left,S.liq.per);S.cash+=p;S.liq.left-=p;S.liq.next=m+3;news(`The liquidators of ${BANK_NAME} pay the Line ${fmt(p)}${S.liq.left>1?`; ${fmt(S.liq.left)} is still to come`:', the last of it'}.`,'good');if(S.liq.left<1)S.liq=null;}
@@ -114,6 +114,18 @@ const GILT_Y={1899:2.38,1900:2.55,1901:2.69,1902:2.68,1903:2.79,1904:2.86,1905:2
 (()=>{const ks=Object.keys(GILT_Y).map(Number).sort((a,b)=>a-b);for(let i=1;i<ks.length;i++)for(let y=ks[i-1]+1;y<ks[i];y++)GILT_Y[y]=+(GILT_Y[ks[i-1]]+(GILT_Y[ks[i]]-GILT_Y[ks[i-1]])*(y-ks[i-1])/(ks[i]-ks[i-1])).toFixed(2);})();
 const GILT_LAST=2030;
 const GILT_COUPON=2.5,GILT_FEE=0.0025;
+/* the Bank of England's rate, broadly, year by year (0.38.0; KI-066). The Line borrows at a point and three quarters over
+   it, never under 4.5% (a mortgage on ships was good security), and pays a point and a half more on an overdraft; a
+   panic adds two. Before, every loan was 6.5% from 1900 to the present, in the cheap money of the 1930s as in 1920.
+   After 1939 the world has no war */
+const BANK_RATE={1900:3.9,1901:3.7,1902:3.3,1903:3.75,1904:3.3,1905:3.0,1906:4.3,1907:4.9,1908:3.0,1909:3.1,1910:3.7,1911:3.5,1912:3.8,
+  1913:4.8,1914:5,1915:5,1916:5.5,1917:5.2,1918:5,1919:5.2,1920:6.7,1921:6.1,1922:3.7,1923:3.5,1924:4,1925:4.6,1926:5,1927:4.65,
+  1928:4.5,1929:5.5,1930:3.4,1931:3.9,1932:3,1933:2,1939:2,1945:2,1951:2.5,1955:4.5,1957:7,1960:5,1965:6.5,1970:7,1974:12,1980:16,
+  1985:12,1990:14.75,1995:6.6,2000:6,2005:4.6,2008:3,2010:0.5,2020:0.1,2023:5,2030:4};
+(()=>{const ks=Object.keys(BANK_RATE).map(Number).sort((a,b)=>a-b);for(let i=1;i<ks.length;i++)for(let y=ks[i-1]+1;y<ks[i];y++)BANK_RATE[y]=+(BANK_RATE[ks[i-1]]+(BANK_RATE[ks[i]]-BANK_RATE[ks[i-1]])*(y-ks[i-1])/(ks[i]-ks[i-1])).toFixed(2);})();
+const bankRate=()=>BANK_RATE[clamp(Math.floor(yearNow()),1900,2030)];
+const loanRate=()=>Math.max(4.5,bankRate()+1.75)/100+(S.rateUp>S.m?0.02:0);
+const odRate=()=>loanRate()+0.015;
 /* the yield in a (fractional) year: each year's average taken at mid-year, straight lines between */
 function giltYieldAt(y){const a=Math.floor(y-0.5),f=y-0.5-a,k=v=>GILT_Y[clamp(v,1899,GILT_LAST)];return k(a)+(k(a+1)-k(a))*f;}
 /* the market does not follow the table exactly (0.37.2; KI-016): a wander of a few tenths of a per cent either side, drawn only
@@ -137,11 +149,17 @@ function taxMonth(net){
   // a year's loss is carried forward against later profits, as the Income Tax Acts allowed (0.37.2)
   if(S.m>=ym(1925,0)&&profit<0){S.taxLoss=(S.taxLoss||0)-profit;return;}
   const relief=Math.min(S.taxLoss||0,Math.max(0,profit)),taxable=profit-relief;
-  const thr=150000*PX();if(S.m<ym(1925,0)||taxable<=thr){if(S.m>=ym(1925,0))S.taxLoss=(S.taxLoss||0)-relief;return;}
-  S.taxLoss=(S.taxLoss||0)-relief;
-  const tax=Math.round((taxable-thr)*0.3/100)*100;book('tax',-tax);
-  news(`Income tax: on ${fmt(profit)} earned last year${relief>0?`, less ${fmt(relief)} of earlier losses,`:''} the Inland Revenue takes ${fmt(tax)}, three tenths of what is over the allowance.`,'bad'); // not the wartime duty (0.35.7)
+  // the standard rate on all the year's profit, as companies paid it (0.38.0): before, three tenths of what was over an
+  // allowance of £150,000 at 1921 prices, so a small line paid nothing. In this world there is no war after 1939
+  if(S.m<ym(1925,0)||taxable<=0){if(S.m>=ym(1925,0))S.taxLoss=(S.taxLoss||0)-relief;return;}
+  S.taxLoss=(S.taxLoss||0)-relief;const y=Math.floor(yearOfM(S.m))-1,rate=incomeTaxRate(y);
+  const tax=Math.round(taxable*rate/100)*100;if(tax<=0)return;book('tax',-tax);
+  news(`Income tax at ${taxRateText(rate)} in the pound: on ${fmt(profit)} earned last year${relief>0?`, less ${fmt(relief)} of earlier losses,`:''} the Inland Revenue takes ${fmt(tax)}.`,'bad'); // not the wartime duty (0.35.7)
 }
+/* the standard rate of income tax, year by year, as a share of the pound */
+const INCOME_TAX={1924:0.225,1925:0.2,1926:0.2,1927:0.2,1928:0.2,1929:0.2,1930:0.225,1931:0.25,1932:0.25,1933:0.25,1934:0.225,1935:0.225,1936:0.2375,1937:0.25,1938:0.275};
+const incomeTaxRate=y=>INCOME_TAX[y]!==undefined?INCOME_TAX[y]:y<1924?0.225:0.275;
+const taxRateText=r=>{const s=Math.round(r*20*12),sh=Math.floor(s/12),d=s%12;return `${sh}s${d?' '+d+'d':''}`;};
 /* ---------- the unions: a big, rich line gets asked for more ---------- */
 const HOME_PORTS=['GLA','LIV','SOU','AVO'];
 function unionMonth(){
@@ -352,7 +370,7 @@ function rescueTerms(R){const t=[];if(R.noDiv&&R.loan>0)t.push('no dividend unti
 /* monthly: interest on the rescue loan, and a quarter of any surplus over three months' running costs to repay it */
 function rescueMonth(){const R=S.rescue;if(!R||!(R.loan>0))return;book('interest',-R.loan*R.rate/12);S.noLend=Math.max(S.noLend||0,S.m+1);
   const spare=S.cash-3*runningCost();if(spare>0){const p=Math.min(R.loan,Math.round(spare*0.25));S.cash-=p;R.loan-=p;
-    if(R.loan<1){R.loan=0;news(`The Line has repaid its rescue loan to ${R.kind==='treasury'?'the Treasury':'the banks'}. ${R.stake?`${RESCUE_BY[R.kind]||'The rescuer'} keeps its ${Math.round(R.stake*100)}% of the Line.`:'The restrictions are lifted.'}`,'good',true);}}}
+    if(R.loan<1){R.loan=0;news(`The Line has repaid its rescue loan to ${R.kind==='treasury'?'the Treasury':'the banks'}. ${R.stake?`${R.kind==='treasury'?'The Treasury':R.kind==='rival'?RIVALS[R.o].name:'The rescuer'} keeps its ${Math.round(R.stake*100)}% of the Line.`:'The restrictions are lifted.'}`,'good',true);}}}
 /* what the rescue still forbids */
 const rescueNoSale=()=>!!(S.rescue&&S.rescue.veto&&S.rescue.loan>0);
 const rescueNoBuy=()=>!!(S.rescue&&S.rescue.noBuy&&S.rescue.loan>S.rescue.loan0*0.5);

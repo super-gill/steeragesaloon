@@ -14,7 +14,7 @@ function seed(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>1
 /* the history headlines for this game: the 1921 opening line only for games begun in 1921 */
 /* the mails and wireless: before the American wireless law of July 1911 any ship may carry the mails; after it, only ships with wireless */
 const wirelessRule=()=>S.m>=ym(1911,6);
-const mailShip=sh=>(sh.up&&sh.up.wireless)||!wirelessRule();
+const mailShip=sh=>((sh.up&&sh.up.wireless)||!wirelessRule())&&paxBerths(sh)>=60; // the mails went by passenger liner, not by a tramp (0.38.0)
 /* Ellis Island, before 1921: about 2 in 100 steerage passengers are refused and carried home at the line's cost (half as
    many when they sailed from a port with the Line's hostel, which checks them first), a fine for each one diseased, and
    the head tax on every immigrant landed: $1, then $2 from 1903 and $4 from 1907. In the pounds of the day. */
@@ -94,20 +94,21 @@ function depression(c,m,rk){
   m-=M21;
   if(m<106)return 1;
   // emigration to North America all but stopped (0.37.2): the United States turned away anyone likely to need relief from
-  // September 1930, and Canada admitted almost no one but farmers with capital from 1930-31. Steerage there falls to a third
-  // and comes back only slowly, through to 1942
+  // September 1930, and Canada admitted almost no one but farmers with capital from 1930-31. Steerage there falls by half
+  // (0.38.0; to a third in 0.37.2, which with the fall in ship values finished two thirds of the scripted owners) and comes
+  // back only slowly, through to 1940
   const g=rk&&ROUTES[rk]?ROUTES[rk].group:'',na=c==='t'&&(g==='North Atlantic'||g==='Canada');
-  const deep=na?0.35:{f:.45,s:.62,t:.75,tt:.5}[c];
+  const deep=na?0.5:{f:.45,s:.62,t:.75,tt:.4}[c]; // Tourist Third: the students and tourists stayed at home too (0.38.0; 0.5 before)
   if(m<120)return 1-(1-deep)*Math.min(1,(m-105)/14);
   if(m<156)return deep;
-  return Math.min(1,deep+(1-deep)*(m-156)/(na?96:48));
+  return Math.min(1,deep+(1-deep)*(m-156)/(na?72:48));
 }
 /* how deep the slump is, 0 to 1, for rates that fall with it */
 const slump=m=>{m-=M21;return m<106?0:m<120?(m-105)/14:m<156?1:Math.max(0,1-(m-156)/48);};
 /* in a slump the costs of running ships fall too: coal, wages, dues and insurance all come down at the trough */
 const SLUMP_CUT={fuel:0.25,wage:0.10,dues:0.15,ins:0.10};
-/* and second-hand ships fetch less: two fifths off at the trough (0.37.2) */
-const SLUMP_SHIP=0.4;
+/* and second-hand ships fetch less: three tenths off at the trough (0.37.2; two fifths until 0.38.0) */
+const SLUMP_SHIP=0.3;
 const slumpK=(k,m)=>1-SLUMP_CUT[k]*slump(m===undefined?(typeof S!=='undefined'&&S?S.m:0):m);
 /* cargo on the 1900 calendar: world trade grows about 3% a year before the war, then the 1921 game's cargo history */
 const cargoPre=m=>1+0.03*preYears(m);
@@ -125,7 +126,7 @@ function repF(c,rep,r){const x=rep-30;if(c==='f')return clamp(1+x/(r.prestige>1.
    fleet: one ship in seventy matters less than one in six (0.35.4; before, a big line's name was ground to nothing) */
 function repHit(n){const k=S.ships.filter(x=>x.state!=='lost').length;S.rep=clamp(S.rep+n*clamp(Math.sqrt(6/Math.max(1,k)),0.3,1),0,100);}
 const repWord=r=>r<15?'Disreputable':r<30?'Unknown':r<45?'Respectable':r<60?'Well regarded':r<75?'Fashionable':'Illustrious';
-function shipValue(sh){return sh.base*PX()/(sh.pi0||1)*Math.pow(sh.cond/100,0.7)*Math.max(0.15,1-fatOf(sh)*0.0085)*shipMkt();}
+function shipValue(sh){return sh.base*PX()/(sh.pi0||1)*Math.pow(sh.cond/100,0.35)*Math.max(0.15,1-fatOf(sh)*0.0085)*shipMkt();}
 /* the ship's company: deck and engine-room hands by size and fuel (stokers for coal), and stewards by the passengers carried.
    A freighter needs no stewards, so she is cheap to crew; a liner's hotel staff can outnumber her sailors */
 const crewCount=sh=>crewHands(sh); // by department: see crew.js
@@ -184,12 +185,12 @@ const REFIT_BASE={scrape:g=>g*0.22,cruise:g=>g*2.4+12000,hatch:g=>g*1.2,heavy:()
 /* a cruise conversion: steerage becomes a smaller number of Tourist cabins and a few more in first and second */
 const cruiseBerths=b=>{const t=b.t||0;return {...b,t:0,tt:(b.tt||0)+Math.round(t*0.3),s:(b.s||0)+Math.round(t*0.06),f:(b.f||0)+Math.round(t*0.04)};};
 const atOwnYard=sh=>S.shore&&S.shore.yards[sh.port]&&sh.state!=='sea'&&sh.state!=='repo';
-function refitCost(sh,k){if(k==='fac')return sh.facPlan?Math.round(facChange(sh,sh.facPlan).cost*(atOwnYard(sh)?0.7:1)):0;let c=k==='tourist'?8000+Math.round(sh.berths.t*0.5)*12:REFIT_BASE[k]?REFIT_BASE[k](sh.grt):0;
+function refitCost(sh,k){if(k==='fac')return sh.facPlan?Math.round(facChange(sh,sh.facPlan).cost*(atOwnYard(sh)?0.7:1)):0;let c=k==='tourist'?8000+Math.round(sh.berths.t*0.5)*30:REFIT_BASE[k]?REFIT_BASE[k](sh.grt):0;
   c*=PX();if(c&&atOwnYard(sh))c*=0.7;return Math.round(c);}
 const yardDays=(sh,k)=>Math.round((k==='fac'&&sh.facPlan?Math.max(7,facChange(sh,sh.facPlan).days):YARD_DAYS[k])*(atOwnYard(sh)?0.7:1));
 /* captains */
 function makeCaptain(R=Math.random){
-  const exp=Math.floor(2+R()*26),age=Math.min(64,30+exp+Math.floor(R()*8));
+  const exp=Math.floor(2+R()*26),age=Math.min(62,30+exp+Math.floor(R()*8)); // at most 62: a new master serves a few years before he retires at 65 (0.38.0)
   const keys=Object.keys(CAPT_TRAITS),traits=[];
   const n=R()<0.25?0:R()<0.8?1:2;
   while(traits.length<n){const k=keys[Math.floor(R()*keys.length)];if(!traits.includes(k)&&!(k==='cautious'&&traits.includes('driver'))&&!(k==='driver'&&traits.includes('cautious')))traits.push(k);}

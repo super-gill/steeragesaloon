@@ -1,6 +1,6 @@
 # Known Issues
 
-Steerage & Saloon 0.37.2. This log records every known defect, loophole and open question that has not been fixed in a released version. Balance targets and accepted behaviour are in `docs/overhaul/BALANCE.md`; this file covers what is wrong or unfinished.
+Steerage & Saloon 0.39.0. This log records every known defect, loophole and open question that has not been fixed in a released version. Balance targets and accepted behaviour are in `docs/overhaul/BALANCE.md`; this file covers what is wrong or unfinished.
 
 **Severity**
 
@@ -13,7 +13,7 @@ Steerage & Saloon 0.37.2. This log records every known defect, loophole and open
 
 **Status:** Open (not yet scheduled), Planned (assigned to a version), Discuss (needs a design decision first), Fixed (the version that fixed it; kept here for one release, then moved to the changelog only).
 
-**Sources:** P2, P3 and P4 are the test-player rounds (P2 played 1900 to 1914 on 0.35.4; P3 played 1914 to 1927 on 0.35.5; P4 played 1927 to 1945 on 0.37.1). Notes with full repro steps are in `tools/play/` (gitignored). U is the owner's own report.
+**Sources:** P2, P3 and P4 are the test-player rounds (P2 played 1900 to 1914 on 0.35.4; P3 played 1914 to 1927 on 0.35.5; P4 played 1927 to 1945 on 0.37.1; P5 played a small Line 1927 to 1940 on 0.37.2 and again on 0.38.0). Notes with full repro steps are in `tools/play/` (gitignored). U is the owner's own report.
 
 ---
 
@@ -61,22 +61,24 @@ Steerage & Saloon 0.37.2. This log records every known defect, loophole and open
 | KI-043 | S3 | Open | P3 | The forecast horizon ignores the certain July 1924 quota cut. |
 | KI-045 | S3 | Fixed (0.37.2) | P2, P4 | Advice flipped tables and advertising with no memory, and moved ships back and forth. A table or advertising changed in the last six months is left to settle, and a ship moved in the last year needs twice the margin to move again. |
 | KI-046 | S3 | Open | P2 | Captain advice to replace a "popular" captain recurs every quarter on the adjective alone. |
-| KI-047 | S3 | Open | P3, P4 | Tourist Third looks very strong: tourist ships repaid their cost in about 18 months in the late 1920s and 1930s (Arran, £679k, made £409k in nine months; Morven Princess, £1.08m, £524k in 1944). Needs checking against the trade's history before changing. |
+| KI-047 | S2 | Open (research before 0.40) | P3, P4, P5 | **Ships pay too well** (with KI-065). A new tourist or emigrant ship ordered in 1928 earns 30% to 42% a year on her cost in the test games (15% to 18% in 1934, 24% in 1938), against perhaps half that in fact. Converted old ships with Tourist Third are not the problem: they sail 33% to 64% full in the slump and mostly lose money. Needs sources on building costs per ton by type and on liner companies' earnings, 1900 to 1939. |
 | KI-048 | S4 | Fixed (0.36.2) | U | **The game never shows what line a ship was built for.** `designLine` is saved at delivery but used nowhere. The design does matter (bunkers for the longest leg, draught for the ports, seakeeping for the route), so a ship moved to another line can be short-legged or too deep without the player knowing why. Fix: show "Built for ..." in the ship detail and fleet manager, and flag a mismatch with its reason. |
 
 ## Economy and balance
 
 | ID | Sev | Status | Source | Issue |
 |---|---|---|---|---|
-| KI-060 | S2 | Open | Harness, P4 | **The Depression.** The test players found it mild for a well-run line (no losing year; ship values did not fall). 0.37.2 makes it harder: second-hand ships lose two fifths of their worth at the trough, and steerage to North America falls to about a third. The scripted careful owner now goes bankrupt in 10 of 20 games to 1939 (5 rescued, 3 of them failed again), mostly small fleets that sell ships at the bottom. Whether that owner is too passive or the slump too hard needs a human player. |
+| KI-060 | S2 | Fixed (0.38.0) | Harness, P4, P5 | **The Depression.** Settled against human play: a competent small Line now comes through it (on 0.38.0 it had no losing year), by selling losers, laying up, Tourist Third and buying at the bottom, while one that does nothing fails. The scripted careful owner, which does none of those, goes bankrupt in 24 of 40 games to 1939; it is no longer the target for this era. |
 | KI-061 | S2 | Fixed (0.37.2) | P2, P4 | A bank failure took three quarters of the Line's cash on the day (£31.8m from one player in 1938). The deposit is now frozen and fifteen shillings in the pound comes back over eighteen months; a quarter is lost. A rumour about the bank stays under Needs attention until it passes. |
-| KI-062 | S3 | Discuss | Harness | Rival failures run at 7.2 a decade against 6.3 for 0.34, and 11 to 13 a game in the 1920s. See KI-091. |
-| KI-063 | S3 | Open | Harness | Shipping shares recover to only 0.90 of worth by 1937. |
+| KI-062 | S3 | Fixed (0.39.0) | Harness | Rival failures ran at 7 to 8 a decade, 12 to 14 a game in each of the 1920s and 1930s, nearly all one-ship lines promoted in play and refloated after each failure. Now about 2 a decade with a quiet Morven Line. |
+| KI-063 | S3 | Fixed (0.39.0) | Harness | Shipping shares sat at about two thirds of the lines' worth for years, from lopsided smoothing. Now back at worth by 1925 and 1937. |
 | KI-064 | S3 | Open | P3 | Idle cash earns nothing. A real line would hold deposits at bank rate less a margin. |
-| KI-066 | S3 | Open | P4 | The Line's loan rate is a fixed 6.5% from 1900 to 1945, while the game's own Consols yielded 2.9% in 1935 (cheap money). |
-| KI-067 | S3 | Open | P4 | The investment account lost 24% of £10m in fifteen months (1935-36) while shipping shares rose 44%: it buys seven small companies each quarter and pays its own price impact both ways. |
-| KI-068 | S3 | Open | P4 | When a big rival fails (Imperial Atlantic, 23 ships, November 1939), no new line enters its main trade for about two years, leaving the Line a monopoly on Liverpool to New York. |
-| KI-065 | S3 | Open | Harness | The advisor strategy finishes far ahead of the careful one (about 11×, and widening). |
+| KI-066 | S3 | Fixed (0.38.0) | P4 | Loans were a fixed 6.5% from 1900 on. They now follow Bank Rate. |
+| KI-067 | S3 | Fixed (0.38.0) | P4 | The investment account bought small companies whole and paid its own price impact both ways. It now holds no more than a twenty-fifth of any company. |
+| KI-068 | S3 | Fixed (0.38.0) | P4 | A failed giant's main trade lay open for two years. A second promoter now takes it up within months. |
+| KI-069 | S3 | Fixed (0.39.0) | P5 | A ship bought below her worth added the discount to net worth on the day. She now counts at her cost for her first year. |
+| KI-070 | S4 | Fixed (0.39.0) | P5 | Fare advice judged a fare on one month and flipped with the season. It now judges over this month and six on, and waits three months after a change. |
+| KI-065 | S2 | Open (research before 0.40) | Harness | An owner who takes all head office's advice reaches a median £1.06m by 1914 (none bankrupt) against £74k for the cautious scripted owner. Advice that is right should win, but growth from one ship to £1m in fourteen years, every time, is too easy: the same cause as KI-047. |
 
 ## Text and presentation
 

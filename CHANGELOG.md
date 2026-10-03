@@ -2,6 +2,42 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.39.0 (3 October 2026)
+The open items before the 1900 to 1940 milestone. Two are left open on purpose: see the end.
+- Rival lines (KI-062): fewer failures. Established lines were failing about once a decade; the rest were one-ship lines promoted in play that failed and were refloated on the same trades again and again, eight or nine a decade between the wars. A promoted line that fails is now replaced only if its trade is left with no rival. With a quiet Morven Line, failures fall from 4.9 to 2.1 a decade (1920s 5.0, 1930s 1.2), and the rival fleet holds at 14 to 15 lines. Lines of four ships or more (eight before) get one reconstruction from their bankers, and the banks judge a rival's ships at their normal worth through a slump.
+- Shipping shares (KI-063): the City marked a company's worth down at 0.45 a month and up at 0.2, so on a worth that moves about month to month, shares sat at about two thirds of it for years. Now 0.35 down and 0.3 up: shares fall to about a third of their peak in 1921 and 1931-32 and are back at worth by 1925 and 1937.
+- A ship bought below her worth (a receiver's bargain or a slump price) now counts at what was paid, moved with the market, for her first year, instead of adding the discount to net worth and borrowing the day she is bought (KI-069). Ships that come in with a merger still count at their worth.
+- Fare advice (KI-070) judges a fare over this month and six months on, not this month alone, so it no longer flips with the season; and a fare changed in the last three months is left to settle, for the Fares Office as for the owner.
+- New ships' passenger space costs more: about £400 a first-class berth, £170 second, £110 tourist and £35 steerage at 1921 prices (£250, £90, £50 and £20). A 19,000-ton tourist liner ordered in 1928 now costs about £855k (£720k).
+- Tests: `QUIET=1 node tools/companies.js` measures the rivals with a Morven Line of one ship (the default player buys every ship it can and crowds them out); `tools/market.js` compares shares with worth directly and judges the slumps by the fall from the peak.
+- Left open (KI-047, KI-065): ships pay too well. In the test games a new tourist or emigrant ship ordered in 1928 earns 30% to 42% a year on her cost, and an owner who takes every piece of head office's advice reaches about £1.06m by 1914 against £74k for the cautious scripted owner. Both point at the costs of building and running ships against what they earn, which needs sources on the period's building costs and earnings before it is changed, as 1900 to 1930 was built. That research comes before 0.40.
+- Balance: careful test owner to 1922, 2 of 40 bankrupt; to 1939, 21 of 40.
+
+## 0.38.0 (2 October 2026)
+Balancing 1900 to 1940, from two more test players on a small, mortgaged Line through the Depression, and a fix for a browser mixing old and new files.
+- Fixed: a browser that kept an old copy of the page could load some of the game's files at the new version and some at the old, and fail with "Can't find variable" (Ross, on 0.37.x; very likely the blank screen reported on 0.36.2). The page now loads its files through `js/boot.js`, fetched fresh every time, which names one version for all of them. If such a fault still appears, the notice offers to save and reload.
+- The Depression (KI-060), settled against human play. On 0.37.2 a competent small Line survived only by selling three of its four ships, partly because a laid-up ship cost nearly as much as a working one and head office never suggested Tourist Third. Now:
+  - A laid-up ship keeps only shipkeepers and her master on half pay: about a tenth of her running wages.
+  - Head office advises the Tourist Third refit where it pays; the refit costs more (about £30 a berth converted, at 1921 prices, from £12).
+  - Steerage to North America falls by half at the trough (a third in 0.37.2) and recovers by 1940; Tourist Third falls further (to 0.4); second-hand ships lose three tenths (two fifths in 0.37.2).
+  - Played again on this version, the same kind of small Line had no losing year and grew from £573k to £4.4m by 1940, by selling a losing liner early, taking up Tourist Third and buying cheap ships at the bottom. The scripted careful owner, which never sells a loser or lays up, goes bankrupt in 24 of 40 games to 1939. The test now is whether a sensible human survives, not the scripted owner.
+- Loans follow Bank Rate (KI-066): 1.75 points over it, never under 4.5%: about 5.5% before the war, 7% in 1920, 4.5% in the cheap money of the 1930s (a flat 6.5% before). An overdraft costs 1.5 points more.
+- Income tax is charged at the standard rate on all profit from 1925 (4s in the pound, rising to 5s 6d by 1938), with losses carried forward. Before, a line paid three tenths of what it made over £150,000 at 1921 prices, so a small line paid nothing.
+- A ship's worth moves less with her condition, so a docking no longer swings net worth and borrowing by a fifth.
+- Fixed:
+  - A ship marked for sale was stranded in port by the Treasury director's veto; the sale is now called off with a notice.
+  - Refusing the Combine's offer and then joining the conference ended the Combine's rate war; the conference will not admit the Line while that war lasts.
+  - A called loan foreclosed a Line still owed £96k by a failed bank's liquidators; that debt now counts towards what the bank will lend.
+  - A 10-knot cargo ship kept a transatlantic mail contract for years; only a passenger ship carries the mails.
+  - A standing cruise programme took the only mail ship off her line.
+  - Booking and freight agents could never be dismissed.
+  - A new master could retire a month after taking command.
+  - Cruises to nowhere paid over £20k a month on a £160k ship in 1928 (now about a quarter less).
+- Rival lines (KI-068): when a line of eight or more ships fails, a second promoter takes up its main trade within months.
+- The investment account (KI-067) holds no more than a twenty-fifth of any company.
+- Text: the Blue Riband passing to a slower ship when the holder leaves service no longer reads as a record crossing; fare advice no longer says a fare at the line rate is pricing passengers off; "Rivals have matched your fares" only when the Line has cut; lighter cruise dues in the pier advice; "The Treasury" capitalised; a cruise to nowhere returns "from beyond the limit".
+- Tests: `tools/warprofit.js` now uses a freight-led fleet (cargo at least 45% of tonnage), which earned 138% a year on its 1913 worth in 1916 (tramps commonly cleared their cost in a year or two); the band is 60% to 200%. Careful test owner to 1922: 3 of 40 bankrupt.
+
 ## 0.37.2 (2 October 2026)
 Fixes from test round 4, two players over 1927 to 1945.
 - Fixed (S1): a rich Line could fail on purpose and come out £50m better off. It borrowed against Consols until the bank would lend no more, let interest push the account past its limit, and was rescued by the banks, who wrote off a quarter of its debt though its stock covered every penny. Now the bank sells a Line's government stock, investment account and shares before it forecloses, so a Line rich in stock is not rescued; the mortgage holders write off only what the fleet and property will not cover; and the bank lends on stock and shares no more than twice what the Line is worth.

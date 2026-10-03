@@ -45,7 +45,7 @@ function run(seed, years) {
         for(const k in funds){const F=funds[k],v=mkFundVal(F);const d=dd[k]=dd[k]||{pk:0};d.pk=Math.max(d.pk,v);const e=y<1912?'1907':y>=1920&&y<1925?'1921':y>=1929&&y<1935?'1930s':null;
           if(e){d[e]=Math.min(d[e]===undefined?9:d[e],v/Math.max(1,d.pk));}}
         if(S.m%12===0&&${JSON.stringify(YEARS)}.includes(y)){snap[y]=snap[y]||{};for(const k in funds)snap[y][k]=mkFundVal(funds[k])/funds[k].giltEq;}
-        const I=S.ex&&S.ex.idx[S.ex.idx.length-1];if(I){const y2=Math.floor(YEAR0+S.m/12),q=I[1]/Math.max(1,I[2]);const e=idx[y2]=idx[y2]||{lo:9,hi:0};e.lo=Math.min(e.lo,q);e.hi=Math.max(e.hi,q);}}
+        const I=S.ex&&S.ex.idx[S.ex.idx.length-1];if(I){const y2=Math.floor(YEAR0+S.m/12),q=I[3]!==undefined?I[3]:I[1]/Math.max(1,I[2]); /* shares against worth itself (0.39.0), not against the first month ratio */const e=idx[y2]=idx[y2]||{lo:9,hi:0};e.lo=Math.min(e.lo,q);e.hi=Math.max(e.hi,q);e.cl=Math.min(e.cl??9e9,I[1]);e.ch=Math.max(e.ch??0,I[1]);}}
       advance(1);
     }
     const end={passive:PAS.v/PAS.eq};for(const k in funds)end[k]=mkFundVal(funds[k])/funds[k].giltEq;
@@ -66,9 +66,12 @@ for (const e of ['1907', '1921', '1930s']) console.log(`${e.padEnd(6)} ${['prese
 console.log('\nShipping shares against what the lines are worth (low to high in the year):');
 const iy = [1907, 1908, 1914, 1919, 1920, 1921, 1922, 1924, 1928, 1929, 1931, 1932, 1934, 1937];
 for (const y of iy) { const rows = R.map(r => r.idx[y]).filter(Boolean); if (!rows.length) continue; console.log(`${y}  ${f2(avg(rows.map(q => q.lo)))} to ${f2(avg(rows.map(q => q.hi)))}`); }
-const lo21 = avg(R.map(r => (r.idx[1921] || { lo: 1 }).lo)), lo32 = avg(R.map(r => Math.min((r.idx[1931] || { lo: 1 }).lo, (r.idx[1932] || { lo: 1 }).lo)));
+// the slumps: share prices (the index of the lines' value) against the year before the fall (0.39.0: shares against worth
+// says little in a slump, when half of worth is earnings that have gone negative)
+const fall = (a, b1, b2) => avg(R.map(r => { const p = (r.idx[a] || {}).ch, l = Math.min((r.idx[b1] || {}).cl ?? 9e9, (r.idx[b2] || {}).cl ?? 9e9); return p && l < 9e9 ? l / p : 1; }));
+const lo21 = fall(1920, 1921, 1921), lo32 = fall(1929, 1931, 1932);
 const back = avg(R.map(r => (r.idx[1925] || r.idx[1924] || { hi: 1 }).hi)), back2 = avg(R.map(r => (r.idx[1937] || r.idx[1936] || { hi: 1 }).hi));
 const lost = ['preserve', 'balanced', 'growth'].every(k => R.some(r => ['1907','1921','1930s'].some(e => (r.dd[k] || {})[e] < 0.97)));
 const ok = avg(R.map(r => r.end.balanced)) > 1 && lost && lo21 < 0.95 && lo32 < 0.9 && back > 0.9 && back2 > 0.9;
-console.log(`\nbalanced ahead of stock: ${f2(avg(R.map(r => r.end.balanced)))} · every account loses in some slump: ${lost} · shares below worth in 1921 ${f2(lo21)} and 1931-32 ${f2(lo32)} · back by 1925 ${f2(back)} and 1937 ${f2(back2)}`);
+console.log(`\nbalanced ahead of stock: ${f2(avg(R.map(r => r.end.balanced)))} · every account loses in some slump: ${lost} · share prices in 1921 ${f2(lo21)} of 1920's high and 1931-32 ${f2(lo32)} of 1929's · back by 1925 ${f2(back)} and 1937 ${f2(back2)}`);
 console.log(ok ? 'PASS' : 'CHECK: see the figures above');

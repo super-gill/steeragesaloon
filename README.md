@@ -10,7 +10,8 @@ It is a static browser game with no build step. Open `index.html`, or serve the 
 
 | File | What it holds |
 |---|---|
-| `index.html` | Page shell: header, chart, side panels |
+| `index.html` | Page shell: header, chart, side panels; loads `js/boot.js` |
+| `js/boot.js` | The loader: the version and the list of scripts, in order (0.38.0) |
 | `css/style.css` | All styling, light and dark themes |
 | `js/chart-data.js` | Generated Atlantic chart (North and South): land, graticule, ports, route polylines with calls, distances. Made by `tools/gen-chart.mjs` |
 | `js/data.js` | The calendar (`YEAR0`, `ym(year, month)`, `M21`), and game data: routes and trades, commodities, classes, seasons, ships for sale, upgrades, captains' traits, shore property, departments, rivals, historical events, milestones |
@@ -48,11 +49,11 @@ It is a static browser game with no build step. Open `index.html`, or serve the 
 | `js/ui.js` | Panels and tabs, rendered by patching the DOM in place |
 | `js/main.js` | Input handling and start-up |
 
-Scripts are plain (non-module) files loaded in the order in `index.html` and share one global scope, so the game also runs straight from disk.
+Scripts are plain (non-module) files loaded in the order given by `BOOT_FILES` in `js/boot.js` and share one global scope, so the game also runs straight from disk. `index.html` loads `js/boot.js` with the time in its address, so it is never taken from a browser's cache; `boot.js` then loads the style sheet and every script at its own `BOOT_VER`. A browser holding an old copy of `index.html` therefore cannot mix files of two versions (0.38.0; before, a cached page could load an old `economy.js` beside a new `sim.js`, and the game failed with "Can't find variable").
 
 ## Releasing
 
-Bump `GAME_VERSION` in `js/data.js`, change `?v=` on every script and stylesheet link in `index.html` to match (so browsers fetch the new files instead of cached ones), add an entry to `CHANGELOG.md`, and add a short player-facing entry to `DEVLOG` in `js/devlog.js` (moving the shipped item off `DEVPLAN`). The Menu's Game section shows both as What's new and Coming next, and after an update the game points the player there once (`ss_seenver` in this browser).
+Bump `GAME_VERSION` in `js/data.js` and `BOOT_VER` in `js/boot.js` to match (`tools/lint.js` checks they agree, and that every file in `js/` is in `BOOT_FILES`), add an entry to `CHANGELOG.md`, and add a short player-facing entry to `DEVLOG` in `js/devlog.js` (moving the shipped item off `DEVPLAN`). The Menu's Game section shows both as What's new and Coming next, and after an update the game points the player there once (`ss_seenver` in this browser).
 
 ## The calendar
 
@@ -298,6 +299,27 @@ Each month the Shore tab also shows what each pier, hostel and booking agency is
 
 Money is in 1921 pounds, scaled by the price index. Head office suggests selling spare berths at piers and yards (which cost the fleet nothing) once they would earn £400 a month; hostels and agents are left to the player, since they help rivals on the Line's own routes.
 
+## Open items before 1940 (0.39.0)
+
+- **Rival lines** (`coFail` in `js/companies.js`): a line promoted in play (`born`) that fails is replaced only if a trade it sailed is left with no other line; lines of four ships or more get one reconstruction (`rescued`); the banks lend on, and judge, a rival's ships at their normal worth in a slump (`coBankValue`).
+- **Share prices** (`marketMonth` in `js/market.js`): a company's smoothed worth (`c.f`) moves 0.35 of the way to today's worth each month when it falls and 0.3 when it rises. The share index records the lines' value against their worth as its fourth figure.
+- **A ship's first year** (`fleetValue` in `js/sim.js`): a ship held for under twelve months counts at the lower of her worth and what was paid moved with the market (`saleCap`), except a ship from a merger (`sh.merged`).
+- **Fare advice** (`advice.js`): each fare is judged by the line's takings this month and six months on, averaged; a fare changed in the last three months (`S.lines[rk].set['fare'+c]`) is not advised again.
+- **Passenger space** (`designStats` in `js/yard.js`): £400 a first-class berth, £170 second, £110 tourist, £35 steerage, at 1921 prices, before the builder's and the year's factors.
+
+## Balancing 1900 to 1940 (0.38.0)
+
+- **Loans** (`BANK_RATE`, `loanRate`, `odRate` in `js/economy.js`): the Bank of England's rate year by year (to 2030, filled in between the years given; no war after 1939); the Line borrows at 1.75 points over it, never under 4.5%, and an overdraft costs 1.5 points more; a panic adds 2.
+- **Laid up** (`dailyTick`, `idleCost`): shipkeepers at 8% of her crew's wages and her master at half pay, with port-risk insurance (a quarter of her crew and her master in full before).
+- **Ship's worth** (`shipValue`): condition counts as (condition/100)^0.35 (^0.7 before), so a docking no longer swings her worth, the Line's net worth and its borrowing by a fifth.
+- **The Depression** (`depression`, `SLUMP_SHIP`): steerage to North America and Canada falls by half at the trough and recovers by 1940; Tourist Third falls to 0.4; second-hand ships lose three tenths.
+- **Tourist Third**: head office now advises the refit where it pays (`yard('tourist')` in the advice); it costs 8,000 plus 30 a converted berth in 1921 pounds (12 before).
+- **Income tax** (`taxMonth`, `INCOME_TAX`): from 1925 the standard rate on all of a year's profit, 4s in the pound in 1925-29 rising to 5s 6d in 1938 (5s 6d after), losses carried forward; before, three tenths of what was over £150,000 at 1921 prices.
+- **The mails** (`mailShip`): only a ship with sixty or more passenger berths carries them. **Cruising** (`cruiseFor`): the only ship that keeps a mail contract does not leave her line for a cruise. **Agents** can be dismissed (Shore tab, `agentdrop`).
+- **Rival lines** (`coFail`): when a line of eight or more ships fails, a second promoter takes up its main trade within three to eight months.
+- **The investment account** (`mkRebalance`): no holding over a twenty-fifth of a company's value; the rest stays in government stock.
+- **The Combine and the conference**: no admission to the conference while the Combine's rate war against the Line lasts. **Rescue**: a sale the Treasury's director forbids is called off with a notice, and a failed bank's liquidators' debt counts at three quarters towards what the bank will lend.
+
 ## Fixes from test round 4 (0.37.2)
 
 - **Lending** (`headroom`): 70% of the fleet and property, plus government stock at 90% and shares at half, the stock-backed part no more than twice the Line's net worth. In the Depression the fleet is valued at its normal worth for lending and for the rescue's cover.
@@ -309,7 +331,7 @@ Money is in 1921 pounds, scaled by the price index. Head office suggests selling
 
 ## The war, the ship's hospital and the great disasters (0.37.1)
 
-- **War freight** (`WAR_FREIGHT`, `warCargoVol` in `js/war.js`): the multiple of the 1913 rate over the price level. 1.25 at the outbreak, 1.4 from 1915 through 1916; 0.8 under the Ministry of Shipping's control from February 1917 to the armistice; 1.9 in March 1919 rising to 2.5 in April 1920, then down to 1 by December 1920. A quarter more cargo is offered in the war and a fifth more until August 1920. `tools/warprofit.js` checks the return of a trading ship on her 1913 worth: 30% to 80% in 1916, lower but positive in 1917-18, positive in 1919 and 1920.
+- **War freight** (`WAR_FREIGHT`, `warCargoVol` in `js/war.js`): the multiple of the 1913 rate over the price level. 1.25 at the outbreak, 1.4 from 1915 through 1916; 0.8 under the Ministry of Shipping's control from February 1917 to the armistice; 1.9 in March 1919 rising to 2.5 in April 1920, then down to 1 by December 1920. A quarter more cargo is offered in the war and a fifth more until August 1920. `tools/warprofit.js` checks the return of a freight-led ship on her 1913 worth: 60% to 200% in 1916, lower but positive in 1917-18, positive in 1919 and 1920.
 - **Excess Profits Duty** (`epdJanuary`, `epdSale`): the standard is the larger of the 1911-13 average profit and 6% of the Line's net worth at the outbreak, in pounds, not raised with prices. A ship sold from August 1914 to the end of 1920 adds what she fetched over her July 1914 worth (`sh.v14`; her cost if bought since; else her worth without the war premium) to the year's profit for the duty.
 - **War service** (`reqChoose`): Offer her, on the Company tab, at any time in the war. An offered ship counts towards what the Admiralty wants, is paid the volunteer's hire (15% more) and gives the Line the choice of the rest.
 - **Isolation hospital** (`sh.up.hosp`, a refit for ships of sixty or more passengers, 0.25 a ton plus 1,500 in 1921 pounds, 12 days): sickness spread and deaths ×0.75 (`crewMods().sick`), quarantine days ×0.7. Standard on passenger ships delivered from 1935.
@@ -406,11 +428,12 @@ Run from the repo root with Node (and Python for the bundler).
 | `node tools/lint.js` | Finds code hidden inside a `//` comment on a long line (a comment added mid-line swallows the code after it; it stopped the strikes and the 1912 disaster in 0.35.4). Run it before every release |
 | `node tools/play.js new|step|do|look <slot> ...` | Plays a real game a few months at a time from the command line, for test players (people or programs): the player's own controls as actions, a report each step, and read-only views. Saved to `tools/play/<slot>.json` between calls and loaded as the browser loads a save, so every step is also a save-and-reload test. `node tools/play.js look <slot> help` lists the actions and views. The actions are in `tools/play-lib.js` |
 | `node tools/market.js [years] [seeds]` | Plays from 1900 (default 40 years, 6 seeds) with the Line kept afloat, runs three broker accounts side by side (preserve, balanced, growth) from January 1901 and a buy-and-hold of every company, and prints each against government stock at key years, each account's worst fall in the 1907, 1921 and 1930s slumps, and the shipping share index against what the lines are worth. Checks that the balanced account beats stock over the run, every account loses in some slump, and shares fall below worth in the slumps and recover |
+| `QUIET=1 node tools/companies.js [years] [seeds]` | The same with a Morven Line of one ship that buys nothing, so the rivals are measured on their own (0.39.0) |
 | `node tools/companies.js [years] [seeds] [verbose]` | Plays the given years (default 40) headless with a plain expanding player who cannot go bust, and prints the rival companies year by year (ships, tonnage, lines, the biggest line's share, cash, debt), failures and new lines per decade, and checks that no line dominates, no trade lies empty and failures stay at a few a decade |
 | `node tools/outside.js [years] [seeds] [sell]` | Gives the Line a full shore establishment, plays the given years (default 15) and prints what each place would earn a month from other lines every January, against its running cost and price; with `sell` every place sells, and it prints what each earned and the Line's own takings, for the trade-off |
 | `node tools/routes.js [seed] [ship]` | What a ship (default the Morven; try "Kinross" or "Rio Negro") would earn per month on each route, every January and July, as the rivals evolve |
 | `node tools/gen-chart.mjs` | Regenerates `js/chart-data.js` from Natural Earth (needs `world-atlas`, `topojson-client` and `d3-geo` installed) |
-| `python tools/build-single.py` | Bundles the game into one HTML file in `dist/` (used for the claude.ai artifact) |
+| `python tools/build-single.py` | Bundles the game into one HTML file in `dist/` (used for the claude.ai artifact): the style sheet and the scripts named in `js/boot.js`, in order; refuses if `BOOT_VER` and `GAME_VERSION` differ |
 
 ### Balance targets
 

@@ -70,6 +70,8 @@ const cruiseInSeason=(rk,m)=>ROUTES[rk].cruise.months.includes(((m%12)+12)%12);
 function cruiseProg(sh){if(sh.wc&&!sh.cp)sh.cp=[sh.wc];delete sh.wc;return (sh.cp||[]).filter(k=>ROUTES[k]&&isCruise(k)&&S.lines[k]&&routeOpen(k,S.m));}
 /* the cruise she should be on in a month: the one she is on while it is still in season, else the first in her programme that is */
 function cruiseFor(sh,m,noStick){const cp=cruiseProg(sh);if(!cp.length||sh.wcHold>S.m)return null;
+  // the only ship keeping a mail contract does not go cruising: the contract would go after missed sailings (0.38.0)
+  if(!onProgramme(sh)&&sh.line&&S.mail&&S.mail[sh.line]&&!S.ships.some(x=>x!==sh&&x.line===sh.line&&x.state!=='laid'))return null;
   if(!noStick&&cp.includes(sh.line)&&cruiseInSeason(sh.line,m))return sh.line;
   return cp.find(k=>cruiseInSeason(k,m))||null;}
 const onProgramme=sh=>isCruise(sh.line)&&sh.homeLine!==undefined;
@@ -88,7 +90,7 @@ function cruiseSeason(sh){
 function depart(sh){
   const P=sh.port;
   if(sh.reqDue){reqStart(sh);return;}
-  if(sh.pendingExit){exitShip(sh,sh.pendingExit);return;}
+  if(sh.pendingExit){const how=sh.pendingExit;if(exitShip(sh,how)===false&&S.ships.includes(sh)){sh.pendingExit=null;news(`SS ${sh.name} was to be sold at ${PN[sh.port]}, but the government director will not allow it while the Treasury's loan is owed. She sails on.`,'bad',true);}else return;} // a sale the rescue forbids no longer strands her in port (0.38.0)
   if(sh.pendingYard){const k=sh.pendingYard;sh.pendingYard=null;enterYard(sh,k);return;}
   cruiseSeason(sh);
   const rk=sh.line,L=rk&&S.lines[rk];
@@ -98,7 +100,7 @@ function depart(sh){
     const to=laneDist(P,A)<=laneDist(P,B)?A:B,d=laneDist(P,to);
     sh.state='repo';sh.repoTo=to;sh.repoLeft=sh.repoTotal=d/(knotsOf(sh)*24);
     book('fuel',-fuelRate(sh,1)*sh.repoTotal*fuelPrice(sh,m),rk,sh);
-    news(`SS ${sh.name} leaves ${PN[P]} light to join the ${r.name} service at ${PN[to]}.`);return;
+    news(`SS ${sh.name} ${P==='OFF'?'heads in from beyond the limit':'leaves '+PN[P]} light to join the ${r.name} service at ${PN[to]}.`);return;
   }
   // an unhappy crew may walk off before sailing
   if((sh.morale||60)<30&&sh.lastStrike!==S.m&&Math.random()<0.25){
@@ -308,9 +310,11 @@ function dailyTick(){
   wireTick();silentDaily();if(Math.floor(S.t-D21)%7===0)deptWeek(); // Saturdays, counted as the 1921 game did
   for(const sh of S.ships){
     if(sh.state==='lost'||sh.state==='req')continue; // on war service the state pays her way
-    const act=ACTIVE.includes(sh.state),f=act?1:sh.state==='yard'?0.5:0.25;
+    // laid up, a ship keeps a few shipkeepers and her master on half pay; stewards and most hands are paid off (0.38.0; was a quarter of
+    // her crew and her master in full, which made laying up in a slump hardly worth it)
+    const act=ACTIVE.includes(sh.state),laid=sh.state==='laid',f=act?1:sh.state==='yard'?0.5:0.08;
     const key=act?(sh.state==='sea'?sh.legRoute:sh.line):'_idle';
-    book('crew',-(crewCost(sh)*f+(sh.captain?sh.captain.wage:0))/30,key,sh);
+    book('crew',-(crewCost(sh)*f+(sh.captain?sh.captain.wage*(laid?0.5:1):0))/30,key,sh);
     if(act&&sh.fac)book('crew',-facMods(sh).staff*PX()/30,key,sh);
     book('ins',-(insCost(sh)+(act?warInsCost(sh)+warTopCost(sh):0))/30,key,sh);if(act)book('upkeep',-MAINT_COST[sh.maint]*sh.grt/8000/30,key,sh);
     if(act&&sh.cond<condCap(sh))sh.cond=clamp(sh.cond+MAINT_GAIN[sh.maint]/30,5,condCap(sh));
@@ -321,7 +325,7 @@ function dailyTick(){
   for(const rk in S.lines)if(S.ships.some(x=>x.line===rk&&ACTIVE.includes(x.state)))book('adv',-ADV_COST[S.lines[rk].adv]/30,rk); // no sailings to sell, no advertising
   book('office',-officeCost()/30);const sc=safetyCost();if(sc)book('safety',-sc/30);inquiryDaily();
   const up=shoreUpkeep()*PX();if(up)book('shore',-up/30);
-  book('interest',-S.debt*(0.065+(S.rateUp>S.m?0.02:0))/365);if(S.cash<0)book('interest',S.cash*(0.08+(S.rateUp>S.m?0.02:0))/365);strikeDaily();disasterDaily(); // an overdraft costs 8%, more than the loan (0.35.4)
+  book('interest',-S.debt*loanRate()/365);if(S.cash<0)book('interest',S.cash*odRate()/365);strikeDaily();disasterDaily(); // an overdraft costs a point and a half more than the loan (0.35.4; rates from Bank Rate, 0.38.0)
   const m=mOf(S.t);if(m!==S.m){const pm=S.m;S.m=m;monthRoll(pm);}
   if(S.cash<0&&!S.odWarn){S.odWarn=true;news(`The account is overdrawn. The bank will foreclose below ${fmt(-odLimit())}.`,'bad');}
   if(S.cash>0)S.odWarn=false;
@@ -413,7 +417,9 @@ function buyShip(m){if(rescueNoBuy())return false;const t=buyTerms(m);if(S.cash<
   news(`Bought SS ${m.name}, lying at ${PN[m.port]}${t.mort?`, ${fmt(t.mort)} of it on mortgage`:', for cash'}.`,'good');return true;}
 /* the monthly bill for keeping the fleet and office going, before fuel and port costs */
 const runningCost=()=>S.ships.reduce((a,x)=>a+crewCost(x)+(x.captain?x.captain.wage:0)+insCost(x)+MAINT_COST[x.maint]*x.grt/8000,0)+officeCost()+shoreUpkeep()*PX(); // head office as charged (0.37.0)
-const fleetValue=()=>S.ships.reduce((a,s)=>a+shipValue(s),0);
+// a ship the Line has had for less than a year counts at what it paid for her, moved with the market (saleCap): a receiver's
+// bargain does not add its discount to net worth and borrowing the day it is bought (0.39.0; KI-069)
+const fleetValue=()=>S.ships.reduce((a,s)=>a+(s.merged?shipValue(s):Math.min(shipValue(s),saleCap(s))),0); // a merged line's ships come in at their worth: the Line paid for them in shares
 // property ashore is worth about half what it cost at today's prices (0.35.4: it was valued at 1921 prices, so before 1921 buying it raised net worth)
 const shoreValue=()=>{const s=S.shore,x=PX();let v=0;for(const p in s.piers)v+=PIER_COST[p]*0.6;for(const y in s.yards)v+=150000*0.5*x;if(s.slip)v+=OWN_SLIP_COST*0.5*x;for(const h in s.hostels)v+=35000*0.5*x;for(const p in s.sheds||{})v+=SHED_COST*0.5*x;for(const p in s.cold||{})v+=COLD_COST*0.5*x;return v;};
 const ordersValue=()=>(S.orders||[]).reduce((a,o)=>a+(o.paid||0),0); // ships on the stocks, at what has been paid on them (0.35.4)
@@ -421,8 +427,8 @@ const netWorth=()=>S.cash+(S.gilts||0)+fleetValue()+shoreValue()+ordersValue()-S
 // what the bank will still lend: 70% of the fleet and property, and on stock and shares (government stock at 90%, shares at
 // half) no more than twice the Line's own worth, since no bank lends a shipping line ten times its capital on stock (0.37.2).
 // In the 1919 and 1920 boom the bank lends on ships at no more than their worth at the armistice, and in the Depression on
-// their normal worth (0.37.2)
-const headroom=()=>Math.max(0,0.7*(fleetValue()/(newCal()&&S.m>ARMISTICE&&S.m<M21?Math.max(1,warShips(S.m)/warShips(ARMISTICE)):1)/(newCal()?1-SLUMP_SHIP*slump(S.m):1)+shoreValue())+Math.min(0.9*(S.gilts||0)+0.5*Math.max(0,mkWorth()),2*Math.max(0,netWorth()))-S.debt-admDebt());
+// their normal worth (0.37.2). What a failed bank's liquidators still owe counts at three quarters (0.38.0)
+const headroom=()=>Math.max(0,0.7*(fleetValue()/(newCal()&&S.m>ARMISTICE&&S.m<M21?Math.max(1,warShips(S.m)/warShips(ARMISTICE)):1)/(newCal()?1-SLUMP_SHIP*slump(S.m):1)+shoreValue())+Math.min(0.9*(S.gilts||0)+0.5*Math.max(0,mkWorth()),2*Math.max(0,netWorth()))+0.75*((S.liq&&S.liq.left)||0)-S.debt-admDebt());
 const odLimit=()=>8000+0.5*headroom(); // the bank forecloses when cash falls below minus this
 function news(t,k,pauseIt){
   S.news.unshift({d:Math.floor(S.t),t,k:k||''});if(S.news.length>150)S.news.length=150;

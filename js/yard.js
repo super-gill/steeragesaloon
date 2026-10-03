@@ -158,7 +158,9 @@ function designStats(d){
   // costs: a longer, finer hull costs more steel per ton; engines cost by the horsepower
   const hull=g*22*H.cost*SUBDIV[d.subdiv].cost*P.cx*Math.pow(e.len/lenForSize(g),0.7);
   const power=e.shp*MACH_DATA[d.mach].pps*M.cost/1.1;
-  const interiors=(berths.f*250+berths.s*90+berths.t*20+berths.tt*50)*Q.cost*(d.style==='edw'?1:1.08);
+  // passenger space is the dear part of a liner: cabins, plumbing, galleys and public rooms (0.39.0: about doubled for second and
+  // tourist, since new tourist and emigrant ships returned 40% a year on their cost against perhaps half that in fact)
+  const interiors=(berths.f*400+berths.s*170+berths.t*35+berths.tt*110)*Q.cost*(d.style==='edw'?1:1.08);
   let extras=fc.cost/PX();for(const k in d.extras)if(d.extras[k]&&EXTRAS[k])extras+=EXTRAS[k].cost(g);
   // the biggest ships cost far more than their tonnage: longer slips, heavier plate, more of everything done once only
   const sizeK=1+0.6*Math.pow(Math.max(0,(g-20000)/40000),1.3);

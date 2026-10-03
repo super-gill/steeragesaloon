@@ -70,6 +70,7 @@ var PL = (function () {
     sharespct: (o, pct) => mkBuyPct(o, +pct),
     sellshares: (o, frac) => mkSell(o, +frac),
     repaymargin: amt => mkRepay(+amt),
+    agentdrop: (kind, a) => { const k = kind === 'fagents' ? 'fagents' : 'agents'; if (!S.shore[k] || !S.shore[k][a]) return false; delete S.shore[k][a]; return true; },
     rescuepay: amt => { const R = S.rescue; if (!R || !(R.loan > 0)) return false; const x = Math.min(+amt, R.loan); if (S.cash < x) return false; R.loan -= x; S.cash -= x; return true; },
     lend: (o, amt) => mkLend(o, +amt),
     merge: o => mkMerge(o),
