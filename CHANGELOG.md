@@ -2,6 +2,17 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.39.1 (3 October 2026)
+What ships cost and earn, set against the period's sources (`docs/overhaul/research/earnings.md`). A new liner earned roughly 12% to 18% of her cost a year in good years before depreciation (Mauretania 16% to 23% in 1910), less in average years and nothing in a slump. Before the war the game was near that; after it, new emigrant and tourist ships returned 30% to 40%.
+- New ships designed from the 1920s give each steerage and Tourist Third passenger more room (third class had moved from open steerage into cabins): an 11,000-ton emigrant ship of 1928 carries about 1,360 rather than 2,220, nearer the 8 to 13 tons a passenger of the period's ships. Ships already built keep their berths.
+- Steerage and Tourist Third demand after the war eases to seven tenths and six tenths of what the old trade would have given, between 1921 and 1924, as the quotas take hold and fewer ships share the trade.
+- Freight rates after 1921 settle at 1.15 times their 1900 level against prices, not 1.63: the freight index stood near its 1913 level in money through the 1920s while costs were half as much again.
+- New emigrant, intermediate, tourist and passenger-cargo ships cost about a third more to build, and cargo liners about two fifths more: in 1928 about £38 to £53 a ton (sources £51 to £61 for intermediate and tourist liners).
+- Result, for a new ship on her natural trade in 1928: emigrant 18% a year on her cost (41% before), Tourist 18% (32%), cargo 15% (25%), passenger-cargo 9%, express 7%. In 1910: emigrant 13%, cargo 17%, express 4%.
+- Tried and reverted: cutting all freight rates by a quarter, which bankrupted 17 of 40 careful owners by 1922; asking second-hand prices of four years' earnings, which would have priced an 1886 steamer at £21 a ton against the period's £5 to £8.
+- Left open (KI-065): old ships bought second-hand before the war still return 18% to 31% a year on their price (the best on a quarter's list 50% or more), so an owner who buys whatever head office advises still reaches about £930k by 1914. Their prices are already right; what an old ship earns against a new one is not, and the start of the game is balanced on the Morven, built in 1881. That needs its own change and a fresh test of the opening years.
+- Tests: `tools/forecast.js` no longer judges a kind of ship with fewer than five ship-years. Balance: careful owner to 1922, 4 of 40 bankrupt, war growth 2.2 times; to 1939, 22 of 40.
+
 ## 0.39.0 (3 October 2026)
 The open items before the 1900 to 1940 milestone. Two are left open on purpose: see the end.
 - Rival lines (KI-062): fewer failures. Established lines were failing about once a decade; the rest were one-ship lines promoted in play that failed and were refloated on the same trades again and again, eight or nine a decade between the wars. A promoted line that fails is now replaced only if its trade is left with no rival. With a quiet Morven Line, failures fall from 4.9 to 2.1 a decade (1920s 5.0, 1930s 1.2), and the rival fleet holds at 14 to 15 lines. Lines of four ships or more (eight before) get one reconstruction from their bankers, and the banks judge a rival's ships at their normal worth through a slump.

@@ -1,18 +1,22 @@
 /* ================= SHIPBUILDING =================
    A new ship is designed in the drawing office, ordered from a builder, waits for a slip, is framed, plated, launched,
    fitted out and run over the measured mile before she is handed over. Prices are staged; the work stops if you cannot pay. */
+/* cx: how much a hull of this kind costs against a plain one. Raised for passenger ships in 0.39.1 from the sources on build costs:
+   intermediate and tourist liners of the 1920s and 30s cost about £51-61 a gross ton (Mongolia 1923, Minnewaska 1923,
+   Viceroy of India 1929, Andes 1939), the game's about £35-50; a 1913 emigrant liner about £24 (Ceramic); a cargo liner
+   £12-13 in 1906-13 (Clan Matheson, Clan Mactavish) and £35 by 1939 (Port Quebec) */
 const PURPOSES={
   express:{name:'Express mail liner',size:[18000,85000],speed:[19,31],mix:{f:40,s:25,t:35,tt:0},pax:0.9,cx:1.25,
     blurb:'Speed and splendour for the richest trades. Ruinously dear, and the pride of a line.'},
-  inter:{name:'Intermediate liner',size:[8000,30000],speed:[13,21],mix:{f:26,s:26,t:48,tt:0},pax:0.82,cx:1,
+  inter:{name:'Intermediate liner',size:[8000,30000],speed:[13,21],mix:{f:26,s:26,t:48,tt:0},pax:0.82,cx:1.3,
     blurb:'The workhorse: steady speed, big capacity in every class and a fair cargo.'},
-  emig:{name:'Emigrant ship',size:[6000,20000],speed:[12,17],mix:{f:4,s:14,t:82,tt:0},pax:0.85,cx:0.9,
+  emig:{name:'Emigrant ship',size:[6000,20000],speed:[12,17],mix:{f:4,s:14,t:82,tt:0},pax:0.85,cx:1.2,
     blurb:'Plain, roomy and economical. Built to carry as many steerage passengers as the law allows.'},
-  tourist:{name:'Tourist liner',from:1927,size:[10000,35000],speed:[15,23],mix:{f:25,s:0,t:0,tt:75},pax:0.88,cx:1.05,
+  tourist:{name:'Tourist liner',from:1927,size:[10000,35000],speed:[15,23],mix:{f:25,s:0,t:0,tt:75},pax:0.88,cx:1.35,
     blurb:'For the new tourist class: students, teachers and holidaymakers who want comfort without the price of first.'},
-  mixed:{name:'Passenger-cargo liner',size:[5000,16000],speed:[12,18],mix:{f:40,s:30,t:30,tt:0},pax:0.42,cx:1,
+  mixed:{name:'Passenger-cargo liner',size:[5000,16000],speed:[12,18],mix:{f:40,s:30,t:30,tt:0},pax:0.42,cx:1.2,
     blurb:'Half passenger ship, half cargo ship, for the colonial and South American trades.'},
-  cargo:{name:'Cargo liner',size:[4000,14000],speed:[10,18],mix:{f:100,s:0,t:0,tt:0},pax:0.05,cx:0.85,
+  cargo:{name:'Cargo liner',size:[4000,14000],speed:[10,18],mix:{f:100,s:0,t:0,tt:0},pax:0.05,cx:1.2,
     blurb:'Big holds and a dozen cabins. Earns her keep on freight.'},
   cruise:{name:'Cruise ship',from:1928,size:[5000,30000],speed:[13,20],mix:{f:45,s:20,t:0,tt:35},pax:0.8,cx:1.12,cruiser:true,
     blurb:'White, airy and built for pleasure: cabins, sun decks, pools and public rooms, and no steerage at all. Made for the cruises, though she can run a line in the off season.'},
@@ -148,7 +152,9 @@ function designStats(d){
   const fc=facChange({fac:{},grt:g,facPlan:null},d.fac||{}),facRoom=FAC_KEYS.reduce((a,k)=>a+((FAC[k].levels[(d.fac||{})[k]||0]||{}).room||0),0);
   if(slotsUsed(d.fac)>slotsOf({grt:g}))w.push(`A ship of ${int(g)} tons has room for ${slotsOf({grt:g})} venues; the plan has ${slotsUsed(d.fac)}.`);
   for(const k of FAC_KEYS){const l=(d.fac||{})[k]||0;if(l&&!levelOk(k,l,g,y))w.push(`${FAC[k].levels[l].n} needs a bigger ship${FAC[k].levels[l].from>y?' or a later year':''}.`);}
-  const room=Math.max(0,e.usable),paxSpace=Math.max(0,room*d.pax-facRoom),per={f:14*Q.space,s:8*Q.space,t:3.2,tt:5.5*Q.space},berths={};
+  // after the war third class moved from open steerage into cabins, and new ships carried far fewer people a ton (0.39.1):
+  // about 5 to 7 tons a berth before the war (Saxonia, Ivernia), 8 to 13 by the late 1920s (Ascania, Laurentic, the Duchesses)
+  const cab=clamp((y-1914)/10,0,1),room=Math.max(0,e.usable),paxSpace=Math.max(0,room*d.pax-facRoom),per={f:14*Q.space,s:8*Q.space,t:3.2+2.3*cab,tt:(5.5+2.5*cab)*Q.space},berths={};
   const tot=Math.max(1,d.mix.f+d.mix.s+d.mix.t+d.mix.tt);
   for(const c of ['f','s','t','tt'])berths[c]=Math.round(paxSpace*d.mix[c]/tot/per[c]);
   if(berths.tt&&y<1925)w.push('Tourist class does not exist yet.');

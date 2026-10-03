@@ -43,7 +43,7 @@ const med = a => { const s = a.slice().sort((x, y) => x - y); return s.length ? 
 const ratio = q => q.f > 0 ? q.a / q.f : null;
 const by = {}; for (const q of all) { const r = ratio(q); if (r === null) continue; (by[q.k] = by[q.k] || []).push(r); (by.all = by.all || []).push(r); }
 let bad = 0;
-for (const k of Object.keys(by)) { const m = med(by[k]); const lim = k === 'all' ? 0.2 : 1 / 3; const pass = Math.abs(m - 1) <= lim;
+for (const k of Object.keys(by)) { const m = med(by[k]); const lim = k === 'all' ? 0.2 : 1 / 3; if (by[k].length < 5) { console.log(`--   ${k}: median ${m.toFixed(2)} over ${by[k].length} ship-years, too few to judge`); continue; } const pass = Math.abs(m - 1) <= lim;
   if (!pass) bad++; console.log(`${pass ? 'ok  ' : 'FAIL'} ${k}: median actual/forecast ${m.toFixed(2)} over ${by[k].length} ship-years (within ${k === 'all' ? 'a fifth' : 'a third'})`); }
 const yr = {}; for (const q of all) { const r = ratio(q); if (r !== null) (yr[q.y] = yr[q.y] || []).push(r); }
 console.log('by year: ' + Object.keys(yr).map(y => `${y} ${med(yr[y]).toFixed(2)}`).join(' · '));

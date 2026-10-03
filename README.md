@@ -299,6 +299,15 @@ Each month the Shore tab also shows what each pier, hostel and booking agency is
 
 Money is in 1921 pounds, scaled by the price index. Head office suggests selling spare berths at piers and yards (which cost the fleet nothing) once they would earn £400 a month; hostels and agents are left to the player, since they help rivals on the Line's own routes.
 
+## Costs and earnings (0.39.1)
+
+Set against `docs/overhaul/research/earnings.md`.
+
+- **Room a berth** (`designStats` in `js/yard.js`): steerage 3.2 tons of usable space a berth in designs before 1914, rising to 5.5 by 1924; Tourist Third 5.5 rising to 8.
+- **Hull cost by kind** (`PURPOSES[].cx`): intermediate 1.3, emigrant 1.2, tourist 1.35, passenger-cargo 1.2, cargo 1.2, express 1.25.
+- **Post-war passenger trade** (`quotaTrade` in `js/helpers.js`): steerage demand × (1 − 0.3 × the share of 1921-24 gone), Tourist Third × (1 − 0.4 × it).
+- **Post-war freight** (`CARGO_POST`): rates from 1921 follow the 1921 game's history from a level of 1.15 times 1900's against prices.
+
 ## Open items before 1940 (0.39.0)
 
 - **Rival lines** (`coFail` in `js/companies.js`): a line promoted in play (`born`) that fails is replaced only if a trade it sailed is left with no other line; lines of four ships or more get one reconstruction (`rescued`); the banks lend on, and judge, a rival's ships at their normal worth in a slump (`coBankValue`).

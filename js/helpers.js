@@ -53,8 +53,13 @@ const H_CACHE={s:null,a:{},d:{}}; // the join at 1921 and the start's level, per
 function histAbs(c,rk,m){
   if(m<M21)return preDemand(c,rk,m);
   const k=c+rk;if(H_CACHE.a[k]===undefined)H_CACHE.a[k]=preDemand(c,rk,M21-1,true)/histLegacy(c,rk,M21);
-  return H_CACHE.a[k]*histLegacy(c,rk,m);
+  return H_CACHE.a[k]*histLegacy(c,rk,m)*quotaTrade(c,m);
 }
+/* after the war fewer ships are left on the emigrant trades than before it, and the market they share was sized from the
+   pre-war fleets: steerage and Tourist Third ships sailed over half full and returned 30% to 40% a year on their cost by
+   1928, against 30% to 40% full and perhaps 12% to 18% in fact (0.39.1; the earnings research). Steerage and tourist
+   demand eases to seven tenths (Tourist Third to six) between 1921 and 1924, as the American quotas take hold */
+const quotaTrade=(c,m)=>(c==='t'||c==='tt')&&m>=M21?1-(c==='tt'?0.4:0.3)*Math.min(1,(m-M21)/42):1;
 /* history's effect on passenger demand by class, route and month, relative to the game's start (markets are sized then) */
 function histMod(c,rk,m){
   if(!newCal())return histLegacy(c,rk,m);
@@ -112,7 +117,11 @@ const SLUMP_SHIP=0.3;
 const slumpK=(k,m)=>1-SLUMP_CUT[k]*slump(m===undefined?(typeof S!=='undefined'&&S?S.m:0):m);
 /* cargo on the 1900 calendar: world trade grows about 3% a year before the war, then the 1921 game's cargo history */
 const cargoPre=m=>1+0.03*preYears(m);
-const cargoMod=m=>{if(!newCal())return cargoLegacy(m);const a=x=>x<M21?cargoPre(x)*crashMod('s',x)*warFreight(x):cargoPre(M21-1)/cargoLegacy(M21)*cargoLegacy(x);return a(m)/a(S.m0);};
+/* freight rates after 1921 settle at 1.15 of 1900's against prices, not at the 1.63 that the growth of world trade before the
+   war had brought them to (0.39.1): the Economist's freight index stood near its 1913 level in money in the 1920s while
+   prices and costs were 50% to 100% higher, and cargo companies' profits were "ground to pieces" */
+const CARGO_POST=1.15;
+const cargoMod=m=>{if(!newCal())return cargoLegacy(m);const a=x=>x<M21?cargoPre(x)*crashMod('s',x)*warFreight(x):CARGO_POST/cargoLegacy(M21)*cargoLegacy(x);return a(m)/a(S.m0);};
 const cargoLegacy=m=>{const k=m-M21;return crashMod('s',m)*(k>=306?1+Math.min(0.25,(k-306)/12*0.02):1)*(1-0.2*slump(m))*(k<12?0.75:k<24?0.9:k<106?1:k<120?0.75:k<156?0.62:Math.min(1,0.62+0.38*(k-156)/48));};
 const cargoSeason=(c,m)=>COMM[c].season?COMM[c].season[m%12]:1;
 const dirW=(rk,c)=>(ROUTES[rk].dirw&&ROUTES[rk].dirw[c])||DIRW[c];

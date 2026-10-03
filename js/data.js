@@ -1,5 +1,5 @@
 /* ================= DATA ================= */
-const GAME_VERSION='0.39.0',GAME_BUILT='1 October 2026'; // bump on every release; see CHANGELOG.md
+const GAME_VERSION='0.39.1',GAME_BUILT='1 October 2026'; // bump on every release; see CHANGELOG.md
 /* ---------- the calendar ----------
    Month 0 is January 1900 and day 0 is 1 January 1900. ym(year,month) names a month (month 0 = January), so every date
    the game cares about reads as a date. History written for the 1921 game is kept exact by counting from M21. */
