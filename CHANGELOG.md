@@ -2,6 +2,14 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.39.2 (4 October 2026)
+KI-065 re-diagnosed; one small fix. The research and the experiments are in `docs/overhaul/research/advisor-growth.md`.
+- The diagnosis in 0.39.1 was wrong: the owner who takes all of head office's advice grows fast before 1914 on steerage in the boom years, from new emigrant ships (37% to 40% a year on their cost on the Canadian routes in 1913) as much as old ones, not from old second-hand ships as such.
+- Rival lines now replace a ship they send to the breakers on a trade that still pays, when they can afford it. Before, the 1880s ships went in 1911 to 1913 with nothing ordered in their place. Neutral on the balance tests.
+- Tried and reverted, all because they hurt the careful owner as much as or more than the advisor: old-type steerage losing appeal to new-type cabins on the northern routes (careful owner 8 of 40 bankrupt by 1922); rivals building for the boom and booms drawing new lines (7 of 40); a ship price cycle from the freight market (10 of 40, and the advisor no poorer). Kept as `docs/overhaul/research/experiments/0.39.2-cycle-and-boom.patch`.
+- KI-065 is now a design question for the 0.40 test round: whether human players get near the advisor.
+- Balance (unchanged): careful owner to 1922, 5 of 40 bankrupt; advisor to 1914, about £950k.
+
 ## 0.39.1 (3 October 2026)
 What ships cost and earn, set against the period's sources (`docs/overhaul/research/earnings.md`). A new liner earned roughly 12% to 18% of her cost a year in good years before depreciation (Mauretania 16% to 23% in 1910), less in average years and nothing in a slump. Before the war the game was near that; after it, new emigrant and tourist ships returned 30% to 40%.
 - New ships designed from the 1920s give each steerage and Tourist Third passenger more room (third class had moved from open steerage into cabins): an 11,000-ton emigrant ship of 1928 carries about 1,360 rather than 2,220, nearer the 8 to 13 tons a passenger of the period's ships. Ships already built keep their berths.

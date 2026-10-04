@@ -42,8 +42,8 @@ Players see a short version of this plan, and what each release brought, in the 
 | 0.38.0 (done) | Balancing 1900 to 1940 | The loader (no more mixed versions); KI-060 the Depression against a human player; Tourist Third advised; cheap lay-up; KI-066 loans by Bank Rate; income tax at the standard rate; KI-067, KI-068; test player P5 twice | Small Line played 1927-1940 by a test player on the new code: survives the Depression on sensible play; the scripted careful owner no longer the target |
 | 0.39.0 (done) | Open items before the milestone | KI-062 rival failures; KI-063 shipping shares; KI-069 bargains; KI-070 fare advice; passenger space dearer. KI-047 and KI-065 left for research | `QUIET=1 node tools/companies.js 40 6`: about 2 failures a decade; `tools/market.js`: PASS |
 | 0.39.1 (done) | Costs and earnings | Research (`docs/overhaul/research/earnings.md`); 1920s designs roomier; post-war steerage and tourist demand and freight rates lower; new ships dearer. KI-047 fixed; KI-065 narrowed to old ships before the war | New ships' returns within the sources' bands in 1910 and 1928 |
-| 0.39.2 | Old ships before the war | KI-065: what an old ship earns against a new one, with the opening years (the Morven) re-tested | Advisor's growth to 1914 within reason; first-year profit and the careful owner unchanged |
-| 0.40.0 | Milestone | 1900 to 1940 complete and balanced; every S1 and S2 issue closed | Full suite on 40 seeds |
+| 0.39.2 (done) | Old ships before the war | KI-065 re-diagnosed (`docs/overhaul/research/advisor-growth.md`): the boom-year steerage trade, not old ships; three fixes tried and reverted; rivals replace ships they break up | Careful owner 5 of 40 bankrupt by 1922; advisor about £950k in 1914 (unchanged) |
+| 0.40.0 | Milestone | 1900 to 1940 complete and balanced; every S1 and S2 issue closed; the test round judges KI-065 (whether human players approach the advisor's growth to 1914) | Full suite on 40 seeds |
 
 ## From 0.40 to 1.0
 

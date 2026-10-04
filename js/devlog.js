@@ -3,6 +3,7 @@
    record is CHANGELOG.md and ROADMAP.md. Add an entry here with every release (see Releasing in the README), and move a
    plan item to DONE when it ships. */
 const DEVLOG=[
+  {v:'0.39.2',d:'4 October 2026',t:'Rival lines replace their old ships',items:['A rival line that sends an old ship to the breakers now orders a new one for the trade if it still pays, so the emigrant trades no longer lose ships in the busiest years before the war.','Behind the scenes: why head office\'s advice makes a Line grow so fast before 1914 was looked into again. The cause is the emigrant boom itself, not old ships, and it will be judged on players in the next round of testing.']},
   {v:'0.39.1',d:'3 October 2026',t:'What ships cost and earn',items:['Ships built from the 1920s carry fewer passengers a ton, as third class moved into cabins; new ships cost more to build; the emigrant trade after the quotas and freight rates in the 1920s are lower. A new ship now earns about what the period\'s did: roughly a sixth of her cost a year in good times.','Old ships bought before the war still earn too much for their age: that comes next.']},
   {v:'0.39.0',d:'3 October 2026',t:'Loose ends before 1940',items:['Rival lines no longer fail and refloat over and over between the wars: about two failures a decade now.','Shipping shares stand near what the lines are worth in good times, and fall to a third of their peak in the slumps.','A ship bought cheaply counts at what you paid for her first year; fare advice no longer flips with the season.','New passenger ships cost more to build. Ships still pay too well overall: that waits for research into the period\'s costs and earnings.']},
   {v:'0.38.0',d:'2 October 2026',t:'Balancing the years to 1940',items:['Fixed: a browser could mix files from two versions after an update and stop with "Can\'t find variable". The page now always loads one version; if it ever happens again, the notice offers to save and reload.','Laying a ship up now costs only her shipkeepers and her master on half pay, and head office suggests Tourist Third where it pays: a well-run small line can come through the Depression.','Loans follow the Bank Rate (cheap in the 1930s, dear in 1920), and income tax is charged at the standard rate on all profits from 1925.','Plus: the mails go only by passenger ships, agents can be dismissed, a vetoed sale no longer strands a ship, and more.']},
@@ -32,8 +33,7 @@ const DEVLOG=[
 ];
 /* what is coming, in order; 'now' marks the next release */
 const DEVPLAN=[
-  {v:'0.39.2',t:'Old ships before the war',now:true,items:['What an old ship earns against a new one, without upsetting the first years with the Morven.']},
-  {v:'0.40.0',t:'1900 to 1940 complete',items:['Every serious known issue closed and the game balanced to 1940.']},
+  {v:'0.40.0',t:'1900 to 1940 complete',now:true,items:['Every serious known issue closed and the game balanced to 1940.']},
   {v:'0.4x to 0.9x',t:'The later decades, to the present day',items:['Researched and built era by era, as 1900 to 1930 was: two-class liners, the cruise boom and ever bigger ships, casinos and night life aboard, Soviet budget lines, family cruising, and more.']},
   {v:'1.0',t:'The game complete to the present day',items:[]}
 ];

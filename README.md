@@ -299,6 +299,10 @@ Each month the Shore tab also shows what each pier, hostel and booking agency is
 
 Money is in 1921 pounds, scaled by the price index. Head office suggests selling spare berths at piers and yards (which cost the fleet nothing) once they would earn £400 a month; hostels and agents are left to the player, since they help rivals on the Line's own routes.
 
+## Rival fleets (0.39.2)
+
+- **Replacing old ships** (`rivalsMonth` in `js/rivals.js`): a rival ship over 32 years old goes to the breakers with a chance of 8% a month, as before. If the line's loads on that trade are at least 0.95 of its 1900 level, it is not at war, has no ship already ordered for the trade and can pay (`coCanPay`), it orders a new ship for the trade, delivered in 12 to 20 months.
+
 ## Costs and earnings (0.39.1)
 
 Set against `docs/overhaul/research/earnings.md`.

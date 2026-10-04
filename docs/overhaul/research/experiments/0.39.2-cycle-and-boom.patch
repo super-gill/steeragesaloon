@@ -1,0 +1,137 @@
+diff -u a/js/companies.js b/js/companies.js
+--- a/js/companies.js	2026-10-03 18:58:07.103960502 +0100
++++ b/js/companies.js	2026-10-03 21:26:44.851853596 +0100
+@@ -20,7 +20,7 @@
+ function coCostIdx(m){return PX()*(0.55*slumpK('wage',m)+0.3*clamp(coalPrice(m)/1.6,0.7,1.8)*slumpK('fuel',m)+0.15*slumpK('dues',m));}
+ const coAge=x=>Math.max(0,yearOfM(S.m)-x.built);
+ const coShipVal=x=>x.grt*CO_PRICE*PX()*Math.max(0.1,1-coAge(x)/35)*shipMkt();
+-const coNewPrice=x=>Math.round(x.grt*CO_PRICE*PX()/1000)*1000;
++const coNewPrice=x=>Math.round(x.grt*CO_PRICE*PX()*cycNew(S.m)/1000)*1000;
+ const coScrap=x=>x.grt*2*PX();
+ const coFleet=o=>S.rships.filter(x=>x.owner===o);
+ /* a line's share of all rival tonnage */
+@@ -37,7 +37,7 @@
+ /* keep about three months' costs in the bank; borrow up to the character's share of the fleet's value */
+ const coReserve=o=>3*Math.max(20000*PX(),(S.rivals[o].h||[]).slice(-3).reduce((a,q)=>a+q.cost,0)/Math.max(1,Math.min(3,(S.rivals[o].h||[]).length)));
+ // the banks lend on a line's ships at their normal worth through a slump, as they do the Morven Line's (0.39.0; KI-062)
+-const coBankValue=o=>coValue(o)/(newCal()?1-SLUMP_SHIP*slump(S.m):1);
++const coBankValue=o=>coValue(o)/shipNorm();
+ const coMaxDebt=o=>RIVAL_P[o].lev*coBankValue(o);
+ const coShort=o=>S.rivals[o].cash<0||S.rivals[o].debt>coMaxDebt(o)*0.95;
+ function coCanPay(o,price,fight){const co=S.rivals[o],room=Math.max(0,coMaxDebt(o)+price*RIVAL_P[o].lev-co.debt);
+@@ -216,7 +216,10 @@
+     // an empty trade draws new capital quickly; one line holding a full trade to itself draws a challenger in time
+     const by={};for(const x of here)by[x.owner]=(by[x.owner]||0)+x.grt;const tot=here.reduce((a,x)=>a+x.grt,0),top=Math.max(0,...Object.values(by));
+     const q=stats[rk],p=q?Object.values(q.owners).reduce((a,o)=>a+o.pax,0):0,c=q?Object.values(q.owners).reduce((a,o)=>a+o.cap,0):0,rel=c?p/c/Math.max(0.05,S.load0[rk]*seasonNorm(rk,m)):0;
+-    if(!here.length?Math.random()<0.9:(top>0.7*tot&&rel>1.05&&coLive().length<14&&Math.random()<0.06))S.coQueue.push({at:m+3+Math.floor(Math.random()*7),kind,routes:[rk],fill:here.length?null:rk});}
++    // and before the war a booming emigrant trade draws new lines, as the Uranium Line (1908) came into the New York trade
++    // and the Royal Line (1910) into the Canadian one (0.39.2)
++    const boom=newCal()&&m<ym(1914,7)&&rel>BOOM_REL-0.05&&(st||[]).length>0&&coLive().length<14&&Math.random()<0.25;
++    if(!here.length?Math.random()<0.9:boom||(top>0.7*tot&&rel>1.05&&coLive().length<14&&Math.random()<0.06))S.coQueue.push({at:m+3+Math.floor(Math.random()*7),kind,routes:[rk],fill:here.length?null:rk});}
+   const due=S.coQueue.filter(q=>q.at<=m);if(!due.length)return;
+   const rel={};for(const rk in stats){const q=stats[rk];let p=0,c=0;for(const o in q.owners){p+=q.owners[o].pax;c+=q.owners[o].cap;}rel[rk]=c?p/c/Math.max(0.05,S.load0[rk]*seasonNorm(rk,m)):1.3;}
+   S.coQueue=S.coQueue.filter(q=>q.at>m);
+diff -u a/js/economy.js b/js/economy.js
+--- a/js/economy.js	2026-10-03 18:58:07.104228103 +0100
++++ b/js/economy.js	2026-10-03 21:26:51.779348006 +0100
+@@ -53,7 +53,21 @@
+   const k=m-c.panicAt;return k<6?1:Math.max(0,1-(k-6)/Math.max(1,c.rec-6));
+ }
+ function crashMod(c,m){const f=crashF(m);return f?1-f*S.crash.depth*{f:1.2,s:1,t:0.8,tt:1}[c]:1;}
+-const shipMkt=()=>(1-(S.crash&&S.crash.y1907?0.25:0.4)*crashF(S.m))*warShips(S.m)*(newCal()?1-SLUMP_SHIP*slump(S.m):1); // and in the Depression (0.37.2): three tenths off at the trough, as second-hand tonnage went begging // second-hand ship prices in a panic (the 1907 panic was an American one, and milder here)
++/* the shipping cycle before the war (0.39.2). Ships were dear when trade was good and cheap when it was bad: the yards
++   quoted more when their berths were full, and second-hand tonnage swung harder still. The timing follows the freight market:
++   a memorable peak in 1900, a crash in 1901 and depressed years to 1904 (Stopford, Maritime Economics; the New York to
++   Liverpool grain rate fell two thirds from 1900 to 1904), a recovery to 1907, the slump of 1908 and 1909, when owners such
++   as Burrell ordered at rock-bottom prices, and the boom of 1911 to 1913, when the grain rate more than doubled. The size of
++   the swing is an inference, not a series: the Fairplay price of a representative steamer was not found. Two checks hold:
++   at these figures a new emigrant ship costs about £16 a ton in 1910 and £23 in 1913, against Rotorua's £15.5 (1910) and
++   Ceramic's £23.6 (1913). New ships: SHIP_CYC; second-hand ships move 1.6 times as far (cycShip). From the war the war's
++   own prices take over (warShips, warBuild). */
++const SHIP_CYC=[1.15,1.2,1.25,1.05,0.92,0.86,0.85,0.9,0.98,1.02,0.86,0.82,0.88,1,1.14,1.2,1.08]; // 1898 to 1914, each at mid-year
++const cycNew=m=>{if(!newCal()||m>=WAR_FROM)return 1;const y=clamp(yearOfM(m)-0.5-1898,0,SHIP_CYC.length-1),i=Math.min(SHIP_CYC.length-2,Math.floor(y)),f=y-i;return SHIP_CYC[i]+(SHIP_CYC[i+1]-SHIP_CYC[i])*f;};
++const cycShip=m=>1+1.6*(cycNew(m)-1);
++/* a ship's normal worth, as the banks and the receivers value her: the cycle and the Depression taken out */
++const shipNorm=()=>(newCal()?1-SLUMP_SHIP*slump(S.m):1)*cycShip(S.m);
++const shipMkt=()=>(1-(S.crash&&S.crash.y1907?0.25:0.4)*crashF(S.m))*warShips(S.m)*(newCal()?1-SLUMP_SHIP*slump(S.m):1)*cycShip(S.m); // and in the Depression (0.37.2): three tenths off at the trough, as second-hand tonnage went begging // second-hand ship prices in a panic (the 1907 panic was an American one, and milder here)
+ function crashMonth(){
+   const m=S.m,c=S.crash;
+   if(S.liq&&m>=S.liq.next){const p=Math.min(S.liq.left,S.liq.per);S.cash+=p;S.liq.left-=p;S.liq.next=m+3;news(`The liquidators of ${BANK_NAME} pay the Line ${fmt(p)}${S.liq.left>1?`; ${fmt(S.liq.left)} is still to come`:', the last of it'}.`,'good');if(S.liq.left<1)S.liq=null;}
+@@ -335,7 +349,7 @@
+    share is the owner's no longer: the owner's own stake (ownerShare) is what the game's score counts from then on. */
+ const RESCUE_BY={bank:'a consortium of the City banks',treasury:'the Treasury'};
+ function rescueNeed(){return Math.max(0,-S.cash)+6*runningCost();}
+-function rescueChance(){if(S.rescue||!S.ships.length)return 0;const owe=S.debt+Math.max(0,-S.cash),cover=(fleetValue()/(newCal()?1-SLUMP_SHIP*slump(S.m):1)+shoreValue())/Math.max(1,owe); // ships at their normal worth, as the banks judge them in the Depression (0.37.2)
++function rescueChance(){if(S.rescue||!S.ships.length)return 0;const owe=S.debt+Math.max(0,-S.cash),cover=(fleetValue()/shipNorm()+shoreValue())/Math.max(1,owe); // ships at their normal worth, as the banks judge them in the Depression (0.37.2)
+   return clamp(0.72+0.005*(S.rep-40)+(cover>=1.2?0.15:cover>=0.8?0:-0.2),0.15,0.92);}
+ function rescueWho(need){
+   const tons=S.ships.reduce((a,x)=>a+x.grt,0),national=S.ships.some(x=>x.adm)||Object.keys(S.mail||{}).length>0||tons>=40000;
+diff -u a/js/rivals.js b/js/rivals.js
+--- a/js/rivals.js	2026-10-03 18:58:08.421517199 +0100
++++ b/js/rivals.js	2026-10-03 19:51:59.595493972 +0100
+@@ -225,11 +225,16 @@
+     for(const rk of routes){const st=stats[rk].owners[o],ourShare=stats[rk].ours.pax/Math.max(1,stats[rk].total);
+       const fight=ourShare>0.3&&R()<0.08*P.aggr*(coShare(o)>0.35?0.3:1); // answer an interloper with tonnage (a giant leaves it to its smaller lines)
+       const sh0=coFleet(o).reduce((a,x)=>a+x.grt,0)/Math.max(1,S.rships.reduce((a,x)=>a+x.grt,0)),big=sh0<=0.2?1:Math.max(0.05,1-(sh0-0.2)*5); // the biggest lines grow more slowly: their bankers and the conference hold them back
+-      if((S.rorders||[]).some(q=>q.o===o&&q.rk===rk)||atWar(m))continue; // one ship on order for a trade at a time; none in the war
++      // one ship on order for a trade at a time, two in a boom (0.39.2); none in the war
++      const boom=newCal()&&m<ym(1914,7)&&st.rel>BOOM_REL;
++      if((S.rorders||[]).filter(q=>q.o===o&&q.rk===rk).length>=(boom?2:1)||atWar(m))continue;
+       if(co.keepOff&&S.lines[rk])continue; // a line the Morven Line controls keeps off its trades
+-      // in the emigrant years the lines add tonnage later: they wait for the ships to run well above their usual loads
+-      const grow=newCal()&&m<ym(1914,7)?1.2:1.12;
+-      if(fight||(st.rel>grow&&coProfit(o)>0&&R()<(0.16*P.aggr+(ourShare>0.25?0.1:0))*big)){
++      // in the emigrant years the lines add tonnage later: they wait for the ships to run well above their usual loads; but
++      // once they do, they build for the boom, as the Canadian and Liverpool lines did from 1903 to 1913 (0.39.2: they had
++      // ordered as slowly as in ordinary times, the trades ran half as full again as in 1900, and a new emigrant ship on
++      // them returned 30% to 40% a year on her cost, against 12% to 18% for a good year in the sources)
++      const grow=newCal()&&m<ym(1914,7)?1.2:1.12,eager=boom?1+(st.rel-BOOM_REL)*3:1,big2=boom?Math.max(big,0.5):big;
++      if(fight||(st.rel>grow&&coProfit(o)>0&&R()<(0.16*P.aggr*eager+(ourShare>0.25?0.1:0))*big2)){
+         // a new ship takes ten months to a year and a half to build (half a year for a ship bought to fight), so a sudden boom
+         // leaves the trade short of berths for a while
+         const lead=fight?6:10+Math.floor(R()*9);
+@@ -249,7 +254,11 @@
+         else if(ships.length>1&&!atWar(m)){dropRival(x);if(coAge(x)<20){co.cash+=coShipVal(x)*0.75;rivalMove(o,rk,'sold',x.name);}else{co.cash+=coScrap(x);rivalMove(o,rk,'retire',x.name);}} // a young ship is sold abroad, an old one broken up
+         break;}}
+     // old ships go to the breakers
+-    for(const x of S.rships.filter(y=>y.owner===o&&yearOfM(m)-y.built>32)){if(R()<0.08){dropRival(x);co.cash+=coScrap(x);rivalMove(o,x.route,'retire',x.name);}}
++    // and a line replaces a ship it breaks up on a trade that still pays, when it can (0.39.2: the old ships of the 1880s went
++    // in 1911 to 1913 with nothing ordered in their place, and the Liverpool trade lost a third of its berths in the boom)
++    for(const x of S.rships.filter(y=>y.owner===o&&yearOfM(m)-y.built>32)){if(R()<0.08){const rk=x.route,st=stats[rk]&&stats[rk].owners[o];dropRival(x);co.cash+=coScrap(x);rivalMove(o,rk,'retire',x.name);
++      if(REPLACE_OLD&&st&&st.rel>=0.95&&!atWar(m)&&routeOpen(rk,m)&&!(co.keepOff&&S.lines[rk])&&!(S.rorders||[]).some(q=>q.o===o&&q.rk===rk)){const lead=12+Math.floor(R()*9),nx=makeRivalShip(o,rk,Math.floor(yearOfM(m+lead)));
++        nx.knots=+(P.knots[1]-Math.random()+shipEraKnots(nx.built)).toFixed(1);const price=coNewPrice(nx);if(coCanPay(o,price,false)){coPay(o,price);(S.rorders=S.rorders||[]).push({o,rk,at:m+lead,sh:nx});}}}}
+     // after the armistice the lines break up the worn-out tonnage the war kept at sea (0.34)
+     if(newCal()&&m>ARMISTICE&&m<M21&&!/German/.test((RIVALS[o]||{}).flag||''))for(const x of S.rships.filter(y=>y.owner===o&&yearOfM(m)-y.built>25)){if(R()<0.05){dropRival(x);co.cash+=coScrap(x);rivalMove(o,x.route,'retire',x.name);}}
+     if(m%12===0&&coAlive(o))coYearEnd(o);
+@@ -257,6 +266,7 @@
+   }
+   coEntrants(stats);RW_CACHE.k=null; // ships moved, sold, built or scrapped: weigh them afresh
+ }
++const BOOM_REL=1.35,REPLACE_OLD=true; // loads this far above 1900's make an emigrant trade a boom
+ /* seasonal demand now, relative to the reference month used for load0 (July 1921) */
+ function seasonNorm(rk,m){const r=ROUTES[rk];let a=0,b=0;for(const c of ['f','s','t','tt']){if(c==='tt'&&!r.cruise)continue;a+=r.base[c]*seasonOf(rk,c,m);b+=r.base[c]*seasonOf(rk,c,6);}return a/b;} // season only: quotas and booms register as real change
+ /* ---------- where each rival ship physically is (visual only: the market uses sailings, not positions) ---------- */
+diff -u a/js/sim.js b/js/sim.js
+--- a/js/sim.js	2026-10-03 18:58:07.104356476 +0100
++++ b/js/sim.js	2026-10-03 21:26:44.851387068 +0100
+@@ -428,7 +428,7 @@
+ // half) no more than twice the Line's own worth, since no bank lends a shipping line ten times its capital on stock (0.37.2).
+ // In the 1919 and 1920 boom the bank lends on ships at no more than their worth at the armistice, and in the Depression on
+ // their normal worth (0.37.2). What a failed bank's liquidators still owe counts at three quarters (0.38.0)
+-const headroom=()=>Math.max(0,0.7*(fleetValue()/(newCal()&&S.m>ARMISTICE&&S.m<M21?Math.max(1,warShips(S.m)/warShips(ARMISTICE)):1)/(newCal()?1-SLUMP_SHIP*slump(S.m):1)+shoreValue())+Math.min(0.9*(S.gilts||0)+0.5*Math.max(0,mkWorth()),2*Math.max(0,netWorth()))+0.75*((S.liq&&S.liq.left)||0)-S.debt-admDebt());
++const headroom=()=>Math.max(0,0.7*(fleetValue()/(newCal()&&S.m>ARMISTICE&&S.m<M21?Math.max(1,warShips(S.m)/warShips(ARMISTICE)):1)/shipNorm()+shoreValue())+Math.min(0.9*(S.gilts||0)+0.5*Math.max(0,mkWorth()),2*Math.max(0,netWorth()))+0.75*((S.liq&&S.liq.left)||0)-S.debt-admDebt());
+ const odLimit=()=>8000+0.5*headroom(); // the bank forecloses when cash falls below minus this
+ function news(t,k,pauseIt){
+   S.news.unshift({d:Math.floor(S.t),t,k:k||''});if(S.news.length>150)S.news.length=150;
+diff -u a/js/yard.js b/js/yard.js
+--- a/js/yard.js	2026-10-03 18:58:07.104068395 +0100
++++ b/js/yard.js	2026-10-03 21:26:44.852136501 +0100
+@@ -170,7 +170,7 @@
+   let extras=fc.cost/PX();for(const k in d.extras)if(d.extras[k]&&EXTRAS[k])extras+=EXTRAS[k].cost(g);
+   // the biggest ships cost far more than their tonnage: longer slips, heavier plate, more of everything done once only
+   const sizeK=1+0.6*Math.pow(Math.max(0,(g-20000)/40000),1.3);
+-  const base=(hull*sizeK*(LY.cost||1)+power+interiors+extras)*B.price*(d.contract==='fixed'?1.08:1)*(d.adm&&admEligible(d)?1.05:1)*PX()*warBuild(S.m); // naval standards cost a twentieth more; 1919 and 1920 prices are inflated
++  const base=(hull*sizeK*(LY.cost||1)+power+interiors+extras)*B.price*(d.contract==='fixed'?1.08:1)*(d.adm&&admEligible(d)?1.05:1)*PX()*warBuild(S.m)*cycNew(S.m); // the yards quote more in a boom (0.39.2); naval standards cost a twentieth more; 1919 and 1920 prices are inflated
+   const price=Math.round(base/1000)*1000;
+   const months=Math.round((6+g/1600)*Math.pow(Math.max(1,e.shp/15000),0.12)*[0.95,1,1.08,1.15][d.quality]*B.speed*Math.sqrt(P.cx));
+   // running character: coal or oil a day at service speed, set by her engines and her lines

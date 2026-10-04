@@ -59,3 +59,5 @@ Before the war the game was near the sources. After it, three things were wrong,
 And new passenger and cargo ships cost more to build (about £38 to £53 a ton for emigrant and tourist ships in 1928, nearer the £51 to £61 of the sources).
 
 Left as it was: **old ships bought second-hand before the war** still return about 18% to 31% a year on their asking price (the best of a quarter's list up to 50% or 60%), so an owner who buys whatever head office advises still grows very fast to 1914 (KI-065). Their prices are already at or above the period's (£5 to £8 a ton for an old steamer); the gap is in what an old ship earns against a new one, and the start of the game is balanced around the Morven, built in 1881.
+
+**Correction (0.39.2):** the advisor's growth to 1914 does not come from old ships as such but from the boom-year steerage trade, new ships and old; see `advisor-growth.md`.

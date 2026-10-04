@@ -249,7 +249,11 @@ function rivalsMonth(){
         else if(ships.length>1&&!atWar(m)){dropRival(x);if(coAge(x)<20){co.cash+=coShipVal(x)*0.75;rivalMove(o,rk,'sold',x.name);}else{co.cash+=coScrap(x);rivalMove(o,rk,'retire',x.name);}} // a young ship is sold abroad, an old one broken up
         break;}}
     // old ships go to the breakers
-    for(const x of S.rships.filter(y=>y.owner===o&&yearOfM(m)-y.built>32)){if(R()<0.08){dropRival(x);co.cash+=coScrap(x);rivalMove(o,x.route,'retire',x.name);}}
+    // and a line replaces a ship it breaks up on a trade that still pays, when it can (0.39.2: before, the ships of the 1880s
+    // went to the breakers in 1911 to 1913 with nothing ordered in their place, in the busiest years the trades had seen)
+    for(const x of S.rships.filter(y=>y.owner===o&&yearOfM(m)-y.built>32)){if(R()<0.08){const rk=x.route,st=stats[rk]&&stats[rk].owners[o];dropRival(x);co.cash+=coScrap(x);rivalMove(o,rk,'retire',x.name);
+      if(st&&st.rel>=0.95&&!atWar(m)&&routeOpen(rk,m)&&!(co.keepOff&&S.lines[rk])&&!(S.rorders||[]).some(q=>q.o===o&&q.rk===rk)){const lead=12+Math.floor(R()*9),nx=makeRivalShip(o,rk,Math.floor(yearOfM(m+lead)));
+        nx.knots=+(P.knots[1]-Math.random()+shipEraKnots(nx.built)).toFixed(1);const price=coNewPrice(nx);if(coCanPay(o,price,false)){coPay(o,price);(S.rorders=S.rorders||[]).push({o,rk,at:m+lead,sh:nx});}}}}
     // after the armistice the lines break up the worn-out tonnage the war kept at sea (0.34)
     if(newCal()&&m>ARMISTICE&&m<M21&&!/German/.test((RIVALS[o]||{}).flag||''))for(const x of S.rships.filter(y=>y.owner===o&&yearOfM(m)-y.built>25)){if(R()<0.05){dropRival(x);co.cash+=coScrap(x);rivalMove(o,x.route,'retire',x.name);}}
     if(m%12===0&&coAlive(o))coYearEnd(o);
