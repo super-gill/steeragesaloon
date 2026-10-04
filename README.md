@@ -299,6 +299,20 @@ Each month the Shore tab also shows what each pier, hostel and booking agency is
 
 Money is in 1921 pounds, scaled by the price index. Head office suggests selling spare berths at piers and yards (which cost the fleet nothing) once they would earn £400 a month; hostels and agents are left to the player, since they help rivals on the Line's own routes.
 
+## Balancing 1900 to 1939 (0.39.4)
+
+Set against `docs/overhaul/research/growth.md`.
+
+- **Conference fares** (`confCeil`, `CONF_CEIL` in `js/helpers.js`): a member's fares are held between 95% (`confFloor`) and 115% of the line rate, rounded, in `effFare`; head office's fare advice and the Fares Office keep within the same band (`floorFare`).
+- **Steerage after the war** (`warPax` in `js/war.js`): from the armistice, steerage on the North Atlantic and Canadian routes follows set points to January 1921 (North Atlantic 0.2, 0.35, 0.55 and 0.67 of 1913 at July 1919, January and July 1920 and January 1921; Canada 0.2, 0.28, 0.33 and 0.37). Cabin classes still return over the year.
+- **The 1920s** (`canadaPost`, `CA_POST`, `US_POST` in `js/helpers.js`): steerage and Tourist Third demand from 1921 is multiplied, by months since January 1921, on the Canadian routes by 0.45, 0.3 (12), 0.25 (24) and 0.5 (from 36), and on the North Atlantic by 0.7, 0.6 (12), 0.75 (30) and 1 (from 42).
+- **The Depression** (`depression`): North Atlantic and Canadian steerage falls to 0.3 of its trend at the trough (was 0.5).
+- **Ship prices after the boom** (`WAR_SHIPS` in `js/war.js`; `postWarShip`, `shipNorm` in `js/economy.js`): the boom tops out at 2.05 times prices in April 1920. Second-hand prices (`shipMkt`) are times 0.5 in 1921 and 1922, rising to 1 by January 1925. The bank (`headroom`, `rescueChance`, `coBankValue`) values ships at their normal worth, taking out both the glut and the Depression.
+- **A failed line's ships** (`coShipDesign`, `coToMarket` in `js/companies.js`): priced from a design of the same size, speed and kind (express at 20 knots or more; cargo under one passenger berth in 100 tons; emigrant when three quarters of berths are steerage; otherwise intermediate): `base` is 0.8 of its price at today's prices, and she takes its coal and crew factors. The receivers ask 0.7 of her worth.
+- **Income tax** (`taxMonth`, `INCOME_TAX`): on the 1900 calendar charged every January from 1901 on the last year's profit, less the Excess Profits Duty paid on it and earlier losses carried forward; the rates of each year from 1900, with 5% added in 1920-23 for the Corporation Profits Tax.
+- **The conference advice** has a Join button (`confjoin`, `confCanJoin` in `js/trust.js`) and shows only when the conference would take the Line.
+- **Harness**: `keen` is head office's advice plus joining the conference whenever possible, the stand-in for a bold human.
+
 ## Fixes from test round 5 (0.39.3)
 
 - **Bank lending** (`bankFleetValue`, `headroom` in `js/sim.js`): the bank lends 0.7 of each ship's worth, but for a ship held under twelve months, merged ships included, at most what was paid for her moved with the market (`saleCap`). Net worth (`fleetValue`) still counts a merged fleet at its worth.

@@ -37,7 +37,7 @@ const coProfit=o=>{const h=S.rivals[o].h||[];return h.length?coYear(o,'net')*12/
 /* keep about three months' costs in the bank; borrow up to the character's share of the fleet's value */
 const coReserve=o=>3*Math.max(20000*PX(),(S.rivals[o].h||[]).slice(-3).reduce((a,q)=>a+q.cost,0)/Math.max(1,Math.min(3,(S.rivals[o].h||[]).length)));
 // the banks lend on a line's ships at their normal worth through a slump, as they do the Morven Line's (0.39.0; KI-062)
-const coBankValue=o=>coValue(o)/(newCal()?1-SLUMP_SHIP*slump(S.m):1);
+const coBankValue=o=>coValue(o)/shipNorm();
 const coMaxDebt=o=>RIVAL_P[o].lev*coBankValue(o);
 const coShort=o=>S.rivals[o].cash<0||S.rivals[o].debt>coMaxDebt(o)*0.95;
 function coCanPay(o,price,fight){const co=S.rivals[o],room=Math.max(0,coMaxDebt(o)+price*RIVAL_P[o].lev-co.debt);
@@ -146,9 +146,17 @@ function coFail(o){
     if(main)S.coQueue.push({at:m+3+Math.floor(R()*6),kind:RIVAL_P[o].kind||'liner',routes:[main],fill:main,flag:RIVALS[o].flag});}
 }
 /* a failed line's ship, offered cheaply to the Morven Line by the receivers */
+/* her worth is what the drawing office would charge for a ship of her size, speed and kind today, as for the brokers' own
+   ships (genMarketShip), and she runs on that design's coal and crew (0.39.4; KI-075: she was worth £26 a ton at 1921 prices
+   whatever she was, so a three-year-old 24,500-ton express liner sold for a fifth of what she cost to build, and earned more
+   than her price in a year) */
+function coShipDesign(x){const pax=(x.berths.f||0)+(x.berths.s||0)+(x.berths.t||0),pk=x.knots>=20&&techOn(PURPOSES.express.from,yNow())?'express':pax<x.grt/100?'cargo':(x.berths.t||0)>pax*0.7?'emig':'inter';
+  const P=PURPOSES[pk];if(!P||!techOn(P.from,yNow()))return null;const d=defaultDesign(pk);d.auto={mach:false,form:false};d.grt=x.grt;d.knots=x.knots;d.mach=x.knots>18&&yNow()>=1905?(yNow()>=1911?'geared':'turb'):'quad';d.fuel='coal';
+  try{return designStats(d);}catch(e){return null;}}
 function coToMarket(x,o){
-  const t={name:x.name,built:x.built,grt:x.grt,knots:x.knots,berths:{f:x.berths.f,s:x.berths.s,t:x.berths.t,tt:0},cargo:x.cargo,fuel:yearOfM(S.m)>=1925&&x.built>=1920?'oil':'coal',base:x.grt*26,note:`Ex-${RIVALS[o].name}, sold cheaply by the receivers.`};
-  t.reefer=x.reefer;const sh=makeShip(t,55+Math.random()*20,['GLA','LIV','NAP'][Math.floor(Math.random()*3)]);sh.price=Math.round(shipValue(sh)*0.7/100)*100;sh.bargain=true;sh.listed=S.m;S.market.push(sh);
+  const st=coShipDesign(x);
+  const t={name:x.name,built:x.built,grt:x.grt,knots:x.knots,berths:{f:x.berths.f,s:x.berths.s,t:x.berths.t,tt:0},cargo:x.cargo,fuel:yearOfM(S.m)>=1925&&x.built>=1920?'oil':'coal',base:st?Math.round(st.price*0.8/warBuild(S.m)):x.grt*26,pi0:st?PX():1,note:`Ex-${RIVALS[o].name}, sold cheaply by the receivers.`};
+  t.reefer=x.reefer;const sh=makeShip(t,55+Math.random()*20,['GLA','LIV','NAP'][Math.floor(Math.random()*3)]);if(st){sh.fuelK=st.fuelK;sh.crewK=st.crewK;}sh.price=Math.round(shipValue(sh)*0.7/100)*100;sh.bargain=true;sh.listed=S.m;S.market.push(sh);
 }
 
 /* ---------- new lines ---------- */

@@ -2,6 +2,20 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.39.4 (4 October 2026)
+Balancing 1900 to 1939 against how real lines grew (`docs/overhaul/research/growth.md`). Round 5's humans turned the starting Line into £1.4m (careful) to £3.5m (bold) by 1914; no real British owner grew like that from running ships. New targets: careful about £100,000 to £250,000 by 1914, bold £0.5m to £1m, £0.5m to £3m by 1939.
+- **Conference fares (KI-071, KI-072):** members' fares are held between 95% and 115% of the rate, as agents sold every member's berths at the agreed rate for the class of ship. In round 5 a member charged first class 50% over the rate on a trade it dominated and still filled most berths. At the ceiling a new emigrant ship now earns less than at the rate; she returns 15% to 31% a year in 1903 to 1913.
+- **Emigration after the war (KI-073):** steerage follows the arrivals: in the year to July 1919 about a fifth of 1913's, two thirds by January 1921 to New York and a third to Canada (it was back to 1913's level within the year, and a third over it in 1920). New York is eased through the first quota years, and Canada held to 22% to 50% of 1913 through the 1920s (it stayed near 1913's level).
+- **The Depression (KI-076):** North Atlantic and Canadian steerage at the trough is now about a tenth of 1929's, as it was (a quarter before).
+- **The 1919-20 boom (KI-074):** it tops out near five times 1913's money (six and a half before), and second-hand ships then fetch about half their normal price in 1921 and 1922, recovering by 1925. The banks lend on normal worth through the glut, as through the Depression.
+- **A failed line's ships (KI-075)** are priced from what a matching design costs today, so a three-year-old express liner fetches about £360,000 against £754,000 new (£148,000 before), and she runs on that design's coal and crew.
+- **Income tax (KI-078)** is charged from 1900 on the 1900 calendar, at the standard rate of each year (a shilling in the pound in 1900, 6s in 1918-21), after the Excess Profits Duty in the war, with the 5% Corporation Profits Tax in 1920-23. Before, none was paid until 1925.
+- **The conference advice (KI-102, part of KI-053)** has a Join button, and shows only when the conference would take the Line. The scripted advisor could never join.
+- **Harness:** a new script, `keen` (head office's advice and the conference), stands in for a bold human.
+- Results (scripted owners): `keen` £637k (12 games) and £819k (8) by 1914, inside the bold band; careful £70k by 1914, 5 of 40 bankrupt by 1922, 23 of 40 by 1939 (the script fails in the Depression; a human survived it in round 4).
+- **Left open (KI-077):** the war. `keen` goes from £0.82m in 1914 to £3.07m in 1919 and £5.25m at the 1920 peak, about 1.7 times in real terms, and ends 1939 at a median £5.96m, twice the top of the band. Round 6 decides whether the war's returns come down.
+- Tests: the whole suite passes on 0.39.4 (40 seeds, the share-dealing suites 12).
+
 ## 0.39.3 (4 October 2026)
 Fixes from test round 5 (`docs/overhaul/test-rounds/round5.md`), which held back 0.40.0: three new games from 1900 to 1940 found the game far too easy, one S1 exploit and four S2 ones. This release fixes the exploits and bugs; the balance is 0.39.4.
 - Exploits:

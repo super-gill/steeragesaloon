@@ -23,7 +23,7 @@ function curveAt(P,m){if(m<=P[0][0])return P[0][1];for(let i=1;i<P.length;i++)if
 const WAR_FREIGHT=[[ym(1914,6),1],[ym(1914,7),1.25],[ym(1915,0),1.4],[ym(1916,0),1.4],[ym(1916,11),1.4],[ym(1917,1),0.8],[ym(1918,10),0.8],[ym(1919,2),1.9],[ym(1919,8),2.3],[ym(1920,3),2.5],[ym(1920,7),1.7],[ym(1920,10),1.15],[ym(1920,11),1]];
 const WAR_COAL=[[ym(1914,6),1],[ym(1914,7),1.2],[ym(1916,0),1.55],[ym(1918,0),1.8],[ym(1919,0),1.6],[ym(1920,11),1.1]];
 const WAR_WAGE=[[ym(1914,6),1],[ym(1914,9),1.1],[ym(1916,0),1.25],[ym(1918,0),1.4],[ym(1919,6),1.3],[ym(1920,11),1.1]];
-const WAR_SHIPS=[[ym(1914,6),1],[ym(1914,7),1.05],[ym(1915,0),1.2],[ym(1916,0),1.4],[ym(1917,0),1.6],[ym(1919,0),1.8],[ym(1919,9),2.3],[ym(1920,3),2.6],[ym(1920,8),2.3],[ym(1920,10),1.8],[ym(1920,11),1.3]]; // over and above prices, which themselves more than double; the bubble tops out in the spring of 1920 and the crash comes that winter
+const WAR_SHIPS=[[ym(1914,6),1],[ym(1914,7),1.05],[ym(1915,0),1.2],[ym(1916,0),1.4],[ym(1917,0),1.6],[ym(1919,0),1.7],[ym(1919,9),1.9],[ym(1920,3),2.05],[ym(1920,8),1.85],[ym(1920,10),1.5],[ym(1920,11),1.1]]; // 0.39.4: with prices this tops out near five times 1913's money, as a new 7,500-ton steamer went from about £48,000 to £258,000 (2.6 at the top made it six and a half) // over and above prices, which themselves more than double; the bubble tops out in the spring of 1920 and the crash comes that winter
 /* the state's war-risk insurance: a monthly premium on the value of every ship still trading, dearest when the submarines are
    at their worst in 1917. It pays four fifths of a ship lost to the enemy (the losses themselves come in 0.27) */
 const WAR_INS=[[ym(1914,7),0.012],[ym(1915,0),0.008],[ym(1916,0),0.012],[ym(1917,1),0.02],[ym(1918,0),0.015],[ym(1918,10),0.008]];
@@ -47,8 +47,14 @@ function warPax(c,rk,m){
   w=Math.min(1,w);
   if(c!=='t'&&c!=='tt'&&m>=LUSITANIA&&m<LUSITANIA+6&&(r.group==='North Atlantic'||r.group==='Canada'))w*=0.8; // after the liner is sunk off Ireland
   if(m<=ARMISTICE){const k=m-WAR_FROM;return k===0?1-(1-w)*0.5:k===1?1-(1-w)*0.8:w;}
-  const back=w+(1-w)*Math.min(1,(m-ARMISTICE)/12); // back to the pre-war trade over the year after the armistice
-  return back*((c==='t'||c==='tt')&&m>=ym(1920,0)&&(r.group==='North Atlantic'||rk==='nap')?1.3:1); // 1920: the rush to cross before the American quotas
+  // cabin travel comes back over the year after the armistice; emigration far more slowly (0.39.4; KI-073). Arrivals in the
+  // United States were 12% of 1913's in the year to June 1919, 36% to June 1920 and 67% to June 1921; in Canada 14%, 29% and
+  // 37% in the years to March (US Immigration; Canada Year Book). Before, steerage was back to 1913's level within the year
+  // and a third over it in 1920
+  if(c==='t'||c==='tt'){const ca=r.group==='Canada',na=r.group==='North Atlantic'||rk==='nap';
+    if(ca||na){const P=ca?[[ARMISTICE,w],[ym(1919,6),0.2],[ym(1920,0),0.28],[ym(1920,6),0.33],[M21,0.37]]:[[ARMISTICE,w],[ym(1919,6),0.2],[ym(1920,0),0.35],[ym(1920,6),0.55],[M21,0.67]];
+      let i=0;while(i<P.length-2&&m>P[i+1][0])i++;const f=clamp((m-P[i][0])/(P[i+1][0]-P[i][0]),0,1);return P[i][1]+(P[i+1][1]-P[i][1])*f;}}
+  return w+(1-w)*Math.min(1,(m-ARMISTICE)/12); // back to the pre-war trade over the year after the armistice
 }
 /* going home at the outbreak: reservists and families crowd the eastbound steerage in August and September 1914 */
 const warReturn=m=>newCal()&&(m===WAR_FROM||m===WAR_FROM+1)?2.2:1;
@@ -166,6 +172,7 @@ function epdJanuary(profit){
   let earned=profit;if(y===1914){earned=profit-((S.war&&S.war.julyNet)||0);std*=5/12;} // the duty runs from August 1914
   const gain=Math.round(((S.war&&S.war.gain)||{})[y]||0);earned+=gain; // gains on ships sold count as profit (0.37.1)
   const tax=Math.round(Math.max(0,earned-std)*rate/100)*100;
+  S.epdLast=tax; // income tax is charged on what is left (taxMonth; 0.39.4)
   if(tax>0){book('tax',-tax);news(`Excess Profits Duty on ${y}: the Line earned ${fmt(Math.round(earned))}${gain>0?`, ${fmt(gain)} of it on ships sold,`:''} against a standard of ${fmt(Math.round(std))}. The Treasury takes ${Math.round(rate*100)}% of the excess, ${fmt(tax)}.`,'bad',true);}
   else news(`Excess Profits Duty on ${y}: the Line earned no more than its standard of ${fmt(Math.round(std))}. Nothing to pay.`);
 }

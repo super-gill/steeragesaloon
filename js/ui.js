@@ -436,7 +436,7 @@ function renderLineDetail(rk){
     const lr=Math.round(r.ref[c]*(war?war.mult:1));
     const ld=(i)=>{const x=L.last[i];return x&&x.pax[c]?`${int(x.pax[c].n)}/${x.pax[c].cap}`:'–';};
     return `<tr><td>${CL_NAME[c]}</td><td><input type="number" id="fare-${rk}-${c}" data-fare="${c}" min="1" max="500" value="${L.fares[c]}" aria-label="${CL_NAME[c]} fare in pounds"></td>
-      <td class="r num">£${lr}${S.conf?`<div class="meta">floor £${confFloor(rk,c)}</div>`:''}</td><td class="r num">${ld(0)}</td><td class="r num">${ld(1)}</td></tr>`;}).join('');
+      <td class="r num">£${lr}${S.conf&&!ROUTES[rk].cruise?`<div class="meta">£${confFloor(rk,c)} to £${confCeil(rk,c)}</div>`:''}</td><td class="r num">${ld(0)}</td><td class="r num">${ld(1)}</td></tr>`;}).join('');
   const ec=econ(rep,rk),rt=ec.rt,perMonth=ec.pm;
   const fp=l=>CL.filter(c=>l.pax[c]).map(c=>`${CL_NAME[c]} ${int(l.pax[c].n)}`).join(', ');
   const nAct=ships.filter(x=>ACTIVE.includes(x.state)).length;
@@ -514,7 +514,7 @@ function marketHTML(rk,estPax,n){
     tens=`<div class="ctl"><div class="row"><span class="lbl">${confOpen()?'Conference tension':'Tension with the other lines'}</span><span class="tier ${t>=65?'neg':t>=40?'':'pos'}" style="${t>=40&&t<65?'color:var(--warn)':''}">${tensionWord(t)} · ${Math.round(t)}</span></div>
       <div class="gauge" role="img" aria-label="Tension ${Math.round(t)} of 100"><b style="left:${t}%"></b><b class="proj" style="left:${clamp(next,0,100)}%"></b></div>
       <p class="note">At these fares, about <strong>${Math.round(next)}</strong> next month (dashed). Rate wars start above 40 and grow likely above 65; ${RIVALS[topRival(rk)].name} would lead one here. Tension rises with fares below the line rate, a large market share and extra ships. Rivals here are ${routeAggr(rk)>=1?'aggressive':routeAggr(rk)>=0.8?'watchful':'fairly relaxed'}.</p></div>`;
-  } else if(L&&S.conf&&!r.cruise)tens=`<div class="ctl"><span class="lbl">Conference</span><p class="note" style="margin:0">Member: no rate wars while you keep to the fare floor (95% of the line rate) and the steerage quota.</p>${confBtn()}</div>`;
+  } else if(L&&S.conf&&!r.cruise)tens=`<div class="ctl"><span class="lbl">Conference</span><p class="note" style="margin:0">Member: no rate wars. Fares are held between 95% and 115% of the line rate, and steerage to the quota.</p>${confBtn()}</div>`;
   if(r.cruise)tens=`<p class="note">No conference on cruises: no rate wars and no fare floor, but a small market shared with the cruising companies.</p>`;
   else if(L&&!S.conf)tens=tens.replace(/<\/div>$/,`${confBtn()}</div>`);
   const mv=S.rmoves.filter(q=>q.rk===rk||q.to===rk).slice(0,4);
@@ -713,11 +713,11 @@ function renderCompany(){
         ${o.auto&&DEPT_ORDERS[k]?`<div class="orders"><span class="lbl">Standing orders: it may on its own</span>${DEPT_ORDERS[k].map(([g,l])=>`<label class="check"><input type="checkbox" data-dorder="${k}:${g}" ${o.orders&&o.orders[g]===false?'':'checked'}> ${l}</label>`).join('')}<span class="meta">What it may not do comes to you as advice. With ${S.ships.length} ships it can see to ${Math.max(1,Math.ceil(S.ships.length/12))*(1+Math.floor((o.head?o.head.comp:50)/100*1.5))} items a week.</span></div>`:''}`:buy('dept',k,'Open')}</div>`;}).join('');
 
   const conf=S.conf?`<p style="margin:0"><strong>Member of the North Atlantic conference.</strong></p>
-      <ul class="note" style="padding-left:18px;margin:0"><li>Fares may not go below 95% of the line rate.</li><li>Third class limited to 80% of berths.</li><li>Pooled agents add 4% to third class demand.</li><li>No rate wars. Dues ${fmt(350*PX())} a month.</li></ul>
+      <ul class="note" style="padding-left:18px;margin:0"><li>Fares are held between 95% and 115% of the line rate.</li><li>Third class limited to 80% of berths.</li><li>Pooled agents add 4% to third class demand.</li><li>No rate wars. Dues ${fmt(350*PX())} a month.</li></ul>
       ${UI.confirm==='leave'?`<div class="btns"><button class="btn danger" data-act="leave">Confirm: leave</button><button class="btn" data-act="cancel">Stay</button></div>`:`<button class="btn" data-act="leave" style="width:fit-content">Leave the conference</button>`}`
     :!confOpen()?`<p style="margin:0">There is <strong>no conference</strong> on the North Atlantic yet. Every line prices as it likes; the lines fight rate wars over the trades, patch up pools and fall out again. Undercutting the others still invites a war on you.</p>`
     :`<p style="margin:0">You sail as an <strong>independent</strong>. Price as you like, but undercutting the line rate raises conference tension and invites rate wars.</p>
-      <p class="note">Joining costs ${fmt(3000*PX())} plus ${fmt(350*PX())} a month. Members accept a fare floor and a steerage quota in exchange for peace.${S.m<confRejoin()?` Having left, the Line cannot rejoin until ${monthName(confRejoin())}.`:''}</p>
+      <p class="note">Joining costs ${fmt(3000*PX())} plus ${fmt(350*PX())} a month. Members accept the conference's rates, within 95% and 115% of them, and a steerage quota in exchange for peace.${S.m<confRejoin()?` Having left, the Line cannot rejoin until ${monthName(confRejoin())}.`:''}</p>
       <button class="btn" data-act="join" ${S.cash<3000*PX()||S.m<confRejoin()||S.over?'disabled':''} style="width:fit-content">Join for ${fmt(3000*PX())}</button>`;
   const sp=S.safety===undefined?1:S.safety;
   const safety=`<section class="sec"><h2>Safety and training</h2><p class="note">One policy for the whole fleet. It decides how well crews fight a fire or a flood, how many people live when a ship is lost, and what a court of inquiry makes of it.</p>

@@ -53,7 +53,14 @@ function crashF(m){ // how hard the panic is biting, 0 to 1
   const k=m-c.panicAt;return k<6?1:Math.max(0,1-(k-6)/Math.max(1,c.rec-6));
 }
 function crashMod(c,m){const f=crashF(m);return f?1-f*S.crash.depth*{f:1.2,s:1,t:0.8,tt:1}[c]:1;}
-const shipMkt=()=>(1-(S.crash&&S.crash.y1907?0.25:0.4)*crashF(S.m))*warShips(S.m)*(newCal()?1-SLUMP_SHIP*slump(S.m):1); // and in the Depression (0.37.2): three tenths off at the trough, as second-hand tonnage went begging // second-hand ship prices in a panic (the 1907 panic was an American one, and milder here)
+/* after the boom, the glut (0.39.4; KI-074): the world had far more ships than cargoes from 1921 (9 million tons idle in 1923),
+   and second-hand tonnage went for a fraction of its 1919 price: Runciman sold thirteen ships at about £138,000 each in 1919 and
+   bought eight back at about £22,000 in 1922. Second-hand ships stand at about half their normal worth (after prices) in 1921
+   and 1922, recovering by 1925. Before, prices went straight back to normal in January 1921 */
+const postWarShip=m=>{if(!newCal()||m<M21)return 1;const k=m-M21;return k<24?0.5:k<48?0.5+0.5*(k-24)/24:1;};
+/* a ship's normal worth, as the banks value her: the Depression and the post-war glut taken out */
+const shipNorm=()=>newCal()?(1-SLUMP_SHIP*slump(S.m))*postWarShip(S.m):1;
+const shipMkt=()=>(1-(S.crash&&S.crash.y1907?0.25:0.4)*crashF(S.m))*warShips(S.m)*(newCal()?1-SLUMP_SHIP*slump(S.m):1)*postWarShip(S.m); // and in the Depression (0.37.2): three tenths off at the trough, as second-hand tonnage went begging // second-hand ship prices in a panic (the 1907 panic was an American one, and milder here)
 function crashMonth(){
   const m=S.m,c=S.crash;
   if(S.liq&&m>=S.liq.next){const p=Math.min(S.liq.left,S.liq.per);S.cash+=p;S.liq.left-=p;S.liq.next=m+3;news(`The liquidators of ${BANK_NAME} pay the Line ${fmt(p)}${S.liq.left>1?`; ${fmt(S.liq.left)} is still to come`:', the last of it'}.`,'good');if(S.liq.left<1)S.liq=null;}
@@ -154,19 +161,27 @@ function gilts(buy,amt){
 /* ---------- the tax man: from 1925, tax on profits over an allowance, each January (wartime excess profits duty is epdJanuary) ---------- */
 function taxMonth(net){
   S.yearNet=(S.yearNet||0)+net;
-  if(S.m%12!==0)return;const profit=S.yearNet;S.yearNet=0;epdJanuary(profit);if(typeof floatJanuary==='function')floatJanuary(profit);
+  if(S.m%12!==0)return;let profit=S.yearNet;S.yearNet=0;S.epdLast=0;epdJanuary(profit);if(typeof floatJanuary==='function')floatJanuary(profit);
+  profit-=S.epdLast||0; // the duty is allowed against income tax
+  // on the 1900 calendar income tax is charged from the first year (0.39.4; KI-078: before 1925 the Line paid none, though
+  // British income tax was charged on company profits throughout, a shilling in the pound in 1900); a game begun in 1921 from 1925
+  const taxFrom=newCal()?ym(1901,0):ym(1925,0);
   // a year's loss is carried forward against later profits, as the Income Tax Acts allowed (0.37.2)
-  if(S.m>=ym(1925,0)&&profit<0){S.taxLoss=(S.taxLoss||0)-profit;return;}
+  if(S.m>=taxFrom&&profit<0){S.taxLoss=(S.taxLoss||0)-profit;return;}
   const relief=Math.min(S.taxLoss||0,Math.max(0,profit)),taxable=profit-relief;
   // the standard rate on all the year's profit, as companies paid it (0.38.0): before, three tenths of what was over an
   // allowance of £150,000 at 1921 prices, so a small line paid nothing. In this world there is no war after 1939
-  if(S.m<ym(1925,0)||taxable<=0){if(S.m>=ym(1925,0))S.taxLoss=(S.taxLoss||0)-relief;return;}
+  if(S.m<taxFrom||taxable<=0){if(S.m>=taxFrom)S.taxLoss=(S.taxLoss||0)-relief;return;}
   S.taxLoss=(S.taxLoss||0)-relief;const y=Math.floor(yearOfM(S.m))-1,rate=incomeTaxRate(y);
   const tax=Math.round(taxable*rate/100)*100;if(tax<=0)return;book('tax',-tax);
-  news(`Income tax at ${taxRateText(rate)} in the pound: on ${fmt(profit)} earned last year${relief>0?`, less ${fmt(relief)} of earlier losses,`:''} the Inland Revenue takes ${fmt(tax)}.`,'bad'); // not the wartime duty (0.35.7)
+  news(`${y>=1920&&y<=1923&&newCal()?"Income tax and the Corporation Profits Tax":"Income tax"} at ${taxRateText(rate)} in the pound: on ${fmt(profit)} earned last year${relief>0?`, less ${fmt(relief)} of earlier losses,`:''} the Inland Revenue takes ${fmt(tax)}.`,'bad'); // not the wartime duty (0.35.7)
 }
 /* the standard rate of income tax, year by year, as a share of the pound */
-const INCOME_TAX={1924:0.225,1925:0.2,1926:0.2,1927:0.2,1928:0.2,1929:0.2,1930:0.225,1931:0.25,1932:0.25,1933:0.25,1934:0.225,1935:0.225,1936:0.2375,1937:0.25,1938:0.275};
+/* 1900 to 1923 (0.39.4): the standard rate in the pound (1s 1900; 1s 2d 1901; 1s 3d 1902; 11d 1903; 1s 1904-08; 1s 2d
+   1909-14; 3s 6d 1915; 5s 1916-17; 6s 1918-21; 5s 1922; 4s 6d 1923), and from 1920 to 1923 the Corporation Profits Tax of 5%
+   on company profits besides */
+const INCOME_TAX={1900:0.05,1901:0.0583,1902:0.0625,1903:0.0458,1904:0.05,1905:0.05,1906:0.05,1907:0.05,1908:0.05,1909:0.0583,1910:0.0583,1911:0.0583,1912:0.0583,1913:0.0583,1914:0.0583,
+  1915:0.175,1916:0.25,1917:0.25,1918:0.3,1919:0.3,1920:0.35,1921:0.35,1922:0.3,1923:0.275,1924:0.225,1925:0.2,1926:0.2,1927:0.2,1928:0.2,1929:0.2,1930:0.225,1931:0.25,1932:0.25,1933:0.25,1934:0.225,1935:0.225,1936:0.2375,1937:0.25,1938:0.275};
 const incomeTaxRate=y=>INCOME_TAX[y]!==undefined?INCOME_TAX[y]:y<1924?0.225:0.275;
 const taxRateText=r=>{const s=Math.round(r*20*12),sh=Math.floor(s/12),d=s%12;return `${sh}s${d?' '+d+'d':''}`;};
 /* ---------- the unions: a big, rich line gets asked for more ---------- */
@@ -344,7 +359,7 @@ function inquiry(q){
    share is the owner's no longer: the owner's own stake (ownerShare) is what the game's score counts from then on. */
 const RESCUE_BY={bank:'a consortium of the City banks',treasury:'the Treasury'};
 function rescueNeed(){return Math.max(0,-S.cash)+6*runningCost();}
-function rescueChance(){if(S.rescue||!S.ships.length)return 0;const owe=S.debt+Math.max(0,-S.cash),cover=(fleetValue()/(newCal()?1-SLUMP_SHIP*slump(S.m):1)+shoreValue())/Math.max(1,owe); // ships at their normal worth, as the banks judge them in the Depression (0.37.2)
+function rescueChance(){if(S.rescue||!S.ships.length)return 0;const owe=S.debt+Math.max(0,-S.cash),cover=(fleetValue()/shipNorm()+shoreValue())/Math.max(1,owe); // ships at their normal worth, as the banks judge them in the Depression (0.37.2)
   return clamp(0.72+0.005*(S.rep-40)+(cover>=1.2?0.15:cover>=0.8?0:-0.2),0.15,0.92);}
 function rescueWho(need){
   const tons=S.ships.reduce((a,x)=>a+x.grt,0),national=S.ships.some(x=>x.adm)||Object.keys(S.mail||{}).length>0||tons>=40000;

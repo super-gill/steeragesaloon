@@ -9,6 +9,18 @@ The final pass ran over 0.33.0 and 0.34.0, and found the 1920s and 1930s unteste
 **closed** (fixed and measured), **accepted** (the figure stands, for the
 reason given), or **open** (for 0.34.0, or after 1.0.0 where marked).
 
+## Targets from 0.39.4
+
+Round 5 showed the scripted careful owner is a floor, not a typical player, and that humans did 6 to 10 times better than any real owner. From 0.39.4 the targets come from the period (`docs/overhaul/research/growth.md`) and are checked against human play in each test round:
+
+| Measure | Target | 0.39.4 (scripts) |
+| --- | --- | --- |
+| Careful human, net worth January 1914 | £100,000 to £250,000 | Careful script £70k (40 games): a floor |
+| Bold human, January 1914 | £0.5m to £1m | `keen` £637k (12) to £819k (8) |
+| Any owner, January 1939 | £0.5m to £3m; more only through takeovers, at Kylsant's risk | `keen` median £5.96m (8): open, KI-077 |
+| Careful script bankrupt by 1922 | 3 to 6 of 40 | 5 |
+| A new emigrant ship's return, good years | 12% to 18%, best routes a little more | 15% to 31% (1903 to 1913) |
+
 ## A bug found in the pass
 
 Since 0.30.0 rival lines paid no dividends: an inline comment in

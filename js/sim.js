@@ -447,7 +447,7 @@ const netWorth=()=>S.cash+(S.gilts||0)+fleetValue()+shoreValue()+ordersValue()-S
 // half) no more than twice the Line's own worth, since no bank lends a shipping line ten times its capital on stock (0.37.2).
 // In the 1919 and 1920 boom the bank lends on ships at no more than their worth at the armistice, and in the Depression on
 // their normal worth (0.37.2). What a failed bank's liquidators still owe counts at three quarters (0.38.0)
-const headroom=()=>Math.max(0,0.7*(bankFleetValue()/(newCal()&&S.m>ARMISTICE&&S.m<M21?Math.max(1,warShips(S.m)/warShips(ARMISTICE)):1)/(newCal()?1-SLUMP_SHIP*slump(S.m):1)+shoreValue())+Math.min(0.9*(S.gilts||0)+0.5*Math.max(0,mkWorth()),2*Math.max(0,netWorth()))+0.75*((S.liq&&S.liq.left)||0)-S.debt-admDebt());
+const headroom=()=>Math.max(0,0.7*(bankFleetValue()/(newCal()&&S.m>ARMISTICE&&S.m<M21?Math.max(1,warShips(S.m)/warShips(ARMISTICE)):1)/shipNorm()+shoreValue())+Math.min(0.9*(S.gilts||0)+0.5*Math.max(0,mkWorth()),2*Math.max(0,netWorth()))+0.75*((S.liq&&S.liq.left)||0)-S.debt-admDebt());
 const odLimit=()=>8000+0.5*headroom(); // the bank forecloses when cash falls below minus this
 function news(t,k,pauseIt){
   S.news.unshift({d:Math.floor(S.t),t,k:k||''});if(S.news.length>150)S.news.length=150;

@@ -55,7 +55,7 @@ function run(seed) {
     {setup(1931);S.rescue=null;yes();S.debt=0;S.cash=5e6;gilts(true,5e6);let g=0;while(g++<60){const h=headroom();if(h<1000)break;S.debt+=h;S.cash+=h;gilts(true,h);}
      const lev=S.debt/Math.max(1,netWorth()),nw0=netWorth(),d0=S.debt;fail();no();
      ok('borrowing on stock stops at about twice what the Line is worth',lev<=2.3,'debt '+lev.toFixed(2)+' times net worth');
-     ok('a Line rich in stock is not rescued: the bank sells the stock',!S.rescue&&!S.over,(S.rescue?'rescued, '+fmt(S.rescue.cut||0)+' written off':'no rescue')+', debt '+fmt(d0)+' then '+fmt(S.debt)+', net worth '+fmt(nw0)+' then '+fmt(netWorth()));}
+     ok('a Line rich in stock is not rescued: the bank sells the stock',!S.rescue&&(!S.over||(S.over==='wound'&&S.gross)) /* a ship lost through gross negligence in the month played ends the game on its own (0.39.4) */,(S.rescue?'rescued, '+fmt(S.rescue.cut||0)+' written off':'no rescue')+', debt '+fmt(d0)+' then '+fmt(S.debt)+', net worth '+fmt(nw0)+' then '+fmt(netWorth())+(S.over?', OVER '+S.over:''));}
     // 6: a rescued Line: no borrowing to pay it off, no merger
     {setup(1912);yes();S.rescue=null;fail();no();const R=S.rescue;
      if(R&&R.loan>0){const h=headroom();const lent=h>=1000&&!(S.noLend>S.m);ok('a rescued Line cannot borrow from the bank to repay the rescue',!lent,'headroom '+fmt(h)+', no lending until '+monthName(S.noLend||0));

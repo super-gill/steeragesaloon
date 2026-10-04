@@ -165,7 +165,7 @@ function advice(budget){
     for(const c of CL)for(const h of advUnit('fare:'+rk+':'+c,()=>{const A2=[],add=h=>A2.push(h);(()=>{
       if(!ships.some(s=>s.berths[c]))return;
       if(L.set&&L.set['fare'+c]!==undefined&&S.m-L.set['fare'+c]<3)return; // a fare changed in the last three months is left to settle (0.39.0)
-      const ref=r.ref[c],lo=S.conf?confFloor(rk,c):Math.round(ref*0.6),hi=Math.round(ref*1.6),step=Math.max(1,Math.round(ref*0.05));
+      const ref=r.ref[c],lo=S.conf?confFloor(rk,c):Math.round(ref*0.6),hi=S.conf&&!r.cruise?confCeil(rk,c):Math.round(ref*1.6),step=Math.max(1,Math.round(ref*0.05));
       let best={f:L.fares[c],pm:base.pm,tn:curNext}; // the same as settled(rk,{}), worked out once
       // every other step first, then the steps either side of the best (0.36.0: half the work, the same answer on a
       // smooth curve)
@@ -422,8 +422,8 @@ function advice(budget){
   // the City's whispers: a bank in trouble takes most of the cash on deposit with it, and Consols are safe (0.35.4)
   if(S.crash&&S.crash.stage==='rumour'&&S.crash.bank&&S.cash>3*runningCost()+5000*PX())add({id:'bankrun'+S.crash.m0,scope:'co',sev:'bad',gain:S.cash*0.5,title:'Move spare cash out of the bank',
     why:`${BANK_NAME[0].toUpperCase()+BANK_NAME.slice(1)} is said to be overextended. If it fails it takes most of the cash on deposit with it; government stock is safe. Keep a few months' running costs in the account and put the rest into Consols until the whispers pass.`,act:[['Finance','tabgo','finance']]});
-  if(!S.conf&&confOpen()&&Object.keys(S.wars).length)add({id:'conf-war',scope:'co',sev:'tip',gain:200,title:'The conference is an option',
-    why:'Members cannot be targeted by rate wars. The price is a fare floor at 95% of the line rate and a cap on steerage. Worth it if you keep provoking wars.',act:[['Conference','tabgo','company']]});
+  if(confCanJoin()&&Object.keys(S.wars).length)add({id:'conf-war',scope:'co',sev:'tip',gain:200,title:'The conference is an option',
+    why:'Members cannot be targeted by rate wars. The price is fares held between 95% and 115% of the line rate, and a cap on steerage. Worth it if you keep provoking wars.',act:[['Join the conference','confjoin'],['Conference','tabgo','company']]});
   })();return A1;}))add(h);
   // the situation has passed: it may be raised afresh (only on a complete pass)
   if(!ADV_SHORT)for(const id in S.dismiss)if(S.dismiss[id]===UNTIL_CLEAR&&!raised.has(id))delete S.dismiss[id];
@@ -435,7 +435,7 @@ function advice(budget){
 }
 /* advice stays on the desk until it is acted on or put aside. A note with nothing to do stays away once read, until the
    situation passes and comes round again; a suggestion put aside comes back after a while if it still stands */
-const UNTIL_CLEAR=1e9,DOING=['crewset','appoint','crew','setfare','setfares','setlineopt','setship','moveship','setyard','sellship','scrapship','hire','shorebuy','openmove','buyship','build','refit'];
+const UNTIL_CLEAR=1e9,DOING=['confjoin','crewset','appoint','crew','setfare','setfares','setlineopt','setship','moveship','setyard','sellship','scrapship','hire','shorebuy','openmove','buyship','build','refit'];
 const restFor=h=>h.id.startsWith('buy:')?18:h.sev==='tip'?6:3;
 function putAside(id){const h=advice().find(q=>q.id===id);if(!h)return;S.dismiss[id]=h.info?UNTIL_CLEAR:S.m+restFor(h);ADV_CACHE.key=null;}
 /* the screen's advice: while a pass is under way the screen shows what it has so far and leaves the work to the clock,
@@ -449,7 +449,7 @@ const capScore=c=>Math.min(c.exp,25)/5+c.traits.reduce((a,t)=>a+(CAPT_TRAITS[t].
 /* a yard job the refit office would offer her now: no gyro stabilisers in 1900 (0.35.5) */
 function yardJobOk(sh,k){if(typeof RF_JOBS==='undefined')return true;for(const [,L] of RF_JOBS)for(const j of L)if(j[0]===k)return !!j[2](sh);return true;}
 /* ---------- actions: shared by buttons, departments and the test harness ---------- */
-const floorFare=(rk,c,v)=>S.conf&&!ROUTES[rk].cruise&&ROUTES[rk].ref[c]?Math.max(v,confFloor(rk,c)):v;
+const floorFare=(rk,c,v)=>S.conf&&!ROUTES[rk].cruise&&ROUTES[rk].ref[c]?Math.min(Math.max(v,confFloor(rk,c)),Math.max(confFloor(rk,c),confCeil(rk,c))):v; // within the conference's floor and ceiling (0.39.4)
 function doAction(act,d){MOD_EPOCH++;
   const ship=id=>S.ships.find(q=>q.id===id);
   switch(act){
@@ -458,6 +458,7 @@ function doAction(act,d){MOD_EPOCH++;
     case 'setfares':{const [rk,f,s2,t]=d;if(S.lines[rk]){Object.assign(S.lines[rk].fares,{f:floorFare(rk,'f',f),s:floorFare(rk,'s',s2),t:floorFare(rk,'t',t)});return true;}return false;}
     case 'linehands':{const [rk,v]=d;if(!S.lines[rk])return false;S.lines[rk].hands=!!v;return true;}
     case 'setlineopt':{const [rk,k,v]=d;if(S.lines[rk]){if(S.lines[rk][k]!==v){(S.lines[rk].set=S.lines[rk].set||{})[k]=S.m;(S.lines[rk].was=S.lines[rk].was||{})[k]=S.lines[rk][k];}S.lines[rk][k]=v;return true;}return false;}
+    case 'confjoin':return confJoin(); // the advice's own button (0.39.4: it only went to the Company tab, so the scripted owner could never join)
     case 'setship':{const [id,k,v]=d;const x=ship(id);if(x){x[k]=v;return true;}return false;}
     case 'setwc':case 'cruiseadd':{const [id,rk]=d;const x=ship(id);if(!x)return false;cruiseProg(x);
       if(!rk){x.cp=[];return true;} // she finishes the cruise she is on, then goes back to her line

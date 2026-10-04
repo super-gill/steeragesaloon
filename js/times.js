@@ -55,6 +55,7 @@ function timesConditions(m,rk){
   if(k>=0&&k<106){const f=k<12?0.85:k>=24?1+0.035*(Math.min(k,105)-24)/12:1;
     if(f<0.97)add('postwar','After the post-war crash',`Cabin passengers are ${pctTxt(f-1)} on a normal year: the boom has collapsed and people are nervous of spending.`,'bad');
     else if(f>1.03)add('growth','Prosperous times',`Wealthier Americans are crossing to Europe in growing numbers: first and second class ${pctTxt(f-1)} on 1922.`,'good');}
+  if(typeof postWarShip==='function'&&postWarShip(m)<0.99)add('glut','Too many ships',`The war's building has left the world with more ships than cargoes. Second-hand ships fetch ${pctTxt(postWarShip(m)-1)} on their normal price; the banks still lend on their normal worth.`,'bad'); // (0.39.4)
   const dep=['f','s','t'].map(c=>depression(c,m,rk||'liv'));
   if(dep[0]<0.99){const sl=slump(m);
     add('dep','The Depression',`First class ${pctTxt(dep[0]-1)}, second ${pctTxt(dep[1]-1)}, steerage ${pctTxt(dep[2]-1)}; cargo ${pctTxt(cargoMod(m)-1)}; second-hand ships ${pctTxt(-SLUMP_SHIP*slump(m))}.${sl>0.05?` Costs have come down with it: coal ${pctTxt(-SLUMP_CUT.fuel*sl)}, wages ${pctTxt(-SLUMP_CUT.wage*sl)}, port dues ${pctTxt(-SLUMP_CUT.dues*sl)}.`:''}`,'bad');}

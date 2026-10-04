@@ -60,12 +60,20 @@ const H_CACHE={s:null,a:{},d:{}}; // the join at 1921 and the start's level, per
 function histAbs(c,rk,m){
   if(m<M21)return preDemand(c,rk,m);
   const k=c+rk;if(H_CACHE.a[k]===undefined)H_CACHE.a[k]=preDemand(c,rk,M21-1,true)/histLegacy(c,rk,M21);
-  return H_CACHE.a[k]*histLegacy(c,rk,m)*quotaTrade(c,m);
+  return H_CACHE.a[k]*histLegacy(c,rk,m)*quotaTrade(c,m)*canadaPost(c,rk,m);
 }
 /* after the war fewer ships are left on the emigrant trades than before it, and the market they share was sized from the
    pre-war fleets: steerage and Tourist Third ships sailed over half full and returned 30% to 40% a year on their cost by
    1928, against 30% to 40% full and perhaps 12% to 18% in fact (0.39.1; the earnings research). Steerage and tourist
    demand eases to seven tenths (Tourist Third to six) between 1921 and 1924, as the American quotas take hold */
+/* Canada after the war (0.39.4): arrivals were 37% of 1913's in the year to March 1921, 22% in 1922, 18% in 1923, and 37% to
+   41% from 1924 to 1929 under the Empire Settlement Act (Canada Year Book); the 1921 game's history held the Canadian trades
+   near 1913's level all decade. This brings them to those shares */
+const CA_POST=[[0,0.45],[12,0.3],[24,0.25],[36,0.5],[106,0.5]];
+// and the United States: 67% of 1913 in the year to June 1921, 26% to June 1922 under the first quota law, 44% and 59% in the
+// next two years; the 1921 game's history carried the New York trades at 63% to 77% (0.39.4)
+const US_POST=[[0,0.7],[12,0.6],[30,0.75],[42,1],[106,1]];
+function canadaPost(c,rk,m){if((c!=='t'&&c!=='tt')||m<M21)return 1;const g=ROUTES[rk].group;if(g!=='Canada'&&g!=='North Atlantic')return 1;const k=m-M21,P=g==='Canada'?CA_POST:US_POST;let i=0;while(i<P.length-2&&k>P[i+1][0])i++;const f=clamp((k-P[i][0])/(P[i+1][0]-P[i][0]),0,1);return P[i][1]+(P[i+1][1]-P[i][1])*f;}
 const quotaTrade=(c,m)=>(c==='t'||c==='tt')&&m>=M21?1-(c==='tt'?0.4:0.3)*Math.min(1,(m-M21)/42):1;
 /* history's effect on passenger demand by class, route and month, relative to the game's start (markets are sized then) */
 function histMod(c,rk,m){
@@ -110,7 +118,7 @@ function depression(c,m,rk){
   // (0.38.0; to a third in 0.37.2, which with the fall in ship values finished two thirds of the scripted owners) and comes
   // back only slowly, through to 1940
   const g=rk&&ROUTES[rk]?ROUTES[rk].group:'',na=c==='t'&&(g==='North Atlantic'||g==='Canada');
-  const deep=na?0.5:{f:.45,s:.62,t:.75,tt:.4}[c]; // Tourist Third: the students and tourists stayed at home too (0.38.0; 0.5 before)
+  const deep=na?0.3:{f:.45,s:.62,t:.75,tt:.4}[c]; // 0.39.4: emigration to North America fell to 9% (Canada) and 13% (US) of 1929's by 1932-33; with the trend already falling, 0.3 here brings the game's trough to about 15% // Tourist Third: the students and tourists stayed at home too (0.38.0; 0.5 before)
   if(m<120)return 1-(1-deep)*Math.min(1,(m-105)/14);
   if(m<156)return deep;
   return Math.min(1,deep+(1-deep)*(m-156)/(na?72:48));
@@ -186,7 +194,11 @@ function insRate(sh){
 }
 const insCost=sh=>insured(sh)*insRate(sh)/12*(sh.state==='laid'?0.3:1); // laid up she is insured for port risks only
 const confFloor=(rk,c)=>Math.ceil(ROUTES[rk].ref[c]*0.95);
-function effFare(rk,c){let f=S.lines[rk].fares[c];if(S.conf&&!ROUTES[rk].cruise)f=Math.max(f,confFloor(rk,c));return f;} // the conference has no say over cruises
+/* the conference's rates bind upwards too (0.39.4; KI-071): its members' agents sell every berth at the agreed rate for the
+   class of ship, so a member can ask no more than about a sixth over it. In round 5 a member charged first class half as much
+   again as the rate on a trade it dominated, and still filled most berths */
+const CONF_CEIL=1.15,confCeil=(rk,c)=>Math.floor(ROUTES[rk].ref[c]*CONF_CEIL);
+function effFare(rk,c){let f=S.lines[rk].fares[c];if(S.conf&&!ROUTES[rk].cruise&&ROUTES[rk].ref[c])f=Math.min(Math.max(f,confFloor(rk,c)),Math.max(confFloor(rk,c),confCeil(rk,c)));return f;} // the conference has no say over cruises
 function defaultFares(rk){const r=ROUTES[rk].ref;return {f:r.f,s:r.s,t:r.t,tt:r.tt};}
 function gcDist(p,q){const a=CHART.lonlat[p],b=CHART.lonlat[q],rad=Math.PI/180;
   const la1=a[1]*rad,la2=b[1]*rad,dl=(b[0]-a[0])*rad,dp=la2-la1;

@@ -18,7 +18,7 @@ const H={
   buy(m){return buyShip(m)?m:null;}, // the screen's terms (0.35.4)
   bestRoute(sh){let b=null;for(const rk of Object.keys(ROUTES)){if(!routeOpen(rk,S.m))continue;const q=econYear(sh,rk);/* a sensible buyer looks at the year ahead, not one month */if(!b||q.pm>b.pm)b={rk,pm:q.pm};}return b;},
   apply(h){const a=h.act[0];if(!a)return;const [l,act,...d]=a;
-    if(['setfare','setfares','setlineopt','setship','moveship','setyard','sellship','hire','buyship','openmove','shorebuy'].includes(act))doAction(act,d);
+    if(['confjoin','setfare','setfares','setlineopt','setship','moveship','setyard','sellship','hire','buyship','openmove','shorebuy'].includes(act))doAction(act,d);
     else if(act==='build'){const dz=JSON.parse(JSON.stringify(d[0]));dz.name='Harness '+(S.yardNext||534);placeOrder(dz);}
     else if(act==='tabgo'&&d[0]==='shore'){const [k,key]=h.id.split(':');
       if(k==='pier'||k==='agency'){if(canSpend(shoreCost(k,key)))doAction('shorebuy',[k,key]);}
@@ -40,6 +40,8 @@ const H={
 const STRATS={
   idle(){},
   cautious(){H.boats();if(S.m===S.m0)S.ships.forEach(s=>{s.autoDock=50;s.maint=1;});},
+  /* a bold owner as round 5's test players played (0.39.4): head office's advice, and the conference whenever it will take the Line */
+  keen(){if(confCanJoin())confJoin();STRATS.advisor();},
   advisor(){for(let i=0;i<4;i++){const A=advice().filter(h=>h.act.length);if(!A.length)break;H.apply(A[0]);S.dismiss[A[0].id]=S.m;}},
   expander(){H.expand(8000);},
   prudent(){H.expand(12000,true);},
@@ -124,5 +126,5 @@ function report(strategy, n) {
 const [, , only, nArg] = process.argv;
 const n = +nArg || 20;
 const t0 = Date.now();
-for (const s of only ? [only] : ['idle', 'cautious', 'careful', 'advisor', 'expander', 'prudent', 'office', 'undercutter', 'liverpool']) report(s, n);
+for (const s of only ? [only] : ['idle', 'cautious', 'careful', 'advisor', 'keen', 'expander', 'prudent', 'office', 'undercutter', 'liverpool']) report(s, n);
 console.log(`\n(${((Date.now() - t0) / 1000).toFixed(1)}s)`);
