@@ -13,13 +13,13 @@ const mvC=id=>S.ex.cos[id];
 /* dawn raid: up to a fifth of the company, in a day, at a tenth over the market; the price jumps after */
 function mvRaidQty(o){const c=mvC(o);return Math.floor(Math.min(MV_RAID*c.n,mkFree(o)));}
 const mvRaidCost=o=>Math.round(mvRaidQty(o)*mvC(o).px*(1+MV_RAID_PREM)*(1+MK_FEE_BUY));
-function mvRaid(o){const M=mkEnsure(),c=mvC(o);if(rescueFriend(o)||!c||c.gone||!mkRival(o)||mkShut()||mkStake(o)>=MK_CTRL||(M.me.short&&M.me.short[o]))return false;
+function mvRaid(o){const M=mkEnsure(),c=mvC(o);if(rescueFriend(o)||mkEnemy(o)||!c||c.gone||!mkRival(o)||mkShut()||mkStake(o)>=MK_CTRL||(M.me.short&&M.me.short[o]))return false;
   const q=mvRaidQty(o),cost=mvRaidCost(o);if(q<1||S.cash<cost)return false;const before=mkStake(o);
   S.cash-=cost;const h=M.me.pos[o]||(M.me.pos[o]={n:0,cost:0});h.n+=q;h.cost+=cost;c.sh*=1.12;mkOwnPush(o,0,1.12);
   news(`Dawn raid: before the market opens the Line's brokers buy ${Math.round(q/c.n*100)}% of ${mkName(o)} for ${fmt(cost)}. The City wakes to a bid battle.`,'good',true);
   mkThresholds(o,before);mvDefend(o,'raid');return true;}
 /* tender offer: a set price for all its shares, open a month, going through only if the Line ends with over half */
-function mvTender(o,prem){const M=mkEnsure(),c=mvC(o);if(rescueFriend(o)||!c||c.gone||!mkRival(o)||mkShut()||M.tender||mkStake(o)>=0.9||trustMember(o)||(M.me.short&&M.me.short[o]))return false;
+function mvTender(o,prem){const M=mkEnsure(),c=mvC(o);if(rescueFriend(o)||mkEnemy(o)||!c||c.gone||!mkRival(o)||mkShut()||M.tender||mkStake(o)>=0.9||trustMember(o)||(M.me.short&&M.me.short[o]))return false;
   const price=c.px*(1+prem),need=Math.max(0,0.5*c.n-((M.me.pos[o]||{}).n||0))*price*(1+MK_FEE_BUY);if(S.cash<need)return false;
   M.tender={o,prem,price,pre:c.px,due:S.m+1};c.sh*=1+prem*0.7;mkOwnPush(o,0,1+prem*0.7);
   news(`The Morven Line offers ${pxTxt(price)} a share for every share in ${mkName(o)}, ${Math.round(prem*100)}% over the market, if it ends with over half. The offer closes in ${monthName(S.m+1)}.`,'',true);

@@ -1,6 +1,6 @@
 # Known Issues
 
-Steerage & Saloon 0.39.1. This log records every known defect, loophole and open question that has not been fixed in a released version. Balance targets and accepted behaviour are in `docs/overhaul/BALANCE.md`; this file covers what is wrong or unfinished.
+Steerage & Saloon 0.39.3. This log records every known defect, loophole and open question that has not been fixed in a released version. Balance targets and accepted behaviour are in `docs/overhaul/BALANCE.md`; this file covers what is wrong or unfinished.
 
 **Severity**
 
@@ -13,7 +13,7 @@ Steerage & Saloon 0.39.1. This log records every known defect, loophole and open
 
 **Status:** Open (not yet scheduled), Planned (assigned to a version), Discuss (needs a design decision first), Fixed (the version that fixed it; kept here for one release, then moved to the changelog only).
 
-**Sources:** P2, P3 and P4 are the test-player rounds (P2 played 1900 to 1914 on 0.35.4; P3 played 1914 to 1927 on 0.35.5; P4 played 1927 to 1945 on 0.37.1; P5 played a small Line 1927 to 1940 on 0.37.2 and again on 0.38.0). Notes with full repro steps are in `tools/play/` (gitignored). U is the owner's own report.
+**Sources:** P2, P3 and P4 are the test-player rounds (P2 played 1900 to 1914 on 0.35.4; P3 played 1914 to 1927 on 0.35.5; P4 played 1927 to 1945 on 0.37.1; P5 played a small Line 1927 to 1940 on 0.37.2 and again on 0.38.0; round 5, on 0.39.2, played three new games from 1900 to 1940: P6 a careful owner, P7 a bold one, P8 an exploit hunter, summarised in `docs/overhaul/test-rounds/round5.md`). Notes with full repro steps are in `tools/play/` (gitignored). U is the owner's own report.
 
 ---
 
@@ -43,6 +43,11 @@ Steerage & Saloon 0.39.1. This log records every known defect, loophole and open
 | ID | Sev | Status | Source | Issue |
 |---|---|---|---|---|
 | KI-016 | S3 | Fixed (0.37.2) | P3, P4 | Consols followed a fixed yield table, so a holding's path was known in advance; P4 geared £235m of debt on it. Prices now wander a few tenths of a per cent of yield either side, and borrowing on stock is limited to twice the Line's worth. |
+| KI-017 | S1 | Fixed (0.39.3) | P8 | **Merge and strip in 1918.** A merger counted the merged fleet at its full wartime worth and the bank lent 0.7 of it the same day, so each merger raised the Line's borrowing by more than it cost: thirteen mergers on 1 January 1918 borrowed £7.8m, and selling the ships in the 1919 boom cleared £3.8m after duty. The bank now lends on every ship at what was paid for her, moved with the market, in her first year, merged ships included (`bankFleetValue`). |
+| KI-018 | S2 | Fixed (0.39.3) | P8 | A float raised the net worth shown by the whole issue though the owner kept a quarter of the Line. The owner's own wealth (their share of the Line plus what they took out at the float) is now shown beside the Line's net worth (`ownerWorth`). |
+| KI-019 | S2 | Fixed (0.39.3) | P8 | Every City rumour came true and share prices ignored it, so selling short on a rumour was a sure profit (+40% in two months). A third of rumours now blow over, shares fall while a rumour lasts, and on the 1900 calendar no invented panic comes between 1914 and 1946. |
+| KI-020 | S2 | Fixed (0.39.3) | P8 | A German line could be bought and merged in 1916, its ships taken into the Line and away from the reparations. The Trading with the Enemy Act now blocks buying, raiding, tendering for, merging or taking ships from an enemy line from August 1914 to the peace (`mkEnemy`). |
+| KI-021 | S3 | Fixed (0.39.3) | P8 | Scrapping had no check for a requisitioned ship or the Treasury director's veto. |
 
 ## Bugs
 
@@ -51,6 +56,14 @@ Steerage & Saloon 0.39.1. This log records every known defect, loophole and open
 | KI-023 | S2 | Fixed (0.37.1) | P3 | War freight fell far short of its own text. Rates now follow the free market to 1916, the Ministry's control from 1917 and the 1919-20 boom; checked by `tools/warprofit.js`. |
 | KI-024 | S2 | Fixed (0.37.1) | P3 | The player could not choose which ships went to war service without the reserve list. Ships can now be offered at any time in the war. The hire was left as it is: it matches the Blue Book rates against the open market. |
 | KI-026 | S2 | Fixed (0.37.1) | P3 | Excess Profits Duty never charged: its standard rose with prices, and sale gains were not profit. Both fixed. |
+| KI-027 | S2 | Fixed (0.39.3) | P8, P7 | **Head office's forecasts saw history coming.** They ran the economy three, six and nine months ahead, so on 1 July 1914 they advised laying up a ship that cleared £26k that month because they could see the war, and the same leaked the 1921 and 1929 slumps. Forecasts still run through the seasons, but history's scripted turns are held at today's (`FC_NOW`, `fcHist` in `js/sim.js`), except laws already passed (the 1924 quota, KI-043). |
+| KI-028 | S2 | Fixed (0.39.3) | P6 | Emigration figures were read as calendar years though the American ones are fiscal years to June and the Canadian ones mostly to March, so on the Canadian routes the 1908 slump was the best year of the decade. Each figure is now centred where its year fell (`preSeries`). |
+| KI-029 | S2 | Fixed (0.39.3) | P6 | A bank failure in 1937 was all but certain: the panic clock still counted from the end of the 1907 panic. No British clearing bank failed between the wars; see KI-019. |
+| KI-030 | S3 | Fixed (0.39.3) | P6, P8 | Rate wars broke out in the Great War (the month war was declared) and could be led by a line with no ships on the route. |
+| KI-031 | S3 | Fixed (0.39.3) | P6 | A loan called in a panic was taken in full from a Line that had repaid early, leaving the debt below zero. |
+| KI-032 | S3 | Fixed (0.39.3) | P7 | A ship sold in the 1920 boom that broke down beyond repair before handover still fetched her full price. The buyers now take off the repair. |
+| KI-033 | S4 | Fixed (0.39.3) | P7 | A tie for the Blue Riband passed it from the holder to the rival, with the text for a holder gone out of service. |
+| KI-034 | S2 | Fixed (0.39.3) | Suite (40 seeds) | When the Combine bought a line, the paying member took the whole price as debt with nothing on its books: its worth went below nothing and its shares sold at two fifths of break-up value. It now carries only the premium; and the Combine no longer buys into a line the Morven Line holds more than two fifths of. |
 
 ## Advice and departments
 
@@ -58,11 +71,16 @@ Steerage & Saloon 0.39.1. This log records every known defect, loophole and open
 |---|---|---|---|---|
 | KI-040 | S2 | Fixed (0.36.2) | P1, P2 | Forecasts are optimistic for mixed ships (about half the forecast on three moves). Move advice piles ships onto one line without counting the ones already sent. |
 | KI-041 | S2 | Fixed (0.36.2) | P2 | The Fares Office sets fares below the conference floor. |
-| KI-043 | S3 | Open | P3 | The forecast horizon ignores the certain July 1924 quota cut. |
+| KI-043 | S3 | Fixed (0.39.3) | P3 | The forecast horizon ignored the certain July 1924 quota cut. Forecasts from January 1924 now see it. |
 | KI-045 | S3 | Fixed (0.37.2) | P2, P4 | Advice flipped tables and advertising with no memory, and moved ships back and forth. A table or advertising changed in the last six months is left to settle, and a ship moved in the last year needs twice the margin to move again. |
 | KI-046 | S3 | Open | P2 | Captain advice to replace a "popular" captain recurs every quarter on the adjective alone. |
 | KI-047 | S2 | Fixed (0.39.1) | P3, P4, P5 | New tourist and emigrant ships returned 30% to 42% a year on their cost in the late 1920s. Set against the sources (`docs/overhaul/research/earnings.md`): now about 18%, within the good-year band. |
 | KI-048 | S4 | Fixed (0.36.2) | U | **The game never shows what line a ship was built for.** `designLine` is saved at delivery but used nowhere. The design does matter (bunkers for the longest leg, draught for the ports, seakeeping for the route), so a ship moved to another line can be short-legged or too deep without the player knowing why. Fix: show "Built for ..." in the ship detail and fleet manager, and flag a mismatch with its reason. |
+| KI-049 | S3 | Fixed (0.39.3) | P6, P7 | Head office quoted the chance of a ship being sunk at about four times the real figure until February 1915: it left out that three attacks in four never came before the submarines. |
+| KI-050 | S3 | Fixed (0.39.3) | P6 | Head office advised the private war-risk top-up without weighing its premium (£1,040 a month to cover an expected £296), and the Marine Superintendent bought it on that advice. It is now advised only when the loss it covers is at least seven tenths of the premium. |
+| KI-051 | S3 | Fixed (0.39.3) | P6, P8 | The table on a line still swung between Standard and Lavish twice a year. Going back to the table before the last change now needs a clear case. |
+| KI-052 | S4 | Open | P7 | "Departments pay their way" is advised at any fleet size; at 19 ships a department saved about £137 a month of office friction and cost £276 to £454. |
+| KI-053 | S3 | Open | P7 | Conference advice contradicts itself: "Calm the conference" sets fares the next report advises cutting; "Move a ship there" appears beside "Calm the conference" on the same line; "The conference is an option" shows while joining is refused. |
 
 ## Economy and balance
 
@@ -78,13 +96,23 @@ Steerage & Saloon 0.39.1. This log records every known defect, loophole and open
 | KI-068 | S3 | Fixed (0.38.0) | P4 | A failed giant's main trade lay open for two years. A second promoter now takes it up within months. |
 | KI-069 | S3 | Fixed (0.39.0) | P5 | A ship bought below her worth added the discount to net worth on the day. She now counts at her cost for her first year. |
 | KI-070 | S4 | Fixed (0.39.0) | P5 | Fare advice judged a fare on one month and flipped with the season. It now judges over this month and six on, and waits three months after a change. |
-| KI-065 | S2 | Design question (0.40 test round) | Harness | An owner who takes all head office's advice reaches about £950k by 1914 (none bankrupt) against about £90k for the careful scripted owner. 0.39.2 found the cause is the boom-year steerage trade (new emigrant ships returning 37% to 40% on the Canadian routes in 1913, old ones as much or more), not old second-hand ships. Three fixes (old-type steerage, rivals building for the boom, a ship price cycle) hurt the careful owner as much as the advisor and were reverted; see `docs/overhaul/research/advisor-growth.md`. To be judged on whether human players in the 0.40 round approach the advisor. |
+| KI-065 | S2 | Open: 0.39.4 | Harness, P6 to P8 | **Settled by round 5: the game is far too easy from 1900 to 1940.** A careful human ended 1940 with £14.8m and lost money only in 1921 and 1937; a bold one reached £3.53m by 1914 (3.7 times the scripted advisor) and £25.7m by 1940. The scripted careful owner the targets were set on is far weaker than a human, so the balance targets were set on the wrong yardstick. The causes are KI-071 to KI-078. |
+| KI-071 | S2 | Open: 0.39.4 | P7 | In the conference there is a fare floor but no ceiling: first class 50% over the line rate still sold well, and Liverpool to Halifax cleared £62k to £78k a month in 1912 and 1913. |
+| KI-072 | S2 | Open: 0.39.4 | P7 | New emigrant ships return 60% to 80% a year on their cost for a human player in 1912 and 1913 (sources: 12% to 18% in good years). |
+| KI-073 | S2 | Open: 0.39.4 | P6 | Emigrant demand returns to the 1913 level within a year of the Armistice (85% in September 1919; 130% on New York in 1920). Arrivals were about 15% of 1913 in 1919 and 35% in 1920. |
+| KI-074 | S2 | Open: 0.39.4 | P6, P7 | The 1919-20 boom is riskless: ships sell for 5.5 to 8.3 times their pre-war worth whatever their state (one at 19% condition for £700k), and second-hand prices stay at normal through 1921 and 1922. |
+| KI-075 | S2 | Open: 0.39.4 | P7 | A failed rival's ships are valued in 1921 pounds times the price level, which before the war is far below what the drawing office charges: a nearly new 24,500-ton express liner sold for £147,600 against £754,000 to build, and earned more than her price each year. |
+| KI-076 | S3 | Open: 0.39.4 | P6 | The Depression halves trade rather than gutting it (Canadian immigration fell about 90%); a careful Line never made a loss. |
+| KI-077 | S3 | Open: 0.39.4 | P6 | The Great War is almost riskless for a Line: net worth doubled in four years without a ship built. |
+| KI-078 | S3 | Open: 0.39.4 | P6 | No income tax on profits before 1925; British income tax was charged on company profits throughout (1s in the pound in 1900, 1s 2d in 1913). |
 
 ## Text and presentation
 
 | ID | Sev | Status | Source | Issue |
 |---|---|---|---|---|
 | KI-083 | S4 | Fixed (0.37.1) | Harness | Stale war-outbreak text: it promised every hold would fill and freight would reach three times its pre-war worth. |
+| KI-084 | S4 | Open | P6 | Fares show as decimal pounds (29.9) rather than pounds and shillings. |
+| KI-085 | S4 | Fixed (0.39.3) | P6 | "The bank call in"; a Lord Provost's wife launching ships at Birkenhead and Princess Mary launching them as a child; "Ships are cheap in a slump" in the 1914 boom; a sunk ship "out of service". |
 
 ## Design questions
 
@@ -118,4 +146,6 @@ New features must fit the theme and be at least roughly historical. After 1939 t
 
 | ID | Sev | Status | Issue |
 |---|---|---|---|
-| KI-100 | S3 | Open | The headless player has no actions for zigzag, convoy or the private war-risk top-up. |
+| KI-100 | S3 | Fixed (0.39.3) | The headless player had no actions for zigzag, convoy or the private war-risk top-up (`zigzag`, `convoy`, `wartop`). |
+| KI-101 | S3 | Fixed (0.39.3) | Headless player: the advice's Build button stopped the clock and ordered nothing; `step 0` played three months; `waroffer` answered "done" for a lapsed offer; the finance view showed a fixed 6.5% interest rate. |
+| KI-102 | S3 | Open | The scripted advisor (`tools/harness.js`) can never join the conference: the advice's only button goes to the Company tab, which the harness ignores. |

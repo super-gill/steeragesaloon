@@ -2,6 +2,33 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.39.3 (4 October 2026)
+Fixes from test round 5 (`docs/overhaul/test-rounds/round5.md`), which held back 0.40.0: three new games from 1900 to 1940 found the game far too easy, one S1 exploit and four S2 ones. This release fixes the exploits and bugs; the balance is 0.39.4.
+- Exploits:
+  - **Merge and strip (KI-017, S1):** the bank lent 0.7 of a merged fleet's full wartime worth the day of the merger, so thirteen mergers in January 1918 borrowed £7.8m and the ships sold in the 1919 boom cleared £3.8m after duty. The bank now lends on every ship at what was paid for her, moved with the market, in her first year, merged ships included.
+  - **Floats (KI-018):** the Line's net worth counted a float's whole issue though the owner kept a quarter. The owner's own wealth (their share of the Line and the money taken out at the float) now shows beside it, in the header, at the end of a game and in the headless reports.
+  - **City rumours (KI-019):** every rumour came true and shares ignored it, so selling short on one was a sure profit. A third now blow over, shares fall while a rumour lasts, and on the 1900 calendar no invented panic comes between 1914 and 1946 (no British clearing bank failed between the wars; the 1907 panic and the 1929 Crash are history's own).
+  - **Enemy lines (KI-020):** under the Trading with the Enemy Act no shares in a German line can be bought, raided, tendered for or merged, and no ship taken from one, from August 1914 to the peace.
+  - **Scrapping (KI-021):** no longer allowed for a requisitioned ship, or under the Treasury director's veto unless she is worn out.
+- Bugs:
+  - **Forecasts (KI-027, KI-043):** head office forecast by running the economy months ahead, so it saw the war and the slumps coming (on 1 July 1914 it advised laying up a ship that cleared £26k that month). Forecasts still run through the seasons, but history is held at today's, except laws already passed (from January 1924, the American quota law of that July). Forecast test: actual earnings 1.12 times the forecast over all ship-years, against 1.03 before (1928: 0.94, against 1.41).
+  - **Emigration years (KI-028):** the American figures are years to June and the Canadian ones mostly to March; read as calendar years, the 1908 slump was Canada's best year. Each is now centred where its year fell.
+  - **The 1937 bank failure (KI-029)** was all but certain, the panic clock counting from 1909; see KI-019.
+  - **Rate wars (KI-030)** no longer start in the Great War, or on a trade where no rival line sails.
+  - **A called loan (KI-031)** takes no more than is still owed.
+  - **A ship sold with damage to repair (KI-032)** fetches her price less the repair.
+  - **The Blue Riband (KI-033)** stays with the holder on a tie.
+  - **The Combine's purchases (KI-034):** the member that paid for a line bought into the Combine took the whole price as debt with nothing on its own books; Imperial's worth went below nothing, its bank reconstructed it, and its shares sold at two fifths of break-up value. The paying member now carries only the premium over the line's worth. The Combine also no longer buys a line the Morven Line holds more than two fifths of.
+- Advice:
+  - The chance of a ship being sunk before February 1915 was quoted about four times too high (KI-049).
+  - The private war-risk top-up is advised only when the loss it covers is at least seven tenths of its premium (KI-050).
+  - Going back to the table before the last change needs a clear case, so tables stop swinging twice a year (KI-051).
+- Text (KI-085): "The bank calls in"; launch sponsors fit the yard and the year; the advice to sell no longer calls a boom a slump; a sunk ship is no longer "out of service".
+- Headless player (KI-100, KI-101): new actions `zigzag`, `convoy` and `wartop`; the advice's Build button places the order; `step <slot> <actions> 0` plays no months; `waroffer` reports a lapsed offer; the finance view shows the real loan and overdraft rates.
+- Tests: the whole suite now runs on 40 seeds, and passes. Running it at 40 instead of 3 found the Combine bug above and a dozen test-setup gaps, fixed in the tests: targets that were German lines in the war, unlisted, or absent from a game; a route the test ship cannot sail; the Pac-Man test running out of cash; reputation measured across two months' drift; and a break-up check that included Combine members, which can never be wound up.
+- Balance (scripted owners, 40 games): careful owner to 1922, 2 bankrupt; to 1939, 27 (23 before: head office no longer sees the Depression coming, so the script buys into it). These targets were set on the wrong yardstick (round 5) and are reset in 0.39.4.
+- Decided: the Second World War goes in, as 0.41 after the 0.40.0 milestone (see ROADMAP.md).
+
 ## 0.39.2 (4 October 2026)
 KI-065 re-diagnosed; one small fix. The research and the experiments are in `docs/overhaul/research/advisor-growth.md`.
 - The diagnosis in 0.39.1 was wrong: the owner who takes all of head office's advice grows fast before 1914 on steerage in the boom years, from new emigrant ships (37% to 40% a year on their cost on the Canadian routes in 1913) as much as old ones, not from old second-hand ships as such.

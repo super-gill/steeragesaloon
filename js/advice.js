@@ -12,7 +12,8 @@ function withTemp(sh,rk,patch,shPatch,fn){
 const turnFor=(sh,rk)=>{if(ROUTES[rk].cruise)return turnPair(rk);const [a,b]=geoEnds(geoKey(rk,S.m));return turnDays(sh,a)+turnDays(sh,b);};
 /* a ship's expected monthly result on a route this month, at current settings (patches try alternatives) */
 function econ(sh,rk,patch,shPatch){
-  return withTemp(sh,rk,patch,shPatch,()=>{
+  const fc0=FC_NOW;FC_NOW=S.m; // history held at today (sim.js, legCalc)
+  try{return withTemp(sh,rk,patch,shPatch,()=>{
     const L=S.lines[rk],w=legCalc(sh,rk,0,null),e=legCalc(sh,rk,1,null),rt=w.seaDays+e.seaDays+turnFor(sh,rk);
     const legNet=(l,dir)=>l.paxRev+(l.onboard||0)+l.cargoRev+l.mail-l.fuelC-l.prov-l.agents-l.port-lighterLeg(sh,l,dir);
     const n=Math.max(1,shipsOn(rk).length);
@@ -20,7 +21,8 @@ function econ(sh,rk,patch,shPatch){
     const pax=CL.reduce((a,c)=>a+(w.pax[c]?w.pax[c].n:0)+(e.pax[c]?e.pax[c].n:0),0)*30/rt;
     return {pm:(legNet(w,0)+legNet(e,1)-fixed)*30/rt-ADV_COST[L.adv]/n,rev:(w.paxRev+e.paxRev+w.cargoRev+e.cargoRev+w.mail+e.mail)*30/rt,
       fuel:(w.fuelC+e.fuelC)*30/rt,rt,w,e,pax};
-  });
+  });}
+  finally{FC_NOW=fc0;}
 }
 /* the same averaged over the coming year (four seasons), for decisions that last */
 /* A year at sea is not twelve months of sailing: a ship spends time in the yard, broken down, held in port or slowed by
@@ -207,7 +209,10 @@ function advice(budget){
       // a table or advertising changed in the last six months is left to settle: a table takes months to move the Line's name,
       // and judging it again each month flipped it to and fro (0.37.2; KI-045)
       const settled=!(L.set&&L.set[k]!==undefined&&S.m-L.set[k]<6);
-      if(best.v!==L[k]&&gain>=150&&settled){
+      // going straight back to what it was before the last change wants a clear case: a table moves the Line's name for a year
+      // and more, so the six-month judgement swung it between Standard and Lavish twice a year (0.39.3)
+      const back=L.was&&L.was[k]===best.v&&L.set&&S.m-L.set[k]<24,need=back?Math.max(600,0.05*Math.abs(cur)):150;
+      if(best.v!==L[k]&&gain>=need&&settled){
         const nm=k==='adv'?['no advertising','£300 advertising','£800 advertising','£1,500 advertising'][best.v]:['a Spartan table','a Standard table','a Lavish table'][best.v];
         add({id:`${k}:${rk}`,scope:'line',ref:rk,sev:'tip',gain,title:`Try ${nm} on ${r.name}`,
           why:k==='adv'?(best.v>L.adv?'More advertising would fill enough extra berths to pay for itself.':'Your advertising costs more than the extra passengers it brings.')
@@ -229,7 +234,7 @@ function advice(budget){
       const idleC=idleCost(sh),val=Math.round(shipValue(sh)*0.9);
       if(best&&best.pm<0&&S.ships.length>1&&!sh.pendingExit&&!(sh.acq>S.m-18)&&!WINTER.includes(mo))add({id:`sell:${sh.id}`,scope:'ship',ref:sh.id,sev:'warn',gain:idleC+val*loanRate()/12,
         title:`Sell SS ${sh.name}`,
-        why:`Even laid up she costs ${money(idleC)} a month, and no route would pay her way over the coming year. Selling her raises about ${money(val)}${S.debt>0?', which could pay down the mortgage and its interest':''}. Ships are cheap in a slump, so you may be selling low.`,
+        why:`Even laid up she costs ${money(idleC)} a month, and no route would pay her way over the coming year. Selling her raises about ${money(val)}${S.debt>0?', which could pay down the mortgage and its interest':''}. ${shipMkt()<0.95?'Ships are cheap now, so you would be selling low.':shipMkt()>1.1?'Ships are fetching good prices.':''}`,
         act:[['Sell her','sellship',sh.id]]});
       if(best&&best.pm>(S.lines[best.rk]?0:300)&&!WINTER.slice(0,3).includes(mo))add({id:`unlay:${sh.id}`,scope:'ship',ref:sh.id,sev:'warn',gain:best.pm,title:`Put SS ${sh.name} back to work`,
         why:`Laid up she still costs wages and insurance. On ${ROUTES[best.rk].name} she would earn about ${money(best.pm)} a month over the coming year${!S.lines[best.rk]?' (that line is not open yet)':''}.${mo>=1&&mo<=3?' Spring bookings are picking up.':''}`,
@@ -299,8 +304,9 @@ function advice(budget){
         why:`Fewer hits for ${money(refitCost(sh,'dazzle'))} and ${yardDays(sh,'dazzle')} days in the yard.`,act:[[sh.pendingYard?'Add it to her yard visit':'Book it','setyard',sh.id,'dazzle']]});
       if(warGoodwill()&&!sh.gun&&!inVisit('gun')&&canSpend(refitCost(sh,'gun'))&&pm>0.002)add({id:`gun:${sh.id}`,scope:'ship',ref:sh.id,sev:'tip',gain:v*(pm-warLossPM(sh,{gun:true})),title:`Arm SS ${sh.name}`,
         why:`A gun aft and naval gunners keep a surfaced submarine at a distance: fewer hits, for ${money(refitCost(sh,'gun'))} and ${yardDays(sh,'gun')} days in the yard.`,act:[[sh.pendingYard?'Add it to her yard visit':'Book it','setyard',sh.id,'gun']]});
-      if(!sh.warTop&&(1-Math.pow(1-pm,12))>0.06)add({id:`wtop:${sh.id}`,scope:'ship',ref:sh.id,sev:'tip',gain:v*0.2*pm,title:`Take a private war-risk top-up on SS ${sh.name}`,
-        why:`If she is sunk the state pays four fifths of her value; the rest, about ${money(v*0.2)}, would be the Line's loss. The top-up costs about ${money(v*0.2*warInsRate(S.m)*2.5*(1+0.2*((S.war&&S.war.losses)||0)))} a month.`,act:[['Take it','setship',sh.id,'warTop',1]]});}
+      const topPrem=v*0.2*warInsRate(S.m)*2.5*(1+0.2*((S.war&&S.war.losses)||0)); // what the top-up costs a month, against the loss it covers (0.39.3: it was advised at £1,040 a month to cover £296)
+      if(!sh.warTop&&(1-Math.pow(1-pm,12))>0.06&&v*0.2*pm>=0.7*topPrem)add({id:`wtop:${sh.id}`,scope:'ship',ref:sh.id,sev:'tip',gain:v*0.2*pm-topPrem,title:`Take a private war-risk top-up on SS ${sh.name}`,
+        why:`If she is sunk the state pays four fifths of her value; the rest, about ${money(v*0.2)}, would be the Line's loss. The top-up costs about ${money(topPrem)} a month, against about ${money(v*0.2*pm)} a month of expected loss.`,act:[['Take it','setship',sh.id,'warTop',1]]});}
     if(atWar()&&!sh.wcSave&&(sh.berths.t||0)+(sh.berths.tt||0)>=100){const t=sh.berths.t||0,tt=sh.berths.tt||0;
       yard('warcargo',{berths:{...sh.berths,t:0,tt:0},cargo:Math.round(sh.cargo+t*WC_T+tt*WC_TT)},`Clear SS ${sh.name}'s steerage for cargo`,`The emigrants have stopped coming and every hold fills at war rates. Her steerage decks would take about ${int(t*WC_T+tt*WC_TT)} more tons; they can be put back after the war for the same price.`);}
     // Tourist Third (0.38.0): head office never suggested it, though it was the answer to the emigrant trade's end
@@ -451,7 +457,7 @@ function doAction(act,d){MOD_EPOCH++;
     case 'setfare':{const [rk,c,v]=d;if(S.lines[rk]){const L=S.lines[rk],nv=floorFare(rk,c,v);if(L.fares[c]!==nv)(L.set=L.set||{})['fare'+c]=S.m;L.fares[c]=nv;return true;}return false;}
     case 'setfares':{const [rk,f,s2,t]=d;if(S.lines[rk]){Object.assign(S.lines[rk].fares,{f:floorFare(rk,'f',f),s:floorFare(rk,'s',s2),t:floorFare(rk,'t',t)});return true;}return false;}
     case 'linehands':{const [rk,v]=d;if(!S.lines[rk])return false;S.lines[rk].hands=!!v;return true;}
-    case 'setlineopt':{const [rk,k,v]=d;if(S.lines[rk]){if(S.lines[rk][k]!==v)(S.lines[rk].set=S.lines[rk].set||{})[k]=S.m;S.lines[rk][k]=v;return true;}return false;}
+    case 'setlineopt':{const [rk,k,v]=d;if(S.lines[rk]){if(S.lines[rk][k]!==v){(S.lines[rk].set=S.lines[rk].set||{})[k]=S.m;(S.lines[rk].was=S.lines[rk].was||{})[k]=S.lines[rk][k];}S.lines[rk][k]=v;return true;}return false;}
     case 'setship':{const [id,k,v]=d;const x=ship(id);if(x){x[k]=v;return true;}return false;}
     case 'setwc':case 'cruiseadd':{const [id,rk]=d;const x=ship(id);if(!x)return false;cruiseProg(x);
       if(!rk){x.cp=[];return true;} // she finishes the cruise she is on, then goes back to her line

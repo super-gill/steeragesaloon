@@ -43,15 +43,20 @@ Players see a short version of this plan, and what each release brought, in the 
 | 0.39.0 (done) | Open items before the milestone | KI-062 rival failures; KI-063 shipping shares; KI-069 bargains; KI-070 fare advice; passenger space dearer. KI-047 and KI-065 left for research | `QUIET=1 node tools/companies.js 40 6`: about 2 failures a decade; `tools/market.js`: PASS |
 | 0.39.1 (done) | Costs and earnings | Research (`docs/overhaul/research/earnings.md`); 1920s designs roomier; post-war steerage and tourist demand and freight rates lower; new ships dearer. KI-047 fixed; KI-065 narrowed to old ships before the war | New ships' returns within the sources' bands in 1910 and 1928 |
 | 0.39.2 (done) | Old ships before the war | KI-065 re-diagnosed (`docs/overhaul/research/advisor-growth.md`): the boom-year steerage trade, not old ships; three fixes tried and reverted; rivals replace ships they break up | Careful owner 5 of 40 bankrupt by 1922; advisor about £950k in 1914 (unchanged) |
-| 0.40.0 | Milestone | 1900 to 1940 complete and balanced; every S1 and S2 issue closed; the test round judges KI-065 (whether human players approach the advisor's growth to 1914) | Full suite on 40 seeds |
+| Test round 5 (done) | Test players, 1900 to 1940 | Three new games on 0.39.2 (careful, bold, exploits): the game is far too easy (a careful human £14.8m by 1940, a bold one £3.5m by 1914); one S1 and four S2 exploits. Summary and notes in `docs/overhaul/test-rounds/` | Gate failed: 0.40.0 held |
+| 0.39.3 (done) | Fixes from round 5 | KI-017 to KI-021 exploits (merge and strip, floats, rumours, enemy lines, scrapping); KI-027 to KI-033 bugs (forecasts seeing history, emigration years, the 1937 bank failure, rate wars in war, called loans, sales, Blue Riband); KI-043, KI-049 to KI-051 advice; KI-100, KI-101 tooling | Suite on 40 seeds |
+| 0.39.4 | Balancing 1900 to 1940 against human play | KI-065, KI-071 to KI-078: conference fares, emigrant returns, emigration after the war, the 1919-20 boom, failed rivals' ships, the Depression, the war's risks, income tax before 1925; balance targets set on human results, not the scripted owner | Round 5's games replayed by the harness; targets in `docs/overhaul/BALANCE.md` |
+| Test round 6 | Test players, 1900 to 1939 | Three new games on 0.39.4 | |
+| 0.40.0 | Milestone | 1900 to the outbreak of the Second World War complete and balanced; every S1 and S2 issue closed | Full suite on 40 seeds; round 6 within the targets |
+| 0.41 | The Second World War, 1939 to 1945 | Decided 4 October 2026: the war goes in, replacing this world's peace after 1939. Research pass first (`docs/overhaul/research/`), then requisition, the Atlantic campaign and convoys, losses and compensation, the post-war rebuilding and the troopship years; Bank Rate, Consols, prices and taxes from 1939 rewritten for the war | Its own test round |
 
 ## From 0.40 to 1.0
 
-The eras after 1940, in this world where the liner trade never declined. Each starts with a research pass (`docs/overhaul/research/`), then a design note, then patches as above, and ends with a round of test players over the era.
+The eras after 1939, in this world where the liner trade never declined. The Second World War is in (decided 4 October 2026; until 0.41 the game still runs on in peace after 1939). Each starts with a research pass (`docs/overhaul/research/`), then a design note, then patches as above, and ends with a round of test players over the era.
 
 | Versions | Era | Contents |
 |---|---|---|
-| 0.4x | 1940 to 1966 | The world as already sketched (no Second World War, the Atlantic Air Conference, tourist-class boom), researched properly; two-class ships (FR-03) |
+| 0.42 to 0.4x | 1945 to 1966 | The post-war world, researched properly (the Atlantic Air Conference and tourist-class boom as sketched, revisited after the war); two-class ships (FR-03) |
 | 0.5x to 0.6x | 1966 to 1990 | FR-12: the cruise trade's rise, casinos and discos (FR-07), Soviet budget lines (FR-10), larger ships and new artwork (FR-05) |
 | 0.7x to 0.8x | 1990 to 2010 | Mega ships, the family cruise lines and "Fredrick" (FR-04, FR-09), the safety rules after the great disasters |
 | 0.9x | 2010 to the present | The modern trade, and the final balance pass over the whole game |

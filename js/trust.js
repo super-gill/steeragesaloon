@@ -56,9 +56,9 @@ function trustMonth(){
   // buying lines: a weak independent now and then, while the Combine's members can pay; it stops growing after 1907
   if(m<ym(1908,0)&&members.length<5&&R()<0.03){
     const payer=members.slice().sort((a,b)=>S.rivals[b].cash-S.rivals[a].cash)[0],pc=S.rivals[payer];
-    const t=coLive().filter(o=>!trustMember(o)&&!RIVAL_P[o].kind&&o!=='aurore').sort((a,b)=>coWorth(a)-coWorth(b))[0];
+    const t=coLive().filter(o=>!trustMember(o)&&!RIVAL_P[o].kind&&o!=='aurore'&&(typeof mkStake!=='function'||mkStake(o)<=0.4)) /* the Combine takes three fifths: not of a line the Morven Line holds more than two fifths of (0.39.3: it bought into a line the Line controlled) */.sort((a,b)=>coWorth(a)-coWorth(b))[0];
     if(t){const price=Math.max(100000*PX(),coWorth(t)*1.25);
-      if(pc.cash+Math.max(0,coMaxDebt(payer)-pc.debt)>=price){coPay(payer,price);T.members.push(t);T.bought.push({o:t,m});
+      if(pc.cash+Math.max(0,coMaxDebt(payer)-pc.debt)>=price){coPay(payer,Math.max(0,price-Math.max(0,coWorth(t)))); /* the member that pays carries only the premium over the line's worth: the holding company gains the line itself (0.39.3: the payer took the whole price as debt with nothing on its books, its worth went below nothing, and its shares sold at two fifths of break-up value) */T.members.push(t);T.bought.push({o:t,m});
         news(`${TRUST_SHORT[0].toUpperCase()+TRUST_SHORT.slice(1)} buys ${RIVALS[t].name} for about ${fmt(Math.round(price/1000)*1000)}. It keeps its name and ships.`,S.ships.some(x=>x.line&&ownersOn(x.line)[t])?'bad':'');}}}
   // an offer for the Morven Line, once it is worth having: about once in three years, never within two of a refusal
   if(!S.trustOffer&&!S.over&&S.ships.length>=3&&m>=T.next&&R()<0.03){

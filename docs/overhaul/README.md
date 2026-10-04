@@ -25,7 +25,7 @@ The research notes behind the data tab are in `research/`.
 - Money follows real history year by year: the price index is about 0.40
   in 1900 against 1.00 in 1921, and the 1921 to 1939 game should follow the
   real index too.
-- A fictional Great War, 1914 to 1918. No Second World War.
+- A fictional Great War, 1914 to 1918. The Second World War goes in from 0.41 (decided 4 October 2026); until then the game runs on in peace after 1939.
 - The 1912 disaster is always a total loss, the Titanic under fictional
   names, handled with respect. It falls on the worst-run giant at sea,
   usually a rival's; date, route and cause vary a little.

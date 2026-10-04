@@ -11,7 +11,9 @@ var PL = (function () {
   const shut = () => typeof mkShut === 'function' && mkShut();
   const A = {
     // ---- a head-office advice button, exactly as the screen presses it: press(verb, ...args) from {button: [label, verb, ...args]}
-    press: (verb, ...args) => DOING.includes(verb) || ['propyes','propno','newhead','cruiseadd','cruisedrop','setwc','openmove','buyship','build'].includes(verb) ? doAction(verb, args) : 'not an action button',
+    // the advice's Build button opens the drawing office on the screen; here it places the order as drawn (0.39.3: it opened the
+    // office, which stops the clock, so the step played no months and ordered nothing)
+    press: (verb, ...args) => verb === 'build' ? (() => { const d = JSON.parse(JSON.stringify(args[0] || {})); if (!d.purpose) return 'no design'; if (!d.name) { const L = SHIP_NAMES[d.purpose] || SHIP_NAMES.inter, used = new Set(S.ships.map(x => x.name).concat((S.orders || []).map(o => o.d.name))); d.name = L.find(n => !used.has(n)) || L[0] + ' II'; } const r = placeOrder(d); return r.ok ? true : 'refused: ' + r.why; })() : DOING.includes(verb) || ['propyes','propno','newhead','cruiseadd','cruisedrop','setwc','openmove','buyship','build'].includes(verb) ? doAction(verb, args) : 'not an action button',
     // ---- ships and lines
     move: (id, rk) => { if (!own(id)) return false; if (rk && !S.lines[rk] && !openLine(rk)) return false; return doAction('moveship', [+id, rk || '']); },
     layup: id => own(id) && doAction('moveship', [+id, '']),
@@ -22,6 +24,10 @@ var PL = (function () {
     table: (rk, v) => doAction('setlineopt', [rk, 'service', +v]),
     adv: (rk, v) => doAction('setlineopt', [rk, 'adv', +v]),
     speed: (id, v) => own(id) && doAction('setship', [+id, 'speed', +v]),
+    // the war at sea (0.39.3, KI-100): as the ship panel's own buttons; no underwriter adds cover on a ship already in trouble
+    zigzag: (id, on) => own(id) && doAction('setship', [+id, 'zigzag', on ? 1 : 0]),
+    convoy: (id, on) => own(id) && doAction('setship', [+id, 'convoy', on ? 1 : 0]),
+    wartop: (id, on) => { const x = own(id); if (!x) return false; if (on && !x.warTop && shipInTrouble(x)) return 'no underwriter will add cover on her now'; return doAction('setship', [+id, 'warTop', on ? 1 : 0]); },
     maint: (id, v) => own(id) && doAction('setship', [+id, 'maint', +v]),
     threshold: (id, pct) => { const x = own(id); if (!x || !DOCK_TH.includes(+pct)) return false; x.autoDock = +pct; return true; },
     yard: (id, kind) => { if (!YARD_NAME[kind]) return false; return doAction('setyard', [+id, kind]); },
@@ -63,7 +69,7 @@ var PL = (function () {
     // ---- the war
     reserve: (id, on) => { const x = ship(id); if (!x || atWar()) return false; x.reserve = !!on; return true; },
     offership: id => { if (!S.war || !atWar()) return false; reqChoose(+id); return true; },
-    waroffer: (sid, yes) => { if (!S.war || !S.war.offers) return false; offerTake(+sid, !!yes); return true; },
+    waroffer: (sid, yes) => { if (!S.war || !S.war.offers || !S.war.offers.some(o => o.sid === +sid)) return 'no such offer (it may have lapsed)'; offerTake(+sid, !!yes); return true; }, // 0.39.3: a lapsed offer answered "done"
     auction: (i, kk) => { if (!S.war || !S.war.auction) return false; auctionBid(+i, +kk); return true; },
     // ---- shares (Finance, Shares)
     shares: (o, amt, margin) => mkBuy(o, +amt, !!margin),
@@ -112,7 +118,7 @@ var PL = (function () {
  shore/office: shore(kind,key) kinds pier, agency, fagent, shed, cold, hostel, yard, slip, bunker, dept · shoresell(key,on) · dept(key) · deptmode(key,act) · newhead(key,i) · propose(id,yes) · safety(0-2)
  money: borrow(amt) · repay(amt) · rescuepay(amt) · gilts(amt) [negative sells] · giltsall()
  trade: join() · leave() [the conference] · mail(yes) · union(yes) · combine(yes) [selling to the Combine ENDS the game]
- war: reserve(id,on) · offership(id) · waroffer(shipId,yes) · auction(lot,0-2)
+ war: zigzag(id,on) · convoy(id,on) · wartop(id,on) · reserve(id,on) · offership(id) · waroffer(shipId,yes) · auction(lot,0-2)
  shares: shares(o,amt,margin) · sharespct(o,pct) · sellshares(o,frac) · repaymargin(amt) · lend(o,amt) · merge(o) · windup(o) · buyout(o) · control(o,'div'|'strat'|'keep',v) · peace(o)
    fundopen('broker'|'office') · fundpay(amt) · fundtake(amt) · fundclose() · fundbrief('preserve'|'balanced'|'growth') · officehire(i)
  floating: float(0.25|0.49|0.6|0.75,founders) · buyback(pct) · founders() · knight(o) · crown() · appeal()
@@ -156,7 +162,7 @@ VIEWS (look <view> [arg]): help · ship <id> · line <rk> · routes · market ·
   }
   function report(first) {
     const L = [];
-    L.push(`=== ${dateLong(S.t)} · cash ${p(S.cash)} · debt ${p(S.debt)} · net worth ${p(netWorth())} · can borrow ${S.noLend > S.m ? 'nothing (lending stopped until ' + monthName(S.noLend) + ')' : p(headroom())} · reputation ${Math.round(S.rep)} (${repWord(S.rep)}) · prices ×${PX().toFixed(2)}${S.gilts ? ' · Consols ' + p(S.gilts) : ''}${S.ex && S.ex.fund ? ' · investment account ' + p(mkFundVal(S.ex.fund)) : ''}${S.conf ? ' · in the conference' : ''}${S.over ? ' · GAME OVER: ' + S.over : ''}`);
+    L.push(`=== ${dateLong(S.t)} · cash ${p(S.cash)} · debt ${p(S.debt)} · net worth ${p(netWorth())}${ownsAll() ? '' : ' (yours ' + p(ownerWorth()) + ')'} · can borrow ${S.noLend > S.m ? 'nothing (lending stopped until ' + monthName(S.noLend) + ')' : p(headroom())} · reputation ${Math.round(S.rep)} (${repWord(S.rep)}) · prices ×${PX().toFixed(2)}${S.gilts ? ' · Consols ' + p(S.gilts) : ''}${S.ex && S.ex.fund ? ' · investment account ' + p(mkFundVal(S.ex.fund)) : ''}${S.conf ? ' · in the conference' : ''}${S.over ? ' · GAME OVER: ' + S.over : ''}`);
     if (S.lastMonth) L.push(`last month: net ${p(S.lastMonth.net)}`);
     L.push('SHIPS id | name | grt kn built | line | where | cond% | speed | last month | 12-mo avg £/mo');
     for (const sh of S.ships.filter(x => x.state !== 'lost')) {
@@ -193,7 +199,7 @@ VIEWS (look <view> [arg]): help · ship <id> · line <rk> · routes · market ·
       case 'shares': { if (!S.ex) return 'no market yet'; const Mx = S.ex; return Object.keys(Mx.cos).filter(o => !Mx.cos[o].gone && o !== 'morven').map(o => { const c = Mx.cos[o]; return `${o} | ${mkName(o)} | price ${c.px.toFixed(3)} (worth ${mkVal(o).toFixed(3)}) | cap ${k(mkCap(o))} | div ${c.dy.toFixed(3)} | yours ${Math.round(mkStake(o) * 100)}%${mkInfl(o) ? ' influence ' + mkInfl(o) : ''} | on offer ${Math.round(mkFree(o) / c.n * 100)}%`; }).join('\n') + `\nmargin loan ${p(Mx.me.loan)} · the Line's shares valued ${p(mkPosVal(Mx.me))}`; }
       case 'company': { const o = arg, co = S.rivals[o]; if (!co) return 'no company ' + o; return `${mkName(o)}: cash ${p(co.cash)} debt ${p(co.debt)} ships ${coFleet(o).length} (${[...new Set(coFleet(o).map(x => x.route))].join(', ')}) profit last year ${p(coYear(o, 'net'))} health ${coHealth(o)[0]} · your stake ${Math.round(mkStake(o) * 100)}% · loan from the Line ${p(co.lineLoan || 0)} · div policy ${co.divPol || '-'} strategy ${co.strat || '-'}`; }
       case 'advice': return advice().map(h => `- [${h.sev}] ${h.title}: ${String(h.why).replace(/<[^>]+>/g, '')} {button: ${JSON.stringify(h.act[0] || null)}}`).join('\n');
-      case 'finance': { const lm = S.lastMonth; return `last month by account: ${lm ? Object.keys(lm.cat).map(c => c + ' ' + k(lm.cat[c])).join(', ') : '-'}\ninterest rate ${S.rateUp > S.m ? '8.5' : '6.5'}% · overdraft limit ${p(odLimit())} · Consols yield ${giltYield().toFixed(2)}% · year profits ${JSON.stringify(S.annual || {})}`; }
+      case 'finance': { const lm = S.lastMonth; return `last month by account: ${lm ? Object.keys(lm.cat).map(c => c + ' ' + k(lm.cat[c])).join(', ') : '-'}\nloan rate ${(loanRate() * 100).toFixed(2)}% · overdraft ${(odRate() * 100).toFixed(2)}% (Bank Rate ${bankRate().toFixed(2)}%) · overdraft limit ${p(odLimit())} · Consols yield ${giltYield().toFixed(2)}% · year profits ${JSON.stringify(S.annual || {})}`; }
       case 'news': return S.news.slice(0, +arg || 30).map(n => `- ${dateLong(n.d)}: ${n.t}`).join('\n');
       case 'captains': return (S.capPool || []).map(c => `${c.id} ${c.name} age ${c.age} exp ${c.exp} ${c.traits.join(',')} £${c.wage}`).join('\n') || 'none';
       case 'shore': return `owned ${JSON.stringify(S.shore)}\ndepartments ${JSON.stringify(Object.keys(S.depts).map(q => [q, S.depts[q].auto]))}`;

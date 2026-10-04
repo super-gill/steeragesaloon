@@ -27,13 +27,20 @@ function usInspection(n,fare,from,m){
 const agentSteer=()=>newCal()&&S.m<ym(1914,7)?1.12:1.07;
 const histNow=()=>HIST.filter(h=>!h.only||!newCal());
 /* ---------- the pre-war world, 1900 to 1913 ----------
-   Emigration by destination, from the real arrivals (US fiscal years treated as calendar years), each as a multiple
+   Emigration by destination, from the real arrivals (each official year centred where it fell: 0.39.3), each as a multiple
    of 1900: the United States, Canada (damped a little: the lines could not have carried the whole ninefold rise),
    and Argentina. Cabin travel grows steadily; cargo with world trade. 1914 to 1920 hold the 1913 level until the
    war years are written (0.26 to 0.28). */
 const PRE_US=[1,1.09,1.45,1.91,1.81,2.29,2.45,2.87,1.75,1.68,2.32,1.96,1.87,2.67];
 const PRE_CA=[1,1.09,1.5,2.85,2.9,3.25,4.2,3.7,5.8,3.3,4.6,6.9,7.9,8.9].map(v=>Math.pow(v,0.7));
 const PRE_AR=[1,1.06,0.68,0.89,1.48,2.09,2.97,2.46,3.01,2.72,3.41,2.66,3.81,3.56];
+/* where each official year's figure belongs (0.39.3). The American figures are fiscal years to 30 June, so each is centred on
+   1 January; the Canadian ones are years to 30 June until 1906, nine months to March in 1907, and years to 31 March from
+   1908, so those are centred on the October before. Read as calendar years they put the 1907 boom and the 1908 slump in the
+   wrong places: on the Canadian routes the 1908 slump was the best year of the decade */
+const PRE_US_AT=PRE_US.map((_,i)=>YEAR0+i);
+const PRE_CA_AT=PRE_CA.map((_,i)=>YEAR0+(i<=6?i:i===7?6.9:i-0.25));
+function preSeries(arr,at,m){const t=clamp(YEAR0+m/12,at[0],at[at.length-1]);let i=0;while(i<at.length-2&&t>at[i+1])i++;const f=(t-at[i])/(at[i+1]-at[i]);return arr[i]+(arr[i+1]-arr[i])*clamp(f,0,1);}
 /* a yearly series at month m: each year's figure at mid-year, straight lines between */
 function preYear(arr,m){const y=clamp(YEAR0+m/12-0.5,YEAR0,YEAR0+arr.length-1),i=Math.min(arr.length-2,Math.floor(y-YEAR0)),f=y-YEAR0-i;return arr[i]+(arr[i+1]-arr[i])*f;}
 /* going home before the war: in the American slump of 1908 more emigrants went home than came out, and 1909 was still heavy */
@@ -43,8 +50,8 @@ const preYears=m=>clamp(YEAR0+m/12-YEAR0,0,13.99); // years since 1900, held at 
 function preDemand(c,rk,m,raw){
   const r=ROUTES[rk],g=r.group,y=preYears(m);let x;
   if(r.cruise)x=1+0.03*y;
-  else if(c==='t'||c==='tt'){const us=preYear(PRE_US,m);
-    x=rk==='nap'?Math.pow(us,1.1):g==='North Atlantic'?us:g==='Canada'?preYear(PRE_CA,m):rk==='rpl'?preYear(PRE_AR,m):1+0.02*y;}
+  else if(c==='t'||c==='tt'){const us=preSeries(PRE_US,PRE_US_AT,m);
+    x=rk==='nap'?Math.pow(us,1.1):g==='North Atlantic'?us:g==='Canada'?preSeries(PRE_CA,PRE_CA_AT,m):rk==='rpl'?preYear(PRE_AR,m):1+0.02*y;}
   else x=c==='f'?1+0.035*y:1+0.05*y;
   return raw?x:x*crashMod(c,m)*warPax(c,rk,m);
 }

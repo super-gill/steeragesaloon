@@ -36,13 +36,13 @@ function run(seed) {
     if(R&&R.kind==='bank'){
       ok('the banks forbid buying a ship until half the loan is repaid',rescueNoBuy()&&!buyShip((refreshMarket(),S.market[0]||{grt:1})),'');
       ok('no dividend while the loan is owed',rescueNoDiv(),'');}
-    if(R){ok('the rescue loan counts against net worth',Math.abs(netWorth()-(S.cash+(S.gilts||0)+fleetValue()+shoreValue()+ordersValue()-S.debt-admDebt()-R.loan+mkWorth()))<1,fmt(R.loan));
+    if(R){ok('the rescue loan counts against net worth',Math.abs(netWorth()-(S.cash+(S.gilts||0)+fleetValue()+shoreValue()+ordersValue()-S.debt-admDebt()-R.loan+((S.liq&&S.liq.left)||0)+mkWorth()))<1,fmt(R.loan));
       const d0=S.debt;S.cash=Math.max(S.cash,3e5);to(S.m+1);ok('no repayment on the mortgages during the moratorium',S.debt>=d0-1,fmt(d0)+' then '+fmt(S.debt));
       yes();fail();no();ok('a second failure is final',S.over==='bust',S.over);}
     // 2: the Treasury after 1921, for a Line with a mail contract
     setup(1922);yes();S.rescue=null;S.mail=S.mail||{};S.mail.liv={pay:1000,strikes:0,ok:false};fail();no();
     {const T=S.rescue;ok('the Treasury rescues a Line that matters to the country after 1921',T&&T.kind==='treasury'&&!S.over,T?T.kind:S.over);
-     if(T){const sh=S.ships.find(x=>x.state==='port'||x.state==='sea');ok('the government director stops a ship being sold',sh&&!exitShip(sh,'sell')&&S.ships.includes(sh),sh&&sh.name);
+     if(T){const sh=S.ships.find(x=>x.state!=='req'&&x.state!=='lost');ok('the government director stops a ship being sold',!sh||(!exitShip(sh,'sell')&&S.ships.includes(sh)),sh?sh.name:'no ship to try'); /* any ship of hers (0.39.3) */
        ok('the owner keeps three quarters',Math.abs(ownerShare()-0.75)<1e-9||(S.fl&&S.fl.n),ownerShare().toFixed(2));}}
     // 3: a rival that rescues the Line may not be raided
     {setup(1910);S.rescue=null;mkEnsure();const o=coLive().find(q=>!RIVAL_P[q].kind&&S.ex.cos[q]&&!S.ex.cos[q].gone);

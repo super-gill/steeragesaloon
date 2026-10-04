@@ -42,7 +42,7 @@ const load = () => { if (!fs.existsSync(file)) { console.log('No game in slot ' 
 if (cmd === 'new') { M.seed = seed; M.steps = 0; run('PL.fresh()'); save(); console.log(run('PL.report(true)')); }
 else if (cmd === 'look') { load(); console.log(run(`PL.look(${JSON.stringify(a3 || 'help')},${JSON.stringify(a4 === undefined ? null : a4)},${JSON.stringify(a5 === undefined ? null : a5)})`)); }
 else if (cmd === 'do' || cmd === 'step') {
-  load(); ctx.__ACT = readActions(a3); const months = cmd === 'step' ? Math.max(1, Math.min(12, +a4 || 3)) : 0;
+  load(); ctx.__ACT = readActions(a3); const months = cmd === 'step' ? (a4 === undefined || a4 === '' ? 3 : Math.max(0, Math.min(12, Math.floor(+a4) || 0))) : 0; // step <slot> <actions> 0 plays no months (0.39.3: it played three)
   console.log(run('PL.act(__ACT)'));
   if (months) { console.log(run(`PL.play(${months})`)); M.steps++; }
   save(); console.log(run('PL.report(false)'));

@@ -69,7 +69,7 @@ function renderHeader(){
   setHTML($('brand'),`<span class="eyebrow"><span class="long">Steerage &amp; Saloon · The Morven Line </span><span class="ver">v${GAME_VERSION}</span></span><div class="row" style="justify-content:flex-start;gap:12px"><h1>${dateLong(S.t)}</h1><button class="menubtn" data-act="menu" aria-expanded="${!!UI.menu}">Menu</button></div>`);
   setHTML($('clock'),`<span class="lbl">Clock</span><div class="seg" role="group" aria-label="Game speed">${SPEED_LABELS.map((l,i)=>`<button data-act="speed" data-v="${i}" aria-pressed="${UI.speed===i}" ${S.over?'disabled':''}>${l}</button>`).join('')}</div>`);
   setHTML($('stats'),`<div><dt>Cash</dt><dd class="${S.cash<0?'neg':''}">${fmt(S.cash)}</dd></div><div><dt>Bank debt</dt><dd>${fmt(S.debt)}</dd></div>
-    <div><dt>Reputation</dt><dd>${Math.round(S.rep)} <small>${repWord(S.rep)}</small></dd></div><div><dt>Net worth</dt><dd>${fmt(netWorth())}</dd></div>`);
+    <div><dt>Reputation</dt><dd>${Math.round(S.rep)} <small>${repWord(S.rep)}</small></dd></div><div><dt>Net worth</dt><dd>${fmt(netWorth())}${ownsAll()?'':` <small>yours ${fmt(ownerWorth())}</small>`}</dd></div>`);
 }
 function renderTabs(){
   const n=alerts().length;
@@ -763,7 +763,7 @@ function renderModal(){
   const nw=netWorth(),sold=S.over==='sold',wound=S.over==='wound',flEnd=S.over==='removed'||S.over==='taken';
   const v=sold?`The Morven Line now belongs to the ${TRUST_NAME}. Its ships keep their names and sail under the Combine's orders; you leave with ${fmt(S.soldFor)} for the shareholders.`:S.rescue?`The bank has foreclosed for the second time. Rescued once, in ${monthName(S.rescue.m)}, the Morven Line finds no one to rescue it again, and it is finished.`:'The bank has foreclosed and no one would rescue the Line. The Morven Line is finished.';
   setHTML(el,`<div class="modal" role="dialog" aria-modal="true" aria-labelledby="mt"><div class="panel">${wound?woundHTML():flEnd?flEndHTML():`<h3 id="mt">${sold?'Sold to the Combine':'Foreclosed'}</h3><p style="margin:0">${v}</p>`}
-    <dl class="kv">${sold?`<dt>Sale price</dt><dd>${fmt(S.soldFor)}</dd>`:''}<dt>Net worth</dt><dd>${fmt(nw)}</dd>${S.rescue&&S.rescue.stake?`<dt>Your share</dt><dd>${fmt(Math.max(0,nw)*ownerShare())}</dd>`:''}<dt>Fleet</dt><dd>${S.ships.length}</dd><dt>Reputation</dt><dd>${Math.round(S.rep)}</dd><dt>Reached</dt><dd>${dateLong(S.t)}</dd></dl>
+    <dl class="kv">${sold?`<dt>Sale price</dt><dd>${fmt(S.soldFor)}</dd>`:''}<dt>Net worth</dt><dd>${fmt(nw)}</dd>${ownsAll()?'':`<dt>Yours</dt><dd>${fmt(ownerWorth())}</dd>`}<dt>Fleet</dt><dd>${S.ships.length}</dd><dt>Reputation</dt><dd>${Math.round(S.rep)}</dd><dt>Reached</dt><dd>${dateLong(S.t)}</dd></dl>
     <button class="btn primary" data-act="newnow">Start a new line</button>
     <label class="lbl" for="loadCode2">Or load a save code</label><textarea id="loadCode2" data-keep="1" class="code" rows="2" placeholder="Paste a code here"></textarea>
     <button class="btn" data-act="loadcode" data-src="loadCode2" style="width:fit-content">Load code</button>${UI.loadMsg&&!UI.loadMsg.ok?`<p class="badline">${UI.loadMsg.t}</p>`:''}</div></div>`);

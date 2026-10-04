@@ -299,6 +299,19 @@ Each month the Shore tab also shows what each pier, hostel and booking agency is
 
 Money is in 1921 pounds, scaled by the price index. Head office suggests selling spare berths at piers and yards (which cost the fleet nothing) once they would earn £400 a month; hostels and agents are left to the player, since they help rivals on the Line's own routes.
 
+## Fixes from test round 5 (0.39.3)
+
+- **Bank lending** (`bankFleetValue`, `headroom` in `js/sim.js`): the bank lends 0.7 of each ship's worth, but for a ship held under twelve months, merged ships included, at most what was paid for her moved with the market (`saleCap`). Net worth (`fleetValue`) still counts a merged fleet at its worth.
+- **The owner's wealth** (`ownerWorth`, `ownsAll` in `js/economy.js`): the Line's net worth times the owner's share (`ownerShare`: after a float or a rescue stake), plus `S.ownerCash`, the money taken out by selling shares at a float. Shown beside net worth whenever the owner does not hold the whole Line.
+- **Panics** (`crashMonth`): on the 1900 calendar no invented panic starts before 1946. A rumour other than 1907's comes to nothing one time in three (`S.crash.false`); while a rumour lasts the share market's mood is 0.12 lower (`mkMoodBase`).
+- **Enemy lines** (`mkEnemy` in `js/market.js`): from August 1914 to January 1920 a German line's shares cannot be bought (`mkBuy`, `mkBuyPct`), raided or tendered for (`mvRaid`, `mvTender`), and it cannot be merged or bought out, nor its ships taken.
+- **Forecasts** (`FC_NOW`, `fcHist`, `FC_KNOWN` in `js/sim.js`; `econ` in `js/advice.js`): while head office forecasts, `legCalc` takes the season from the month forecast but history (demand trends, the war, cargo, coal and oil, routes, inspection rules) from today. `FC_KNOWN` lists laws known in advance: from January 1924, the quota law of July 1924. `marketM` takes the two months separately.
+- **Emigration series** (`preSeries`, `PRE_US_AT`, `PRE_CA_AT` in `js/helpers.js`): the American figures are centred on 1 January (years to June); the Canadian on 1 January to 1906, November 1906 for the nine months to March 1907, and the October before from 1908 (years to March).
+- **Rate wars** (`sim.js`, the monthly loop): no tension builds, and no war starts, while the Great War lasts or on a trade with no rival line; a war records its leader (`by`), so it ends if the leader leaves the trade.
+- **War losses** (`warLossPM` in `js/war.js`): times 0.25 before `SUB_FROM`, as `warRoll`. The top-up advice needs the expected loss covered to be at least 0.7 of the premium.
+- **Table advice**: `setlineopt` records the value before a change (`L.was`); going back to it within 24 months needs a gain of £600 a month or 5% of the line's takings, whichever is more, against £150 for any other change.
+- **Sales with damage** (`exitShip`): a ship with a repair or engine visit pending sells for her price less 1.5 or 0.8 times her tonnage times the price level, but never below scrap value.
+
 ## Rival fleets (0.39.2)
 
 - **Replacing old ships** (`rivalsMonth` in `js/rivals.js`): a rival ship over 32 years old goes to the breakers with a chance of 8% a month, as before. If the line's loads on that trade are at least 0.95 of its 1900 level, it is not at war, has no ship already ordered for the trade and can pay (`coCanPay`), it orders a new ship for the trade, delivered in 12 to 20 months.

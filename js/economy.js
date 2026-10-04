@@ -58,12 +58,20 @@ function crashMonth(){
   const m=S.m,c=S.crash;
   if(S.liq&&m>=S.liq.next){const p=Math.min(S.liq.left,S.liq.per);S.cash+=p;S.liq.left-=p;S.liq.next=m+3;news(`The liquidators of ${BANK_NAME} pay the Line ${fmt(p)}${S.liq.left>1?`; ${fmt(S.liq.left)} is still to come`:', the last of it'}.`,'good');if(S.liq.left<1)S.liq=null;}
   if(S.call&&m>=S.call.due)callDue();
+  // on the 1900 calendar the panics are history's own (1907, and the Crash of 1929 in the Depression): between the wars no
+  // British clearing bank failed, so no invented panic comes before 1946 (0.39.3: the 1907 panic left the clock at 1909, and
+  // from 1936 a panic and a bank failure were all but certain within a few years)
+  if(!c&&newCal()&&m<ym(1946,0))return;
   if(!c){const since=m-(S.lastCrash||ym(1931,0));if(m<ym(1936,0)||since<96)return;
     if(Math.random()<0.004+Math.min(0.02,(since-96)*0.0004)){
       const bank=Math.random()<0.6;S.crash={stage:'rumour',m0:m,bank,panicAt:m+1+(Math.random()<0.5?1:0),depth:0.3+Math.random()*0.2,rec:24+Math.floor(Math.random()*18)};
       news(bank?`Whispers in the City: ${BANK_NAME}, which keeps the Morven Line's accounts, is said to be badly overextended. Some owners are quietly moving their money into government stock.`
         :'The markets are jittery. Shares have run too far, and the banks are quietly calling in loans. Cautious owners are paying down debt and holding stock.','bad',true);}
     return;}
+  // a rumour does not always come true (0.39.3: it always did, and the share market took no notice until the panic, so selling
+  // short on a rumour was a sure profit); a third blow over, and the market marks shares down while the rumour lasts (mkMoodBase)
+  if(c.stage==='rumour'&&m>=c.panicAt&&c.y1907===undefined&&c.false===undefined)c.false=Math.random()<0.35;
+  if(c.stage==='rumour'&&m>=c.panicAt&&c.false){S.crash=null;news(c.bank?`${BANK_NAME[0].toUpperCase()+BANK_NAME.slice(1)} publishes its accounts and the Bank of England stands behind it. The whispers die away.`:'The jitters pass. The markets steady and the banks lend again.','good',true);return;}
   if(c.stage==='rumour'&&m>=c.panicAt){c.stage='panic';panic(c);return;}
   if(c.stage==='panic'&&m>=c.panicAt+c.rec){S.crash=null;S.lastCrash=m;news('Trade has recovered from the panic. The banks are lending again and ships are fetching fair prices.','good',true);}
 }
@@ -77,13 +85,14 @@ function panic(c){
       news(`${BANK_NAME[0].toUpperCase()+BANK_NAME.slice(1)} has closed its doors with ${fmt(dep)} of the Morven Line's money. The liquidators expect to pay fifteen shillings in the pound over eighteen months: ${fmt(lost)} is lost, and ${fmt(back)} will come back a quarter at a time.`,'bad',true);}
     else news(`${BANK_NAME[0].toUpperCase()+BANK_NAME.slice(1)} has closed its doors. The Morven Line had little on deposit.`,'bad',true);}
   if(S.debt>20000*PX()){const amt=Math.round(S.debt*(c.bank?0.25:0.15)*(c.y1907?0.6:1)/100)*100;S.call={amt,due:m+(c.y1907?6:3)};
-    news(`${c.bank?'The receivers':'The bank'} call in ${fmt(amt)} of the Morven Line's loans, due by ${monthName(S.call.due)}. There will be no new lending for a year, and interest is up two points.`,'bad',true);}
+    news(`${c.bank?'The receivers call':'The bank calls'} in ${fmt(amt)} of the Morven Line's loans, due by ${monthName(S.call.due)}. There will be no new lending for a year, and interest is up two points.`,'bad',true);}
   S.noLend=m+12;S.rateUp=m+12;
   {const was=S.gilts||0;S.giltShock=(S.giltShock||0)+0.4;giltsMark();if(was>0)news(`Government stock has fallen in the panic: the Line's holding is worth ${fmt(was-S.gilts)} less for now.`,'bad');}
 }
 /* a called loan falls due: pay it, or the bank sells ships to cover it */
 function callDue(){
-  const c=S.call;S.call=null;let owe=c.amt;
+  const c=S.call;S.call=null;let owe=Math.min(c.amt,Math.max(0,S.debt)); // no more than is still owed: a Line that repaid early owes the bank nothing (0.39.3: the debt went below zero)
+  if(owe<=0){news(`The called loan of ${fmt(c.amt)} falls due, but the Line has already repaid the bank.`,'good');return;}
   const pay=Math.min(owe,Math.max(0,S.cash));if(pay>0){S.cash-=pay;S.debt-=pay;owe-=pay;}
   if(owe<=0){news(`The called loan of ${fmt(c.amt)} is repaid.`,'good');return;}
   // what the account can bear within the overdraft is taken from it; ships are seized only for the rest
@@ -378,4 +387,9 @@ const rescueFriend=o=>!!(S.rescue&&S.rescue.kind==='rival'&&S.rescue.o===o);
 const rescueMoratorium=()=>!!(S.rescue&&S.m<S.rescue.m+36);
 const rescueNoDiv=()=>!!(S.rescue&&S.rescue.noDiv&&S.rescue.loan>0);
 /* the owner's own share of the Line: after a rescuer's stake and any public float */
+/* the owner's own wealth (0.39.3): their share of the Line, and what they have taken out of it by selling shares. The Line's
+   net worth counts the capital a float brought in; after a float the owner holds only part of it (round 5: a float of three
+   quarters at the top of a boom doubled the net worth shown, though the owner kept a quarter) */
+const ownerWorth=()=>Math.max(0,netWorth())*ownerShare()+(S.ownerCash||0);
+const ownsAll=()=>ownerShare()>=0.999&&!S.ownerCash;
 const ownerShare=()=>(1-((S.rescue&&S.rescue.stake)||0))*(S.fl&&S.fl.n?S.fl.own/S.fl.n:1);

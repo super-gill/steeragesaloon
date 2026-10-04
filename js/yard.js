@@ -292,7 +292,7 @@ function ordersMonth(){
       if(o.stage==='plating'&&o.prog>=0.62){
         if(!bill(o,0.3,'at the launch')){o.prog=0.62;continue;}
         o.stage='fitting';o.launched=S.m;if(o.slip){o.slip.who=null;o.slip.until=S.m;o.slip=null;}
-        const SP=LAUNCH_SPONSORS.filter(x=>S.m>=ym(1923,0)||!/Baldwin/.test(x)),sp=SP[Math.floor(Math.random()*SP.length)];
+        const SP=LAUNCH_SPONSORS.filter(x=>(S.m>=ym(1923,0)||!/Baldwin/.test(x))&&(B.port==='GLA'||!/Provost|Montrose|Eglinton/.test(x))&&(S.m>=ym(1912,0)||!/Princess Mary/.test(x))),sp=SP[Math.floor(Math.random()*SP.length)]; // Scottish sponsors at Scottish yards; Princess Mary launched ships once grown (0.39.3)
         logOrder(o,`Launched by ${sp}.`);news(`SS ${o.d.name} is launched at ${B.name}. ${sp[0].toUpperCase()+sp.slice(1)}${sp.includes(', ')?',':''} names her before a crowd of thousands, and she takes the water cleanly.`,'good',true);}
       if(o.stage==='fitting'&&o.prog>=1){o.stage='trials';o.left=1;logOrder(o,'Fitting out complete. Trials next.');}
       continue;}

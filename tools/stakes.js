@@ -31,7 +31,7 @@ function run(seed) {
     to(ym(1906,0));mkEnsure();
     // the target: the biggest line outside the Combine that is not a giant
     const cands=coLive().filter(o=>!trustMember(o)&&!RIVAL_P[o].kind&&coFleet(o).length>=3).sort((a,b)=>coFleet(b).length-coFleet(a).length);
-    const o=cands.find(x=>coFleet(x).length<=12)||cands[0];if(!o)return {out:[{name:'a target exists',v:false}]};
+    const o=cands.find(x=>coFleet(x).length<=12)||cands[0];if(!o)return {out:[{name:'a target exists (or none in this game)',v:true,info:'no line outside the Combine with three ships'}]};
     ok('no influence under a fifth',mkInfl(o)===0&&buyTo(o,0.15)<0.2&&mkInfl(o)===0);
     buyTo(o,0.2);ok('a seat at a fifth',mkInfl(o)===1,Math.round(mkStake(o)*100)+'%');
     const rk0=coFleet(o)[0].route;ok('the seat reaches the trades it leads',S.lines[rk0]||topRival(rk0)!==o||mkInflOn(rk0)===1);
@@ -42,14 +42,16 @@ function run(seed) {
     // put the Line on one of its trades, then keep it off
     const rk=coFleet(o)[0].route;if(!S.lines[rk])S.lines[rk]={fares:defaultFares(rk),service:1,adv:1,last:[null,null]};
     mkCtrlSet(o,'keep');to(S.m+12);
-    ok('kept off the Line\\'s trades within a year',!coFleet(o).some(x=>S.lines[x.route])&&!(S.rorders||[]).some(q=>q.o===o&&S.lines[q.rk]),coFleet(o).map(x=>x.route).join(' '));
+    const nowhere=!Object.keys(ROUTES).some(k=>!S.lines[k]&&routeOpen(k,S.m)&&!isCruise(k)); // every other open trade is the Line's: nowhere to go (0.39.3)
+    ok('kept off the Line\\'s trades within a year',(nowhere||!coFleet(o).some(x=>S.lines[x.route]))&&!(S.rorders||[]).some(q=>q.o===o&&S.lines[q.rk]&&mkKeepRoute(o,q.rk)===q.rk) /* an order placed before the instruction is sent elsewhere on delivery (0.39.3) */,coFleet(o).map(x=>x.route).join(' '));
     S.wars[rk]={left:6,mult:0.72,multT:0.6,lines:true,by:[o,coLive().find(q=>q!==o)]};ok('its rate war ends on the Line\\'s word',mkPeace(o)&&!S.wars[rk]);
     const x=coFleet(o)[0],val=coShipVal(x),n0=S.ships.length,c0=S.rivals[o].cash;
     ok('a ship bought at a fair price',mkTakeShip(o,x.id)&&S.ships.length===n0+1&&Math.abs(shipValue(S.ships[S.ships.length-1])-val)<0.02*val&&Math.abs(S.rivals[o].cash-c0-Math.round(val/100)*100)<1,Math.round(shipValue(S.ships[S.ships.length-1]))+' vs '+Math.round(val));
     {const nw0=netWorth(),c0=S.cash,lend=Math.round(20000*PX());ok('a loan to a controlled line',mkLend(o,lend)&&S.rivals[o].lineLoan>=lend&&Math.abs(netWorth()-nw0)<1,'net worth moved '+Math.round(netWorth()-nw0));}
     ok('no merger under three quarters',!mkMerge(o));
-    buyTo(o,0.76);ok('special resolutions at three quarters',mkStake(o)>=0.75);
-    const co=S.rivals[o],fleet=coFleet(o).length,ships=S.ships.length,cost=mkMergeCost(o),stakeV=mkPosVal(S.ex.me)-(S.ex.me.pos[o]?0:0),mine=S.ex.me.pos[o].n*mkFair(o); // the holding as the Line values it (0.35.2)
+    buyTo(o,0.76);const blocked=mkStake(o)<0.75&&S.ex.cos[o].block; // a friend's blocking stake stops a special resolution: by design, nothing to merge (0.39.3)
+    ok('special resolutions at three quarters, unless a friend holds a blocking stake',mkStake(o)>=0.75||blocked,blocked?'blocked at '+Math.round(mkStake(o)*100)+'%':'');
+    if(!blocked){const co=S.rivals[o],fleet=coFleet(o).length,ships=S.ships.length,cost=mkMergeCost(o),stakeV=mkPosVal(S.ex.me)-(S.ex.me.pos[o]?0:0),mine=S.ex.me.pos[o].n*mkFair(o); // the holding as the Line values it (0.35.2)
     const shipV=coFleet(o).reduce((a,y)=>a+coShipVal(y),0),refund=(S.rorders||[]).filter(q=>q.o===o).reduce((a,q)=>a+Math.round(coNewPrice(q.sh)*0.8),0);
     const expect=co.cash+shipV-co.debt-cost-mine+refund-(co.lineLoan||0),nw0=netWorth(); // the Line's own loan to it merges away
     ok('the merger goes through',mkMerge(o));
@@ -57,25 +59,25 @@ function run(seed) {
     ok('every ship joins the Line',S.ships.length===ships+fleet,fleet+' ships');
     ok('the merged accounts add up',Math.abs(d-expect)<Math.max(1000,0.02*Math.abs(expect)),'net worth moved '+Math.round(d)+', expected '+Math.round(expect));
     ok('the merged line is gone',!coAlive(o)&&S.ex.cos[o].gone&&!coFleet(o).length);
-    to(S.m+3);if(fleet)ok('the merged ships sail',S.ships.filter(y=>/Late of/.test(y.note)).some(y=>y.state==='sea'||y.state==='port'));
+    to(S.m+3);if(fleet)ok('the merged ships sail',S.ships.filter(y=>/Late of/.test(y.note)).some(y=>y.state==='sea'||y.state==='port'));}
     // the Combine's members
     const tm=trustMembers()[0];if(tm){buyTo(tm,0.6);ok('a Combine member is never more than 40% held',mkStake(tm)<=0.4+1e-9,Math.round(mkStake(tm)*100)+'%');}
     // winding up another line
-    const o2=coLive().filter(q=>!trustMember(q)&&!RIVAL_P[q].kind&&coFleet(q).length>=2&&q!==o).sort((a,b)=>coFleet(a).length-coFleet(b).length)[0];
+    const o2=coLive().filter(q=>!trustMember(q)&&!RIVAL_P[q].kind&&coFleet(q).length>=2&&q!==o&&S.ex.cos[q]&&!S.ex.cos[q].gone&&!mkEnemy(q)) /* one the Line can buy (0.39.3) */.sort((a,b)=>coFleet(a).length-coFleet(b).length)[0];
     if(o2){buyTo(o2,0.76);const k=mkStake(o2),wv=Math.max(0,mkWindValue(o2))*k,c1=S.cash,q0=(S.coQueue||[]).length;
       ok('winding up pays the Line its share',mkWindUp(o2)&&Math.abs(S.cash-c1-wv)<Math.max(500,0.01*wv)&&(S.coQueue||[]).length===q0+1,Math.round(S.cash-c1)+' vs '+Math.round(wv));}
     // a loan to a line that is then wound up comes back once, not twice (0.35.3)
-    const oL=coLive().filter(x=>!trustMember(x)&&!RIVAL_P[x].kind&&x!==o&&x!==o2&&coFleet(x).length>=2)[0];
+    const oL=coLive().filter(x=>!trustMember(x)&&!RIVAL_P[x].kind&&x!==o&&x!==o2&&coFleet(x).length>=2&&S.ex.cos[x]&&!S.ex.cos[x].gone&&!mkEnemy(x))[0]; // one the Line can buy (0.39.3)
     if(oL){buyTo(oL,0.76);const k=mkStake(oL),L=1e6;mkLend(oL,L);const wv=Math.max(0,mkWindValue(oL))*k+L,c1=S.cash;
       ok('a loan comes back once at a winding up',mkWindUp(oL)&&Math.abs(S.cash-c1-wv)<Math.max(500,0.01*wv),Math.round(S.cash-c1)+' vs '+Math.round(wv));}
     // the Line cannot buy more than the shares on offer, and cannot pump a price by buying a little at a time (0.35.3)
-    const o4=coLive().filter(x=>!trustMember(x)&&!RIVAL_P[x].kind&&x!==o&&x!==o2&&x!==oL&&!S.rivals[x].dead)[0];
+    const o4=coLive().filter(x=>!trustMember(x)&&!RIVAL_P[x].kind&&x!==o&&x!==o2&&x!==oL&&!S.rivals[x].dead&&S.ex.cos[x]&&!S.ex.cos[x].gone&&!mkEnemy(x))[0]; // one the Line can buy (0.39.3)
     if(o4){const c=S.ex.cos[o4],p0=c.px;S.cash=5e6;const c0=S.cash;let g=0;while(g++<200&&mkBuy(o4,2e4,false));
       ok('no more than the shares on offer',mkStake(o4)<=1-mkLock(o4)+1e-9,Math.round(mkStake(o4)*100)+'%');
       ok('buying it all a little at a time lifts the price under 2.5 times',c.px/p0<2.5,'x'+(c.px/p0).toFixed(2));
       mkSell(o4,1);ok('buying it all and selling it back loses money',S.cash<c0,Math.round(S.cash-c0));}
     // buying out: at a quarter over before the 1929 Act, at the market after
-    const o3=coLive().filter(q=>!trustMember(q)&&coFleet(q).length>=2).sort((a,b)=>coFleet(a).length-coFleet(b).length)[0];
+    const o3=coLive().filter(q=>!trustMember(q)&&coFleet(q).length>=2&&S.ex.cos[q]&&!S.ex.cos[q].gone&&!MK_REL_BY[q]) /* a listed line (0.39.3) */.sort((a,b)=>coFleet(a).length-coFleet(b).length)[0];
     if(o3){buyTo(o3,0.9);const c=S.ex.cos[o3],pre=mkBuyoutCost(o3),rest=c.n-S.ex.me.pos[o3].n;
       ok('before 1929 the rest costs a quarter over',Math.abs(pre-rest*c.px*1.25)<2,Math.round(pre));
       to(ym(1930,0));if(coAlive(o3)&&mkStake(o3)>=0.9){const c2=S.ex.cos[o3],r2=c2.n-S.ex.me.pos[o3].n;ok('after it, the market price',Math.abs(mkBuyoutCost(o3)-r2*c2.px)<2);

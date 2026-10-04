@@ -31,7 +31,7 @@ function flRaise(pct,founders){return Math.round(flIssue(pct,founders).gross*(1-
 function flFloat(pct,founders){if(flCanFloat()||!FL_OPTS.includes(pct))return false;const M=mkEnsure();
   const I=flIssue(pct,founders),raised=Math.round(I.gross*(1-FL_FEE)),gross=I.gross,n=I.n,pub=I.pub;
   const toLine=Math.round(raised/2); // half the shares sold are new, for the Line; half are the owner's own, sold for the owner (0.34)
-  S.cash+=toLine;S.fl={n,own:n-pub,pub,founders:!!founders,conf:65,floated:S.m,raised:toLine,ownerCash:raised-toLine,pay:'normal',targets:null,knight:null,bid:null,nextBid:S.m+12,seen:{},paid:0};
+  S.cash+=toLine;S.ownerCash=(S.ownerCash||0)+raised-toLine;S.fl={n,own:n-pub,pub,founders:!!founders,conf:65,floated:S.m,raised:toLine,ownerCash:raised-toLine,pay:'normal',targets:null,knight:null,bid:null,nextBid:S.m+12,seen:{},paid:0};
   M.cos.morven={n,px:gross/pub,sh:1,dy:0,hist:[],since:S.m,f:flWorth(),e:0,w:0};
   flTargets();
   news(`The Morven Line is floated on the Stock Exchange: ${Math.round(pct*100)}% of it sold to the public for ${fmt(raised)} after the issuing house's fee: ${fmt(toLine)} in new capital for the Line, ${fmt(raised-toLine)} to you for shares of your own.${pct>0.5?' The public holds the majority: the board can remove you, and the Line can be bid for.':' You keep the majority.'}`,'good',true);return true;}

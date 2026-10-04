@@ -224,7 +224,7 @@ function warHitP(sh,o){o=o||{};let h=0.75;if(o.zigzag??sh.zigzag)h*=0.75;if(o.da
   if(o.convoy??inConvoy(sh))h*=0.7;if(knotsOf(sh)>=20)h*=0.6;h*=clamp(1.1-cwSk(sh,'deck')/250,0.8,1.05);return h;}
 /* a rough monthly chance of losing her, for the ship's panel and head office */
 function warLossPM(sh,o){const rk=sh.line;if(!rk||!ROUTES[rk]||!atWar()||sh.state==='req')return 0;
-  const d=GEO(geoKey(rk,S.m)).dist,per=30/Math.max(3,d/(knotsOf(sh)*24)+4);return per*warAttackP(sh,rk,d,o)*0.75*warHitP(sh,o)*0.8;}
+  const d=GEO(geoKey(rk,S.m)).dist,per=30/Math.max(3,d/(knotsOf(sh)*24)+4);return per*warAttackP(sh,rk,d,o)*(S.m<SUB_FROM?0.25:1)*0.75*warHitP(sh,o)*0.8;} // before the submarines, three attacks in four never come (warRoll; 0.39.3: the figure was four times too high until February 1915)
 /* at sailing: will the enemy find her this voyage? */
 function warRoll(sh,gk,dist,R){
   if(!atWar())return null;const rk=sh.legRoute||sh.line;if(!rk)return null;

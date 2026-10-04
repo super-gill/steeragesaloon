@@ -17,9 +17,18 @@ const duesAt=(sh,port,mult)=>sh.grt*mult*(S.shore&&S.shore.piers[port]?0.4:1)*sl
 function stopsFor(gk,dir){if(dir===1&&ROUTES[gk]&&ROUTES[gk].cruise)return []; // a cruise sails home non-stop
   const g=GEO(gk),c=g.calls.slice(1,-1);return (dir===0?c.map(x=>[x[0],x[1]]):c.reverse().map(x=>[x[0],g.dist-x[1]]));}
 
+/* head office forecasts by running the coming months (advice.js, econ). While it does, history's scripted turns (war, slumps,
+   the trend in demand, coal, routes opening and closing) are held where they stand today and only the season moves on, so a
+   forecast cannot see the war or a slump coming (0.39.3: on 1 July 1914 it advised laying up a ship that cleared £26k that
+   month, because it could see the war) */
+let FC_NOW=null;
+// what was known in advance: the American quota law of 1924, debated from the winter and passed in May, cut steerage from
+// July (KI-043); a forecast from January 1924 sees it
+const FC_KNOWN=[[ym(1924,0),ym(1924,6)]];
+const fcHist=m=>{if(FC_NOW===null||m<=FC_NOW)return m;for(const [a,b] of FC_KNOWN)if(FC_NOW>=a&&m>=b)return Math.max(b,FC_NOW);return FC_NOW;};
 function legCalc(sh,rk,dir,R,gk){
-  const r=ROUTES[rk],L=S.lines[rk],m=mOf(S.t),mods=shipMods(sh),sm=SPD[sh.speed]*mods.speed;
-  gk=gk||geoKey(rk,m);const g=GEO(gk),kn=knotsOf(sh);
+  const r=ROUTES[rk],L=S.lines[rk],m=mOf(S.t),mh=fcHist(m),mods=shipMods(sh),sm=SPD[sh.speed]*mods.speed;
+  gk=gk||geoKey(rk,mh);const g=GEO(gk),kn=knotsOf(sh);
   // a foul bottom slows her; a short-legged ship stops to coal or fills cargo space with bunkers
   const short=rangeShort(sh,rk),range=dimsOf(sh).range;
   const cr=r.cruise,back=cr&&dir===1;
@@ -33,14 +42,14 @@ function legCalc(sh,rk,dir,R,gk){
   const usOut=!back&&wirelessRule()&&!(sh.up&&sh.up.wireless)&&['NYC','NOL','GAL'].includes(geoEnds(gk)[dir]),usF=usOut?Math.min(1,49/Math.max(1,CL.reduce((a,c)=>a+(sh.berths[c]||0),0))):1;
   for(const c of CL){
     if(back){const o=outPax[c];if(!o||!o.n)continue;pax[c]={n:o.n,cap:o.cap,fare:0,rev:0};prov+=o.n*(seaDays+1)*PROV[c]*SERV_COST[L.service];continue;}
-    const b=(m>=ym(1940,0)&&!(sh.up&&sh.up.wireless))||(c==='t'&&fatOf(sh)>=90)?0:Math.floor(sh.berths[c]*bf*usF);if(!b)continue;
+    const b=(mh>=ym(1940,0)&&!(sh.up&&sh.up.wireless))||(c==='t'&&fatOf(sh)>=90)?0:Math.floor(sh.berths[c]*bf*usF);if(!b)continue;
     const fare=effFare(rk,c),myA=ourAppeal(sh,rk,c),own=b*sailings(kn,rk,sm)*myA;
     const rw=rivalWeight(rk,c),ow=ourWeight(rk,c,sh),others=rw+ow;
     // the way out (0.35.4): a share of the route's capacity at the line rate stands for the travellers who would go another
     // way, so dear fares lose passengers even with no rival on the route; at the line rate it changes nothing
     const pfO=fareDemand(r.ref[c]/fare,c),pfR=fareDemand(1/((S.rfare&&S.rfare[rk])||1),c),outW=OUTSIDE_A*(rw/pfR+(ow+own)/pfO);
     // this ship's slice of the route's market for this class and direction, per crossing
-    let d=marketM(rk,c,dir,m)*b*myA*(1+OUTSIDE_A)/Math.max(1e-9,others+own+outW);
+    let d=marketM(rk,c,dir,m,mh)*b*myA*(1+OUTSIDE_A)/Math.max(1e-9,others+own+outW);
     d*=facWinter(sh,c,m%12); // indoor rooms keep people travelling in winter
     if(R)d*=0.85+R()*0.3;
     const q=S.conf&&c==='t';let cap=q?Math.floor(b*0.8):b;
@@ -52,15 +61,15 @@ function legCalc(sh,rk,dir,R,gk){
   const cd=dir===0?r.cargo.out:r.cargo.home,cm=COMM[cd.c];
   const myCap=Math.max(0,sh.cargo*(cm.reefer&&!(sh.up&&sh.up.reefer)?0.15:1)-(short?fuelRate(sh,sm)*Math.min(short,range*0.5)/(kn*24)*1.2:0));
   const cw=cargoWeight(rk,sh,cm.reefer)+myCap*sailings(kn,rk,sm);
-  const offer=S.cmkt[rk]*cd.t*cargoSeason(cd.c,m)*warCargoVol(m);
+  const offer=S.cmkt[rk]*cd.t*cargoSeason(cd.c,m)*warCargoVol(mh);
   const cargoT=Math.round(Math.min(myCap,offer*myCap*cargoPull(rk,cm.reefer)/Math.max(1,cw)*(R?0.8+R()*0.4:1)));
   const fuelT=fuelRate(sh,sm)*seaDays*(1+0.1*(sh.foul||0));
   const endPort=dir===0?geoEnds(gk)[1]:geoEnds(gk)[0];
   // cruise ships lie off and land their passengers by launch: lighter dues, and none at all out at sea
-  const insp=dir===0&&endPort==='NYC'&&pax.t?usInspection(pax.t.n,pax.t.fare,r.calls[0],m):0;
+  const insp=dir===0&&endPort==='NYC'&&pax.t?usInspection(pax.t.n,pax.t.fare,r.calls[0],mh):0;
   let dues=insp+(endPort==='OFF'?0:duesAt(sh,endPort,cr?(dir===0?0.03:0.06):0.08));for(const [p] of stopsFor(gk,dir))dues+=duesAt(sh,p,cr?0.02:0.04);
   const fm=facMods(sh);let onboard=0;for(const c in pax)onboard+=pax[c].n*(seaDays+calls*CALL_DAYS)*((fm.spend[c]||0)*(cr?cr.spend:1)+(cr?(cr.bar?cr.bar[c]:CRUISE_SPEND[c]*cr.spend/2):0))*PX();onboard*=crewMods(sh).spend;
-  return {cruiseOut:!!cr&&dir===0,onboard,pax,paxRev,prov,cargoT,comm:cd.c,cargoRev:cargoT*cm.rate*cargoMod(m)*(sh.up&&sh.up.heavy&&(cd.c==='general'||cd.c==='manuf')?1.12:1)*(sh.up&&sh.up.deep&&cd.c==='palm'?1.3:1)*(['grain','cotton','palm'].includes(cd.c)?1:clamp(1+(S.rep-30)/150,0.85,1.3)),fuelT,fuelC:fuelT*fuelPrice(sh,m),
+  return {cruiseOut:!!cr&&dir===0,onboard,pax,paxRev,prov,cargoT,comm:cd.c,cargoRev:cargoT*cm.rate*cargoMod(mh)*(sh.up&&sh.up.heavy&&(cd.c==='general'||cd.c==='manuf')?1.12:1)*(sh.up&&sh.up.deep&&cd.c==='palm'?1.3:1)*(['grain','cotton','palm'].includes(cd.c)?1:clamp(1+(S.rep-30)/150,0.85,1.3)),fuelT,fuelC:fuelT*fuelPrice(sh,mh),
     seaDays:seaDays+calls*CALL_DAYS,geo:gk,mail:S.mail[rk]&&sh.speed>0&&mailShip(sh)?S.mail[rk].pay/2:0,
     agents:0.08*paxRev,port:dues+0.35*cargoT*PX()*((sh.up&&sh.up.hatch)?0.75:1)*(S.shore&&S.shore.sheds&&S.shore.sheds[endPort]?0.6:1)};
 }
@@ -272,9 +281,12 @@ const scrapValue=sh=>Math.round(sh.grt*2*PX());
 function exitShip(sh,how){
   if(how!=='scrap'&&rescueNoSale())return false; // the government director will not let her go (0.37.0)
   if(sh.state==='req'||sh.state==='lost')return false; // a requisitioned ship is the Admiralty's until she is handed back (0.35.6)
-  const v=how==='scrap'?scrapValue(sh):saleValue(sh);
+  // a ship sold with damage still to be made good goes for less: the buyers take off the repair (0.39.3: a ship that broke down
+  // beyond repair on her way to the buyers fetched her full price)
+  const dmg=how==='scrap'?0:Math.round((sh.pendingYard==='repair'?1.5:sh.pendingYard==='engine'?0.8:0)*sh.grt*PX()/100)*100;
+  const v=how==='scrap'?scrapValue(sh):Math.max(scrapValue(sh),saleValue(sh)-dmg);
   S.cash+=v;const epdG=how==='scrap'?0:epdSale(sh,v);const adm=admRepay(sh);fleetGone(sh,how==='scrap'?'scrapped':'sold',how==='scrap'?`broken up for ${fmt(v)}`:`sold for ${fmt(v)}`);S.ships=S.ships.filter(x=>x!==sh);
-  news((how==='scrap'?`SS ${sh.name} sold to the breakers for ${fmt(v)}.`:`SS ${sh.name} sold for ${fmt(v)}.`)+(adm?` ${fmt(Math.round(adm))} of it repays her Admiralty loan.`:'')+(epdG>0?` ${fmt(epdG)} over her worth counts towards Excess Profits Duty next January.`:''));
+  news((how==='scrap'?`SS ${sh.name} sold to the breakers for ${fmt(v)}.`:`SS ${sh.name} sold for ${fmt(v)}${dmg?`, ${fmt(dmg)} less for the damage still to be repaired`:''}.`)+(adm?` ${fmt(Math.round(adm))} of it repays her Admiralty loan.`:'')+(epdG>0?` ${fmt(epdG)} over her worth counts towards Excess Profits Duty next January.`:''));
   if(S.selShip===sh.id)S.selShip=S.ships[0]?S.ships[0].id:null;
 }
 function moveAll(step){
@@ -356,13 +368,16 @@ function monthRoll(pm){
   lineWarsMonth();trustMonth();prewarMonth();admMonth();disasterMonth();warMonth();bubbleMonth();if(!(typeof MKT_OFF!=='undefined'&&MKT_OFF))marketMonth(); // the early years (trust.js, prewar.js)
   for(const rk of Object.keys(ROUTES)){
     const n=shipsOn(rk).filter(x=>ACTIVE.includes(x.state)).length;
-    if(S.conf||!S.lines[rk]||!n||isCruise(rk)){S.tension[rk]=(S.tension[rk]||0)*0.6;continue;} // no conference on cruises
+    // no conference on cruises; no rate war in the Great War, when the trades were controlled and every berth was wanted, and
+    // none on a trade where no rival line sails (0.39.3: a war could break out the month war was declared, led by a line
+    // whose ships sailed elsewhere)
+    if(S.conf||!S.lines[rk]||!n||isCruise(rk)||atWar()||!Object.keys(ownersOn(rk)).length){S.tension[rk]=(S.tension[rk]||0)*0.6;continue;}
     const pr=pressure(rk,S.lines[rk].fares,S.lastPax[rk]||0,n,S.m);
     const inf=typeof mkInflOn==='function'?mkInflOn(rk):0; // a seat on the leading rival's board softens it (about two fifths fewer rate wars); control stops them (0.34)
     const prev=S.tension[rk]||0,t=prev+(pr.p*(inf===2?0:inf===1?0.88:1)+(combineOn(rk)?45:0)-prev)*0.35;S.tension[rk]=t;
     if(prev<40&&t>=40)news(`${RIVALS[topRival(rk)].name} is complaining about your fares on ${ROUTES[rk].name}. Tension ${Math.round(t)}.`,'bad');
     if(!S.wars[rk]&&t>=40&&inf<2&&Math.random()<(t-40)/100*0.9){
-      S.wars[rk]={left:4+Math.floor(Math.random()*4),mult:0.72};
+      S.wars[rk]={left:4+Math.floor(Math.random()*4),mult:0.72,by:[topRival(rk)]};
       news(`${RIVALS[topRival(rk)].name} leads a rate war on ${ROUTES[rk].name}. ${confOpen()?'Conference fares':'Fares'} are down a quarter to drive you off.`,'bad',true);}
   }
   rivalsMonth();
@@ -419,7 +434,11 @@ function buyShip(m){if(rescueNoBuy())return false;const t=buyTerms(m);if(S.cash<
 const runningCost=()=>S.ships.reduce((a,x)=>a+crewCost(x)+(x.captain?x.captain.wage:0)+insCost(x)+MAINT_COST[x.maint]*x.grt/8000,0)+officeCost()+shoreUpkeep()*PX(); // head office as charged (0.37.0)
 // a ship the Line has had for less than a year counts at what it paid for her, moved with the market (saleCap): a receiver's
 // bargain does not add its discount to net worth and borrowing the day it is bought (0.39.0; KI-069)
-const fleetValue=()=>S.ships.reduce((a,s)=>a+(s.merged?shipValue(s):Math.min(shipValue(s),saleCap(s))),0); // a merged line's ships come in at their worth: the Line paid for them in shares
+const fleetValue=()=>S.ships.reduce((a,s)=>a+(s.merged?shipValue(s):Math.min(shipValue(s),saleCap(s))),0);
+// what the bank lends on: every ship at the lower of her worth and what was paid, moved with the market, for her first year, a
+// merged line's ships too (0.39.3: in 1918 a merger on borrowed money raised the Line's borrowing by more than it cost, at
+// the ships' full wartime worth, and thirteen mergers in a day borrowed £7.8m against fleets bought for far less)
+const bankFleetValue=()=>S.ships.reduce((a,s)=>a+Math.min(shipValue(s),saleCap(s)),0); // a merged line's ships come in at their worth: the Line paid for them in shares
 // property ashore is worth about half what it cost at today's prices (0.35.4: it was valued at 1921 prices, so before 1921 buying it raised net worth)
 const shoreValue=()=>{const s=S.shore,x=PX();let v=0;for(const p in s.piers)v+=PIER_COST[p]*0.6;for(const y in s.yards)v+=150000*0.5*x;if(s.slip)v+=OWN_SLIP_COST*0.5*x;for(const h in s.hostels)v+=35000*0.5*x;for(const p in s.sheds||{})v+=SHED_COST*0.5*x;for(const p in s.cold||{})v+=COLD_COST*0.5*x;return v;};
 const ordersValue=()=>(S.orders||[]).reduce((a,o)=>a+(o.paid||0),0); // ships on the stocks, at what has been paid on them (0.35.4)
@@ -428,7 +447,7 @@ const netWorth=()=>S.cash+(S.gilts||0)+fleetValue()+shoreValue()+ordersValue()-S
 // half) no more than twice the Line's own worth, since no bank lends a shipping line ten times its capital on stock (0.37.2).
 // In the 1919 and 1920 boom the bank lends on ships at no more than their worth at the armistice, and in the Depression on
 // their normal worth (0.37.2). What a failed bank's liquidators still owe counts at three quarters (0.38.0)
-const headroom=()=>Math.max(0,0.7*(fleetValue()/(newCal()&&S.m>ARMISTICE&&S.m<M21?Math.max(1,warShips(S.m)/warShips(ARMISTICE)):1)/(newCal()?1-SLUMP_SHIP*slump(S.m):1)+shoreValue())+Math.min(0.9*(S.gilts||0)+0.5*Math.max(0,mkWorth()),2*Math.max(0,netWorth()))+0.75*((S.liq&&S.liq.left)||0)-S.debt-admDebt());
+const headroom=()=>Math.max(0,0.7*(bankFleetValue()/(newCal()&&S.m>ARMISTICE&&S.m<M21?Math.max(1,warShips(S.m)/warShips(ARMISTICE)):1)/(newCal()?1-SLUMP_SHIP*slump(S.m):1)+shoreValue())+Math.min(0.9*(S.gilts||0)+0.5*Math.max(0,mkWorth()),2*Math.max(0,netWorth()))+0.75*((S.liq&&S.liq.left)||0)-S.debt-admDebt());
 const odLimit=()=>8000+0.5*headroom(); // the bank forecloses when cash falls below minus this
 function news(t,k,pauseIt){
   S.news.unshift({d:Math.floor(S.t),t,k:k||''});if(S.news.length>150)S.news.length=150;
