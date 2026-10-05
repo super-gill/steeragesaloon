@@ -4,7 +4,8 @@ let S=null;
 const UI={irq:(()=>{try{return localStorage.getItem('ss_irq')||'auto';}catch(e){return 'auto';}})(),perf:(()=>{try{return localStorage.getItem('ss_perf')==='1';}catch(e){return false;}})(),speed:0,tab:'overview',confirm:null,banner:'Paused. Press 1× to start the clock.',eventMode:(()=>{try{return localStorage.getItem('ss_eventmode')||'slow';}catch(e){return 'slow';}})(),view:'ext',dirty:true};
 function newGame(){
   const m0=START,t0=tOfM(m0,1),pi=piAt(m0);
-  S={v:3,t:t0,m:m0,t0,m0,cash:Math.round(18000*pi/500)*500,debt:Math.round(40000*pi/1000)*1000,rep:30,conf:false,ships:[],lines:{},wars:{},mail:{},offer:null,market:[],news:[],hist:[18000],
+  /* the Line starts with no mortgage on the Morven (0.39.6; it was 40,000 at 1921 prices): her first year runs close to break-even */
+  S={v:3,t:t0,m:m0,t0,m0,cash:Math.round(18000*pi/500)*500,debt:0,rep:30,conf:false,ships:[],lines:{},wars:{},mail:{},offer:null,market:[],news:[],hist:[18000],
      mtd:blankLedger(),lastMonth:null,nextId:1,over:false,selShip:1,selLine:'hal',odWarn:false,tension:{},pax:{},lastPax:{},rivalIdx:{},dismiss:{},
      shore:{piers:{},agents:{},hostels:{},yards:{},bunker:null,fagents:{},sheds:{},cold:{},sell:{},earn:{},est:{}},miles:{},capPool:[],capNext:1,depts:{},tut:{},tutSeen:{},orders:[],bslips:{},yardNext:534,wire:[],wireQ:[],wireNext:0,ghosts:[]};
   S.lines.hal={fares:defaultFares('hal'),service:1,adv:1,last:[null,null]};

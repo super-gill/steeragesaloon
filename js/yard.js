@@ -170,7 +170,7 @@ function designStats(d){
   let extras=fc.cost/PX();for(const k in d.extras)if(d.extras[k]&&EXTRAS[k])extras+=EXTRAS[k].cost(g);
   // the biggest ships cost far more than their tonnage: longer slips, heavier plate, more of everything done once only
   const sizeK=1+0.6*Math.pow(Math.max(0,(g-20000)/40000),1.3);
-  const base=(hull*sizeK*(LY.cost||1)+power+interiors+extras)*B.price*(d.contract==='fixed'?1.08:1)*(d.adm&&admEligible(d)?1.05:1)*PX()*warBuild(S.m); // naval standards cost a twentieth more; 1919 and 1920 prices are inflated
+  const base=(hull*sizeK*(LY.cost||1)+power+interiors+extras)*B.price*(d.contract==='fixed'?1.08:1)*(d.adm&&admEligible(d)?1.05:1)*PX()*warBuild(S.m)*SHIP_K; // naval standards cost a twentieth more; 1919 and 1920 prices are inflated
   const price=Math.round(base/1000)*1000;
   const months=Math.round((6+g/1600)*Math.pow(Math.max(1,e.shp/15000),0.12)*[0.95,1,1.08,1.15][d.quality]*B.speed*Math.sqrt(P.cx));
   // running character: coal or oil a day at service speed, set by her engines and her lines

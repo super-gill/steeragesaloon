@@ -2,6 +2,18 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.39.6 (5 October 2026)
+What ships earn (KI-065). Bold games ran far past the 1914 target because each new emigrant ship returned 35% to 50% a year on her cost. The tuning record is `docs/overhaul/research/what-ships-earn.md`.
+- **Ships cost a quarter more:** new builds, and the old ships the brokers list. A ship's worth is still what she cost, so building is no loss on the books, but each ship added now earns less on the money put into her. In a human-style test game a new 13,000-ton emigrant ship returned 18% to 24% in 1913 (35% to 50% before).
+- **Running costs a twentieth more:** coal, wages, victuals, dues and upkeep, as the period's accounts suggest. The plan was a third. Tested at a quarter, a tenth and with a heavier steerage commission, every version sank the old, small ships of the early years, which run close to break-even, while barely touching the new ones. At a quarter the Line never got past its first ship.
+- **An easier start:** the Line begins with no mortgage on the Morven (£16,000 in 1900). Her first year ran close to break-even. A second starting ship was tried and dropped: on the same trade she halved the Morven's loads.
+- Results:
+  - Bold script (advice, plus any well-forecast ship): £0.36m to £0.84m by 1914 (0.39.5: £0.87m to £1.36m).
+  - Human-style bold game: £558k by 1914.
+  - Careful script: 4 of 40 bankrupt by 1922 (0.39.5: 3), median £81k in 1914 (£59k).
+  - Keen script (advice and the conference, 10 games): median £444k in 1914 and £3.81m in 1939 (0.39.4: £5.96m), 1 bankrupt. 1939 is still above the £0.5m to £3m band; the war and the 1920 boom (£3.18m at the peak) carry most of it. Test round 7 decides what follows.
+- Tests: the whole suite passes (exploits 40 seeds, market 40, rescue 20, companies 20, the rest 10 to 12).
+
 ## 0.39.5 (5 October 2026)
 Fixes from test round 6 (`docs/overhaul/test-rounds/round6.md`) and three short test games to 1914. Round 6 ended far above the period's targets again (a careful human £7.8m by 1939, a bold one £23.9m); the balance is 0.39.6. This release fixes the bugs and exploits round 6 found, including one that 0.39.4 brought in.
 - Fixed, from 0.39.4: the Excess Profits Duty was relieved twice against income tax (all of it set against the year's trading profit, though most was on ship-sale gains income tax never charged, and the taxes then counted as a cost of the next year), so a Line that sold ships in the 1920 boom paid no income tax and carried a loss forward. Only the duty on trading profit is now allowed, and taxes are not a cost of the year they are paid in.

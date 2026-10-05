@@ -5,7 +5,7 @@ const TUT=[
     text:'The Line runs in real time. Press 1× in the header to let the days pass, and pause whenever you need to think. The clock slows by itself when something big happens, so you can read the news.',
     done:()=>S.t-(S.t0??D21)>=1},
   {id:'ship',title:'Look over the Morven',tab:'fleet',
-    text:'The Fleet tab is your ship: where she is, her condition, her master and crew, and the yard. She is old and slow, but she is paid for, bar the mortgage.',
+    text:'The Fleet tab is your ship: where she is, her condition, her master and crew, and the yard. She is old and slow, but she is paid for outright.',
     done:()=>S.tutSeen&&S.tutSeen.fleet},
   {id:'line',title:'Check your fares against the market',tab:'lines',
     text:'The Lines tab shows each service: your fares, how full she sailed, and the market report of rival lines. Cutting fares below the line rate wins passengers but angers the other lines, and they may answer with a rate war.',

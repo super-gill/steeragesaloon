@@ -59,7 +59,7 @@ function cdCost(sh,d){
 function crewCostOf(sh){
   let c=0;for(const d of CD_KEYS)c+=cdCost(sh,d);
   const off=offOf(sh);for(const r of OFF_KEYS)if(off[r])c+=offWage(off[r]);
-  return (c+watchCost(sh))*warWage(S.m); // a second wireless operator for the night watch; war bonuses
+  return (c+watchCost(sh))*warWage(S.m)*RUN_K; // a second wireless operator for the night watch; war bonuses
 }
 const crewHands=sh=>{const cw=cwOf(sh);return CD_KEYS.reduce((a,d)=>a+deptCount(sh,d)*MAN[cw[d].man][1],0);};
 

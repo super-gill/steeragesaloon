@@ -4,7 +4,7 @@ const turnDays=(sh,port)=>Math.max(2,TURN_DAYS-(sh.up&&sh.up.gear?1:0)-(S.shore&
 /* freight canvassers in a region the route calls at, and cold stores at its ports, win this line more cargo */
 const cargoPull=(rk,reefer)=>{const sh=S.shore||{},calls=ROUTES[rk].calls;let f=1;for(const a in sh.fagents||{})if(FAGENCY[a]&&FAGENCY[a].ports.some(p=>calls.includes(p)))f+=0.075;if(reefer&&Object.keys(sh.cold||{}).some(p=>calls.includes(p)))f+=0.2;return f;};
 const bunkerDiscount=()=>S.shore&&S.shore.bunker&&S.shore.bunker.until>=S.m?0.88:1;
-const fuelPrice=(sh,m)=>(sh.fuel==='coal'?coalPrice(m,bunkerHeld()):oilPrice(m))*bunkerDiscount()*slumpK('fuel',m)*PX();
+const fuelPrice=(sh,m)=>(sh.fuel==='coal'?coalPrice(m,bunkerHeld()):oilPrice(m))*bunkerDiscount()*slumpK('fuel',m)*PX()*RUN_K;
 /* a ship fast for her size burns far more: power grows with the cube of speed. A ship the Line designs has her own figure
    (fuelK, from her engines); for the rest, above the speed a hull of her size makes economically (about 16 knots at
    10,000 tons, a little more for bigger ships) coal rises with the speed to the power 2.5 (0.36.5). Fitted so that a
@@ -12,7 +12,7 @@ const fuelPrice=(sh,m)=>(sh.fuel==='coal'?coalPrice(m,bunkerHeld()):oilPrice(m))
    about 1,000, and an Olympic-class liner about 770 against some 650; ordinary steamers are unchanged. */
 const fastK=sh=>sh.fuelK?1:Math.max(1,Math.pow((sh.knots||12)/(16*Math.pow(Math.max(1000,sh.grt)/10000,0.15)),2.5));
 const fuelRate=(sh,sm)=>sh.grt/(sh.fuel==='coal'?70:95)*Math.pow(sm,3)*(sh.up&&sh.up.turbines?0.92:1)*(sh.fuelK||fastK(sh))*crewMods(sh).fuel;
-const duesAt=(sh,port,mult)=>sh.grt*mult*(S.shore&&S.shore.piers[port]?0.4:1)*slumpK('dues')*PX();
+const duesAt=(sh,port,mult)=>sh.grt*mult*(S.shore&&S.shore.piers[port]?0.4:1)*slumpK('dues')*PX()*RUN_K;
 /* the intermediate calls of a geography in sailing order for a direction, as [port, nm from departure] */
 function stopsFor(gk,dir){if(dir===1&&ROUTES[gk]&&ROUTES[gk].cruise)return []; // a cruise sails home non-stop
   const g=GEO(gk),c=g.calls.slice(1,-1);return (dir===0?c.map(x=>[x[0],x[1]]):c.reverse().map(x=>[x[0],g.dist-x[1]]));}
@@ -435,7 +435,7 @@ function refreshMarket(){
   const y=yearNow(),old=TEMPL.filter(t=>t.built<=y-1&&(!t.from||y>=t.from)&&y-t.built<34&&!nameTaken(t.name,true)&&!keep.some(k=>k.name===t.name)).sort(()=>Math.random()-0.5);
   // as the old list ages, the brokers offer ships built in the years since
   const nNew=Math.min(atWar()?1:4,Math.max(0,Math.round((y-1924)/4),old.length<4?4-old.length:0,newCal()?Math.round((y-yearOfM(S.m0)-2)/3):0));const nMk=atWar()?(S.m>=ym(1917,0)||Math.random()>0.35?0:1):bubbleOn()?2:4,pool=old.slice(0,Math.max(0,nMk-nNew));for(let i=pool.length;i<nMk;i++)pool.push(genMarketShip());
-  S.market=keep.concat(pool.map(t=>{const sh=makeShip(t,45+Math.random()*35,ports[Math.floor(Math.random()*ports.length)]);if(t.gen)Object.assign(sh,t.gen);sh.paint=oldOwnerPaint(sh);sh.price=Math.round(shipValue(sh)*(1.25+Math.random()*0.25)/100)*100;return sh;}));
+  S.market=keep.concat(pool.map(t=>{const sh=makeShip(t,45+Math.random()*35,ports[Math.floor(Math.random()*ports.length)]);if(t.gen)Object.assign(sh,t.gen);else sh.base=Math.round(sh.base*SHIP_K);sh.paint=oldOwnerPaint(sh);sh.price=Math.round(shipValue(sh)*(1.25+Math.random()*0.25)/100)*100;return sh;}));
   // a name already afloat, or twice on the list, takes a numeral (0.35.7)
   const seen=new Set();for(const x of S.market){if(seen.has(x.name)||nameTaken(x.name,true)){let k=2;const R=['II','III','IV','V','VI','VII'];while(k<8&&(seen.has(x.name+' '+R[k-2])||nameTaken(x.name+' '+R[k-2])))k++;x.name=x.name+' '+R[Math.min(k,7)-2];}seen.add(x.name);}
 }

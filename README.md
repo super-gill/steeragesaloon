@@ -299,6 +299,14 @@ Each month the Shore tab also shows what each pier, hostel and booking agency is
 
 Money is in 1921 pounds, scaled by the price index. Head office suggests selling spare berths at piers and yards (which cost the fleet nothing) once they would earn £400 a month; hostels and agents are left to the player, since they help rivals on the Line's own routes.
 
+## What ships earn (0.39.6)
+
+Tuning record: `docs/overhaul/research/what-ships-earn.md`.
+
+- **Ship prices** (`SHIP_K` in `js/data.js`, 1.25): multiplies the yards' price in `designStats` (`js/yard.js`) and the `base` of every old ship the brokers list in `refreshMarket` (`js/sim.js`). Ships the brokers generate (`genMarketShip`) already take their `base` from `designStats`. A new build's `base` is still her price, so her worth equals what she cost.
+- **Running costs** (`RUN_K` in `js/data.js`, 1.05): multiplies `fuelPrice` and `duesAt` (`js/sim.js`), `crewCostOf` (`js/crew.js`), and the `PROV` and `MAINT_COST` tables. Head office's forecasts use the same functions; rivals' costs (`coCostIdx`) are unchanged.
+- **The start** (`newGame` in `js/state.js`): `S.debt` is 0. The Morven's mortgage was 40,000 at 1921 prices, about £16,000 in 1900.
+
 ## Fixes from test round 6 (0.39.5)
 
 - **Tax** (`taxMonth`, `epdJanuary`): the year's taxable profit leaves out the taxes booked in it; the Excess Profits Duty allowed against income tax (`S.epdLast`) is the duty's share on trading profit, `tax × (earned − gain − standard) / (earned − standard)`.

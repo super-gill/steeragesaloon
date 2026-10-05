@@ -1,5 +1,5 @@
 /* ================= DATA ================= */
-const GAME_VERSION='0.39.5',GAME_BUILT='5 October 2026'; // bump on every release; see CHANGELOG.md
+const GAME_VERSION='0.39.6',GAME_BUILT='5 October 2026'; // bump on every release; see CHANGELOG.md
 /* ---------- the calendar ----------
    Month 0 is January 1900 and day 0 is 1 January 1900. ym(year,month) names a month (month 0 = January), so every date
    the game cares about reads as a date. History written for the 1921 game is kept exact by counting from M21. */
@@ -98,11 +98,13 @@ const SEASON={
 const E={f:1.3,s:1.5,t:1.9,tt:1.8};
 const SERV={f:[.8,1,1.15],s:[.9,1,1.08],t:[.97,1,1.02],tt:[.88,1,1.1]};
 const SPD_D={f:[.92,1,1.06],s:[.95,1,1.04],t:[1,1,1],tt:[.95,1,1.03]};
-const PROV={f:1.2,s:.45,t:.12,tt:.25}; // catering, pounds per passenger per day
+const SHIP_K=1.25; /* what a ship costs to buy (0.39.6): new builds and the brokers' old ships a quarter dearer than the old tables. A new emigrant ship well placed in the 1910-13 boom returned 35% to 50% a year on her cost; the companies' own boom years were nearer 15% to 25% */
+const RUN_K=1.05; /* what it costs to run a ship (0.39.6): coal, wages, victuals, dues and upkeep a twentieth above the old tables. Tested at a quarter and a tenth: either sank the old ships of the early years, which run close to break-even, while barely touching the new ones */
+const PROV={f:1.2*RUN_K,s:.45*RUN_K,t:.12*RUN_K,tt:.25*RUN_K}; // catering, pounds per passenger per day
 const CRUISE_SPEND={f:.7,s:.35,t:.1,tt:.2}; // bars, deck games and shore excursions on a cruise, pounds per passenger per day
 const SERV_COST=[.7,1,1.6], SERV_REP=[-.8,.1,1.2];
 const SPD=[.85,1,1.1], SPD_REP=[-.3,0,.4], SPD_WEAR=[.8,1,1.7];
-const MAINT_COST=[0,700,1800], MAINT_GAIN=[0,1.4,3.2];
+const MAINT_COST=[0,700*RUN_K,1800*RUN_K], MAINT_GAIN=[0,1.4,3.2];
 const ADV_COST=[0,300,800,1500], ADV_MULT=[1,1.06,1.12,1.17];
 /* Yard work: maintenance jobs and upgrades. days are before any repair-yard discount. */
 const YARD_DAYS={scrape:5,cruise:40,hatch:25,heavy:15,deep:30,fac:20,stab:30,rphone:7,aircon:35,radar:10,fins:30,replate:60,dock:25,oil:55,tourist:30,repair:45,engine:10,reefer:40,wireless:7,turbines:70,lux:35,refurb:25,gear:15,boats:7,paint:6,warcargo:10,uncargo:10,dazzle:4,gun:7,hosp:12};
