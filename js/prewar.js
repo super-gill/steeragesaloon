@@ -35,7 +35,7 @@ function prewarMonth(){
       if(!twin||PREWAR_SHIPS.indexOf(twin)>PREWAR_SHIPS.indexOf(q))news(`${RIVALS[o].name} orders ${twin?`two ${PREWAR_NAME[q.kind]}s`:`a new ${PREWAR_NAME[q.kind]}`}: ${twin?`SS ${q.name} and SS ${twin.name}`:`SS ${q.name}`}, ${int(q.grt)} tons and ${q.knots} knots, for ${ROUTES[q.rk].name}${q.kind==='giant'?'. Nothing so big has ever been built':''}.`,S.lines[q.rk]?'bad':'');}
     if(m===q.at&&P.ordered[q.name]&&!P.done[q.name]){const o=prewarOwner(P.ordered[q.name]);P.done[q.name]=true;if(!o)continue;
       const nm=o===q.o?q.name:(RIVAL_P[o].names.find(n=>!nameTaken(n))||freshName(q.name)); // a line that takes over the order names her itself
-      const x={id:'r'+(S.rnext++),owner:o,name:nm,route:q.rk,grt:q.grt,knots:q.knots,built:Math.floor(yearOfM(m)),berths:{...q.berths},cargo:q.cargo,reefer:false,phase:Math.random(),kind:q.kind};
+      const x={id:'r'+(S.rnext++),owner:o,name:nm,route:q.rk,grt:q.grt,knots:q.knots,built:Math.floor(yearOfM(m)),berths:{...q.berths},cargo:q.cargo,reefer:false,phase:Math.random(),kind:q.kind,vk:q.kind==='express'?2:1.3}; // worth what she cost (vk), not a ship of series build (0.39.5)
       S.rships.push(x);newRivalVis(x);RW_CACHE.k=null;S.rmoves.unshift({m,o,rk:q.rk,kind:'add',ship:nm});
       news(`${RIVALS[o].name}'s SS ${nm} sails on her maiden voyage on ${ROUTES[q.rk].name}: ${int(q.grt)} tons, ${q.knots} knots${q.kind==='giant'?', the largest ship in the world':''}.${S.lines[q.rk]?' Your cabin trade there will feel it.':''}`,S.lines[q.rk]?'bad':'',true);}}
   // the October panic of 1907 (the rumours start in September)

@@ -37,7 +37,7 @@ const mkShut=m=>{m=m===undefined?S.m:m;return newCal()&&m>=MK_SHUT[0]&&m<MK_SHUT
 /* the mood of the City: optimism in a boom, fear in a slump, panic in a crash, and a drift of its own */
 function mkMoodBase(m){let b=1;
   if(typeof crashF==='function')b-=0.45*crashF(m);                                     // the panics
-  if(S.crash&&S.crash.stage==='rumour')b-=0.12;                                        // and the rumours before them (0.39.3)
+  if(S.crash&&S.crash.stage==='rumour')b-=0.3;                                         // and the rumours before them: the City prices in most of what it fears (0.39.3; 0.39.5: 0.12 left shorting on the 1907 rumour a sure 50% in a month)
   if(newCal()&&m>=WAR_FROM&&m<ym(1919,6))b-=m<ym(1915,6)?0.3:m<ym(1919,0)?0.38:0.2;  // the war: War Loan pays better than shares, free of risk
   if(newCal()&&m>ARMISTICE&&m<M21)b+=0.35*Math.max(0,(warShips(m)-1)/1.6);            // the 1919 and 1920 boom
   const k=m-M21;if(k>=0&&k<24)b-=0.3*(1-k/24);                                         // the 1921 slump

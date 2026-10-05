@@ -57,7 +57,7 @@ var PL = (function () {
     safety: v => { if (![0, 1, 2].includes(+v)) return false; S.safety = +v; return true; },
     // ---- the bank and money
     borrow: amt => { amt = +amt; if (!(headroom() >= amt) || S.noLend > S.m) return false; S.debt += amt; S.cash += amt; return true; },
-    repay: amt => { const x = Math.min(+amt, S.debt); if (!(x > 0) || S.cash < x) return false; S.debt -= x; S.cash -= x; return true; },
+    repay: amt => repayBank(+amt),
     gilts: amt => +amt >= 0 ? gilts(true, +amt) : gilts(false, -amt),
     giltsall: () => gilts(false, S.gilts),
     // ---- the trade

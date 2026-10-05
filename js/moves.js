@@ -46,7 +46,7 @@ function mvProxy(o){const M=mkEnsure(),c=mvC(o);if(rescueFriend(o)||!c||c.gone||
   else{S.rep=clamp(S.rep-3,0,100);(M.proxyNext=M.proxyNext||{})[o]=S.m+24;
     news(`The Line loses the proxy fight at ${mkName(o)}. The shareholders back the board, the campaign has cost ${fmt(cost)}, and the Line's standing suffers.`,'bad',true);}return true;}
 /* short selling: borrowed shares sold now, bought back later; half the sale put up as margin, a fee to the lender */
-function mvShort(id,pct){const M=mkEnsure(),c=mvC(id);if(!c||c.gone||id==='morven'||mkShut()||(M.me.pos[id]&&M.me.pos[id].n>0))return false;const s0=(M.me.short=M.me.short||{})[id];
+function mvShort(id,pct){const M=mkEnsure(),c=mvC(id);if(!c||c.gone||id==='morven'||mkShut()||mkEnemy(id)||(M.me.pos[id]&&M.me.pos[id].n>0))return false;const s0=(M.me.short=M.me.short||{})[id];
   // (sell what you hold before selling short)
   const q=Math.floor(Math.min(pct*c.n,0.5*mkFree(id)-(s0?s0.n:0)));if(q<Math.max(1,0.01*c.n))return false; // a short is at least 1% of the company (0.35.6)
   const imp=Math.min(0.5,0.6*q/mkDepth(id)),gross=q*c.px*(1-imp/2),col=gross*(1-MK_FEE_SELL),margin=Math.round(gross*MV_SHORT_MARGIN);if(S.cash<margin)return false;

@@ -1,6 +1,6 @@
 # Known Issues
 
-Steerage & Saloon 0.39.4. This log records every known defect, loophole and open question that has not been fixed in a released version. Balance targets and accepted behaviour are in `docs/overhaul/BALANCE.md`; this file covers what is wrong or unfinished.
+Steerage & Saloon 0.39.5. This log records every known defect, loophole and open question that has not been fixed in a released version. Balance targets and accepted behaviour are in `docs/overhaul/BALANCE.md`; this file covers what is wrong or unfinished.
 
 **Severity**
 
@@ -47,7 +47,7 @@ Steerage & Saloon 0.39.4. This log records every known defect, loophole and open
 | KI-018 | S2 | Fixed (0.39.3) | P8 | A float raised the net worth shown by the whole issue though the owner kept a quarter of the Line. The owner's own wealth (their share of the Line plus what they took out at the float) is now shown beside the Line's net worth (`ownerWorth`). |
 | KI-019 | S2 | Fixed (0.39.3) | P8 | Every City rumour came true and share prices ignored it, so selling short on a rumour was a sure profit (+40% in two months). A third of rumours now blow over, shares fall while a rumour lasts, and on the 1900 calendar no invented panic comes between 1914 and 1946. |
 | KI-020 | S2 | Fixed (0.39.3) | P8 | A German line could be bought and merged in 1916, its ships taken into the Line and away from the reparations. The Trading with the Enemy Act now blocks buying, raiding, tendering for, merging or taking ships from an enemy line from August 1914 to the peace (`mkEnemy`). |
-| KI-021 | S3 | Fixed (0.39.3) | P8 | Scrapping had no check for a requisitioned ship or the Treasury director's veto. |
+| KI-021 | S3 | Fixed (0.39.5) | P8, P11 | Scrapping had no check for a requisitioned ship or the Treasury director's veto. The 0.39.3 change was lost before release (round 6 found it still allowed); fixed in 0.39.5. |
 
 ## Bugs
 
@@ -96,7 +96,7 @@ Steerage & Saloon 0.39.4. This log records every known defect, loophole and open
 | KI-068 | S3 | Fixed (0.38.0) | P4 | A failed giant's main trade lay open for two years. A second promoter now takes it up within months. |
 | KI-069 | S3 | Fixed (0.39.0) | P5 | A ship bought below her worth added the discount to net worth on the day. She now counts at her cost for her first year. |
 | KI-070 | S4 | Fixed (0.39.0) | P5 | Fare advice judged a fare on one month and flipped with the season. It now judges over this month and six on, and waits three months after a change. |
-| KI-065 | S2 | Fixed (0.39.4), to be confirmed by round 6 | Harness, P6 to P8 | **Settled by round 5: the game is far too easy from 1900 to 1940.** A careful human ended 1940 with £14.8m and lost money only in 1921 and 1937; a bold one reached £3.53m by 1914 (3.7 times the scripted advisor) and £25.7m by 1940. The scripted careful owner the targets were set on is far weaker than a human, so the balance targets were set on the wrong yardstick. The causes are KI-071 to KI-078. **0.39.4:** targets reset from the period (`docs/overhaul/research/growth.md`): careful £100k to £250k by 1914, bold £0.5m to £1m, £0.5m to £3m by 1939. A new scripted owner, `keen` (head office's advice plus the conference), stands in for a bold human. |
+| KI-065 | S2 | Open: 0.39.6 | Harness, P6 to P11, round 6 | **The game is far too generous to a skilled player.** Round 6 (0.39.4): careful human £595k by 1914 and £7.8m by 1939; bold £3.8m and £23.9m; three bold games to 1914 on 0.39.5's working copy £1.6m to £4.4m (target £0.5m to £1m). Well-placed new ships return 35% to 50% a year on their cost. Making rivals compete harder ruined the scripted careful owner without stopping skilled players (0.39.5, dropped); 0.39.6 brings every ship's running costs up to the period's, with an easier start. |
 | KI-071 | S2 | Fixed (0.39.4) | P7 | In the conference there is a fare floor but no ceiling: first class 50% over the line rate still sold well, and Liverpool to Halifax cleared £62k to £78k a month in 1912 and 1913. **0.39.4:** a member's fares are held between 95% and 115% of the rate (`confCeil`). |
 | KI-072 | S2 | Fixed (0.39.4), to be confirmed by round 6 | P7 | New emigrant ships return 60% to 80% a year on their cost for a human player in 1912 and 1913 (sources: 12% to 18% in good years). **0.39.4:** with the ceiling, the highest fares a member may charge earn less than the rate; a new 11,000-ton emigrant ship returns 15% to 31% a year in 1903 to 1913. |
 | KI-073 | S2 | Fixed (0.39.4) | P6 | Emigrant demand returns to the 1913 level within a year of the Armistice (85% in September 1919; 130% on New York in 1920). Arrivals were about 15% of 1913 in 1919 and 35% in 1920. **0.39.4:** steerage after the armistice follows the arrivals (`warPax`); New York eased through the quota years and Canada held to 22% to 50% of 1913 in the 1920s (`canadaPost`). |
@@ -113,6 +113,7 @@ Steerage & Saloon 0.39.4. This log records every known defect, loophole and open
 | KI-083 | S4 | Fixed (0.37.1) | Harness | Stale war-outbreak text: it promised every hold would fill and freight would reach three times its pre-war worth. |
 | KI-084 | S4 | Open | P6 | Fares show as decimal pounds (29.9) rather than pounds and shillings. |
 | KI-085 | S4 | Fixed (0.39.3) | P6 | "The bank call in"; a Lord Provost's wife launching ships at Birkenhead and Princess Mary launching them as a child; "Ships are cheap in a slump" in the 1914 boom; a sunk ship "out of service". |
+| KI-086 | S4 | Open | P9, P10 | Text: "0s 11d" for 11d; "fire repairs" after flooding; "(to be sell)"; an inquiry that "finds no fault" yet fines; the 1919 duty notice shows a sale gain larger than the year's earnings; scripted news names a failed line; a rival line named after one of the player's ships; the play tool shows rivals' fares without a rate war's cut. |
 
 ## Design questions
 
@@ -148,4 +149,5 @@ New features must fit the theme and be at least roughly historical. After 1939 t
 |---|---|---|---|
 | KI-100 | S3 | Fixed (0.39.3) | The headless player had no actions for zigzag, convoy or the private war-risk top-up (`zigzag`, `convoy`, `wartop`). |
 | KI-101 | S3 | Fixed (0.39.3) | Headless player: the advice's Build button stopped the clock and ordered nothing; `step 0` played three months; `waroffer` answered "done" for a lapsed offer; the finance view showed a fixed 6.5% interest rate. |
+| KI-103 | S3 | Fixed (0.39.5) | Round 6 | The tax on 1920 was relieved twice; a called loan repaid early was taken again; a ship order's stage was billed again after arrears; a solvent Line was foreclosed on the day of an inquiry bill; Hamburg ships for sale in the war; German lines shortable in the war; Consols borrowed against at twice net worth. |
 | KI-102 | S3 | Fixed (0.39.4) | The scripted advisor (`tools/harness.js`) can never join the conference: the advice's only button goes to the Company tab, which the harness ignores. **0.39.4:** the advice now has a Join button (`confjoin`), shown only when the conference would take the Line. |

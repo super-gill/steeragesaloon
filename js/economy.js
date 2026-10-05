@@ -96,6 +96,9 @@ function panic(c){
   S.noLend=m+12;S.rateUp=m+12;
   {const was=S.gilts||0;S.giltShock=(S.giltShock||0)+0.4;giltsMark();if(was>0)news(`Government stock has fallen in the panic: the Line's holding is worth ${fmt(was-S.gilts)} less for now.`,'bad');}
 }
+/* repaying the bank counts first against a loan it has called (0.39.5: a Line that paid the call the day it came was charged
+   it again when it fell due) */
+function repayBank(x){x=Math.min(x,S.debt);if(!(x>0)||S.cash<x)return false;S.debt-=x;S.cash-=x;if(S.call){S.call.amt-=x;if(S.call.amt<=0){S.call=null;news(`The called loan is repaid early.`,'good');}}return true;}
 /* a called loan falls due: pay it, or the bank sells ships to cover it */
 function callDue(){
   const c=S.call;S.call=null;let owe=Math.min(c.amt,Math.max(0,S.debt)); // no more than is still owed: a Line that repaid early owes the bank nothing (0.39.3: the debt went below zero)
@@ -374,6 +377,12 @@ function bankRealise(){const want=()=>-odLimit()*0.5-S.cash;let sold=0;const c0=
   if(want()>0&&S.ex&&S.ex.fund&&typeof mkFundTake==='function')mkFundTake(want()+50000*PX(),false);
   if(want()>0&&S.ex&&S.ex.me)for(const o of Object.keys(S.ex.me.pos||{})){if(want()<=0)break;if(typeof mkSell==='function')mkSell(o,1);}
   sold=S.cash-c0;if(sold>0)news(`The bank, finding the Line's account far overdrawn, sells ${fmt(sold)} of its stock and shares to cover it.`,'bad',true);
+  // a Line still worth something is not foreclosed on the day: the bank sells ships at a forced sale, as for a called loan (0.39.5:
+  // an inquiry's bill closed a Line worth £17,800 the day it came, with no chance to sell a ship)
+  if(S.cash<-odLimit()&&netWorth()>0){const fleet=S.ships.filter(x=>x.state!=='sea'&&x.state!=='repo'&&x.state!=='lost'&&x.state!=='req').sort((a,b)=>shipValue(a)-shipValue(b));
+    while(S.cash<-odLimit()*0.5&&fleet.length&&S.ships.length>1){const x=fleet.shift(),v=Math.round(shipValue(x)*0.6),mort=Math.min(v,shipMortgage(x));fleetGone(x,'seized',`seized by the bank and sold for ${fmt(v)}`);
+      S.ships=S.ships.filter(y=>y!==x);if(S.selShip===x.id)S.selShip=S.ships[0]?S.ships[0].id:null;admRepay(x);S.debt-=mort;S.cash+=v-mort; /* her own mortgage is paid off, the rest goes to the account */
+      news(`The bank has seized SS ${x.name} and sold her at a forced sale for ${fmt(v)} to cover the overdraft.`,'bad',true);}}
   return S.cash>=-odLimit();}
 function rescueTry(){
   if(S.rescue){news('The bank forecloses. Having been rescued once, the Morven Line finds no one to rescue it again.','hist',2);return false;}

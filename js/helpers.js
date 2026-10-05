@@ -118,7 +118,7 @@ function depression(c,m,rk){
   // (0.38.0; to a third in 0.37.2, which with the fall in ship values finished two thirds of the scripted owners) and comes
   // back only slowly, through to 1940
   const g=rk&&ROUTES[rk]?ROUTES[rk].group:'',na=c==='t'&&(g==='North Atlantic'||g==='Canada');
-  const deep=na?0.3:{f:.45,s:.62,t:.75,tt:.4}[c]; // 0.39.4: emigration to North America fell to 9% (Canada) and 13% (US) of 1929's by 1932-33; with the trend already falling, 0.3 here brings the game's trough to about 15% // Tourist Third: the students and tourists stayed at home too (0.38.0; 0.5 before)
+  const deep=na?0.15:{f:.45,s:.62,t:.75,tt:.4}[c]; // emigration to North America fell to 9% (Canada) and 13% (US) of 1929's by 1932-33; the class also carries returning emigrants and visitors, so 15% (0.39.5: 0.39.4's 0.3 was measured with this counted twice, and left the trough at 30%) // Tourist Third: the students and tourists stayed at home too (0.38.0; 0.5 before)
   if(m<120)return 1-(1-deep)*Math.min(1,(m-105)/14);
   if(m<156)return deep;
   return Math.min(1,deep+(1-deep)*(m-156)/(na?72:48));

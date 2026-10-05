@@ -258,6 +258,9 @@ const currentStyle=()=>{const y=yNow();return y>=1950?'contemp':y>=1933?'moderne
 function logOrder(o,t){o.log.unshift({m:S.m,t});if(o.log.length>12)o.log.length=12;}
 /* stage payments: 10% with the order, 20% at the keel, 30% at the launch, the rest on delivery */
 function bill(o,share,what){
+  // each stage is billed once: an unpaid one goes into the arrears and the work goes on once they are paid (0.39.5: the stage
+  // was billed again after the arrears were paid, so a keel could be charged three times)
+  o.billed=o.billed||{};if(o.billed[what])return o.due<=0;o.billed[what]=true;
   const amt=Math.round(o.price*share);
   if(S.cash-(o.adm?amt/3:amt)>=-odLimit()*0.5){pay(o,amt,what);logOrder(o,`${fmt(amt)} paid ${what}.`);return true;}
   o.due+=amt;o.unpaid++;logOrder(o,`Could not pay ${fmt(amt)} ${what}. The yard has stopped work.`);

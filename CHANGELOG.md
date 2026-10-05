@@ -2,6 +2,25 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.39.5 (5 October 2026)
+Fixes from test round 6 (`docs/overhaul/test-rounds/round6.md`) and three short test games to 1914. Round 6 ended far above the period's targets again (a careful human £7.8m by 1939, a bold one £23.9m); the balance is 0.39.6. This release fixes the bugs and exploits round 6 found, including one that 0.39.4 brought in.
+- Fixed, from 0.39.4: the Excess Profits Duty was relieved twice against income tax (all of it set against the year's trading profit, though most was on ship-sale gains income tax never charged, and the taxes then counted as a cost of the next year), so a Line that sold ships in the 1920 boom paid no income tax and carried a loss forward. Only the duty on trading profit is now allowed, and taxes are not a cost of the year they are paid in.
+- Fixed, from 0.39.3: scrapping a requisitioned ship, or a sound ship under the Treasury director's veto, was still allowed. The 0.39.3 change was lost before release; it is in now (KI-021).
+- Bank and yard:
+  - Repaying the bank counts first against a loan it has called; before, the call was taken again when it fell due.
+  - A ship order's stage payments are billed once; an unpaid keel or launch payment was billed again after the arrears were paid (one keel three times).
+  - A Line still worth something is no longer foreclosed on the day an inquiry's bill arrives: the bank sells ships at a forced sale first.
+  - Borrowing against government stock and shares is limited to the Line's net worth (twice it let a Line borrow three times its worth into Consols in 1921 and take the known fall in yields).
+  - Head office now warns when a ship on order is in arrears, how long is left before the yard cancels, and whether the bank would lend enough.
+- Exploits: no ship lying at Hamburg is listed for sale in the war; German lines cannot be sold short in the war (KI-020); a City rumour now marks shares down by about two thirds of the panic it fears, so shorting on the 1907 rumour no longer pays half the Line's worth in a month (KI-019).
+- The 1919-20 boom: the April 1920 news no longer names the top ("the brokers say they will go higher yet"), and a syndicate's surveyor marks down a run-down or worn-out ship. A failed line's ships on the receivers' list follow the market down month by month (one listed in the boom sat at twice her worth after the crash).
+- The conference's steerage pool: from 1908 a member carries no more steerage on a trade than its share of the berths sailing, with 15% leeway, as the Atlantic lines pooled steerage by quota. It binds when a member's agents and piers draw steerage from the other lines; it does not hold back a Line that owns most of a trade.
+- The Depression: North Atlantic and Canadian steerage at the trough is now 15% of 1929's. 0.39.4 set 30% and measured it as a tenth by counting the fall twice.
+- A rival's express liners and giants are valued at what they cost, not the series price (Imperial carried about £660,000 of debt with nothing behind it).
+- The Post Office no longer cancels a mail contract for sailings missed because the Admiralty took the ships.
+- Text: "You will find it under Needs attention."
+- Tried and dropped: making rivals build for the boom, raise new capital and crowd into trades the player dominates. The scripted careful owner went from 5 to 15 to 20 of 40 bankrupt by 1922, while bold human players still reached £1.6m to £2.5m by 1914.
+
 ## 0.39.4 (4 October 2026)
 Balancing 1900 to 1939 against how real lines grew (`docs/overhaul/research/growth.md`). Round 5's humans turned the starting Line into £1.4m (careful) to £3.5m (bold) by 1914; no real British owner grew like that from running ships. New targets: careful about £100,000 to £250,000 by 1914, bold £0.5m to £1m, £0.5m to £3m by 1939.
 - **Conference fares (KI-071, KI-072):** members' fares are held between 95% and 115% of the rate, as agents sold every member's berths at the agreed rate for the class of ship. In round 5 a member charged first class 50% over the rate on a trade it dominated and still filled most berths. At the ceiling a new emigrant ship now earns less than at the rate; she returns 15% to 31% a year in 1903 to 1913.

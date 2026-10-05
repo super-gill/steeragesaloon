@@ -21,6 +21,14 @@ function stopsFor(gk,dir){if(dir===1&&ROUTES[gk]&&ROUTES[gk].cruise)return []; /
    the trend in demand, coal, routes opening and closing) are held where they stand today and only the season moves on, so a
    forecast cannot see the war or a slump coming (0.39.3: on 1 July 1914 it advised laying up a ship that cleared £26k that
    month, because it could see the war) */
+const POOL_LEEWAY=1.15;
+/* the berths sailing on a trade in a class, ours and the rivals', before appeal: the pool's measure (0.39.5) */
+const RCR_CACHE={k:null,m:new Map()};
+function routeCapRaw(rk,c){const day=Math.floor(S.t)+'|'+S.m+'|'+S.rships.length+'|'+S.ships.length;if(RCR_CACHE.k!==day){RCR_CACHE.k=day;RCR_CACHE.m.clear();}
+  const key=rk+c;let v=RCR_CACHE.m.get(key);if(v!==undefined)return v;v=0;
+  for(const x of S.rships)if(x.route===rk){const b=rivalBerths(x,c);if(b)v+=b*sailings(x.knots,rk)*warRivalF(x.owner,S.m);}
+  for(const x of S.ships)if(x.line===rk&&ACTIVE.includes(x.state))v+=(x.berths[c]||0)*sailings(knotsOf(x),rk,SPD[x.speed]);
+  RCR_CACHE.m.set(key,v);return v;}
 let FC_NOW=null;
 // what was known in advance: the American quota law of 1924, debated from the winter and passed in May, cut steerage from
 // July (KI-043); a forecast from January 1924 sees it
@@ -50,6 +58,11 @@ function legCalc(sh,rk,dir,R,gk){
     const pfO=fareDemand(r.ref[c]/fare,c),pfR=fareDemand(1/((S.rfare&&S.rfare[rk])||1),c),outW=OUTSIDE_A*(rw/pfR+(ow+own)/pfO);
     // this ship's slice of the route's market for this class and direction, per crossing
     let d=marketM(rk,c,dir,m,mh)*b*myA*(1+OUTSIDE_A)/Math.max(1e-9,others+own+outW);
+    // the conference's steerage pool (0.39.5): from 1908 the Atlantic lines shared steerage by agreed quotas, and a line over its
+    // quota paid the excess to those under it, so a member carries no more than its share of the berths sailing, with a little
+    // leeway. Before, a member whose agents and piers drew steerage from the rest filled its ships while theirs emptied and left
+    // the trade: a bold player's new emigrant ships returned 35% to 45% a year on their cost (the sources' good years: 12% to 18%)
+    if(S.conf&&(c==='t'||c==='tt')&&!r.cruise){const tot=routeCapRaw(rk,c)+(sh.line===rk?0:b*sailings(kn,rk,sm));d=Math.min(d,marketM(rk,c,dir,m,mh)*b*(1+OUTSIDE_A)/Math.max(1e-9,tot)*POOL_LEEWAY);}
     d*=facWinter(sh,c,m%12); // indoor rooms keep people travelling in winter
     if(R)d*=0.85+R()*0.3;
     const q=S.conf&&c==='t';let cap=q?Math.floor(b*0.8):b;
@@ -352,11 +365,13 @@ function monthRoll(pm){
     const c={};for(const k in shipAcc[sh.id]||{})c[k]=Math.round(shipAcc[sh.id][k]);(sh.plc=sh.plc||[]).push(c);if(sh.plc.length>12)sh.plc.shift();}
   S.lastMonth={m:pm,cat:S.mtd.cat,lines:S.mtd.lines,ships:shipAcc,net,repay,capex:S.mtd.capex||0};
   {const r=o=>{const q={};for(const k in o)q[k]=Math.round(o[k]);return q;};(S.plHist=S.plHist||[]).push({m:pm,cat:r(S.mtd.cat),lines:r(S.mtd.lines)});if(S.plHist.length>12)S.plHist.shift();}S.mtd=blankLedger();
-  inflate();giltsMonth();insMonth();taxMonth(net-(S.lastMonth.cat.divpaid||0));crashMonth();rescueMonth();if(typeof seasonNews==='function')seasonNews(S.m);unionMonth();combineMonth();
+  inflate();giltsMonth();insMonth();taxMonth(net-(S.lastMonth.cat.divpaid||0)-(S.lastMonth.cat.tax||0)); /* taxes paid are not a cost of the year they are paid in (0.39.5: they were relieved again the next year) */crashMonth();rescueMonth();if(typeof seasonNews==='function')seasonNews(S.m);unionMonth();combineMonth();
   S.lastPax=S.pax;S.pax={};
   for(const id in RIVALS)S.rivalIdx[id]=clamp((S.rivalIdx[id]||1)+(Math.random()-0.5)*0.04,0.93,1.06);
   S.hist.push(Math.round(S.cash));if(S.hist.length>240)S.hist.splice(0,S.hist.length-240);
   for(const rk of Object.keys(S.mail)){
+    // the Post Office does not hold it against the Line when the Admiralty has taken the mail ships (0.39.5)
+    if(!S.mail[rk].ok&&atWar()&&S.ships.some(x=>x.state==='req'&&(x.line===rk||x.reqFrom===rk))){S.mail[rk].ok=true;}
     if(!S.mail[rk].ok){S.mail[rk].strikes++;
       if(S.mail[rk].strikes>=2){delete S.mail[rk];S.rep=clamp(S.rep-5,0,100);news(`The Post Office has cancelled your ${ROUTES[rk].name} mail contract after missed sailings.`,'bad',true);}
       else news(`No mail was landed on ${ROUTES[rk].name} last month. One more and the contract goes.`,'bad',true);}
@@ -415,8 +430,8 @@ function monthRoll(pm){
   save();
 }
 function refreshMarket(){
-  const ports=['GLA','LIV','NAP','SOU','HAM','AVO'];
-  const keep=S.market.filter(x=>x.bargain&&x.listed>=S.m-3);
+  const ports=['GLA','LIV','NAP','SOU','AVO'].concat(atWar()?[]:['HAM']); // no ship lying at Hamburg is for sale to a British line in the war (0.39.5)
+  const keep=S.market.filter(x=>x.bargain&&x.listed>=S.m-3);for(const x of keep)x.price=Math.min(x.price,Math.round(shipValue(x)*0.7/100)*100); // the receivers follow the market down (0.39.5: a ship listed in the boom stayed at its price after the crash, at twice her worth)
   const y=yearNow(),old=TEMPL.filter(t=>t.built<=y-1&&(!t.from||y>=t.from)&&y-t.built<34&&!nameTaken(t.name,true)&&!keep.some(k=>k.name===t.name)).sort(()=>Math.random()-0.5);
   // as the old list ages, the brokers offer ships built in the years since
   const nNew=Math.min(atWar()?1:4,Math.max(0,Math.round((y-1924)/4),old.length<4?4-old.length:0,newCal()?Math.round((y-yearOfM(S.m0)-2)/3):0));const nMk=atWar()?(S.m>=ym(1917,0)||Math.random()>0.35?0:1):bubbleOn()?2:4,pool=old.slice(0,Math.max(0,nMk-nNew));for(let i=pool.length;i<nMk;i++)pool.push(genMarketShip());
@@ -447,7 +462,7 @@ const netWorth=()=>S.cash+(S.gilts||0)+fleetValue()+shoreValue()+ordersValue()-S
 // half) no more than twice the Line's own worth, since no bank lends a shipping line ten times its capital on stock (0.37.2).
 // In the 1919 and 1920 boom the bank lends on ships at no more than their worth at the armistice, and in the Depression on
 // their normal worth (0.37.2). What a failed bank's liquidators still owe counts at three quarters (0.38.0)
-const headroom=()=>Math.max(0,0.7*(bankFleetValue()/(newCal()&&S.m>ARMISTICE&&S.m<M21?Math.max(1,warShips(S.m)/warShips(ARMISTICE)):1)/shipNorm()+shoreValue())+Math.min(0.9*(S.gilts||0)+0.5*Math.max(0,mkWorth()),2*Math.max(0,netWorth()))+0.75*((S.liq&&S.liq.left)||0)-S.debt-admDebt());
+const headroom=()=>Math.max(0,0.7*(bankFleetValue()/(newCal()&&S.m>ARMISTICE&&S.m<M21?Math.max(1,warShips(S.m)/warShips(ARMISTICE)):1)/shipNorm()+shoreValue())+Math.min(0.9*(S.gilts||0)+0.5*Math.max(0,mkWorth()),Math.max(0,netWorth())) /* no more than the Line is worth against stock and shares (0.39.5: twice let a Line borrow three times its worth into Consols in 1921 and take the known fall in yields) */+0.75*((S.liq&&S.liq.left)||0)-S.debt-admDebt());
 const odLimit=()=>8000+0.5*headroom(); // the bank forecloses when cash falls below minus this
 function news(t,k,pauseIt){
   S.news.unshift({d:Math.floor(S.t),t,k:k||''});if(S.news.length>150)S.news.length=150;

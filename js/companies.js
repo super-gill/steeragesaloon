@@ -19,7 +19,10 @@ function coAll(){return coLive().map(o=>S.rivals[o]);}
 /* running costs move with wages, bunker coal and port dues, and with the price level */
 function coCostIdx(m){return PX()*(0.55*slumpK('wage',m)+0.3*clamp(coalPrice(m)/1.6,0.7,1.8)*slumpK('fuel',m)+0.15*slumpK('dues',m));}
 const coAge=x=>Math.max(0,yearOfM(S.m)-x.built);
-const coShipVal=x=>x.grt*CO_PRICE*PX()*Math.max(0.1,1-coAge(x)/35)*shipMkt();
+/* a rival ship's worth; an express liner or a giant at what she cost (vk, 0.39.5: they were paid for at twice and 1.3 times the
+   series price but counted at it, so Imperial carried some £660,000 of debt with nothing behind it and failed in the 1912 boom,
+   leaving its trades empty) */
+const coShipVal=x=>x.grt*CO_PRICE*(x.vk||1)*PX()*Math.max(0.1,1-coAge(x)/35)*shipMkt();
 const coNewPrice=x=>Math.round(x.grt*CO_PRICE*PX()/1000)*1000;
 const coScrap=x=>x.grt*2*PX();
 const coFleet=o=>S.rships.filter(x=>x.owner===o);

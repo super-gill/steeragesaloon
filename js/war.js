@@ -114,7 +114,7 @@ function reqMonth(){
   const vol=free.filter(x=>x.reserve||x.adm);
   if(vol.length){const take=reqOrder(vol).slice(0,n);reqTake(take,true);if(take.length>=n)return;}
   const left=want-reqCount();if(left<=0)return;
-  if(reserveN()+goodwill()>0){W.ask={n:left,due:S.m+1};news(`The Admiralty needs ${left===1?'another ship':left+' more ships'} for war service. As a line on its reserve list you may choose which. It is under Needs attention.`,'bad',true);}
+  if(reserveN()+goodwill()>0){W.ask={n:left,due:S.m+1};news(`The Admiralty needs ${left===1?'another ship':left+' more ships'} for war service. As a line on its reserve list you may choose which. You will find it under Needs attention.`,'bad',true);}
   else reqTake(reqOrder(free).slice(0,left),false,'The Admiralty requisitions');
 }
 function reqTake(list,vol,why){
@@ -125,7 +125,7 @@ function reqTake(list,vol,why){
 /* she reaches port, or is already there: into the state's service */
 function reqStart(sh){
   const d=sh.reqDue;if(!d)return;S.war.hadReq=true;sh.reqDue=null;sh.req={role:d.role,gw:d.gw,since:S.m,line:sh.line};
-  if(sh.pendingYard){sh.pendingYard=null;sh.yardAdd=[];}sh.line=null;sh.state='req';sh.load=null;sh.stopLeft=0;
+  if(sh.pendingYard){sh.pendingYard=null;sh.yardAdd=[];}sh.reqFrom=sh.line||sh.reqFrom||null;sh.line=null;sh.state='req';sh.load=null;sh.stopLeft=0;
   wire(sh,`SS ${sh.name} taken up by the Admiralty as ${REQ_NAME[d.role]}. Crew signed on for war service.`,'');
 }
 /* the Line asks: which ships go (called from the Needs attention card) */
@@ -172,7 +172,9 @@ function epdJanuary(profit){
   let earned=profit;if(y===1914){earned=profit-((S.war&&S.war.julyNet)||0);std*=5/12;} // the duty runs from August 1914
   const gain=Math.round(((S.war&&S.war.gain)||{})[y]||0);earned+=gain; // gains on ships sold count as profit (0.37.1)
   const tax=Math.round(Math.max(0,earned-std)*rate/100)*100;
-  S.epdLast=tax; // income tax is charged on what is left (taxMonth; 0.39.4)
+  // income tax is charged on what is left of the trading profit: the duty on ship-sale gains is not allowed against it, since
+  // income tax never charged the gains (0.39.5: the whole duty was allowed, so a Line that sold ships in the boom paid none)
+  const ex=Math.max(1,earned-std);S.epdLast=Math.round(tax*clamp((earned-gain-std)/ex,0,1));
   if(tax>0){book('tax',-tax);news(`Excess Profits Duty on ${y}: the Line earned ${fmt(Math.round(earned))}${gain>0?`, ${fmt(gain)} of it on ships sold,`:''} against a standard of ${fmt(Math.round(std))}. The Treasury takes ${Math.round(rate*100)}% of the excess, ${fmt(tax)}.`,'bad',true);}
   else news(`Excess Profits Duty on ${y}: the Line earned no more than its standard of ${fmt(Math.round(std))}. Nothing to pay.`);
 }
@@ -330,14 +332,15 @@ function bubbleMonth(){
   if(m===VERSAILLES&&!W.rep)reparations();
   if(W.auction&&m>=W.auction.close)auctionClose();
   if(m===ym(1919,8))news('The ironmoulders have come out on strike. Without castings the shipyards can do little more than wait; every ship on the stocks will be late.','bad',true);
-  if(m===ym(1920,3))news('Ship prices are at their height. Some owners are selling while buyers will pay anything; others are ordering new tonnage at record prices.','hist',true);
+  // the brokers did not know it was the top (0.39.5: the news named it, and every Line sold that month)
+  if(m===ym(1920,3))news('Ship prices are higher than ever, and the brokers say they will go higher yet. Some owners are selling while buyers will pay anything; others are ordering new tonnage at record prices.','hist',true);
   if(m===ym(1920,9))news('Freight rates are falling fast. Ships are laying up in every port, and the bankers are beginning to worry about the loans they made on inflated tonnage.','bad',true);
   // buyers' offers for the Line's ships
   if(bubbleOn(m)){W.offers=(W.offers||[]).filter(o=>o.exp>m&&S.ships.some(x=>x.id===o.sid));
     for(const sh of S.ships){if(sh.state==='req'||sh.state==='lost'||W.offers.some(o=>o.sid===sh.id)||Math.random()>0.07)continue;
       // a syndicate looks the ship up: one the Line has had under a year is offered no more than she cost, moved with the market (0.35.6)
-      const amt=Math.round(Math.min(shipValue(sh)*(1.1+Math.random()*0.3),saleCap(sh))/1000)*1000;if(amt<=saleValue({...sh,saleAmt:0}))continue;W.offers.push({sid:sh.id,amt,exp:m+2});
-      news(`A syndicate offers ${fmt(amt)} for SS ${sh.name}, about ${Math.round(amt/Math.max(1,shipValue(sh)/warShips(m)*piAt(ym(1913,6))/PX())*10)/10} times her pre-war worth. It is under Needs attention.`,'',true);}}
+      const amt=Math.round(Math.min(shipValue(sh)*(1.1+Math.random()*0.3)*clamp(sh.cond/75,0.5,1)*(fatOf(sh)>=75?0.6:1),saleCap(sh))/1000)*1000; /* the syndicate's surveyor marks down a run-down or worn-out ship (0.39.5) */if(amt<=saleValue({...sh,saleAmt:0}))continue;W.offers.push({sid:sh.id,amt,exp:m+2});
+      news(`A syndicate offers ${fmt(amt)} for SS ${sh.name}, about ${Math.round(amt/Math.max(1,shipValue(sh)/warShips(m)*piAt(ym(1913,6))/PX())*10)/10} times her pre-war worth. The offer is under Needs attention.`,'',true);}}
   else if(W.offers&&W.offers.length)W.offers=[];
   // speculative lines floated on borrowed money
   if(bubbleOn(m)&&Math.random()<0.15){S.coQueue=S.coQueue||[];S.coQueue.push({at:m,kind:Math.random()<0.5?'cargo':'liner',routes:[],spec:true});}

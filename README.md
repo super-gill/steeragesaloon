@@ -299,6 +299,19 @@ Each month the Shore tab also shows what each pier, hostel and booking agency is
 
 Money is in 1921 pounds, scaled by the price index. Head office suggests selling spare berths at piers and yards (which cost the fleet nothing) once they would earn £400 a month; hostels and agents are left to the player, since they help rivals on the Line's own routes.
 
+## Fixes from test round 6 (0.39.5)
+
+- **Tax** (`taxMonth`, `epdJanuary`): the year's taxable profit leaves out the taxes booked in it; the Excess Profits Duty allowed against income tax (`S.epdLast`) is the duty's share on trading profit, `tax × (earned − gain − standard) / (earned − standard)`.
+- **Called loans** (`repayBank` in `js/economy.js`): every repayment, by the player, the harness or the headless player, reduces `S.call.amt` first and clears the call when it is met.
+- **Stage payments** (`bill` in `js/yard.js`): `o.billed` records each stage billed; an unpaid one is carried in `o.due` and not billed again.
+- **Foreclosure** (`bankRealise`): after stock and shares, if the account is still past the limit and net worth is positive, the bank sells ships cheapest first at 0.6 of their worth until the overdraft is half the limit; each pays off its own mortgage (`shipMortgage`) and the rest goes to the account.
+- **Stock-backed lending** (`headroom` in `js/sim.js`): at most the Line's net worth (was twice it).
+- **The steerage pool** (`routeCapRaw`, `POOL_LEEWAY` in `js/sim.js`): in the conference, a ship's steerage and Tourist Third demand on a trade is at most the trade's demand times her berths over all the berths sailing it (rivals' and the Line's, before appeal), times 1.15.
+- **Panics** (`mkMoodBase`): the share market's mood is 0.3 lower while a City rumour lasts (0.12 before).
+- **Boom offers** (`war.js`): times `clamp(cond/75, 0.5, 1)`, and 0.6 for a ship worn 75 or more. Receivers' listings are repriced to 0.7 of worth each month if lower (`refreshMarket`).
+- **Rival giants** (`coShipVal`): times `vk`, 2 for an express liner and 1.3 for a giant, as paid for in `prewarMonth`.
+- **The Depression's trough** (`depression`): North Atlantic and Canadian steerage 0.15 of its trend.
+
 ## Balancing 1900 to 1939 (0.39.4)
 
 Set against `docs/overhaul/research/growth.md`.

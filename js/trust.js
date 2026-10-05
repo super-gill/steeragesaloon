@@ -67,7 +67,7 @@ function trustMonth(){
     // with part of the Line in the public's hands, the offer is for the owner's own shares (0.35.5)
     else{const own=typeof flOwn==='function'?flOwn():1,amt=Math.round(Math.max(netWorth(),fleetValue()*0.5)*(1.3+R()*0.3)*own/1000)*1000;
     if(amt>0){S.trustOffer={amt,exp:m+2};T.offers++;
-      news(`${TRUST_SHORT[0].toUpperCase()+TRUST_SHORT.slice(1)} offers ${fmt(amt)} for ${own<1?'your shares in ':''}the Morven Line. It is under Needs attention.`,'',true);}}}
+      news(`${TRUST_SHORT[0].toUpperCase()+TRUST_SHORT.slice(1)} offers ${fmt(amt)} for ${own<1?'your shares in ':''}the Morven Line. You will find it under Needs attention.`,'',true);}}}
   if(S.trustOffer&&m>=S.trustOffer.exp)trustRefuse(true);
 }
 /* the owner sells: the game ends with the Line in the Combine */

@@ -55,7 +55,7 @@ if(typeof PROT==='undefined'||PROT!=='0')H.warProt();
     // overdrawn and sinking: raise cash by selling the ship that earns least for her value, before the bank forecloses
     if(S.cash<-0.35*odLimit()&&S.ships.length>1&&!S.ships.some(x=>x.pendingExit)){const w=S.ships.filter(x=>x.state==='port'||x.state==='laid'||x.state==='sea').map(x=>({x,y:(x.pl||[]).reduce((a,v)=>a+v,0)/Math.max(1,shipValue(x))})).sort((a,b)=>a.y-b.y)[0];if(w)doAction('sellship',[w.x.id]);}
     if(S.crash||S.call)return;
-    if(S.debt>0&&S.cash>12*run){const r=Math.min(S.debt,Math.floor((S.cash-12*run)/1000)*1000);if(r>0){S.cash-=r;S.debt-=r;}} // pay down the mortgage when flush
+    if(S.debt>0&&S.cash>12*run){const r=Math.min(S.debt,Math.floor((S.cash-12*run)/1000)*1000);if(r>0)repayBank(r);} // pay down the mortgage when flush
     if(S.debt-Math.max(0,S.cash)<0.35*fleetValue()&&shipMkt()<=1.3)for(const m of S.market.slice()){const dep=buyTerms(m).dep;if(S.cash-dep<Math.max(12000*PX(),6*run))continue;
       const b=H.bestRoute(m);if(!b||b.pm*12<m.price/8)continue;const sh=H.buy(m);if(!sh)continue;if(!S.lines[b.rk])H.openLine(b.rk);if(S.lines[b.rk])H.assign(sh,b.rk);break;}
     // twice a year: a ship that lost money over the year goes where she would pay, or is sold; a worn-out one is sold

@@ -422,6 +422,11 @@ function advice(budget){
   // the City's whispers: a bank in trouble takes most of the cash on deposit with it, and Consols are safe (0.35.4)
   if(S.crash&&S.crash.stage==='rumour'&&S.crash.bank&&S.cash>3*runningCost()+5000*PX())add({id:'bankrun'+S.crash.m0,scope:'co',sev:'bad',gain:S.cash*0.5,title:'Move spare cash out of the bank',
     why:`${BANK_NAME[0].toUpperCase()+BANK_NAME.slice(1)} is said to be overextended. If it fails it takes most of the cash on deposit with it; government stock is safe. Keep a few months' running costs in the account and put the rest into Consols until the whispers pass.`,act:[['Finance','tabgo','finance']]});
+  // a ship on order with payments in arrears: the yard has stopped work and cancels after six months, and everything paid is lost
+  // (0.39.5: head office said nothing while a Line that could borrow enough lost £170,100)
+  for(const o of S.orders||[])if(o.due>0){const left=Math.max(0,7-o.unpaid),h=S.noLend>S.m?0:headroom();
+    add({id:'arrears'+o.id,scope:'co',sev:'bad',gain:o.paid,title:`Pay the arrears on SS ${o.d.name}`,
+      why:`${fmt(o.due)} is owed to the yard, which has stopped work. Unless it is paid within ${left} month${left===1?'':'s'} the contract is cancelled and the ${fmt(o.paid)} already paid is lost. ${h>=o.due?`The bank would lend ${fmt(h)} against the fleet: borrowing enough clears it, and the yard is paid at the month's end.`:S.noLend>S.m?'The bank is lending nothing until '+monthName(S.noLend)+': selling a ship or stock would pay it.':'The bank would not lend enough: selling a ship or stock would pay it.'}`,act:[['Finance','tabgo','finance']]});}
   if(confCanJoin()&&Object.keys(S.wars).length)add({id:'conf-war',scope:'co',sev:'tip',gain:200,title:'The conference is an option',
     why:'Members cannot be targeted by rate wars. The price is fares held between 95% and 115% of the line rate, and a cap on steerage. Worth it if you keep provoking wars.',act:[['Join the conference','confjoin'],['Conference','tabgo','company']]});
   })();return A1;}))add(h);
@@ -473,7 +478,7 @@ function doAction(act,d){MOD_EPOCH++;
       if(x.state==='sea'||x.state==='repo'){x.pendingYard=k;return true;}if(S.cash>=refitCost(x,k)){enterYard(x,k);return true;}return false;}
     case 'crewset':{const [id,dp,k,v]=d;const x=ship(id);if(!x||!CDEPT[dp]||!['man','pay','train'].includes(k))return false;cwOf(x)[dp][k]=clamp(v|0,0,2);if(k==='pay')x.pay=cwOf(x).deck.pay;return true;}
     case 'appoint':{const [id,r,cid]=d;const x=ship(id);if(!x)return false;return appointOfficer(x,r,cid);}
-    case 'scrapship':{const [id]=d;const x=ship(id);if(!x||S.ships.length<2)return false;if(x.state==='sea'||x.state==='repo')x.pendingExit='scrap';else exitShip(x,'scrap');return true;}
+    case 'scrapship':{const [id]=d;const x=ship(id);if(!x||S.ships.length<2||x.state==='req'||x.state==='lost'||(rescueNoSale()&&fatOf(x)<75))return false;if(x.state==='sea'||x.state==='repo')x.pendingExit='scrap';else exitShip(x,'scrap');return true;} /* not a requisitioned ship, and under the government director only a worn-out one (KI-021; in 0.39.5, since the 0.39.3 change was lost) */
     case 'sellship':{const [id]=d;const x=ship(id);if(!x||S.ships.length<2||x.state==='req'||rescueNoSale())return false;if(x.state==='sea'||x.state==='repo')x.pendingExit='sell';else exitShip(x,'sell');return true;}
     case 'hire':{const [id,cid]=d;const x=ship(id),c=(S.capPool||[]).find(q=>q.id===cid);if(!x||!c)return false;
       const old=x.captain;x.captain=c;S.capPool=S.capPool.filter(q=>q!==c);if(old&&old.age<63)S.capPool.push(old);news(`${c.name} takes command of SS ${x.name}.`);return true;}
