@@ -46,7 +46,9 @@ function run(seed) {
     ok('kept off the Line\\'s trades within a year',(nowhere||!coFleet(o).some(x=>S.lines[x.route]))&&!(S.rorders||[]).some(q=>q.o===o&&S.lines[q.rk]&&mkKeepRoute(o,q.rk)===q.rk) /* an order placed before the instruction is sent elsewhere on delivery (0.39.3) */,coFleet(o).map(x=>x.route).join(' '));
     S.wars[rk]={left:6,mult:0.72,multT:0.6,lines:true,by:[o,coLive().find(q=>q!==o)]};ok('its rate war ends on the Line\\'s word',mkPeace(o)&&!S.wars[rk]);
     const x=coFleet(o)[0],val=coShipVal(x),n0=S.ships.length,c0=S.rivals[o].cash;
-    ok('a ship bought at a fair price',mkTakeShip(o,x.id)&&S.ships.length===n0+1&&Math.abs(shipValue(S.ships[S.ships.length-1])-val)<0.02*val&&Math.abs(S.rivals[o].cash-c0-Math.round(val/100)*100)<1,Math.round(shipValue(S.ships[S.ships.length-1]))+' vs '+Math.round(val));
+    // at the yard's price for a ship like her, never less than the rival's own book (0.39.8): she is worth what was paid
+    {const took=mkTakeShip(o,x.id),paid=S.rivals[o].cash-c0,nv=took?shipValue(S.ships[S.ships.length-1]):0;
+    ok('a ship bought at a fair price',took&&S.ships.length===n0+1&&paid>=Math.round(val/100)*100-1&&Math.abs(nv-paid)<0.02*paid,Math.round(nv)+' worth, '+Math.round(paid)+' paid, '+Math.round(val)+' on the rival\\'s books');}
     {const nw0=netWorth(),c0=S.cash,lend=Math.round(20000*PX());ok('a loan to a controlled line',mkLend(o,lend)&&S.rivals[o].lineLoan>=lend&&Math.abs(netWorth()-nw0)<1,'net worth moved '+Math.round(netWorth()-nw0));}
     ok('no merger under three quarters',!mkMerge(o));
     buyTo(o,0.76);const blocked=mkStake(o)<0.75&&S.ex.cos[o].block; // a friend's blocking stake stops a special resolution: by design, nothing to merge (0.39.3)

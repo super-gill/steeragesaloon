@@ -29,6 +29,8 @@ function routeCapRaw(rk,c){const day=Math.floor(S.t)+'|'+S.m+'|'+S.rships.length
   for(const x of S.rships)if(x.route===rk){const b=rivalBerths(x,c);if(b)v+=b*sailings(x.knots,rk)*warRivalF(x.owner,S.m);}
   for(const x of S.ships)if(x.line===rk&&ACTIVE.includes(x.state))v+=(x.berths[c]||0)*sailings(knotsOf(x),rk,SPD[x.speed]);
   RCR_CACHE.m.set(key,v);return v;}
+/* the pool counts the outsiders' berths too (0.39.8) */
+const routeCapPool=(rk,c)=>routeCapRaw(rk,c)+(typeof outCap==='function'?outCap(rk,c):0);
 let FC_NOW=null;
 // what was known in advance: the American quota law of 1924, debated from the winter and passed in May, cut steerage from
 // July (KI-043); a forecast from January 1924 sees it
@@ -62,7 +64,7 @@ function legCalc(sh,rk,dir,R,gk){
     // quota paid the excess to those under it, so a member carries no more than its share of the berths sailing, with a little
     // leeway. Before, a member whose agents and piers drew steerage from the rest filled its ships while theirs emptied and left
     // the trade: a bold player's new emigrant ships returned 35% to 45% a year on their cost (the sources' good years: 12% to 18%)
-    if(S.conf&&(c==='t'||c==='tt')&&!r.cruise){const tot=routeCapRaw(rk,c)+(sh.line===rk?0:b*sailings(kn,rk,sm));d=Math.min(d,marketM(rk,c,dir,m,mh)*b*(1+OUTSIDE_A)/Math.max(1e-9,tot)*POOL_LEEWAY);}
+    if(S.conf&&(c==='t'||c==='tt')&&!r.cruise){const tot=routeCapPool(rk,c)+(sh.line===rk?0:b*sailings(kn,rk,sm));d=Math.min(d,marketM(rk,c,dir,m,mh)*b*(1+OUTSIDE_A)/Math.max(1e-9,tot)*POOL_LEEWAY);}
     d*=facWinter(sh,c,m%12); // indoor rooms keep people travelling in winter
     if(R)d*=0.85+R()*0.3;
     const q=S.conf&&c==='t';let cap=q?Math.floor(b*0.8):b;

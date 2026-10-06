@@ -141,7 +141,33 @@ function rivalWeight(rk,c,owner){
   let v=RW_CACHE.m.get(key);if(v===undefined){v=rivalWeightRaw(rk,c,owner);RW_CACHE.m.set(key,v);}
   return v;
 }
-function rivalWeightRaw(rk,c,owner){let a=0;for(const x of S.rships)if(x.route===rk&&(!owner||x.owner===owner)){const b=rivalBerths(x,c);if(b)a+=b*sailings(x.knots,rk)*rivalAppeal(x.owner,rk,c,x)*warRivalF(x.owner,S.m);}return a;}
+/* ---------- outside tonnage (0.39.8, KI-117 and KI-120) ----------
+   A trade that pays far above the usual draws ships from outside: new lines, tramps fitted for steerage, chartered tonnage,
+   established lines moving ships across. One that pays badly loses them. Each trade carries an outside capacity, measured
+   against its demand (S.otw[rk].k berths for each passenger who wants to sail); it moves towards what would bring the trade's
+   load down to OUT_TARGET, in over about a year and a half and out over a year. Before, a failed line's trades, the 1921
+   glut and the Depression left trades with one or two ships and the player's earned several times what any real ship did. */
+const OUT_TARGET=0.85,OUT_IN=18,OUT_OUT=12,OUT_MAX=1.5,OUT_CL=['f','s','t','tt'];
+const outCap=(rk,c)=>{const o=S.otw&&S.otw[rk];return o&&o.k>0?o.k*(o.d[c]||0):0;};
+/* the trade's load, weighted by what each class pays: every passenger who wants to sail against every berth sailing */
+function outLoad(rk,withOut){const o=S.otw[rk],r=ROUTES[rk];let num=0,den=0;
+  for(const c of OUT_CL){const f=r.ref[c]||0;if(!f||!(o.d[c]>0))continue;num+=o.d[c]*f;den+=(routeCapRaw(rk,c)+(withOut?outCap(rk,c):0))*f;}
+  return {num,den};}
+function otwMonth(m){S.otw=S.otw||{};
+  for(const rk in ROUTES){const r=ROUTES[rk];if(r.cruise)continue;const o=S.otw[rk]||(S.otw[rk]={k:0,d:{}});
+    if(!routeOpen(rk,m)){o.k=0;continue;}
+    for(const c of OUT_CL){const d=marketM(rk,c,0,m,m);o.d[c]=o.d[c]===undefined?d:o.d[c]+(d-o.d[c])/12;} // a year's average, so the seasons do not count
+    if(atWar(m)){o.k*=5/6;continue;} // in the war the tramps and charters are taken up by the state
+    // before 1921 they come only into a trade a named line has left by failing in the last three years: the established lines
+    // added tonnage for the boom themselves, and in the war and its aftermath the German lines' trades wait for their return
+    if(newCal()&&m<M21&&!(S.coFails||[]).some(f=>f.m>=m-36&&f.routes.includes(rk))){o.k*=1-1/OUT_OUT;continue;}
+    const L=outLoad(rk,false);if(!(L.num>0)){o.k*=1-1/OUT_OUT;continue;}
+    const need=clamp((L.num/OUT_TARGET-L.den)/L.num,0,OUT_MAX),k0=o.k;
+    o.k+=(need-o.k)/(need>o.k?OUT_IN:OUT_OUT);if(o.k<0.005)o.k=0;
+    if(S.lines[rk]&&k0<0.15&&o.k>=0.15&&!(o.told>m-24)){o.told=m;news(`Other ships are coming into the ${r.name} trade: new lines and chartered steamers, drawn by full ships and good fares.`);}}}
+function rivalWeightRaw(rk,c,owner){let a=0;for(const x of S.rships)if(x.route===rk&&(!owner||x.owner===owner)){const b=rivalBerths(x,c);if(b)a+=b*sailings(x.knots,rk)*rivalAppeal(x.owner,rk,c,x)*warRivalF(x.owner,S.m);}
+  if(!owner)a+=outW(rk,c);return a;}
+const outW=(rk,c)=>{const v=outCap(rk,c);return v>0?v*fareDemand(1/((S.rfare&&S.rfare[rk])||1),c):0;}; // the outsiders sell at the trade's going fare
 function ourWeight(rk,c,exclude){let a=0;if(!S.lines[rk])return 0;
   for(const sh of S.ships)if(sh!==exclude&&sh.line===rk&&ACTIVE.includes(sh.state)&&sh.berths[c])a+=sh.berths[c]*sailings(knotsOf(sh),rk,SPD[sh.speed])*ourAppeal(sh,rk,c);return a;}
 function cargoWeight(rk,exclude,reefer){let a=0;for(const x of S.rships)if(x.route===rk)a+=x.cargo*sailings(x.knots,rk)*(reefer&&!x.reefer?0.15:1)*warRivalF(x.owner,S.m);a*=outCargo(rk); // shared canvassers help them
@@ -152,7 +178,7 @@ function routeStats(rk,m){
   const r=ROUTES[rk];
   for(const x of S.rships)if(x.route===rk){const o=owners[x.owner]=owners[x.owner]||{ships:0,pax:0,cap:0,rev:0,paxRev:0,cargoRev:0,grt:0,cargoT:0};o.ships++;o.grt+=x.grt;}
   for(const c of ['f','s','t','tt']){
-    const rw={};let tot=ourWeight(rk,c);for(const o in owners){rw[o]=rivalWeight(rk,c,o);tot+=rw[o];}
+    const rw={};let tot=ourWeight(rk,c)+outW(rk,c);for(const o in owners){rw[o]=rivalWeight(rk,c,o);tot+=rw[o];}
     if(tot<=0)continue;
     const ow=ourWeight(rk,c);
     for(const dir of [0,1]){
@@ -197,6 +223,7 @@ function rivalMove(o,rk,kind,ship,to){
 /* the rival lines' month: fares, then each company's accounts and decisions (companies.js), then new lines */
 function rivalsMonth(){
   const m=S.m,R=Math.random;RW_CACHE.k=null;
+  otwMonth(m);RW_CACHE.k=null;
   // price matching: where the Morven Line undercuts, the route's fare level follows it down over a few months
   S.rfare=S.rfare||{};
   for(const rk in ROUTES){const cur=S.rfare[rk]||1,act=S.lines[rk]&&S.ships.some(x=>x.line===rk&&ACTIVE.includes(x.state));

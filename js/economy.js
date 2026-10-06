@@ -15,7 +15,11 @@ for(const k in COMM)PX0.comm[k]=COMM[k].rate;
 function applyPrices(){
   if(PN.QUE)PN.QUE=newCal()&&S.m<ym(1920,0)?'Queenstown':'Cobh'; // renamed in 1920 (0.37.2); the price tables are reset on every load and month, so the name is too
   const p=PX();
-  for(const k in ROUTES)for(const c in PX0.ref[k])ROUTES[k].ref[c]=Math.max(1,Math.round(PX0.ref[k][c]*p));
+  // in the Depression the conference cuts its passenger rates a fifth below the price level, as the lines fought for what traffic
+  // there was (0.39.8, KI-118: rates followed prices down a tenth while coal, wages and dues fell faster, so a Line made more
+  // in 1932 than in 1929)
+  const fk=1-SLUMP_FARE*(typeof S!=='undefined'&&S?slump(S.m):0);
+  for(const k in ROUTES)for(const c in PX0.ref[k])ROUTES[k].ref[c]=Math.max(1,Math.round(PX0.ref[k][c]*p*fk));
   PX0.adv.forEach((v,i)=>ADV_COST[i]=Math.round(v*p));PX0.maint.forEach((v,i)=>MAINT_COST[i]=Math.round(v*p));
   for(const k in PX0.pier)PIER_COST[k]=Math.round(PX0.pier[k]*p/1000)*1000;
   for(const k in PX0.agency)AGENCY[k].cost=Math.round(PX0.agency[k]*p/1000)*1000;

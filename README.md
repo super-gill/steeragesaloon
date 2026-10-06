@@ -299,6 +299,17 @@ Each month the Shore tab also shows what each pier, hostel and booking agency is
 
 Money is in 1921 pounds, scaled by the price index. Head office suggests selling spare berths at piers and yards (which cost the fleet nothing) once they would earn £400 a month; hostels and agents are left to the player, since they help rivals on the Line's own routes.
 
+## Competition (0.39.8)
+
+Design note: `docs/overhaul/research/competition.md`.
+
+- **Outside tonnage** (`otwMonth`, `outCap`, `outW` in `js/rivals.js`):
+  - `S.otw[rk].d[c]`: each class's outbound demand, averaged over a year.
+  - `S.otw[rk].k`: the trade's outside capacity, in berths for each passenger wanting to sail. Each month it moves towards the level that brings the fare-weighted load to `OUT_TARGET` (0.85), in over `OUT_IN` (18) months and out over `OUT_OUT` (12), capped at `OUT_MAX` (1.5). Before 1921 (on the 1900 calendar) it grows only on a trade a named line left by failing in the last 36 months (`S.coFails`), and otherwise decays. It decays by a sixth a month in the war, and is 0 on a closed trade.
+  - Outside capacity `k × d[c]` counts in `rivalWeight` (no owner), at the trade's fare level; in `routeStats`, against the named rivals; and in `routeCapPool`, the conference's steerage pool.
+- **Depression rates** (`applyPrices` in `js/economy.js`): the route rates are multiplied by `1 − SLUMP_FARE × slump(m)`, with `SLUMP_FARE` 0.2.
+- **Taking a ship** (`mkTakeShip` in `js/market.js`): the price is the larger of the rival's book (`coShipVal`) and the matching design's price (`coShipDesign`), aged as `shipValue` ages a ship at 75% condition. The ship is adopted at that worth and takes the design's `fuelK` and `crewK`.
+
 ## Fixes from test round 7 (0.39.7)
 
 - **Merged ships** (`mkAdopt(x, o, k)` in `js/market.js`): `base` is set so the ship's worth is `k` of `coShipVal`: 0.7 for a merger (`mkMerge`), the wind-up value used by `mkWindValue`, and 1 for a ship taken at a fair price (`mkTakeShip`). Refrigeration is carried over from the rival ship (`reefer`).

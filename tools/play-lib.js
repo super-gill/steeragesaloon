@@ -73,6 +73,7 @@ var PL = (function () {
     auction: (i, kk) => { if (!S.war || !S.war.auction) return false; auctionBid(+i, +kk); return true; },
     // ---- shares (Finance, Shares)
     shares: (o, amt, margin) => mkBuy(o, +amt, !!margin),
+    takeship: (o, id) => mkTakeShip(o, +id), // the controlling holder's "take a ship" (0.39.8)
     sharespct: (o, pct) => mkBuyPct(o, +pct),
     sellshares: (o, frac) => mkSell(o, +frac),
     repaymargin: amt => mkRepay(+amt),
@@ -119,7 +120,7 @@ var PL = (function () {
  money: borrow(amt) · repay(amt) · rescuepay(amt) · gilts(amt) [negative sells] · giltsall()
  trade: join() · leave() [the conference] · mail(yes) · union(yes) · combine(yes) [selling to the Combine ENDS the game]
  war: zigzag(id,on) · convoy(id,on) · wartop(id,on) · reserve(id,on) · offership(id) · waroffer(shipId,yes) · auction(lot,0-2)
- shares: shares(o,amt,margin) · sharespct(o,pct) · sellshares(o,frac) · repaymargin(amt) · lend(o,amt) · merge(o) · windup(o) · buyout(o) · control(o,'div'|'strat'|'keep',v) · peace(o)
+ shares: shares(o,amt,margin) · sharespct(o,pct) · sellshares(o,frac) · repaymargin(amt) · lend(o,amt) · merge(o) · takeship(o,rivalShipId) · windup(o) · buyout(o) · control(o,'div'|'strat'|'keep',v) · peace(o)
    fundopen('broker'|'office') · fundpay(amt) · fundtake(amt) · fundclose() · fundbrief('preserve'|'balanced'|'growth') · officehire(i)
  floating: float(0.25|0.49|0.6|0.75,founders) · buyback(pct) · founders() · knight(o) · crown() · appeal()
  moves: raid(o) · tender(o,premium e.g. 0.3) · proxy(o) · short(o,0.02|0.05) · cover(o) · bear(o,rk) · proxyagainst()
@@ -190,7 +191,7 @@ VIEWS (look <view> [arg]): help · ship <id> · line <rk> · routes · market ·
       case 'yardjobs': { const sh = ship(arg); if (!sh) return 'no ship'; return Object.keys(YARD_NAME).filter(q => !(EQUIP[q] && EQUIP[q].from > yearNow())).map(q => { try { return `${q}: ${YARD_NAME[q]} ${p(refitCost(sh, q))}, ${YARD_DAYS[q]} days`; } catch (e) { return q + ': -'; } }).join('\n'); }
       case 'line': { const rk = arg; if (!ROUTES[rk]) return 'no line ' + rk; const r = ROUTES[rk]; L.push(`${r.name} (${rk}): calls ${r.calls.map(q => PN[q]).join(' → ')}, open ${routeOpen(rk, S.m)}, line rate ${JSON.stringify(defaultFares(rk))}`);
         if (S.lines[rk]) L.push(`yours: ${JSON.stringify(S.lines[rk].fares)} table ${S.lines[rk].service} adv ${S.lines[rk].adv}; your ships ${lineShips(rk).map(x => x.name).join(', ')}; forecast ${k(lineEcon(rk, {}).pm)}/mo`);
-        const own = {}; for (const x of S.rships) if (x.route === rk) own[x.owner] = (own[x.owner] || 0) + 1; L.push('rivals on it: ' + Object.keys(own).map(o => `${mkName ? mkName(o) : o} (${o}) ${own[o]} ships${warRivalF(o, S.m) === 0 ? ' (laid up in neutral ports)' : ''}`).join(', '));
+        const own = {}; for (const x of S.rships) if (x.route === rk) own[x.owner] = (own[x.owner] || 0) + 1; L.push('rivals on it: ' + Object.keys(own).map(o => `${mkName ? mkName(o) : o} (${o}) ${own[o]} ships${warRivalF(o, S.m) === 0 ? ' (laid up in neutral ports)' : ''}`).join(', ')); { const ow = S.otw && S.otw[rk]; if (ow && ow.k > 0) L.push(`outside ships (new lines, charters, tramps): about ${Math.round(ow.k * 100)} berths for every 100 passengers wanting to sail`); }
         return L.join('\n'); }
       case 'routes': return Object.keys(ROUTES).map(rk => `${rk} | ${ROUTES[rk].name} | ${routeOpen(rk, S.m) ? 'open' : 'closed'}${S.lines[rk] ? ' | yours' : ''} | line rate ${JSON.stringify(defaultFares(rk))}`).join('\n');
       case 'market': return (S.market.length ? S.market.map(m => { const b = bestLine(m, null); return `"${m.name}" built ${m.built} ${int(m.grt)}grt ${knotsOf(m)}kn berths ${JSON.stringify(m.berths)} cargo ${int(m.cargo || 0)} price ${p(m.price)} (worth ${p(shipValue(m))}) at ${PN[m.port]} · best ${b ? b.rk + ' ' + k(b.pm) + '/mo' : '-'}`; }).join('\n') : 'nothing for sale') + `\nsecond-hand prices ×${shipMkt().toFixed(2)}`;

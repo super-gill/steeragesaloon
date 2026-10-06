@@ -3,6 +3,7 @@
    record is CHANGELOG.md and ROADMAP.md. Add an entry here with every release (see Releasing in the README), and move a
    plan item to DONE when it ships. */
 const DEVLOG=[
+  {v:'0.39.8',d:'6 October 2026',t:'Competition',items:['A trade that runs overfull draws other ships within a year or two: new lines, tramps and charters. A failed rival\'s trades, the 1921 glut and good years no longer leave money lying on an empty trade.','In the Depression the conference cuts its fares harder, as the lines fought for what traffic there was.','A controlled line\'s ship costs what a ship like her would cost from the yards.']},
   {v:'0.39.7',d:'6 October 2026',t:'Fixes from the third round of test games',items:['A merged line\'s ships are booked at what they would fetch if it were wound up, so a merger is no longer an instant gain.','The broker collects a margin loan when the shares behind it are gone.','The bank will not lend you money to buy Consols.','German ships stay in port through the war, and the Post Office no longer cancels mail contracts for ships the Admiralty still holds.','Fares follow the price level within the year when prices move fast, as in the war.']},
   {v:'0.39.6',d:'5 October 2026',t:'What ships earn',items:['New ships and the brokers\' old ones cost a quarter more, so each ship you add earns less on what she cost. The ships you already run are not touched.','Running costs are a twentieth higher: coal, wages, victuals, dues and upkeep.','The Line starts free of its mortgage, so the first year is easier.']},
   {v:'0.39.5',d:'5 October 2026',t:'Fixes from the second round of test games',items:['Fixed: income tax was too low after selling ships in the 1920 boom.','Repaying a called loan early now counts against the call; a ship order is never billed twice for the same stage; a Line still worth something is not foreclosed the day an inquiry\'s bill arrives.','The conference pools steerage: a member carries no more than its share of the berths on a trade.','The 1920 boom no longer announces its own top, and buyers mark down worn ships.','Head office warns when a ship on order is behind with its payments.','The Depression all but stops emigration, as it did.']},
@@ -38,8 +39,7 @@ const DEVLOG=[
 ];
 /* what is coming, in order; 'now' marks the next release */
 const DEVPLAN=[
-  {v:'0.39.8',t:'Competition',now:true,items:['A trade that pays far above the usual draws other ships within a year or two, and one losing money loses them: a failed line\'s trades, the 1921 glut and the Depression no longer leave money lying on an empty trade.']},
-  {v:'0.40.0',t:'1900 to 1939 complete',items:['Every serious known issue closed and the game balanced to the outbreak of the Second World War, after a second round of test games.']},
+  {v:'0.40.0',t:'1900 to 1939 complete',now:true,items:['Every serious known issue closed and the game balanced to the outbreak of the Second World War, after a second round of test games.']},
   {v:'0.41',t:'The Second World War',items:['The war of 1939 to 1945 at sea, researched first: requisition, the Atlantic convoys, losses and the rebuilding after.']},
   {v:'0.4x to 0.9x',t:'The later decades, to the present day',items:['Researched and built era by era, as 1900 to 1930 was: two-class liners, the cruise boom and ever bigger ships, casinos and night life aboard, Soviet budget lines, family cruising, and more.']},
   {v:'1.0',t:'The game complete to the present day',items:[]}

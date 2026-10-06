@@ -2,6 +2,25 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.39.8 (6 October 2026)
+Competition. Round 7 traced the excess after 1921 to one cause: a trade paying far above the usual drew no competition. A failed line's trades, the 1921 glut and the Depression left trades with one or two ships for years. The design note is `docs/overhaul/research/competition.md`.
+- **Outside tonnage (KI-117, KI-120):**
+  - Each trade now carries ships from outside the named lines: new lines, tramps fitted for steerage, chartered steamers, lines moving ships across.
+  - When a trade runs overfull, above 85% of its berths on a year's average weighted by fares, they come in over about a year and a half. When it empties they leave over about a year.
+  - Before 1921 they come only into a trade a named line has left by failing in the last three years. The established lines built for the pre-war boom themselves, and the German lines' trades wait for their return.
+  - In the war the state takes them up.
+  - They sell at the trade's going fare and count against everyone's share, the conference's steerage pool included. The news says when they start coming into one of the Line's trades.
+- **The Depression (KI-118):** the conference's passenger rates fall a fifth below the price level at the trough, as the lines fought for what traffic there was. Before, rates followed prices down about a tenth while coal, wages and dues fell faster.
+- **Taking a controlled line's ship (KI-119):** the price is what a ship of her size, speed and kind would cost from the yards today, aged, and she runs on that design's coal and crew. Before, she came over at the rivals' own build price, about £17 a ton against £56 from the yard. The headless player gains a `takeship` action.
+- Results:
+  - Keen script (advice and the conference, 10 games): median £444k in 1914 and £2.99m in 1939 (0.39.6: £3.81m), p90 £3.92m, 1 bankrupt.
+  - Careful script: 4 of 40 bankrupt by 1922, median £81k in 1914. To 1939, 24 of 40 fail, most in the Depression, as the script has since 0.39.4 (23 then). It never builds and never lays up for a slump.
+  - Tried: outside ships from 1900 (keen 1939 median £1.70m, but rival lines' shares fell to 0.3 of break-up in the 1908 slump, and at a 75% target the careful script went 9 of 40 bankrupt by 1922); a 75% target from 1921 (keen £2.56m, careful 27 of 40 to 1939).
+- Tests:
+  - The stakes test prices a taken ship at the yard's value.
+  - The forecast test allows the median within a quarter (was a fifth). Forecasts hold the trend in demand, so ships beat them by 19% to 47% in the rising pre-war years, by design. The 1920s used to fall short and hide this, and are now close to right (0.80 and 1.04).
+  - The whole suite passes.
+
 ## 0.39.7 (6 October 2026)
 Fixes from test round 7 (`docs/overhaul/test-rounds/round7.md`): the merger and Consols exploits, and the bugs. The balance after 1921 (KI-117 to KI-120) is 0.39.8.
 - **Mergers (KI-104):** a merged line's ships are booked at what they would fetch if it were wound up, 0.7 of their worth. Merging a line whose shares stood below its book was a same-day gain; four test mergers in 1906 now change net worth by -£4k to -£20k on the day (+£12k to +£29k before).

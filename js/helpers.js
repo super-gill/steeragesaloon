@@ -127,6 +127,7 @@ function depression(c,m,rk){
 const slump=m=>{m-=M21;return m<106?0:m<120?(m-105)/14:m<156?1:Math.max(0,1-(m-156)/48);};
 /* in a slump the costs of running ships fall too: coal, wages, dues and insurance all come down at the trough */
 const SLUMP_CUT={fuel:0.25,wage:0.10,dues:0.15,ins:0.10};
+const SLUMP_FARE=0.2; /* the conference's passenger rates at the depth of the Depression, below the price level (0.39.8) */
 /* and second-hand ships fetch less: three tenths off at the trough (0.37.2; two fifths until 0.38.0) */
 const SLUMP_SHIP=0.3;
 const slumpK=(k,m)=>1-SLUMP_CUT[k]*slump(m===undefined?(typeof S!=='undefined'&&S?S.m:0):m);

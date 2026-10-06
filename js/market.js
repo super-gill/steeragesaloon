@@ -324,8 +324,12 @@ function mkAdopt(x,o,k){const age=Math.max(0,yearOfM(S.m)-x.built),fat=clamp(age
   sh.acq=S.m;sh.paid=Math.round(0.6*coShipVal(x));sh.mk0=shipIdx();sh.merged=true;if(S.lines[x.route]&&routeOpen(x.route,S.m)){sh.line=x.route;sh.state='port';sh.portLeft=2;}
   S.ships.push(sh);dropRival(x);return sh;}
 function mkTakeShip(o,sid){if(mkEnemy(o)||mkInfl(o)<2||rescueNoBuy())return false;const x=S.rships.find(y=>y.id===sid&&y.owner===o);if(!x)return false;
-  const price=Math.round(coShipVal(x)/100)*100;if(S.cash<price)return false;
-  S.cash-=price;S.rivals[o].cash+=price;const sh=mkAdopt(x,o);RW_CACHE.k=null;
+  // she costs what a ship of her size, speed and kind would cost from the yards today, aged, as the receivers price a failed line's
+  // ships (0.39.8, KI-119: at the rivals' own book, about £17 a ton against £56 from the yard, a controlled line's ships came over
+  // at a third of their cost)
+  const st=coShipDesign(x),age=Math.max(0,yearOfM(S.m)-x.built),dw=st?st.price*0.8/warBuild(S.m)*Math.pow(0.75,0.35)*Math.max(0.15,1-clamp(age*1.8,0,95)*0.0085)*shipMkt():0;
+  const price=Math.round(Math.max(coShipVal(x),dw)/100)*100;if(S.cash<price)return false;
+  S.cash-=price;S.rivals[o].cash+=price;const sh=mkAdopt(x,o,price/Math.max(1,coShipVal(x)));RW_CACHE.k=null;if(st){sh.fuelK=st.fuelK;sh.crewK=st.crewK;}
   news(`SS ${sh.name} passes from ${mkName(o)} to the Morven Line at a fair price, ${fmt(price)}.${sh.line?'':' She lies laid up until you give her a line.'}`,'good');return true;}
 /* special resolution: merge. The other shareholders are paid their share of what it is worth; its ships, trades, cash
    and debts become the Line's */
