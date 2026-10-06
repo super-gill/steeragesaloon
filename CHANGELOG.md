@@ -2,6 +2,25 @@
 
 The version shows in the game header and in the Company tab.
 
+## 0.39.7 (6 October 2026)
+Fixes from test round 7 (`docs/overhaul/test-rounds/round7.md`): the merger and Consols exploits, and the bugs. The balance after 1921 (KI-117 to KI-120) is 0.39.8.
+- **Mergers (KI-104):** a merged line's ships are booked at what they would fetch if it were wound up, 0.7 of their worth. Merging a line whose shares stood below its book was a same-day gain; four test mergers in 1906 now change net worth by -£4k to -£20k on the day (+£12k to +£29k before).
+- **Margin loans (KI-105):** when the shares behind the broker's loan are merged away or wound up, or a forced sale raises too little, the broker takes the uncovered part from the Line's account. Before, the loan ran on with nothing behind it.
+- **Consols (KI-106):** the bank lends on ships, not to buy stock. While the Line owes more than its ships carry, that much of the account cannot go into Consols, and the Investments screen says so. Borrowing against Consols to buy more at the 1921 top in yields no longer works.
+- **The war:**
+  - A German line's ship finished in the war stays in Germany until the line may sail again (KI-111: Hanseatic Star added a ship in 1915).
+  - Mail contracts are not cancelled for sailings missed by ships the Admiralty still holds after the armistice, or in the three months after they come back (KI-110).
+- **Fares (KI-113):** when prices move a twentieth within the year, as in the war, the lines revise their tariffs at once and the Line's fares follow. Before, fares fell to 86% of the rate between Januarys.
+- **Small fixes:**
+  - Merged ships keep their refrigeration (KI-112).
+  - Buying a ship for a line that cannot be opened now says so (KI-115).
+  - Head office suggests a cruise ship only for a cruise (KI-116).
+  - The tax rate prints "11d", not "0s 11d".
+  - From 0.39.6: the opening news no longer mentions a mortgage, and "Free of debt" needs a debt to have been cleared (KI-114).
+- Not changed: shorting the 1907 rumour and the 1929 Crash, and buying shares at the 1934 bottom, pay because the market follows the real calendar. That is a design question (KI-121).
+- Tools: the headless line view marks interned German lines; the yard-jobs view hides refits not yet invented. The stakes test values merged ships at 0.7; the world test checks a December fare against January's rate.
+- Tests: the whole suite passes.
+
 ## 0.39.6 (5 October 2026)
 What ships earn (KI-065). Bold games ran far past the 1914 target because each new emigrant ship returned 35% to 50% a year on her cost. The tuning record is `docs/overhaul/research/what-ships-earn.md`.
 - **Ships cost a quarter more:** new builds, and the old ships the brokers list. A ship's worth is still what she cost, so building is no loss on the books, but each ship added now earns less on the money put into her. In a human-style test game a new 13,000-ton emigrant ship returned 18% to 24% in 1913 (35% to 50% before).

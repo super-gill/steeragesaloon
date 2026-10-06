@@ -500,7 +500,7 @@ function doAction(act,d){MOD_EPOCH++;
     case 'openmove':{const [id,rk]=d;const x=ship(id);if(!x)return false;if(!S.lines[rk]){const fee=Math.round(2500*PX());if(S.cash<fee||!routeOpen(rk,S.m))return false;book('office',-fee,rk);S.lines[rk]={fares:defaultFares(rk),service:1,adv:1,last:[null,null]};news(`The Morven Line opens a ${ROUTES[rk].name} service.`,'good');}
       return doAction('moveship',[id,rk]);}
     case 'buyship':{const [name,rk]=d;const m=S.market.find(q=>q.name===name);if(!m||(rk&&!routeOpen(rk,S.m))||!buyShip(m))return false;
-      if(rk)doAction('openmove',[m.id,rk]);return true;}
+      if(rk&&!doAction('openmove',[m.id,rk])&&m.line!==rk)news(`SS ${m.name} has no line: the ${ROUTES[rk].name} service could not be opened. Give her one from the Fleet tab.`,'bad',true);return true;} /* 0.39.7, KI-115: she lay idle with no word */
     case 'newhead':{const [k,i]=d;const o=S.depts[k];if(!o||!o.cands||!o.cands[i])return false;const sev=o.head?o.head.wage*3:0;if(S.cash<sev)return false;
       if(sev)book('office',-sev);const h=o.cands[i];news(`${o.head?o.head.name+' leaves with three months\' pay. ':''}${h.name} becomes ${DEPTS[k].head}.`);o.head=h;o.cands.splice(i,1);return true;}
     case 'build':{const [dz]=d;if(typeof openDesigner!=='function')return false;UI.dz=JSON.parse(JSON.stringify(dz));openDesigner();return true;}
@@ -537,6 +537,7 @@ function buildIdea(){
   let best=null;const reach=S.cash+headroom();
   for(const pk of ['inter','emig','mixed','cargo','reefer','tourist','express','cruise']){if(!techOn(PURPOSES[pk].from,yearNow()))continue;
     const d=defaultDesign(pk);d.name='';const f=designForecast(d);if(!f.best||f.best.pm<=0)continue;
+    if((pk==='cruise')!==!!(ROUTES[f.best.rk]&&ROUTES[f.best.rk].cruise))continue; /* a cruise ship for a cruise, a liner for a ferry (0.39.7: head office advised 'a cruise ship for Liverpool to New York') */
     if(reach<f.st.price*0.7)continue;const yrs=f.st.price/(f.best.pm*12);if(yrs>9)continue;
     if(!best||yrs<best.yrs)best={d,rk:f.best.rk,pm:Math.round(f.best.pm),price:f.st.price,yrs};}
   S.buildIdea={m:S.m,v:best};return best;

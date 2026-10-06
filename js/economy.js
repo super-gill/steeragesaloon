@@ -37,8 +37,11 @@ function inflate(){
   // rise by the whole year's inflation in January, and drift off the rate)
   for(const rk in S.lines){const L=S.lines[rk],f=L.fares,R=ROUTES[rk].ref;L.fseen=L.fseen||{...f};L.fref=L.fref||{};
     for(const c in f)if(f[c]!==L.fseen[c]||!L.fref[c]){L.fref[c]=R[c]||0;L.fseen[c]=f[c];}}
-  // each January the lines revise their tariffs to the price level, and the Morven Line's fares follow the rates
-  if(m%12===0&&m>0){const k=S.pi/(S.fareIdx||1);S.fareIdx=S.pi;
+  // each January the lines revise their tariffs to the price level, and the Morven Line's fares follow the rates; when prices
+  // move a twentieth within the year, as in the war, the lines revise at once (0.39.7, KI-113: fares fell to 86% of the rate,
+  // under the conference's floor, between Januarys)
+  const kNow=S.pi/(S.fareIdx||1);
+  if(m>0&&(m%12===0||Math.abs(kNow-1)>0.05)){const k=kNow;S.fareIdx=S.pi;
     if(Math.abs(k-1)>0.004){for(const rk in S.lines){const L=S.lines[rk],f=L.fares,R=ROUTES[rk].ref;
         for(const c in f){const kc=L.fref[c]>0&&R[c]>0?R[c]/L.fref[c]:k;f[c]=Math.max(1,Math.round(f[c]*kc*10)/10);L.fref[c]=R[c]||0;L.fseen[c]=f[c];}}
       news(`Tariff revision: the Atlantic lines ${k>1?'raise':'cut'} fares ${Math.abs(Math.round((k-1)*1000)/10)}% with the cost of living. The Morven Line's fares follow.`);}}
@@ -157,7 +160,7 @@ function giltsMonth(){S.giltShock=(S.giltShock||0)*0.8;if(S.giltShock<0.01)S.gil
   if(S.giltPar>0){const z=Math.sqrt(-2*Math.log(Math.random()||1e-9))*Math.cos(2*Math.PI*Math.random());S.giltNoise=0.9*(S.giltNoise||0)+0.12*z*giltYieldAt(yearNow())/4;}else S.giltNoise=(S.giltNoise||0)*0.5;
   if(S.giltPar>0)book('invest',S.giltPar*GILT_COUPON/100/12);giltsMark();}
 function gilts(buy,amt){
-  if(buy){amt=Math.min(amt,Math.floor(Math.max(0,S.cash)));if(amt<=0)return false;S.cash-=amt;S.giltPar=(S.giltPar||0)+amt*(1-GILT_FEE)/giltPrice()*100;giltsMark();return true;}
+  if(buy){amt=Math.min(amt,Math.floor(typeof stockCash==='function'?stockCash():Math.max(0,S.cash)));if(amt<=0)return false;S.cash-=amt;S.giltPar=(S.giltPar||0)+amt*(1-GILT_FEE)/giltPrice()*100;giltsMark();return true;}
   giltsMark();amt=Math.min(amt,S.gilts||0);if(amt<=0)return false;const all=amt>=S.gilts-1;
   S.giltPar=all?0:S.giltPar*(1-amt/S.gilts);S.cash+=Math.round(amt*(1-GILT_FEE));giltsMark();return true;
 }
@@ -186,7 +189,7 @@ function taxMonth(net){
 const INCOME_TAX={1900:0.05,1901:0.0583,1902:0.0625,1903:0.0458,1904:0.05,1905:0.05,1906:0.05,1907:0.05,1908:0.05,1909:0.0583,1910:0.0583,1911:0.0583,1912:0.0583,1913:0.0583,1914:0.0583,
   1915:0.175,1916:0.25,1917:0.25,1918:0.3,1919:0.3,1920:0.35,1921:0.35,1922:0.3,1923:0.275,1924:0.225,1925:0.2,1926:0.2,1927:0.2,1928:0.2,1929:0.2,1930:0.225,1931:0.25,1932:0.25,1933:0.25,1934:0.225,1935:0.225,1936:0.2375,1937:0.25,1938:0.275};
 const incomeTaxRate=y=>INCOME_TAX[y]!==undefined?INCOME_TAX[y]:y<1924?0.225:0.275;
-const taxRateText=r=>{const s=Math.round(r*20*12),sh=Math.floor(s/12),d=s%12;return `${sh}s${d?' '+d+'d':''}`;};
+const taxRateText=r=>{const s=Math.round(r*20*12),sh=Math.floor(s/12),d=s%12;return sh?`${sh}s${d?' '+d+'d':''}`:`${d}d`;}; /* 11d, not 0s 11d (0.39.7) */
 /* ---------- the unions: a big, rich line gets asked for more ---------- */
 const HOME_PORTS=['GLA','LIV','SOU','AVO'];
 function unionMonth(){

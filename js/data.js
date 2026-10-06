@@ -1,5 +1,5 @@
 /* ================= DATA ================= */
-const GAME_VERSION='0.39.6',GAME_BUILT='5 October 2026'; // bump on every release; see CHANGELOG.md
+const GAME_VERSION='0.39.7',GAME_BUILT='6 October 2026'; // bump on every release; see CHANGELOG.md
 /* ---------- the calendar ----------
    Month 0 is January 1900 and day 0 is 1 January 1900. ym(year,month) names a month (month 0 = January), so every date
    the game cares about reads as a date. History written for the 1921 game is kept exact by counting from M21. */
@@ -213,7 +213,7 @@ const FAGENCY={
 const SHED_COST=18000,COLD_COST=30000,COLD_PORTS=['BUE','MVD','KIN','LIV','SOU','GLA','NYC'];
 const YARD_PORTS={GLA:'the Clyde',LIV:'the Mersey'};
 const HIST=[
-  {m:ym(1900,0),t:'The Morven Line opens its Glasgow office with one elderly emigrant ship, the SS Morven, and a £16,000 mortgage. Emigrants are pouring out of Europe, and there is no conference to hold the fares up.'},
+  {m:ym(1900,0),t:'The Morven Line opens its Glasgow office with one elderly emigrant ship, the SS Morven, owned outright. Emigrants are pouring out of Europe, and there is no conference to hold the fares up.'},
   {m:ym(1900,1),t:'A German express liner is the first to carry wireless telegraphy. It is dear, and only the great lines can afford it for now.'},
   {m:ym(1902,3),t:'An American banker is buying up Atlantic lines. The talk in Liverpool is of a trust to rule the ocean.'},
   {m:ym(1903,2),t:'The United States doubles its head tax on immigrants to $2 each, paid by the line that lands them.'},
@@ -279,5 +279,5 @@ const MILESTONES=[
   ['nw1m','Net worth £1,000,000',()=>netWorth()>=1000000],
   ['pier','A pier of your own',()=>Object.keys(S.shore.piers).length>0],
   ['yard','A repair yard',()=>Object.keys(S.shore.yards).length>0],
-  ['debtfree','Free of debt',()=>S.debt<=0]
+  ['debtfree','Free of debt',()=>S.debt<=0&&!!S.hadDebt] /* only once there has been a debt to clear (0.39.7: the Line starts without one) */
 ];

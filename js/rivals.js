@@ -211,7 +211,8 @@ function rivalsMonth(){
     if(to){rivalMove(x.owner,x.route,'move',x.name,to);x.route=to;}}
   // ships ordered earlier come into service; a line that has failed meanwhile loses its order
   if(S.rorders&&S.rorders.length){const due=S.rorders.filter(q=>q.at<=m);S.rorders=S.rorders.filter(q=>q.at>m);
-    for(const q of due){if(!coAlive(q.o)||!routeOpen(q.rk,m))continue;if(typeof mkKeepRoute==='function'){q.rk=mkKeepRoute(q.o,q.rk);q.sh.route=q.rk;}S.rships.push(q.sh);newRivalVis(q.sh);rivalMove(q.o,q.rk,'add',q.sh.name);}}
+    for(const q of due){if(!coAlive(q.o)||!routeOpen(q.rk,m))continue;
+      if(warRivalF(q.o,m)===0){q.at=m+1;S.rorders.push(q);continue;} /* a German line's ship finished in the war stays in Germany until it may sail (0.39.7, KI-111) */if(typeof mkKeepRoute==='function'){q.rk=mkKeepRoute(q.o,q.rk);q.sh.route=q.rk;}S.rships.push(q.sh);newRivalVis(q.sh);rivalMove(q.o,q.rk,'add',q.sh.name);}}
   const stats={};for(const rk in ROUTES)stats[rk]=routeStats(rk,m);
   S.lastRivalPax={};for(const rk in ROUTES)S.lastRivalPax[rk]=Math.round(stats[rk].rivalPax);
   outsideMonth(stats); // the rivals pay for any spare capacity the Morven Line sells them

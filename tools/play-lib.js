@@ -35,7 +35,7 @@ var PL = (function () {
     sell: id => doAction('sellship', [+id]),
     scrap: id => doAction('scrapship', [+id]),
     unsell: id => { const x = ship(id); if (!x || !x.pendingExit) return false; x.pendingExit = null; x.saleAmt = null; return true; },
-    buy: (name, rk) => doAction('buyship', [name, rk || '']),
+    buy: (name, rk) => { const r = doAction('buyship', [name, rk || '']); const x = S.ships.find(q => q.name === name); return r && rk && x && x.line !== rk ? 'bought, but the line could not be opened: she has no line' : r; },
     build: (purpose, over) => { if (!PURPOSES[purpose]) return 'no purpose ' + purpose; const d = defaultDesign(purpose); Object.assign(d, over || {}); if (over && over.grt && !over.fac) d.fac = defaultFac(purpose, d.grt, yNow());
       if (!d.name) { const L = SHIP_NAMES[purpose] || SHIP_NAMES.inter, used = new Set(S.ships.map(x => x.name).concat((S.orders || []).map(o => o.d.name))); d.name = L.find(n => !used.has(n)) || L[0] + ' II'; }
       const r = placeOrder(d); return r.ok ? true : 'refused: ' + r.why; },
@@ -187,10 +187,10 @@ VIEWS (look <view> [arg]): help · ship <id> · line <rk> · routes · market ·
         L.push(`upgrades: ${Object.keys(sh.up || {}).filter(q => sh.up[q]).join(', ') || 'none'} · insurance ${JSON.stringify(insOf(sh))} premium ${p(insCost(sh))}/mo · captain ${sh.captain ? sh.captain.name + ' ' + sh.captain.traits.join(',') : 'none'}`);
         L.push('expected £/month on each line, averaged over a year: ' + Object.keys(ROUTES).filter(rk => routeOpen(rk, S.m)).map(rk => ({ rk, pm: econYear(sh, rk).pm })).sort((a, b) => b.pm - a.pm).slice(0, 10).map(o => `${o.rk}${S.lines[o.rk] ? '' : '(not open)'} ${k(o.pm)}`).join(', ') + ` · laid up ${k(-idleCost(sh))}`);
         return L.join('\n'); }
-      case 'yardjobs': { const sh = ship(arg); if (!sh) return 'no ship'; return Object.keys(YARD_NAME).map(q => { try { return `${q}: ${YARD_NAME[q]} ${p(refitCost(sh, q))}, ${YARD_DAYS[q]} days`; } catch (e) { return q + ': -'; } }).join('\n'); }
+      case 'yardjobs': { const sh = ship(arg); if (!sh) return 'no ship'; return Object.keys(YARD_NAME).filter(q => !(EQUIP[q] && EQUIP[q].from > yearNow())).map(q => { try { return `${q}: ${YARD_NAME[q]} ${p(refitCost(sh, q))}, ${YARD_DAYS[q]} days`; } catch (e) { return q + ': -'; } }).join('\n'); }
       case 'line': { const rk = arg; if (!ROUTES[rk]) return 'no line ' + rk; const r = ROUTES[rk]; L.push(`${r.name} (${rk}): calls ${r.calls.map(q => PN[q]).join(' → ')}, open ${routeOpen(rk, S.m)}, line rate ${JSON.stringify(defaultFares(rk))}`);
         if (S.lines[rk]) L.push(`yours: ${JSON.stringify(S.lines[rk].fares)} table ${S.lines[rk].service} adv ${S.lines[rk].adv}; your ships ${lineShips(rk).map(x => x.name).join(', ')}; forecast ${k(lineEcon(rk, {}).pm)}/mo`);
-        const own = {}; for (const x of S.rships) if (x.route === rk) own[x.owner] = (own[x.owner] || 0) + 1; L.push('rivals on it: ' + Object.keys(own).map(o => `${mkName ? mkName(o) : o} (${o}) ${own[o]} ships`).join(', '));
+        const own = {}; for (const x of S.rships) if (x.route === rk) own[x.owner] = (own[x.owner] || 0) + 1; L.push('rivals on it: ' + Object.keys(own).map(o => `${mkName ? mkName(o) : o} (${o}) ${own[o]} ships${warRivalF(o, S.m) === 0 ? ' (laid up in neutral ports)' : ''}`).join(', '));
         return L.join('\n'); }
       case 'routes': return Object.keys(ROUTES).map(rk => `${rk} | ${ROUTES[rk].name} | ${routeOpen(rk, S.m) ? 'open' : 'closed'}${S.lines[rk] ? ' | yours' : ''} | line rate ${JSON.stringify(defaultFares(rk))}`).join('\n');
       case 'market': return (S.market.length ? S.market.map(m => { const b = bestLine(m, null); return `"${m.name}" built ${m.built} ${int(m.grt)}grt ${knotsOf(m)}kn berths ${JSON.stringify(m.berths)} cargo ${int(m.cargo || 0)} price ${p(m.price)} (worth ${p(shipValue(m))}) at ${PN[m.port]} · best ${b ? b.rk + ' ' + k(b.pm) + '/mo' : '-'}`; }).join('\n') : 'nothing for sale') + `\nsecond-hand prices ×${shipMkt().toFixed(2)}`;

@@ -164,13 +164,19 @@ function mkSell(id,frac){const M=mkEnsure(),h=M.me.pos[id];if(!h||mkShut())retur
   news(`Sold ${int(q)} shares in ${mkName(id)} for ${fmt(r.cash)}, ${r.gain>=0?'a gain of '+fmt(r.gain):'a loss of '+fmt(-r.gain)} on what they cost${pay>0?`; ${fmt(pay)} of it repays the broker's loan`:''}.`,r.gain>=0?'good':'');return true;}
 function mkRepay(amt){const M=mkEnsure();amt=Math.min(amt,M.me.loan,Math.max(0,S.cash));if(!(amt>0))return false;S.cash-=amt;M.me.loan-=amt;if(M.me.loan<1)M.me.loan=0;return true;}
 /* interest on the margin loan, and the broker's call when the shares no longer cover it */
+/* the broker's loan must stay covered by shares (0.39.7, KI-105): when its shares are merged away or wound up, or a forced sale
+   raises too little, the broker takes the rest from the Line's account at once. Before, a loan with nothing behind it ran on for
+   ever as free credit outside the bank's limit */
+function mkLoanSettle(){const A=S.ex&&S.ex.me;if(!A||!(A.loan>0))return;const v=mkPosVal(A),over=Math.round(A.loan-0.5*v);if(over<=0)return;
+  S.cash-=over;A.loan-=over;if(A.loan<1)A.loan=0;S.ex.call=null;
+  news(`The broker's loan is no longer covered by shares: ${fmt(over)} is taken from the Line's account to bring it back within its cover.`,'bad',true);}
 function mkLoanMonth(){const M=S.ex,A=M.me;if(!(A.loan>0)){M.call=null;return;}
   book('shares',-A.loan*MK_LOAN_RATE/12);const v=mkPosVal(A);
   if(M.call&&S.m>=M.call.due){M.call=null;if(A.loan>0.6*v){ // sold up: enough of every holding to bring the loan back to half
       const need=A.loan-0.5*v,f=Math.min(1,need/Math.max(1,v)*1.1);let raised=0;
       for(const id of Object.keys(A.pos)){const q=Math.ceil(A.pos[id].n*f),r=mkDeal(A,id,-q);if(!r)continue;raised+=r.cash;book('shares',r.gain);S.cash+=r.cash-r.gain;}
       const pay=Math.min(A.loan,Math.max(0,raised));S.cash-=pay;A.loan-=pay;
-      news(`The broker has sold ${fmt(raised)} of the Line's shares at the market to cover its loan.`,'bad',true);}}
+      if(raised>0)news(`The broker has sold ${fmt(raised)} of the Line's shares at the market to cover its loan.`,'bad',true);mkLoanSettle();}}
   else if(!M.call&&A.loan>MK_CALL*v&&!mkShut()){M.call={due:S.m+1,amt:Math.round(A.loan-0.5*v)};
     news(`Margin call: the Line's shares no longer cover the broker's loan. Pay in ${fmt(M.call.amt)} or sell by ${monthName(M.call.due)}, or the broker sells at the market.`,'bad',true);}
   if(M.call&&A.loan<=0.6*v)M.call=null;}
@@ -306,10 +312,13 @@ function mkPeace(o){if(mkInfl(o)<2)return false;let n=0;
   for(const rk of Object.keys(S.wars||{})){const w=S.wars[rk];if((w.by&&w.by.includes(o))||(!w.by&&!w.trust&&topRival(rk)===o)){delete S.wars[rk];S.tension[rk]=20;n++;}}
   if(n)news(`On the Line's instructions ${mkName(o)} ends its rate war${n>1?'s':''}. Fares recover.`,'good');return n>0;}
 /* a rival ship becomes the Line's: valued as the rival's books value her, in her old owner's colours */
-function mkAdopt(x,o){const age=Math.max(0,yearOfM(S.m)-x.built),fat=clamp(age*1.8,0,95),cond=75;
-  const base=Math.round(coShipVal(x)/(PX()*Math.pow(cond/100,0.35)*Math.max(0.15,1-fat*0.0085)*shipMkt()));
+/* a ship taken over is booked at k of her worth: a ship bought at a fair price at all of it, a merged line's ships at what they would
+   fetch if it were wound up, 0.7 (0.39.7, KI-104: at full worth a merger with a line whose shares stood below its book was a
+   same-day gain) */
+function mkAdopt(x,o,k){const age=Math.max(0,yearOfM(S.m)-x.built),fat=clamp(age*1.8,0,95),cond=75;
+  const base=Math.round((k||1)*coShipVal(x)/(PX()*Math.pow(cond/100,0.35)*Math.max(0.15,1-fat*0.0085)*shipMkt()));
   const port=(x.v&&x.v.port)||ROUTES[x.route].calls[0];
-  const sh=makeShip({name:S.ships.some(y=>y.name===x.name)?freshName(x.name):x.name,built:x.built,grt:x.grt,knots:x.knots,berths:{f:0,s:0,t:0,tt:0,...x.berths},cargo:x.cargo||0,fuel:x.fuel||(x.built>=1925?'oil':'coal'),base,note:`Late of ${mkName(o)}.`},cond,port);
+  const sh=makeShip({name:S.ships.some(y=>y.name===x.name)?freshName(x.name):x.name,built:x.built,grt:x.grt,knots:x.knots,berths:{f:0,s:0,t:0,tt:0,...x.berths},cargo:x.cargo||0,fuel:x.fuel||(x.built>=1925?'oil':'coal'),base,reefer:!!x.reefer,note:`Late of ${mkName(o)}.`} /* 0.39.7, KI-112: a fruit line's ships kept their refrigeration */,cond,port);
   if(typeof rivalLiv==='function')sh.paint={...rivalLiv(o),name:`${mkName(o)}'s colours`};
   // booked at what the market paid for her: the break-up value at the share-price floor (0.35.6)
   sh.acq=S.m;sh.paid=Math.round(0.6*coShipVal(x));sh.mk0=shipIdx();sh.merged=true;if(S.lines[x.route]&&routeOpen(x.route,S.m)){sh.line=x.route;sh.state='port';sh.portLeft=2;}
@@ -325,11 +334,11 @@ function mkMerge(o){const M=S.ex,c=M.cos[o],co=S.rivals[o];if(rescueNoBuy()||res
   const cost=mkMergeCost(o);if(S.cash+co.cash<cost)return false;mkPayDeclared(o);
   const n=mkName(o),fleet=coFleet(o),routes=[...new Set(fleet.map(x=>x.route))];let opened=0;
   for(const rk of routes)if(!S.lines[rk]&&routeOpen(rk,S.m)){S.lines[rk]={fares:defaultFares(rk),service:1,adv:1,last:[null,null]};opened++;}
-  for(const x of fleet)mkAdopt(x,o);
+  for(const x of fleet)mkAdopt(x,o,0.7);
   for(const q of (S.rorders||[]).filter(q=>q.o===o))S.cash+=Math.round(coNewPrice(q.sh)*0.8); // orders on the stocks are sold back to the builders
   S.rorders=(S.rorders||[]).filter(q=>q.o!==o);
   const F=M.fund;if(F&&F.pos[o]){F.cash+=F.pos[o].n*Math.max(mkVal(o),0);delete F.pos[o];}
-  S.cash+=co.cash-cost;S.debt+=co.debt;delete M.me.pos[o];
+  S.cash+=co.cash-cost;S.debt+=co.debt;delete M.me.pos[o];mkLoanSettle();
   Object.assign(co,{dead:true,deadM:S.m,merged:true,cash:0,debt:0,h:[]});c.gone=S.m;c.px=0;if(co.aggr0)RIVAL_P[o].aggr=co.aggr0;
   S.rmoves.unshift({m:S.m,o,rk:routes[0]||'liv',kind:'merged'});RW_CACHE.k=null;
   news(`${n} is merged into the Morven Line. Its ${fleet.length} ship${fleet.length===1?'':'s'} fly the Line's flag${opened?`, and ${opened} new trade${opened===1?'':'s'} open${opened===1?'s':''}`:''}; its debts become the Line's. The other shareholders are paid ${fmt(cost)}.`,'good',true);return true;}
@@ -344,7 +353,7 @@ function mkWindUp(o){const M=S.ex,c=M.cos[o],co=S.rivals[o];if(rescueFriend(o)||
   const loan=Math.min(co.lineLoan||0,Math.max(0,mkWindValue(o)+(co.lineLoan||0)));if(loan>0){S.cash+=loan;co.cash-=loan;co.lineLoan=0;} // repaid out of its cash, so the shareholders do not get it again (0.35.3)
   const net=Math.max(0,mkWindValue(o)),perSh=net/c.n,k=mkStake(o),n=mkName(o),fleet=coFleet(o),routes=[...new Set(fleet.map(x=>x.route))];
   for(const x of fleet)dropRival(x);S.rorders=(S.rorders||[]).filter(q=>q.o!==o);
-  const h=M.me.pos[o],got=h.n*perSh;S.cash+=h.cost;book('shares',got-h.cost);delete M.me.pos[o]; // the proceeds, with the gain or loss on what the shares cost through the books
+  const h=M.me.pos[o],got=h.n*perSh;S.cash+=h.cost;book('shares',got-h.cost);delete M.me.pos[o];mkLoanSettle(); // the proceeds, with the gain or loss on what the shares cost through the books
   const F=M.fund;if(F&&F.pos[o]){F.cash+=F.pos[o].n*perSh;delete F.pos[o];}
   Object.assign(co,{dead:true,deadM:S.m,wound:true,cash:0,debt:0,h:[]});c.gone=S.m;c.px=0;if(co.aggr0)RIVAL_P[o].aggr=co.aggr0;
   S.rmoves.unshift({m:S.m,o,rk:routes[0]||'liv',kind:'fail'});RW_CACHE.k=null;

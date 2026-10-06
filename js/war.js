@@ -144,7 +144,7 @@ function reqWear(sh){
 function reqReturns(){
   for(const sh of S.ships){if(sh.state!=='req')continue;if(Math.random()>(S.m>=ym(1919,10)?1:0.22))continue;
     const pay=Math.round(sh.grt*0.9*PX()/100)*100;book('charter',pay,'_idle',sh);
-    const was=sh.req.role,line=sh.req.line;sh.req=null;sh.state='laid';sh.line=line&&S.lines[line]?line:null;if(sh.line){sh.state='port';sh.portLeft=3;}
+    const was=sh.req.role,line=sh.req.line;sh.req=null;sh.reqOff=S.m;sh.state='laid';sh.line=line&&S.lines[line]?line:null;if(sh.line){sh.state='port';sh.portLeft=3;}
     news(`SS ${sh.name} is released from war service as ${REQ_NAME[was]}. The Admiralty pays ${fmt(pay)} towards her refit; she is ${Math.round(sh.cond)}% and ${fatWord(sh).toLowerCase()}.${sh.line?' She goes back to her own service.':''}`,'good',true);}
 }
 

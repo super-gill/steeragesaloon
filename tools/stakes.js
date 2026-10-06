@@ -52,7 +52,7 @@ function run(seed) {
     buyTo(o,0.76);const blocked=mkStake(o)<0.75&&S.ex.cos[o].block; // a friend's blocking stake stops a special resolution: by design, nothing to merge (0.39.3)
     ok('special resolutions at three quarters, unless a friend holds a blocking stake',mkStake(o)>=0.75||blocked,blocked?'blocked at '+Math.round(mkStake(o)*100)+'%':'');
     if(!blocked){const co=S.rivals[o],fleet=coFleet(o).length,ships=S.ships.length,cost=mkMergeCost(o),stakeV=mkPosVal(S.ex.me)-(S.ex.me.pos[o]?0:0),mine=S.ex.me.pos[o].n*mkFair(o); // the holding as the Line values it (0.35.2)
-    const shipV=coFleet(o).reduce((a,y)=>a+coShipVal(y),0),refund=(S.rorders||[]).filter(q=>q.o===o).reduce((a,q)=>a+Math.round(coNewPrice(q.sh)*0.8),0);
+    const shipV=coFleet(o).reduce((a,y)=>a+0.7*coShipVal(y),0) /* merged ships at their wind-up value (0.39.7) */,refund=(S.rorders||[]).filter(q=>q.o===o).reduce((a,q)=>a+Math.round(coNewPrice(q.sh)*0.8),0);
     const expect=co.cash+shipV-co.debt-cost-mine+refund-(co.lineLoan||0),nw0=netWorth(); // the Line's own loan to it merges away
     ok('the merger goes through',mkMerge(o));
     const d=netWorth()-nw0;

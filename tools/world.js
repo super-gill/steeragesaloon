@@ -31,7 +31,9 @@ function run(seed) {
       if(S.m%12===11){const L=S.lines.liv;if(L){refDec=ROUTES.liv.ref.f;L.fares={...L.fares,f:refDec};}}
       while(S.m===m0&&!S.over){if(S.cash<3e5)S.cash=3e5;if(S.dis)S.dis.show=false;if(S.war)S.war.show=false;advance(1);
         sy+=S.ships.filter(x=>x.state!=='laid'&&isSilent(x)).length/365;}
-      if(S.m%12===0&&S.lines.liv&&refDec){const g=S.lines.liv.fares.f/refDec;fareGap=Math.max(fareGap,Math.abs(g-1));}
+      // it should follow the rate, which moves by a month's inflation, not jump by the year's (0.39.7: in the war the rate itself
+      // rose 3.6% from December to January, and the fare with it)
+      if(S.m%12===0&&S.lines.liv&&refDec){const g=S.lines.liv.fares.f/ROUTES.liv.ref.f;fareGap=Math.max(fareGap,Math.abs(g-1));}
       const n=names(),d=n.length-new Set(n).size;if(d>dupMax){dupMax=d;dupAt=monthName(S.m)+': '+n.filter((x,i)=>n.indexOf(x)!==i).slice(0,3).join(', ');}
       let mv=0;for(const x of S.news){if(seen.has(x))continue;seen.add(x);if(/ moves SS /.test(x.t)&&atWar(S.m-1))mv++;if(/overdue but safe/.test(x.t))od++;}
       moveMax=Math.max(moveMax,mv);}
@@ -40,7 +42,7 @@ function run(seed) {
     ok('no two rival lines share a name',cd.length===0,cd.slice(0,3).join(', ')+' ('+cn.length+' lines)');
     ok('in the war, no more than 4 rival ships a month move trades',moveMax<=4,moveMax);
     ok('overdue but safe no more than about once in two ship-years of an old silent fleet',od/Math.max(1,sy)<=0.45,od+' in '+sy.toFixed(0)+' ship-years');
-    ok('a fare set at the rate in December is not raised by a year of inflation in January',fareGap<=0.03,(fareGap*100).toFixed(1)+'%');
+    ok('a fare set at the rate in December is still at the rate in January',fareGap<=0.03,(fareGap*100).toFixed(1)+'%');
     return out;})()`, ctx);
 }
 const n = +process.argv[2] || 6; let bad = 0; const tally = {};

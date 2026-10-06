@@ -370,8 +370,9 @@ function monthRoll(pm){
   for(const id in RIVALS)S.rivalIdx[id]=clamp((S.rivalIdx[id]||1)+(Math.random()-0.5)*0.04,0.93,1.06);
   S.hist.push(Math.round(S.cash));if(S.hist.length>240)S.hist.splice(0,S.hist.length-240);
   for(const rk of Object.keys(S.mail)){
-    // the Post Office does not hold it against the Line when the Admiralty has taken the mail ships (0.39.5)
-    if(!S.mail[rk].ok&&atWar()&&S.ships.some(x=>x.state==='req'&&(x.line===rk||x.reqFrom===rk))){S.mail[rk].ok=true;}
+    // the Post Office does not hold it against the Line when the Admiralty has taken the mail ships (0.39.5), nor while they are
+    // still held after the armistice or in the three months after they come back (0.39.7, KI-110: the excuse ended at the armistice)
+    if(!S.mail[rk].ok&&S.ships.some(x=>(x.state==='req'||x.reqOff!==undefined&&S.m-x.reqOff<=3)&&(x.line===rk||x.reqFrom===rk))){S.mail[rk].ok=true;}
     if(!S.mail[rk].ok){S.mail[rk].strikes++;
       if(S.mail[rk].strikes>=2){delete S.mail[rk];S.rep=clamp(S.rep-5,0,100);news(`The Post Office has cancelled your ${ROUTES[rk].name} mail contract after missed sailings.`,'bad',true);}
       else news(`No mail was landed on ${ROUTES[rk].name} last month. One more and the contract goes.`,'bad',true);}
@@ -424,6 +425,7 @@ function monthRoll(pm){
   if(S.m%3===0)refreshMarket();
   runDepartments();
   ordersMonth();
+  if(S.debt>0)S.hadDebt=true;
   for(const [id,label,test] of MILESTONES)if(!S.miles[id]&&test()){S.miles[id]=S.m;news(`Milestone: ${label}.`,'good');}
   histNow().filter(h=>h.m===S.m).forEach(h=>news(h.t,'hist',true));
   eraEvents();
@@ -462,6 +464,12 @@ const netWorth=()=>S.cash+(S.gilts||0)+fleetValue()+shoreValue()+ordersValue()-S
 // half) no more than twice the Line's own worth, since no bank lends a shipping line ten times its capital on stock (0.37.2).
 // In the 1919 and 1920 boom the bank lends on ships at no more than their worth at the armistice, and in the Depression on
 // their normal worth (0.37.2). What a failed bank's liquidators still owe counts at three quarters (0.38.0)
+/* what the bank lends on the ships and shore property alone, before stock and shares */
+const shipLendCap=()=>Math.max(0,0.7*(bankFleetValue()/(newCal()&&S.m>ARMISTICE&&S.m<M21?Math.max(1,warShips(S.m)/warShips(ARMISTICE)):1)/shipNorm()+shoreValue()));
+/* the cash the Line may put into government stock: the bank lends on ships, not to buy Consols, so any debt beyond what the ships
+   carry is set against the cash first (0.39.7, KI-106: a Line borrowed against its Consols to buy more, twice its worth, at the
+   known 1921 top in yields) */
+const stockCash=()=>Math.max(0,S.cash-Math.max(0,S.debt-shipLendCap()));
 const headroom=()=>Math.max(0,0.7*(bankFleetValue()/(newCal()&&S.m>ARMISTICE&&S.m<M21?Math.max(1,warShips(S.m)/warShips(ARMISTICE)):1)/shipNorm()+shoreValue())+Math.min(0.9*(S.gilts||0)+0.5*Math.max(0,mkWorth()),Math.max(0,netWorth())) /* no more than the Line is worth against stock and shares (0.39.5: twice let a Line borrow three times its worth into Consols in 1921 and take the known fall in yields) */+0.75*((S.liq&&S.liq.left)||0)-S.debt-admDebt());
 const odLimit=()=>8000+0.5*headroom(); // the bank forecloses when cash falls below minus this
 function news(t,k,pauseIt){

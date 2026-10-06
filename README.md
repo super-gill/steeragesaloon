@@ -299,6 +299,15 @@ Each month the Shore tab also shows what each pier, hostel and booking agency is
 
 Money is in 1921 pounds, scaled by the price index. Head office suggests selling spare berths at piers and yards (which cost the fleet nothing) once they would earn £400 a month; hostels and agents are left to the player, since they help rivals on the Line's own routes.
 
+## Fixes from test round 7 (0.39.7)
+
+- **Merged ships** (`mkAdopt(x, o, k)` in `js/market.js`): `base` is set so the ship's worth is `k` of `coShipVal`: 0.7 for a merger (`mkMerge`), the wind-up value used by `mkWindValue`, and 1 for a ship taken at a fair price (`mkTakeShip`). Refrigeration is carried over from the rival ship (`reefer`).
+- **Margin loans** (`mkLoanSettle`): called after a merger, a winding up and the broker's forced sale; any loan above half the remaining positions' value is taken from the account.
+- **Consols** (`stockCash`, `shipLendCap` in `js/sim.js`): `gilts(true, amt)` is limited to the cash less any debt above what the ships and shore property carry.
+- **Requisitioned mail ships** (`monthRoll`): a missed mail sailing is excused while a ship of that line is requisitioned (`state 'req'`) or within three months of her release (`reqOff`).
+- **German deliveries** (`rivalsMonth`): an order due while `warRivalF` is 0 is held a month at a time.
+- **Tariff revision** (`inflate`): the fares follow the rates in January, and in any month the price index has moved 5% since the last revision.
+
 ## What ships earn (0.39.6)
 
 Tuning record: `docs/overhaul/research/what-ships-earn.md`.
