@@ -50,7 +50,9 @@ function run(seed) {
        ok('no dawn raid on the rival holding a rescue stake',!mvRaid(o)&&!mvTender(o,0.35),RIVALS[o].name);}}
     // 4: gross negligence: wound up, no rescue
     setup(1909);S.rescue=null;yes();S.gross={t:S.t,name:'x',dead:1,F:0,total:0,cover:0};fail();no();
-    ok('a Line found grossly negligent is wound up, not rescued',S.over==='wound'&&!S.rescue,S.over);
+    /* since 0.39.5 the bank sells ships at a forced sale before it forecloses, even on an inquiry's bill, so a small Line
+       can come through still trading (seed 34): the rule checked here is that it is never rescued */
+    ok('a Line found grossly negligent is wound up, not rescued',!S.rescue&&(S.over==='wound'||(!S.over&&S.cash>=-odLimit())),S.over||'forced sale, still trading');
     // 5: borrow on Consols to the limit, then fall short of cash: the bank sells the stock; no rescue, no write-off
     {setup(1931);S.rescue=null;yes();S.debt=0;S.cash=5e6;gilts(true,5e6);let g=0;while(g++<60){const h=headroom();if(h<1000)break;S.debt+=h;S.cash+=h;gilts(true,h);}
      const lev=S.debt/Math.max(1,netWorth()),nw0=netWorth(),d0=S.debt;fail();no();

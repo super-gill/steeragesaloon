@@ -23,7 +23,9 @@ Every patch runs the whole suite and none ships until it passes. A milestone rel
 | Rival lines | `QUIET=1 node tools/companies.js 40 6` | PASS |
 | UI smoke | the browser smoke and legacy-save scripts | no page errors |
 
-The UI smoke and legacy-save scripts were never committed: they are not in `tools/`. #2 gets every test green and decides what replaces them; until then a release is opened in a browser by hand, a month played, and a save code exported and loaded back.
+The UI smoke and legacy-save scripts were never committed: they are not in `tools/`. #51 replaces them; until then a release is opened in a browser by hand, a month played, and a save code exported and loaded back.
+
+On 40 seeds (a milestone run) `node tools/rescue.js` takes more than 10 minutes: run it in chunks or in the background.
 
 A patch that closes an exploit adds a check to `tools/exploits.js`, so it stays closed. A patch with its own checks lists them on its issue.
 
