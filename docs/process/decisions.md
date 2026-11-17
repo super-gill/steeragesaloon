@@ -10,9 +10,11 @@ Decisions before 17 November 2026 were gathered from the old roadmap, the known-
 
 ## Index
 
+- 2026-11-17: The five pillars; history sets the shape, not the script ([`direction.md`, Decision record](../design/direction.md#decision-record))
+- 2026-11-17: No Second World War; V1 ends at the present day, a turn after 1.0 is an idea ([`direction.md`, Decision record](../design/direction.md#decision-record))
 - 2026-11-17: GitHub is the home, on vibe-process 0.1.0; no claude.ai artifact ([`direction.md`, Decision record](../design/direction.md#decision-record))
 - 2026-11-17: Adopted vibe-process 0.1.0 with `browser-game` and `typescript`, stage active ([`contributing.md`, Decision record](../engineering/contributing.md#decision-record))
-- 2026-10-04: The Second World War goes in as 0.41 ([`direction.md`, Decision record](../design/direction.md#decision-record))
+- 2026-10-04: ~~The Second World War goes in as 0.41~~ (reversed 2026-11-17) ([`direction.md`, Decision record](../design/direction.md#decision-record))
 - 2026-10-04: Balance targets from the period and human play, not the scripts ([`balance.md`, Decision record](../design/balance.md#decision-record))
 - 2026-10-02: The scripted careful owner is not the Depression's target ([`balance.md`, Decision record](../design/balance.md#decision-record))
 - 2026-10-01: 1.0 is 1900 to the present; 0.40.0 is 1900 to 1939 ([`direction.md`, Decision record](../design/direction.md#decision-record))
