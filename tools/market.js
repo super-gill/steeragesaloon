@@ -13,20 +13,62 @@
    loses money at some point in a crash; shipping shares fall below what the lines are worth in the 1921 slump (under 0.95)
    and the 1930s (under 0.9), and recover to within 10% of it afterwards. That an untouched market changes nothing is checked with the
    harness: `MKT=0 node tools/harness.js careful 10` must print the same as `node tools/harness.js careful 10`. */
-const fs = require('fs'), path = require('path'), vm = require('vm');
+const fs = require('fs'),
+  path = require('path'),
+  vm = require('vm');
 const ROOT = path.join(__dirname, '..');
-const FILES = ['chart-data', 'data', 'helpers', 'economy', 'lanes', 'wireless', 'silent', 'emergency', 'disaster', 'livery', 'war', 'ledger', 'sim', 'rivals', 'companies', 'outside', 'trust', 'prewar', 'market', 'float', 'moves', 'yard', 'naval', 'facilities', 'crew', 'state', 'clock', 'advice']
-  .map(f => path.join(ROOT, 'js', f + '.js')).filter(f => fs.existsSync(f));
-const SRC = FILES.map(f => [f, fs.readFileSync(f, 'utf8')]);
+const FILES = [
+  'chart-data',
+  'data',
+  'helpers',
+  'economy',
+  'lanes',
+  'wireless',
+  'silent',
+  'emergency',
+  'disaster',
+  'livery',
+  'war',
+  'ledger',
+  'sim',
+  'rivals',
+  'companies',
+  'outside',
+  'trust',
+  'prewar',
+  'market',
+  'float',
+  'moves',
+  'yard',
+  'naval',
+  'facilities',
+  'crew',
+  'state',
+  'clock',
+  'advice',
+]
+  .map((f) => path.join(ROOT, 'js', f + '.js'))
+  .filter((f) => fs.existsSync(f));
+const SRC = FILES.map((f) => [f, fs.readFileSync(f, 'utf8')]);
 const RNG = `Math.random=(function(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};})(SEED);`;
 const YEARS = [1906, 1908, 1913, 1919, 1921, 1923, 1929, 1932, 1936, 1939];
 
 function run(seed, years) {
-  const ctx = { console, performance: { now: () => 0 }, localStorage: { getItem() { return null; }, setItem() {} } };
+  const ctx = {
+    console,
+    performance: { now: () => 0 },
+    localStorage: {
+      getItem() {
+        return null;
+      },
+      setItem() {},
+    },
+  };
   vm.createContext(ctx);
   vm.runInContext(RNG.replace('SEED', String(seed * 7919 + 13)), ctx);
   for (const [f, s] of SRC) vm.runInContext(s, ctx, { filename: f });
-  return vm.runInContext(`(function(){
+  return vm.runInContext(
+    `(function(){
     newGame();UI.autoPause=false;UI.speed=1;
     const funds={};let lastM=-1;const snap={},idx={},dd={};
     // three accounts at once: the market pays each its dividends and runs each in turn
@@ -50,28 +92,61 @@ function run(seed, years) {
     }
     const end={passive:PAS.v/PAS.eq};for(const k in funds)end[k]=mkFundVal(funds[k])/funds[k].giltEq;
     return {snap,idx,dd,end,to:YEAR0+Math.floor(S.m/12)};
-  })()`, ctx);
+  })()`,
+    ctx,
+  );
 }
-const [, , yA, nA] = process.argv, years = +yA || 40, n = +nA || 6;
-const R = []; for (let i = 0; i < n; i++) R.push(run(i + 1, years));
-const avg = a => a.reduce((x, y) => x + y, 0) / Math.max(1, a.length), f2 = v => v.toFixed(2);
+const [, , yA, nA] = process.argv,
+  years = +yA || 40,
+  n = +nA || 6;
+const R = [];
+for (let i = 0; i < n; i++) R.push(run(i + 1, years));
+const avg = (a) => a.reduce((x, y) => x + y, 0) / Math.max(1, a.length),
+  f2 = (v) => v.toFixed(2);
 console.log(`SHARE MARKET  (${n} runs, ${years} years, to ${R[0].to})`);
 console.log('\nBroker accounts against the same money in government stock (1.00 = level):');
 console.log('year   preserve  balanced  growth    all shares (held, no fee)');
-for (const y of YEARS) { const rows = R.map(r => r.snap[y]).filter(Boolean); if (!rows.length) continue;
-  console.log(`${y}   ${['preserve', 'balanced', 'growth', 'passive'].map(k => f2(avg(rows.map(q => q[k]))).padStart(8)).join('  ')}`); }
-console.log(`end    ${['preserve', 'balanced', 'growth', 'passive'].map(k => f2(avg(R.map(r => r.end[k]))).padStart(8)).join('  ')}   (range balanced ${f2(Math.min(...R.map(r => r.end.balanced)))} to ${f2(Math.max(...R.map(r => r.end.balanced)))})`);
-console.log('\nWorst fall from the account\'s high, in each slump (0.80 = down a fifth):');
-for (const e of ['1907', '1921', '1930s']) console.log(`${e.padEnd(6)} ${['preserve', 'balanced', 'growth'].map(k => f2(avg(R.map(r => (r.dd[k] || {})[e] ?? 1)))).join('  ')}`);
+for (const y of YEARS) {
+  const rows = R.map((r) => r.snap[y]).filter(Boolean);
+  if (!rows.length) continue;
+  console.log(
+    `${y}   ${['preserve', 'balanced', 'growth', 'passive'].map((k) => f2(avg(rows.map((q) => q[k]))).padStart(8)).join('  ')}`,
+  );
+}
+console.log(
+  `end    ${['preserve', 'balanced', 'growth', 'passive'].map((k) => f2(avg(R.map((r) => r.end[k]))).padStart(8)).join('  ')}   (range balanced ${f2(Math.min(...R.map((r) => r.end.balanced)))} to ${f2(Math.max(...R.map((r) => r.end.balanced)))})`,
+);
+console.log("\nWorst fall from the account's high, in each slump (0.80 = down a fifth):");
+for (const e of ['1907', '1921', '1930s'])
+  console.log(
+    `${e.padEnd(6)} ${['preserve', 'balanced', 'growth'].map((k) => f2(avg(R.map((r) => (r.dd[k] || {})[e] ?? 1)))).join('  ')}`,
+  );
 console.log('\nShipping shares against what the lines are worth (low to high in the year):');
 const iy = [1907, 1908, 1914, 1919, 1920, 1921, 1922, 1924, 1928, 1929, 1931, 1932, 1934, 1937];
-for (const y of iy) { const rows = R.map(r => r.idx[y]).filter(Boolean); if (!rows.length) continue; console.log(`${y}  ${f2(avg(rows.map(q => q.lo)))} to ${f2(avg(rows.map(q => q.hi)))}`); }
+for (const y of iy) {
+  const rows = R.map((r) => r.idx[y]).filter(Boolean);
+  if (!rows.length) continue;
+  console.log(`${y}  ${f2(avg(rows.map((q) => q.lo)))} to ${f2(avg(rows.map((q) => q.hi)))}`);
+}
 // the slumps: share prices (the index of the lines' value) against the year before the fall (0.39.0: shares against worth
 // says little in a slump, when half of worth is earnings that have gone negative)
-const fall = (a, b1, b2) => avg(R.map(r => { const p = (r.idx[a] || {}).ch, l = Math.min((r.idx[b1] || {}).cl ?? 9e9, (r.idx[b2] || {}).cl ?? 9e9); return p && l < 9e9 ? l / p : 1; }));
-const lo21 = fall(1920, 1921, 1921), lo32 = fall(1929, 1931, 1932);
-const back = avg(R.map(r => (r.idx[1925] || r.idx[1924] || { hi: 1 }).hi)), back2 = avg(R.map(r => (r.idx[1937] || r.idx[1936] || { hi: 1 }).hi));
-const lost = ['preserve', 'balanced', 'growth'].every(k => R.some(r => ['1907','1921','1930s'].some(e => (r.dd[k] || {})[e] < 0.97)));
-const ok = avg(R.map(r => r.end.balanced)) > 1 && lost && lo21 < 0.95 && lo32 < 0.9 && back > 0.9 && back2 > 0.9;
-console.log(`\nbalanced ahead of stock: ${f2(avg(R.map(r => r.end.balanced)))} · every account loses in some slump: ${lost} · share prices in 1921 ${f2(lo21)} of 1920's high and 1931-32 ${f2(lo32)} of 1929's · back by 1925 ${f2(back)} and 1937 ${f2(back2)}`);
+const fall = (a, b1, b2) =>
+  avg(
+    R.map((r) => {
+      const p = (r.idx[a] || {}).ch,
+        l = Math.min((r.idx[b1] || {}).cl ?? 9e9, (r.idx[b2] || {}).cl ?? 9e9);
+      return p && l < 9e9 ? l / p : 1;
+    }),
+  );
+const lo21 = fall(1920, 1921, 1921),
+  lo32 = fall(1929, 1931, 1932);
+const back = avg(R.map((r) => (r.idx[1925] || r.idx[1924] || { hi: 1 }).hi)),
+  back2 = avg(R.map((r) => (r.idx[1937] || r.idx[1936] || { hi: 1 }).hi));
+const lost = ['preserve', 'balanced', 'growth'].every((k) =>
+  R.some((r) => ['1907', '1921', '1930s'].some((e) => (r.dd[k] || {})[e] < 0.97)),
+);
+const ok = avg(R.map((r) => r.end.balanced)) > 1 && lost && lo21 < 0.95 && lo32 < 0.9 && back > 0.9 && back2 > 0.9;
+console.log(
+  `\nbalanced ahead of stock: ${f2(avg(R.map((r) => r.end.balanced)))} · every account loses in some slump: ${lost} · share prices in 1921 ${f2(lo21)} of 1920's high and 1931-32 ${f2(lo32)} of 1929's · back by 1925 ${f2(back)} and 1937 ${f2(back2)}`,
+);
 console.log(ok ? 'PASS' : 'CHECK: see the figures above');

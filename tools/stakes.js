@@ -12,19 +12,61 @@
      - winding up pays the Line its share of what is left and queues a new line for the trades, and a loan to it comes back once;
      - the Line cannot buy more than the shares on offer, and buying a company a little at a time cannot pump its price (0.35.3).
    Usage:  node tools/stakes.js [seeds]   (default 4) */
-const fs = require('fs'), path = require('path'), vm = require('vm');
+const fs = require('fs'),
+  path = require('path'),
+  vm = require('vm');
 const ROOT = path.join(__dirname, '..');
-const FILES = ['chart-data', 'data', 'helpers', 'economy', 'lanes', 'wireless', 'silent', 'emergency', 'disaster', 'livery', 'war', 'ledger', 'sim', 'rivals', 'companies', 'outside', 'trust', 'prewar', 'market', 'float', 'moves', 'yard', 'naval', 'facilities', 'crew', 'state', 'clock', 'advice']
-  .map(f => path.join(ROOT, 'js', f + '.js')).filter(f => fs.existsSync(f));
-const SRC = FILES.map(f => [f, fs.readFileSync(f, 'utf8')]);
+const FILES = [
+  'chart-data',
+  'data',
+  'helpers',
+  'economy',
+  'lanes',
+  'wireless',
+  'silent',
+  'emergency',
+  'disaster',
+  'livery',
+  'war',
+  'ledger',
+  'sim',
+  'rivals',
+  'companies',
+  'outside',
+  'trust',
+  'prewar',
+  'market',
+  'float',
+  'moves',
+  'yard',
+  'naval',
+  'facilities',
+  'crew',
+  'state',
+  'clock',
+  'advice',
+]
+  .map((f) => path.join(ROOT, 'js', f + '.js'))
+  .filter((f) => fs.existsSync(f));
+const SRC = FILES.map((f) => [f, fs.readFileSync(f, 'utf8')]);
 const RNG = `Math.random=(function(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};})(SEED);`;
 
 function run(seed) {
-  const ctx = { console, performance: { now: () => 0 }, localStorage: { getItem() { return null; }, setItem() {} } };
+  const ctx = {
+    console,
+    performance: { now: () => 0 },
+    localStorage: {
+      getItem() {
+        return null;
+      },
+      setItem() {},
+    },
+  };
   vm.createContext(ctx);
   vm.runInContext(RNG.replace('SEED', String(seed * 7919 + 13)), ctx);
   for (const [f, s] of SRC) vm.runInContext(s, ctx, { filename: f });
-  return vm.runInContext(`(function(){
+  return vm.runInContext(
+    `(function(){
     newGame();UI.autoPause=false;UI.speed=1;const out=[];const ok=(name,v,info)=>out.push({name,v:!!v,info:info||''});
     let lastM=-1;const to=m=>{let g=0;while(!S.over&&S.m<m&&g++<200000){if(S.m!==lastM){lastM=S.m;if(S.cash<5e6)S.cash=5e6;}advance(1);}};
     const buyTo=(o,k)=>{let g=0;while(mkStake(o)<k&&g++<400){if(!mkBuyPct(o,Math.min(0.05,k-mkStake(o)+0.001)))break;}return mkStake(o);};
@@ -86,9 +128,18 @@ function run(seed) {
         ok('the buyout makes it wholly owned',mkBuyout(o3)&&Math.abs(mkStake(o3)-1)<1e-9);}
       else ok('the line lasts to 1930 for the 1929 test (not a failure of the rules)',true,coAlive(o3)?'stake '+Math.round(mkStake(o3)*100)+'%':'it failed before 1930');}
     return {out,target:RIVALS[o].name};
-  })()`, ctx);
+  })()`,
+    ctx,
+  );
 }
-const n = +process.argv[2] || 4;let bad = 0;
-for (let i = 1; i <= n; i++) { const r = run(i); console.log(`seed ${i}${r.target ? ': ' + r.target : ''}`);
-  for (const q of r.out) { if (!q.v) bad++; console.log(`  ${q.v ? 'ok  ' : 'FAIL'} ${q.name}${q.info ? ' (' + q.info + ')' : ''}`); } }
+const n = +process.argv[2] || 4;
+let bad = 0;
+for (let i = 1; i <= n; i++) {
+  const r = run(i);
+  console.log(`seed ${i}${r.target ? ': ' + r.target : ''}`);
+  for (const q of r.out) {
+    if (!q.v) bad++;
+    console.log(`  ${q.v ? 'ok  ' : 'FAIL'} ${q.name}${q.info ? ' (' + q.info + ')' : ''}`);
+  }
+}
 console.log(bad ? `CHECK: ${bad} failed` : 'PASS');

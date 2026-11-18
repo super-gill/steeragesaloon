@@ -9,18 +9,60 @@
    fifth. Forecasts hold the trend in demand where it stands, so in the rising years before the war ships beat them by 19% to
    47%, by design; the 1920s used to fall short and pull the median back, and since outside tonnage they are close to right.)
    Usage:  node tools/forecast.js [seeds]   (default 6) */
-const fs = require('fs'), path = require('path'), vm = require('vm');
+const fs = require('fs'),
+  path = require('path'),
+  vm = require('vm');
 const ROOT = path.join(__dirname, '..');
-const FILES = ['chart-data', 'data', 'helpers', 'economy', 'lanes', 'wireless', 'silent', 'emergency', 'disaster', 'livery', 'war', 'ledger', 'sim', 'rivals', 'companies', 'outside', 'trust', 'prewar', 'market', 'float', 'moves', 'yard', 'naval', 'facilities', 'crew', 'state', 'clock', 'advice']
-  .map(f => path.join(ROOT, 'js', f + '.js')).filter(f => fs.existsSync(f));
-const SRC = FILES.map(f => [f, fs.readFileSync(f, 'utf8')]);
+const FILES = [
+  'chart-data',
+  'data',
+  'helpers',
+  'economy',
+  'lanes',
+  'wireless',
+  'silent',
+  'emergency',
+  'disaster',
+  'livery',
+  'war',
+  'ledger',
+  'sim',
+  'rivals',
+  'companies',
+  'outside',
+  'trust',
+  'prewar',
+  'market',
+  'float',
+  'moves',
+  'yard',
+  'naval',
+  'facilities',
+  'crew',
+  'state',
+  'clock',
+  'advice',
+]
+  .map((f) => path.join(ROOT, 'js', f + '.js'))
+  .filter((f) => fs.existsSync(f));
+const SRC = FILES.map((f) => [f, fs.readFileSync(f, 'utf8')]);
 const RNG = `Math.random=(function(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};})(SEED);`;
 function run(seed) {
-  const ctx = { console, performance: { now: () => 0 }, localStorage: { getItem() { return null; }, setItem() {} } };
+  const ctx = {
+    console,
+    performance: { now: () => 0 },
+    localStorage: {
+      getItem() {
+        return null;
+      },
+      setItem() {},
+    },
+  };
   vm.createContext(ctx);
   vm.runInContext(RNG.replace('SEED', String(seed * 4243 + 17)), ctx);
   for (const [f, s] of SRC) vm.runInContext(s, ctx, { filename: f });
-  return vm.runInContext(`(function(){
+  return vm.runInContext(
+    `(function(){
     newGame();UI.autoPause=false;UI.speed=1;const lines=['liv','lha','hal','nap','exp','ban','waf','rpl'];
     for(const k of lines)S.lines[k]=S.lines[k]||{fares:defaultFares(k),service:1,adv:1,last:[null,null]};
     const to=m=>{let g=0;while(!S.over&&S.m<m&&g++<100000){if(S.cash<5e5)S.cash=5e5;if(S.dis)S.dis.show=false;if(S.war)S.war.show=false;advance(1);}};
@@ -36,17 +78,49 @@ function run(seed) {
       const pl0={};for(const q of fc)pl0[q.x.id]=0;let ok={};for(const q of fc)ok[q.x.id]=true;
       for(let i=0;i<12;i++){to(S.m+1);for(const q of fc){if(!S.ships.includes(q.x)||q.x.line!==q.line||q.x.state==='laid'){ok[q.x.id]=false;continue;}pl0[q.x.id]+=(q.x.pl||[]).slice(-1)[0]||0;}}
       for(const q of fc)if(ok[q.x.id]&&Math.abs(q.f)>300)out.push({k:q.k,f:q.f,a:pl0[q.x.id]/12,y});}
-    return out;})()`, ctx);
+    return out;})()`,
+    ctx,
+  );
 }
-const n = +process.argv[2] || 6; const all = [];
+const n = +process.argv[2] || 6;
+const all = [];
 for (let i = 1; i <= n; i++) all.push(...run(i));
-const med = a => { const s = a.slice().sort((x, y) => x - y); return s.length ? s[Math.floor(s.length / 2)] : NaN; };
+const med = (a) => {
+  const s = a.slice().sort((x, y) => x - y);
+  return s.length ? s[Math.floor(s.length / 2)] : NaN;
+};
 // actual over forecast, for forecasts of a profit; a forecast loss is judged by the difference instead
-const ratio = q => q.f > 0 ? q.a / q.f : null;
-const by = {}; for (const q of all) { const r = ratio(q); if (r === null) continue; (by[q.k] = by[q.k] || []).push(r); (by.all = by.all || []).push(r); }
+const ratio = (q) => (q.f > 0 ? q.a / q.f : null);
+const by = {};
+for (const q of all) {
+  const r = ratio(q);
+  if (r === null) continue;
+  (by[q.k] = by[q.k] || []).push(r);
+  (by.all = by.all || []).push(r);
+}
 let bad = 0;
-for (const k of Object.keys(by)) { const m = med(by[k]); const lim = k === 'all' ? 0.25 : 1 / 3; if (by[k].length < 5) { console.log(`--   ${k}: median ${m.toFixed(2)} over ${by[k].length} ship-years, too few to judge`); continue; } const pass = Math.abs(m - 1) <= lim;
-  if (!pass) bad++; console.log(`${pass ? 'ok  ' : 'FAIL'} ${k}: median actual/forecast ${m.toFixed(2)} over ${by[k].length} ship-years (within ${k === 'all' ? 'a quarter' : 'a third'})`); }
-const yr = {}; for (const q of all) { const r = ratio(q); if (r !== null) (yr[q.y] = yr[q.y] || []).push(r); }
-console.log('by year: ' + Object.keys(yr).map(y => `${y} ${med(yr[y]).toFixed(2)}`).join(' · '));
+for (const k of Object.keys(by)) {
+  const m = med(by[k]);
+  const lim = k === 'all' ? 0.25 : 1 / 3;
+  if (by[k].length < 5) {
+    console.log(`--   ${k}: median ${m.toFixed(2)} over ${by[k].length} ship-years, too few to judge`);
+    continue;
+  }
+  const pass = Math.abs(m - 1) <= lim;
+  if (!pass) bad++;
+  console.log(
+    `${pass ? 'ok  ' : 'FAIL'} ${k}: median actual/forecast ${m.toFixed(2)} over ${by[k].length} ship-years (within ${k === 'all' ? 'a quarter' : 'a third'})`,
+  );
+}
+const yr = {};
+for (const q of all) {
+  const r = ratio(q);
+  if (r !== null) (yr[q.y] = yr[q.y] || []).push(r);
+}
+console.log(
+  'by year: ' +
+    Object.keys(yr)
+      .map((y) => `${y} ${med(yr[y]).toFixed(2)}`)
+      .join(' · '),
+);
 console.log(bad ? `CHECK: ${bad} failed` : 'PASS');

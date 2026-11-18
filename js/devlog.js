@@ -2,51 +2,263 @@
    The player-facing summary of recent releases and the plan, shown from the Menu. Kept short and in plain words; the full
    record is CHANGELOG.md and ROADMAP.md. Add an entry here with every release (see Releasing in the README), and move a
    plan item to DONE when it ships. */
-const DEVLOG=[
-  {v:'0.39.8',d:'6 October 2026',t:'Competition',items:['A trade that runs overfull draws other ships within a year or two: new lines, tramps and charters. A failed rival\'s trades, the 1921 glut and good years no longer leave money lying on an empty trade.','In the Depression the conference cuts its fares harder, as the lines fought for what traffic there was.','A controlled line\'s ship costs what a ship like her would cost from the yards.']},
-  {v:'0.39.7',d:'6 October 2026',t:'Fixes from the third round of test games',items:['A merged line\'s ships are booked at what they would fetch if it were wound up, so a merger is no longer an instant gain.','The broker collects a margin loan when the shares behind it are gone.','The bank will not lend you money to buy Consols.','German ships stay in port through the war, and the Post Office no longer cancels mail contracts for ships the Admiralty still holds.','Fares follow the price level within the year when prices move fast, as in the war.']},
-  {v:'0.39.6',d:'5 October 2026',t:'What ships earn',items:['New ships and the brokers\' old ones cost a quarter more, so each ship you add earns less on what she cost. The ships you already run are not touched.','Running costs are a twentieth higher: coal, wages, victuals, dues and upkeep.','The Line starts free of its mortgage, so the first year is easier.']},
-  {v:'0.39.5',d:'5 October 2026',t:'Fixes from the second round of test games',items:['Fixed: income tax was too low after selling ships in the 1920 boom.','Repaying a called loan early now counts against the call; a ship order is never billed twice for the same stage; a Line still worth something is not foreclosed the day an inquiry\'s bill arrives.','The conference pools steerage: a member carries no more than its share of the berths on a trade.','The 1920 boom no longer announces its own top, and buyers mark down worn ships.','Head office warns when a ship on order is behind with its payments.','The Depression all but stops emigration, as it did.']},
-  {v:'0.39.4',d:'4 October 2026',t:'Balancing 1900 to 1939',items:['The conference holds members\' fares between 95% and 115% of its rates: no more charging half as much again on a trade you dominate.','Emigration after the war comes back slowly, as it did, and the Canadian trades stay well below their pre-war level through the 1920s. The Depression all but stops emigration.','The 1919-20 boom tops out lower, and second-hand ships fetch about half their normal price in 1921 and 1922.','Income tax is paid from 1900, at each year\'s rate.','A failed line\'s ships sell at a fair discount to what they cost to build, not for a fraction of it.','The advice to join the conference now has a Join button.']},
-  {v:'0.39.3',d:'4 October 2026',t:'Fixes from the 1900 to 1940 test games',items:['Head office no longer sees the future: its forecasts run through the seasons but not through history, so it cannot see the war or a slump coming.','Merging a rival no longer lets you borrow against its ships at more than you paid, and you cannot buy into a German line during the war.','After a float, the header shows your own share of the Line\'s worth as well as the Line\'s.','City rumours do not always come true, and the share market falls on them. No bank fails between the wars.','Emigration figures now fall in the right years: 1907 was the boom and 1908 the slump on the Canadian routes too.','No rate wars in wartime, a fairer war-risk insurance recommendation, steadier advice on the table, and smaller fixes.']},
-  {v:'0.39.2',d:'4 October 2026',t:'Rival lines replace their old ships',items:['A rival line that sends an old ship to the breakers now orders a new one for the trade if it still pays, so the emigrant trades no longer lose ships in the busiest years before the war.','Behind the scenes: why head office\'s advice makes a Line grow so fast before 1914 was looked into again. The cause is the emigrant boom itself, not old ships, and it will be judged on players in the next round of testing.']},
-  {v:'0.39.1',d:'3 October 2026',t:'What ships cost and earn',items:['Ships built from the 1920s carry fewer passengers a ton, as third class moved into cabins; new ships cost more to build; the emigrant trade after the quotas and freight rates in the 1920s are lower. A new ship now earns about what the period\'s did: roughly a sixth of her cost a year in good times.','Old ships bought before the war still earn too much for their age: that comes next.']},
-  {v:'0.39.0',d:'3 October 2026',t:'Loose ends before 1940',items:['Rival lines no longer fail and refloat over and over between the wars: about two failures a decade now.','Shipping shares stand near what the lines are worth in good times, and fall to a third of their peak in the slumps.','A ship bought cheaply counts at what you paid for her first year; fare advice no longer flips with the season.','New passenger ships cost more to build. Ships still pay too well overall: that waits for research into the period\'s costs and earnings.']},
-  {v:'0.38.0',d:'2 October 2026',t:'Balancing the years to 1940',items:['Fixed: a browser could mix files from two versions after an update and stop with "Can\'t find variable". The page now always loads one version; if it ever happens again, the notice offers to save and reload.','Laying a ship up now costs only her shipkeepers and her master on half pay, and head office suggests Tourist Third where it pays: a well-run small line can come through the Depression.','Loans follow the Bank Rate (cheap in the 1930s, dear in 1920), and income tax is charged at the standard rate on all profits from 1925.','Plus: the mails go only by passenger ships, agents can be dismissed, a vetoed sale no longer strands a ship, and more.']},
-  {v:'0.37.2',d:'2 October 2026',t:'Fixes from the 1927-45 test players',items:['A Line rich in government stock is no longer rescued, with its debts written off, when it runs short of cash: the bank sells its stock first. Borrowing on stock is limited, and Consols no longer follow a path you can know in advance.','The rescue terms can no longer be dodged by borrowing more or merging another line in.','The Depression bites harder: ship values fall by two fifths at the trough, and the emigrant trade to America and Canada all but stops.','A failed bank now freezes your money and pays most of it back over eighteen months, instead of taking three quarters at once.','The Fares Office stops flipping tables, head office stops moving ships back and forth, and it suggests one ship at a time for each cruise.']},
-  {v:'0.37.1',d:'1 October 2026',t:'The war, the ship\'s hospital and the great disasters',items:['War freight as it was: by 1916 a ship\'s freight earns four or five times 1913, until the Ministry of Shipping holds the rates down from 1917. After the armistice the 1919-20 boom pays, until the crash.','Excess Profits Duty now bites: its standard is the pre-war profit in pounds, as the Act had it, and ships sold at boom prices pay it on the gain.','In the war you can offer ships to the Admiralty at any time (Company tab), and a Line that has offered one chooses which go after.','An isolation hospital for any passenger ship: sickness spreads slower and kills fewer, and quarantines are shorter. Built in as standard from 1935.','A great disaster at sea about once a decade from the 1920s, by fire, collision, foundering or stranding. Usually it is a rival\'s ship. A worn, old, ill-found ship is likelier to be the one.']},
-  {v:'0.37.0',d:'1 October 2026',t:'Rescue',items:['A Line the bank forecloses on is usually rescued, once: by a consortium of banks, by a rival line that takes two fifths of it, or, from 1921 for a Line that matters to the country, by the Treasury. Each rescue has its price, from no dividends to a government director who will not let a ship be sold. A second failure is final.','The Bank tab shows the rescue, what is still owed and your own share of the Line, and you can repay early.','Rescue sums are small for a small Line: a fleet that loses money every month is only given time to put it right.','The panics and the Depression are not made harder yet: they already finish many Lines. That waits for the next test players.']},
-  {v:'0.36.5',d:'1 October 2026',t:'Costs that grow with the fleet, and a follow camera',items:['Head office costs grow with the tonnage, lines and ports you run, and more again for a big fleet from one office; each department you keep takes some of that off. The Company tab shows the sums.','Fast ships burn the coal they should: an express of 25 knots about twice an ordinary ship of her size.','Follow on the chart: from a ship\'s page, the chart keeps her in the middle.']},
-  {v:'0.36.4',d:'1 October 2026',t:'Fixes from the phone',items:['The Menu button no longer sits under the clock on a phone.','A ship that is lost, seized or sold off stays under Needs attention until noted, and the Fleet tab lists the ships gone from the fleet.','A ship without wireless that sinks stays on the lists, reckoned at sea, until she is posted missing.']},
-  {v:'0.36.3',d:'1 October 2026',t:'Hotfix',items:['If a panel fails to draw, the rest of the game keeps going and a notice at the foot of the screen says what went wrong. Please send that line to the developer.']},
-  {v:'0.36.2',d:'1 October 2026',t:'Running a fleet by line',items:[
-    'Each ship shows the line she was built for, and anything about her build that does not suit the line she is on (too deep for a port, short of coal for the longest leg). The Fleet Manager\'s Fittings view has a Built for column.',
-    'Head office keeps a ship on the line she was built for unless another pays clearly more, and suggests bringing her home when she would do as well there.',
-    'Head office advises only one ship onto a line at a time, so it no longer piles the fleet onto whichever line looks best.',
-    'Forecasts now allow for time in the yard, breakdowns and repairs. They were about twice what ships then earned; tested over many games they are now about right.',
-    'The drawing office says how full your ships on a line are sailing, and how many are already on order for it.',
-    'Each line can be left to you or managed by your departments. The Advice tab gathers the same advice for many ships into one item.',
-    'Inside the conference no fare is set below its floor.']},
-  {v:'0.36.1',d:'1 October 2026',t:'Delegation for big fleets',items:[
-    'Standing orders: acting departments work under orders you can turn off one by one (Company tab).',
-    'The Advice tab shows only what needs you, gravest first, and says what the departments have in hand.',
-    'Interruptions (Menu, Settings): every emergency, grave only, Auto, or Quiet watch. Masters handle the rest.']},
-  {v:'0.36.0',d:'1 October 2026',t:'Performance',items:[
-    'No more freeze each month with a big fleet; the chart and the ship drawing are much lighter.',
-    'Frame times readout (Menu, Settings).']},
-  {v:'0.35.7',d:'1 October 2026',t:'Small fixes',items:['Unique ship and company names, fairer fare revisions, fewer false overdue reports, and a run of wartime fixes.']},
-  {v:'0.35.6',d:'1 October 2026',t:'Loopholes closed',items:['Buying, merging and stripping a rival in the war, and flipping boom-built ships, no longer pay.']}
+const DEVLOG = [
+  {
+    v: '0.39.8',
+    d: '6 October 2026',
+    t: 'Competition',
+    items: [
+      "A trade that runs overfull draws other ships within a year or two: new lines, tramps and charters. A failed rival's trades, the 1921 glut and good years no longer leave money lying on an empty trade.",
+      'In the Depression the conference cuts its fares harder, as the lines fought for what traffic there was.',
+      "A controlled line's ship costs what a ship like her would cost from the yards.",
+    ],
+  },
+  {
+    v: '0.39.7',
+    d: '6 October 2026',
+    t: 'Fixes from the third round of test games',
+    items: [
+      "A merged line's ships are booked at what they would fetch if it were wound up, so a merger is no longer an instant gain.",
+      'The broker collects a margin loan when the shares behind it are gone.',
+      'The bank will not lend you money to buy Consols.',
+      'German ships stay in port through the war, and the Post Office no longer cancels mail contracts for ships the Admiralty still holds.',
+      'Fares follow the price level within the year when prices move fast, as in the war.',
+    ],
+  },
+  {
+    v: '0.39.6',
+    d: '5 October 2026',
+    t: 'What ships earn',
+    items: [
+      "New ships and the brokers' old ones cost a quarter more, so each ship you add earns less on what she cost. The ships you already run are not touched.",
+      'Running costs are a twentieth higher: coal, wages, victuals, dues and upkeep.',
+      'The Line starts free of its mortgage, so the first year is easier.',
+    ],
+  },
+  {
+    v: '0.39.5',
+    d: '5 October 2026',
+    t: 'Fixes from the second round of test games',
+    items: [
+      'Fixed: income tax was too low after selling ships in the 1920 boom.',
+      "Repaying a called loan early now counts against the call; a ship order is never billed twice for the same stage; a Line still worth something is not foreclosed the day an inquiry's bill arrives.",
+      'The conference pools steerage: a member carries no more than its share of the berths on a trade.',
+      'The 1920 boom no longer announces its own top, and buyers mark down worn ships.',
+      'Head office warns when a ship on order is behind with its payments.',
+      'The Depression all but stops emigration, as it did.',
+    ],
+  },
+  {
+    v: '0.39.4',
+    d: '4 October 2026',
+    t: 'Balancing 1900 to 1939',
+    items: [
+      "The conference holds members' fares between 95% and 115% of its rates: no more charging half as much again on a trade you dominate.",
+      'Emigration after the war comes back slowly, as it did, and the Canadian trades stay well below their pre-war level through the 1920s. The Depression all but stops emigration.',
+      'The 1919-20 boom tops out lower, and second-hand ships fetch about half their normal price in 1921 and 1922.',
+      "Income tax is paid from 1900, at each year's rate.",
+      "A failed line's ships sell at a fair discount to what they cost to build, not for a fraction of it.",
+      'The advice to join the conference now has a Join button.',
+    ],
+  },
+  {
+    v: '0.39.3',
+    d: '4 October 2026',
+    t: 'Fixes from the 1900 to 1940 test games',
+    items: [
+      'Head office no longer sees the future: its forecasts run through the seasons but not through history, so it cannot see the war or a slump coming.',
+      'Merging a rival no longer lets you borrow against its ships at more than you paid, and you cannot buy into a German line during the war.',
+      "After a float, the header shows your own share of the Line's worth as well as the Line's.",
+      'City rumours do not always come true, and the share market falls on them. No bank fails between the wars.',
+      'Emigration figures now fall in the right years: 1907 was the boom and 1908 the slump on the Canadian routes too.',
+      'No rate wars in wartime, a fairer war-risk insurance recommendation, steadier advice on the table, and smaller fixes.',
+    ],
+  },
+  {
+    v: '0.39.2',
+    d: '4 October 2026',
+    t: 'Rival lines replace their old ships',
+    items: [
+      'A rival line that sends an old ship to the breakers now orders a new one for the trade if it still pays, so the emigrant trades no longer lose ships in the busiest years before the war.',
+      "Behind the scenes: why head office's advice makes a Line grow so fast before 1914 was looked into again. The cause is the emigrant boom itself, not old ships, and it will be judged on players in the next round of testing.",
+    ],
+  },
+  {
+    v: '0.39.1',
+    d: '3 October 2026',
+    t: 'What ships cost and earn',
+    items: [
+      "Ships built from the 1920s carry fewer passengers a ton, as third class moved into cabins; new ships cost more to build; the emigrant trade after the quotas and freight rates in the 1920s are lower. A new ship now earns about what the period's did: roughly a sixth of her cost a year in good times.",
+      'Old ships bought before the war still earn too much for their age: that comes next.',
+    ],
+  },
+  {
+    v: '0.39.0',
+    d: '3 October 2026',
+    t: 'Loose ends before 1940',
+    items: [
+      'Rival lines no longer fail and refloat over and over between the wars: about two failures a decade now.',
+      'Shipping shares stand near what the lines are worth in good times, and fall to a third of their peak in the slumps.',
+      'A ship bought cheaply counts at what you paid for her first year; fare advice no longer flips with the season.',
+      "New passenger ships cost more to build. Ships still pay too well overall: that waits for research into the period's costs and earnings.",
+    ],
+  },
+  {
+    v: '0.38.0',
+    d: '2 October 2026',
+    t: 'Balancing the years to 1940',
+    items: [
+      'Fixed: a browser could mix files from two versions after an update and stop with "Can\'t find variable". The page now always loads one version; if it ever happens again, the notice offers to save and reload.',
+      'Laying a ship up now costs only her shipkeepers and her master on half pay, and head office suggests Tourist Third where it pays: a well-run small line can come through the Depression.',
+      'Loans follow the Bank Rate (cheap in the 1930s, dear in 1920), and income tax is charged at the standard rate on all profits from 1925.',
+      'Plus: the mails go only by passenger ships, agents can be dismissed, a vetoed sale no longer strands a ship, and more.',
+    ],
+  },
+  {
+    v: '0.37.2',
+    d: '2 October 2026',
+    t: 'Fixes from the 1927-45 test players',
+    items: [
+      'A Line rich in government stock is no longer rescued, with its debts written off, when it runs short of cash: the bank sells its stock first. Borrowing on stock is limited, and Consols no longer follow a path you can know in advance.',
+      'The rescue terms can no longer be dodged by borrowing more or merging another line in.',
+      'The Depression bites harder: ship values fall by two fifths at the trough, and the emigrant trade to America and Canada all but stops.',
+      'A failed bank now freezes your money and pays most of it back over eighteen months, instead of taking three quarters at once.',
+      'The Fares Office stops flipping tables, head office stops moving ships back and forth, and it suggests one ship at a time for each cruise.',
+    ],
+  },
+  {
+    v: '0.37.1',
+    d: '1 October 2026',
+    t: "The war, the ship's hospital and the great disasters",
+    items: [
+      "War freight as it was: by 1916 a ship's freight earns four or five times 1913, until the Ministry of Shipping holds the rates down from 1917. After the armistice the 1919-20 boom pays, until the crash.",
+      'Excess Profits Duty now bites: its standard is the pre-war profit in pounds, as the Act had it, and ships sold at boom prices pay it on the gain.',
+      'In the war you can offer ships to the Admiralty at any time (Company tab), and a Line that has offered one chooses which go after.',
+      'An isolation hospital for any passenger ship: sickness spreads slower and kills fewer, and quarantines are shorter. Built in as standard from 1935.',
+      "A great disaster at sea about once a decade from the 1920s, by fire, collision, foundering or stranding. Usually it is a rival's ship. A worn, old, ill-found ship is likelier to be the one.",
+    ],
+  },
+  {
+    v: '0.37.0',
+    d: '1 October 2026',
+    t: 'Rescue',
+    items: [
+      'A Line the bank forecloses on is usually rescued, once: by a consortium of banks, by a rival line that takes two fifths of it, or, from 1921 for a Line that matters to the country, by the Treasury. Each rescue has its price, from no dividends to a government director who will not let a ship be sold. A second failure is final.',
+      'The Bank tab shows the rescue, what is still owed and your own share of the Line, and you can repay early.',
+      'Rescue sums are small for a small Line: a fleet that loses money every month is only given time to put it right.',
+      'The panics and the Depression are not made harder yet: they already finish many Lines. That waits for the next test players.',
+    ],
+  },
+  {
+    v: '0.36.5',
+    d: '1 October 2026',
+    t: 'Costs that grow with the fleet, and a follow camera',
+    items: [
+      'Head office costs grow with the tonnage, lines and ports you run, and more again for a big fleet from one office; each department you keep takes some of that off. The Company tab shows the sums.',
+      'Fast ships burn the coal they should: an express of 25 knots about twice an ordinary ship of her size.',
+      "Follow on the chart: from a ship's page, the chart keeps her in the middle.",
+    ],
+  },
+  {
+    v: '0.36.4',
+    d: '1 October 2026',
+    t: 'Fixes from the phone',
+    items: [
+      'The Menu button no longer sits under the clock on a phone.',
+      'A ship that is lost, seized or sold off stays under Needs attention until noted, and the Fleet tab lists the ships gone from the fleet.',
+      'A ship without wireless that sinks stays on the lists, reckoned at sea, until she is posted missing.',
+    ],
+  },
+  {
+    v: '0.36.3',
+    d: '1 October 2026',
+    t: 'Hotfix',
+    items: [
+      'If a panel fails to draw, the rest of the game keeps going and a notice at the foot of the screen says what went wrong. Please send that line to the developer.',
+    ],
+  },
+  {
+    v: '0.36.2',
+    d: '1 October 2026',
+    t: 'Running a fleet by line',
+    items: [
+      "Each ship shows the line she was built for, and anything about her build that does not suit the line she is on (too deep for a port, short of coal for the longest leg). The Fleet Manager's Fittings view has a Built for column.",
+      'Head office keeps a ship on the line she was built for unless another pays clearly more, and suggests bringing her home when she would do as well there.',
+      'Head office advises only one ship onto a line at a time, so it no longer piles the fleet onto whichever line looks best.',
+      'Forecasts now allow for time in the yard, breakdowns and repairs. They were about twice what ships then earned; tested over many games they are now about right.',
+      'The drawing office says how full your ships on a line are sailing, and how many are already on order for it.',
+      'Each line can be left to you or managed by your departments. The Advice tab gathers the same advice for many ships into one item.',
+      'Inside the conference no fare is set below its floor.',
+    ],
+  },
+  {
+    v: '0.36.1',
+    d: '1 October 2026',
+    t: 'Delegation for big fleets',
+    items: [
+      'Standing orders: acting departments work under orders you can turn off one by one (Company tab).',
+      'The Advice tab shows only what needs you, gravest first, and says what the departments have in hand.',
+      'Interruptions (Menu, Settings): every emergency, grave only, Auto, or Quiet watch. Masters handle the rest.',
+    ],
+  },
+  {
+    v: '0.36.0',
+    d: '1 October 2026',
+    t: 'Performance',
+    items: [
+      'No more freeze each month with a big fleet; the chart and the ship drawing are much lighter.',
+      'Frame times readout (Menu, Settings).',
+    ],
+  },
+  {
+    v: '0.35.7',
+    d: '1 October 2026',
+    t: 'Small fixes',
+    items: [
+      'Unique ship and company names, fairer fare revisions, fewer false overdue reports, and a run of wartime fixes.',
+    ],
+  },
+  {
+    v: '0.35.6',
+    d: '1 October 2026',
+    t: 'Loopholes closed',
+    items: ['Buying, merging and stripping a rival in the war, and flipping boom-built ships, no longer pay.'],
+  },
 ];
 /* what is coming, in order; 'now' marks the next release */
-const DEVPLAN=[
-  {v:'0.40.0',t:'1900 to 1939 complete',now:true,items:['Every serious known issue closed and the game balanced to the outbreak of the Second World War, after a second round of test games.']},
-  {v:'0.41',t:'The Second World War',items:['The war of 1939 to 1945 at sea, researched first: requisition, the Atlantic convoys, losses and the rebuilding after.']},
-  {v:'0.4x to 0.9x',t:'The later decades, to the present day',items:['Researched and built era by era, as 1900 to 1930 was: two-class liners, the cruise boom and ever bigger ships, casinos and night life aboard, Soviet budget lines, family cruising, and more.']},
-  {v:'1.0',t:'The game complete to the present day',items:[]}
+const DEVPLAN = [
+  {
+    v: '0.40.0',
+    t: '1900 to 1939 complete',
+    now: true,
+    items: [
+      'Every serious known issue closed and the game balanced to the outbreak of the Second World War, after a second round of test games.',
+    ],
+  },
+  {
+    v: '0.41',
+    t: 'The Second World War',
+    items: [
+      'The war of 1939 to 1945 at sea, researched first: requisition, the Atlantic convoys, losses and the rebuilding after.',
+    ],
+  },
+  {
+    v: '0.4x to 0.9x',
+    t: 'The later decades, to the present day',
+    items: [
+      'Researched and built era by era, as 1900 to 1930 was: two-class liners, the cruise boom and ever bigger ships, casinos and night life aboard, Soviet budget lines, family cruising, and more.',
+    ],
+  },
+  { v: '1.0', t: 'The game complete to the present day', items: [] },
 ];
-function devlogHTML(){
-  const n=UI.devAll?DEVLOG.length:2;
-  return `<section class="sec"><h2>Coming next</h2>${DEVPLAN.map(p=>`<div class="devitem${p.now?' now':''}"><div class="row"><strong>${p.v}</strong><span>${p.t}</span>${p.now?'<span class="chip sea">Next</span>':''}</div>${p.items.length?`<ul>${p.items.map(i=>`<li>${i}</li>`).join('')}</ul>`:''}</div>`).join('')}</section>
-    <section class="sec"><h2>What's new</h2>${DEVLOG.slice(0,n).map(r=>`<div class="devitem"><div class="row"><strong>${r.v}</strong><span>${r.t}</span><span class="meta">${r.d}</span></div><ul>${r.items.map(i=>`<li>${i}</li>`).join('')}</ul></div>`).join('')}
-    ${DEVLOG.length>2?`<button class="btn quiet" data-act="devall">${UI.devAll?'Show less':'Earlier releases'}</button>`:''}</section>`;
+function devlogHTML() {
+  const n = UI.devAll ? DEVLOG.length : 2;
+  return `<section class="sec"><h2>Coming next</h2>${DEVPLAN.map((p) => `<div class="devitem${p.now ? ' now' : ''}"><div class="row"><strong>${p.v}</strong><span>${p.t}</span>${p.now ? '<span class="chip sea">Next</span>' : ''}</div>${p.items.length ? `<ul>${p.items.map((i) => `<li>${i}</li>`).join('')}</ul>` : ''}</div>`).join('')}</section>
+    <section class="sec"><h2>What's new</h2>${DEVLOG.slice(0, n)
+      .map(
+        (r) =>
+          `<div class="devitem"><div class="row"><strong>${r.v}</strong><span>${r.t}</span><span class="meta">${r.d}</span></div><ul>${r.items.map((i) => `<li>${i}</li>`).join('')}</ul></div>`,
+      )
+      .join('')}
+    ${DEVLOG.length > 2 ? `<button class="btn quiet" data-act="devall">${UI.devAll ? 'Show less' : 'Earlier releases'}</button>` : ''}</section>`;
 }

@@ -11,25 +11,69 @@
      - against a floated Line a raider with a stake wins a proxy fight when the board is unhappy, and loses when
        founders' shares outvote it.
    Usage:  node tools/moves.js [seeds]   (default 6) */
-const fs = require('fs'), path = require('path'), vm = require('vm');
+const fs = require('fs'),
+  path = require('path'),
+  vm = require('vm');
 const ROOT = path.join(__dirname, '..');
-const FILES = ['chart-data', 'data', 'helpers', 'economy', 'lanes', 'wireless', 'silent', 'emergency', 'disaster', 'livery', 'war', 'ledger', 'sim', 'rivals', 'companies', 'outside', 'trust', 'prewar', 'market', 'float', 'moves', 'yard', 'naval', 'facilities', 'crew', 'state', 'clock', 'advice']
-  .map(f => path.join(ROOT, 'js', f + '.js')).filter(f => fs.existsSync(f));
-const SRC = FILES.map(f => [f, fs.readFileSync(f, 'utf8')]);
+const FILES = [
+  'chart-data',
+  'data',
+  'helpers',
+  'economy',
+  'lanes',
+  'wireless',
+  'silent',
+  'emergency',
+  'disaster',
+  'livery',
+  'war',
+  'ledger',
+  'sim',
+  'rivals',
+  'companies',
+  'outside',
+  'trust',
+  'prewar',
+  'market',
+  'float',
+  'moves',
+  'yard',
+  'naval',
+  'facilities',
+  'crew',
+  'state',
+  'clock',
+  'advice',
+]
+  .map((f) => path.join(ROOT, 'js', f + '.js'))
+  .filter((f) => fs.existsSync(f));
+const SRC = FILES.map((f) => [f, fs.readFileSync(f, 'utf8')]);
 const RNG = `Math.random=(function(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};})(SEED);`;
 function game(seed, scenario) {
-  const ctx = { console, performance: { now: () => 0 }, localStorage: { getItem() { return null; }, setItem() {} } };
+  const ctx = {
+    console,
+    performance: { now: () => 0 },
+    localStorage: {
+      getItem() {
+        return null;
+      },
+      setItem() {},
+    },
+  };
   vm.createContext(ctx);
   vm.runInContext(RNG.replace('SEED', String(seed * 7919 + 13)), ctx);
   for (const [f, s] of SRC) vm.runInContext(s, ctx, { filename: f });
-  return vm.runInContext(`(function(){
+  return vm.runInContext(
+    `(function(){
     newGame();UI.autoPause=false;UI.speed=1;const out=[];const ok=(name,v,info)=>out.push({name,v:!!v,info:info===undefined?'':info});
     let lastM=-1;const to=m=>{let g=0;while(!S.over&&S.m<m&&g++<300000){if(S.m!==lastM){lastM=S.m;if(S.cash<3e5)S.cash=3e5;}advance(1);}};
     to(ym(1905,0));for(const m of S.market.slice(0,3)){delete m.price;S.ships.push(m);}S.market=[];mkEnsure();to(ym(1906,0));
     const quiet=()=>{if(S.fl)S.fl.nextBid=ym(1999,0);if(S.trust)S.trust.next=ym(1999,0);};quiet();
     const target=()=>coLive().filter(o=>!RIVAL_P[o].kind&&!trustMember(o)&&coFleet(o).length>=3&&S.ex.cos[o]&&!S.ex.cos[o].gone&&!mkEnemy(o)) /* a listed line the Line may trade in (0.39.3) */.sort((a,b)=>coFleet(a).length-coFleet(b).length)[0];
     ${scenario}
-    return out;})()`, ctx);
+    return out;})()`,
+    ctx,
+  );
 }
 const SC = {
   raid: `const o=target();if(!o){ok('a listed line to move against',true,'none in this game');return out;} /* (0.39.3) */const c=S.ex.cos[o],px=c.px,cash0=S.cash;const r=mvRaid(o);ok('a dawn raid goes through',r);if(!r)return out;
@@ -52,14 +96,48 @@ const SC = {
   against: `flFloat(0.6,false);quiet();const F=S.fl,o=flBidders()[0]||target();F.raider={o,n:Math.floor(0.15*F.n)};F.pub-=F.raider.n;F.conf=10;ok('a raider wins a proxy fight against an unhappy board',mvProxyAgainst()&&S.over==='removed');`,
   againstFounders: `flFloat(0.6,true);quiet();const F=S.fl,o=flBidders()[0]||target();F.raider={o,n:Math.floor(0.15*F.n)};F.pub-=F.raider.n;F.conf=25;ok('founders\\' shares outvote the raider',!mvProxyAgainst()&&!S.over);`,
 };
-const n = +process.argv[2] || 6;let bad = 0;const tally = {};const pair = [];
+const n = +process.argv[2] || 6;
+let bad = 0;
+const tally = {};
+const pair = [];
 for (let i = 1; i <= n; i++) {
-  for (const k in SC) { if (k === 'pair') continue; for (const q of game(i, SC[k])) { const t = tally[q.name] = tally[q.name] || { ok: 0, n: 0, info: [] }; t.n++; if (q.v) t.ok++; t.info.push(q.info); } }
-  const a = game(i, 'const BEAR=false;' + SC.pair)[0], b = game(i, 'const BEAR=true;' + SC.pair)[0]; pair.push(+b.info - +a.info);
+  for (const k in SC) {
+    if (k === 'pair') continue;
+    for (const q of game(i, SC[k])) {
+      const t = (tally[q.name] = tally[q.name] || { ok: 0, n: 0, info: [] });
+      t.n++;
+      if (q.v) t.ok++;
+      t.info.push(q.info);
+    }
+  }
+  const a = game(i, 'const BEAR=false;' + SC.pair)[0],
+    b = game(i, 'const BEAR=true;' + SC.pair)[0];
+  pair.push(+b.info - +a.info);
 }
-for (const k in tally) { const t = tally[k], share = /tally/.test(k), pass = share ? t.ok >= t.n * 0.5 : t.ok === t.n; if (!pass) bad++;
-  console.log(`${pass ? 'ok  ' : 'FAIL'} ${k}: ${t.ok}/${t.n}${t.info.some(x => x) ? ' (' + t.info.filter(x => x !== '').slice(0, 6).join('; ') + ')' : ''}`); }
-const win = pair.filter(d => d > 0).length;
-console.log(`short plus bear raid against the short alone, net worth after 8 months: ${pair.map(d => Math.round(d / 1000) + 'k').join(', ')} · better in ${win} of ${n}`);
-if (win === n) { bad++; console.log('FAIL the bear raid always pays: a riskless loop'); }
+for (const k in tally) {
+  const t = tally[k],
+    share = /tally/.test(k),
+    pass = share ? t.ok >= t.n * 0.5 : t.ok === t.n;
+  if (!pass) bad++;
+  console.log(
+    `${pass ? 'ok  ' : 'FAIL'} ${k}: ${t.ok}/${t.n}${
+      t.info.some((x) => x)
+        ? ' (' +
+          t.info
+            .filter((x) => x !== '')
+            .slice(0, 6)
+            .join('; ') +
+          ')'
+        : ''
+    }`,
+  );
+}
+const win = pair.filter((d) => d > 0).length;
+console.log(
+  `short plus bear raid against the short alone, net worth after 8 months: ${pair.map((d) => Math.round(d / 1000) + 'k').join(', ')} · better in ${win} of ${n}`,
+);
+if (win === n) {
+  bad++;
+  console.log('FAIL the bear raid always pays: a riskless loop');
+}
 console.log(bad ? `CHECK: ${bad} failed` : 'PASS');

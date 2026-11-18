@@ -1,212 +1,1009 @@
 /* ================= INPUT ================= */
-document.addEventListener('click',e=>{
-  if(UI.suppressClick&&e.target.closest('#map'))return;
-  UI.rev=(UI.rev||0)+1;
-  const b=e.target.closest('[data-act]');if(!b||b.disabled)return;const prevTab=UI.tab;
-  {const al=b.closest('.alert[data-aid]:not([data-sticky])');if(al)(S.attnSeen=S.attnSeen||{})[al.dataset.aid]=true;}
-  const a=b.dataset.act,sh=S.ships.find(x=>x.id===S.selShip),L=S.lines[S.selLine];
-  if(a!=='cancel'&&!a.startsWith('ask')&&!['exit','closeline','leave','new','loadcode','fundclose','officeclose','mkmerge','mkwind','flcrown'].includes(a)&&!a.startsWith('flfloat'))UI.confirm=null;
-  if(UI.slow&&!['zoom','zoomfit'].includes(a))UI.slow=null; // the owner is dealing with it: back to full speed
-  switch(a){
-    case 'devopen':UI.devOpen=!UI.devOpen;break;
-    case 'devall':UI.devAll=!UI.devAll;break;
-    case 'gonetoggle':UI.goneOpen=!UI.goneOpen;break;
-    case 'follow':startFollow(+b.dataset.id||null);break;
-    case 'advall':UI.advAll=!UI.advAll;break;
-    case 'irqmode':UI.irq=b.dataset.v;try{localStorage.setItem('ss_irq',UI.irq);}catch(e){}break;
-    case 'eventmode':UI.eventMode=b.dataset.v;try{localStorage.setItem('ss_eventmode',UI.eventMode);}catch(e){}break;
-    case 'unslow':UI.slow=null;break;
-    case 'inscover':if(sh&&INS_COVER[b.dataset.v]&&!(b.dataset.v==='none'&&S.debt>0)){setCover(sh,b.dataset.v);sh.ownerSet=S.t;}break;
-    case 'insall':if(sh){const p=insOf(sh);S.insDefault={cover:p.cover,excess:p.excess};S.ships.forEach(x=>setCover(x,p.cover,p.excess));}break;
-    case 'insexcess':if(sh)setCover(sh,null,+b.dataset.v);break;
-    case 'speed':if(!S.over){UI.speed=+b.dataset.v;if(UI.speed>0)UI.banner=null;else UI.banner='Paused.';}break;
-    case 'selship':S.selShip=+b.dataset.id;UI.tab='fleet';UI.fmBack=false;(S.tutSeen=S.tutSeen||{}).fleet=true;break;
-    case 'selline':S.selLine=b.dataset.id;UI.tab='lines';(S.tutSeen=S.tutSeen||{}).lines=true;break;
-    case 'tabgo':UI.tab=(UI.wide&&b.dataset.tab==='overview')?UI.tab:b.dataset.tab;(S.tutSeen=S.tutSeen||{})[b.dataset.tab]=true;break;
-    case 'tutoff':if(S.tut)S.tut.off=true;break;
-    case 'agentdrop':{const [k,a]=JSON.parse(b.dataset.d);if(S.shore[k]&&S.shore[k][a]){delete S.shore[k][a];news(`The Line dismisses its ${(k==='agents'?AGENCY:FAGENCY)[a].name.toLowerCase()}. What it paid to appoint them is not returned.`);}break;} // agents can be let go (0.38.0)
-    case 'confjoin':case 'setfare':case 'setfares':case 'setlineopt':case 'linehands':case 'setship':case 'moveship':case 'setyard':case 'sellship':case 'hire':case 'shorebuy':case 'shoresell':case 'deptmode':case 'openmove':case 'buyship':case 'newhead':case 'propyes':case 'propno':case 'build':case 'scrapship':case 'crewset':case 'appoint':case 'setwc':case 'cruiseadd':case 'cruisedrop':
-      {const d=JSON.parse(b.dataset.d||'[]');if(a==='moveship'||a==='openmove'||a==='setship'||a==='setwc'||a==='cruiseadd'||a==='cruisedrop'){const x=S.ships.find(q=>q.id===d[0]);if(x)x.ownerSet=S.t;}if(a==='crewset'||a==='appoint'){const x=S.ships.find(q=>q.id===d[0]);if(x)x.crewSet=S.t;}const big=S.ships.length>25,bef=big?[]:advice().map(h=>[h.id,h.title]);doAction(a,d);ADV_CACHE.key=null;UI.rev++;
-        // with a big fleet the screen works the advice out over the next frames instead (0.36.0)
-        const now=big?new Set():new Set(advice().map(h=>h.id)),gone=bef.filter(([id])=>!now.has(id)&&!(b.closest('.advice[data-key]')&&b.closest('.advice[data-key]').dataset.key===id));
-        UI.advGone=gone.length&&b.closest('.advice')?{rev:UI.rev,titles:gone.map(q=>q[1])}:null;}ADV_CACHE.key=null;break;
-    case 'shipgrp':{const o=UI.shipGrp=UI.shipGrp||{earn:true,upkeep:true,crew:false,retire:false};o[b.dataset.id]=!o[b.dataset.id];break;}
-    case 'plopen':UI.plOpen=UI.plOpen===+b.dataset.id?null:+b.dataset.id;break;
-    case 'plmonth':UI.plMonth=b.dataset.id;break;
-    case 'crew':openCrew(+b.dataset.id||+(JSON.parse(b.dataset.d||'[]')[0])||S.selShip);break;
-    case 'crewclose':closeCrew();break;
-    case 'crewfleet':closeCrew();openFleetMgr('crew');break;
-    case 'fmopen':case 'fmclose':case 'fmview':case 'fmsort':case 'fmattn':case 'fmclear':case 'fmship':case 'fmback':case 'fmask':case 'fmno':case 'fmdo':fmAct(a,b);break;
-    case 'fgtoggle':{const o=UI.fgShut=UI.fgShut||{};o[b.dataset.id]=!o[b.dataset.id];break;}
-    case 'crewship':UI.crewSid=+b.dataset.id;UI.crewFleet=false;UI.offPool=null;break;
-    case 'offpool':UI.offPool=UI.offPool===b.dataset.id?null:b.dataset.id;break;
-    case 'cruisehelp':UI.cruiseHelp=!UI.cruiseHelp;break;
-    case 'menu':UI.menu=!UI.menu;break;
-    case 'perfhud':UI.perf=+b.dataset.v===1;try{localStorage.setItem('ss_perf',UI.perf?'1':'0');}catch(e){}if(!UI.perf){const h=document.getElementById('perfHud');if(h)h.remove();}break;
-    case 'fcship':(UI.fcShip=UI.fcShip||{})[b.dataset.k]=+b.dataset.id;break;
-    case 'cappool':UI.capPool=UI.capPool===+b.dataset.id?null:+b.dataset.id;break;
-    case 'mkcode':UI.copied=null;(S.tutSeen=S.tutSeen||{}).code=true;makeSaveCode().then(c=>{UI.saveCode=c;UI.saveCodeAt=dateLong(S.t)+' (game date)';UI.dirty=true;});break;
-    case 'copycode':case 'copylink':{const txt=a==='copylink'?location.href.split('#')[0]+'#save='+UI.saveCode:UI.saveCode;
-      const ok=()=>{UI.copied=a==='copylink'?'Link copied.':'Code copied.';UI.dirty=true;},fail=()=>{UI.copied='Your browser blocked copying: select the text and copy it by hand.';UI.dirty=true;};
-      try{navigator.clipboard.writeText(txt).then(ok,fail);}catch(err){fail();}break;}
-    case 'askload':if(($('loadCode').value||'').trim())UI.confirm='load';else UI.loadMsg={ok:false,t:'Paste a code into the box first.'};break;
-    case 'loadcode':{const el=$(b.dataset.src||'loadCode'),code=el?el.value:'';UI.confirm=null;
-      loadSaveCode(code).then(s2=>{UI.loadMsg={ok:true,t:`Loaded: ${dateLong(s2.t)}, ${s2.ships.length} ship${s2.ships.length===1?'':'s'}.`};layoutMode();applyView();},e2=>{UI.loadMsg={ok:false,t:e2.message||'That code could not be read.'};UI.dirty=true;});break;}
-    case 'dismiss':putAside(b.dataset.id);break;
-    case 'alladvice':UI.allAdvice=!UI.allAdvice;break;
-    case 'newline':{const rk=Object.keys(ROUTES).find(k=>!S.lines[k]);if(rk)S.selLine=rk;UI.tab='lines';break;}
-    case 'zoom':{const m=$('map');zoomAt(+b.dataset.v>0?1.3:1/1.3,m.clientWidth/2,m.clientHeight/2);break;}
-    case 'zoomfit':zoomFit();break;
-    case 'view':UI.view=b.dataset.v;break;
-    case 'shipset':if(sh){sh.ownerSet=S.t;if(b.dataset.k==='autoDock')sh.autoDock=DOCK_TH[+b.dataset.v];else if(b.dataset.k==='warTop'&&+b.dataset.v&&!sh.warTop&&shipInTrouble(sh))UI.banner=`No underwriter will add cover on SS ${sh.name} now.`;else sh[b.dataset.k]=+b.dataset.v;}break;
-    case 'alldock':if(sh)S.ships.forEach(x=>x.autoDock=sh.autoDock);break;
-    case 'dzopen':openDesigner();break;
-    case 'dzclose':closeDesigner();break;
-    case 'dzview':UI.dzView=b.dataset.v;break;
-    case 'dzauto':if(UI.dz)UI.dz.auto={mach:true,form:true};break;
-    case 'dz':dzSet(b.dataset.k,b.dataset.v);UI.dzMsg=null;break;
-    case 'dzadm':if(UI.dz)UI.dz.adm=!UI.dz.adm;break;
-    case 'dzname':{const L=SHIP_NAMES[UI.dz.purpose]||SHIP_NAMES.inter,used=new Set(S.ships.map(x=>x.name).concat((S.orders||[]).map(o=>o.d.name)));
-      const c=L.filter(n=>!used.has(n));UI.dz.name=c.length?c[Math.floor(Math.random()*c.length)]:L[0]+' II';const i=$('dzName');if(i)i.value=UI.dz.name;break;}
-    case 'dzorder':{const r=placeOrder(UI.dz);if(r.ok){UI.dz=null;UI.dzMsg=null;closeDesigner();UI.tab='brokers';}else UI.dzMsg=r.why;break;}
-    case 'askcxl':UI.confirm='cxl'+b.dataset.id;break;
-    case 'cxlorder':{const o=(S.orders||[]).find(x=>x.id===+b.dataset.id);if(o){if(o.slip){o.slip.who=null;o.slip.until=S.m;}S.orders=S.orders.filter(x=>x!==o);news(`The contract for SS ${o.d.name} is cancelled. The ${fmt(o.paid)} already paid is lost.`,'bad');}UI.confirm=null;break;}
-    case 'headpick':UI.headPick=UI.headPick===b.dataset.id?null:b.dataset.id;break;
-    case 'traytab':UI.trayTab=b.dataset.id;UI.trayHold=false;{const t=$('traybody');if(t)t.scrollTop=0;}break;
-    case 'advopen':UI.advOpen=UI.advOpen===b.dataset.id?null:b.dataset.id;break;
-    case 'wread':{const m=(S.wire||[]).find(x=>x.id===+b.dataset.id);if(m&&m.read===false){m.read=true;UI.wa={id:m.id,txt:m.txt,mode:'decode',made:performance.now()};UI._tray=null;}break;}
-    case 'wreadall':{for(const m of S.wire||[])if(m.read===false){m.read=true;const e=document.querySelector(`[data-hold="${m.id}"] .tg-an`);if(e)e.textContent=m.txt;}if(UI.wa)UI.wa.done=true;UI._tray=null;break;}
-    case 'emmin':UI.emMin=true;break;
-    case 'warclose':warClose();break;
-    case 'reqpick':reqChoose(+b.dataset.id);break;
-    case 'offeryes':offerTake(+b.dataset.id,true);break;
-    case 'offerno':offerTake(+b.dataset.id,false);break;
-    case 'abid':{const d=JSON.parse(b.dataset.d||'[]');auctionBid(d[0],d[1]);break;}
-    case 'rcard':UI.rcard=b.dataset.id;break;
-    case 'rclose':UI.rcard=null;break;
-    case 'livopen':livPickOpen('change');break;
-    case 'livpre':if(UI.liv){UI.liv.l=livFill(JSON.parse(JSON.stringify(LIV_PRESETS[+b.dataset.id])));}break;
-    case 'livown':if(UI.liv)UI.liv.own=!UI.liv.own;break;
-    case 'livok':livOk();break;
-    case 'livcancel':livCancel();break;
-    case 'dissend':disSend(+b.dataset.id);break;
-    case 'dismin':UI.disMin=true;break;
-    case 'disshow':UI.disMin=false;UI.disOpen=true;break;
-    case 'disclose':disClose();break;
-    case 'emshow':{UI.emMin=false;const L=(S.emerg||[]).filter(x=>x.known&&(!x.over||S.t-x.t1<3));if(L.length&&!L.some(x=>x.id===UI.emOpen))UI.emOpen=(L.find(x=>!x.over)||L[0]).id;break;}
-    case 'emtab':UI.emOpen=+b.dataset.id;break;
-    case 'emreport':emOrder('report',+b.dataset.id);break;
-    case 'emorder':emOrder('order',+b.dataset.id,b.dataset.o);break;
-    case 'emoffice':emOrder('office',+b.dataset.id,b.dataset.o);break;
-    case 'emspeed':UI.emNormal=!UI.emNormal;break;
-    case 'emclose':{const e=(S.emerg||[]).find(x=>x.id===+b.dataset.id);if(e)e.t1=-99;break;}
-    case 'maptoggle':UI.noMap=!UI.noMap;requestAnimationFrame(()=>{VIEW.s=null;applyView();});break;
-    case 'wireall':UI.wireAll=!UI.wireAll;break;
-    case 'lineset':if(L)L[b.dataset.k]=+b.dataset.v;break;
-    case 'yard':if(sh){const k=b.dataset.k;if(sh.state==='sea'||sh.state==='repo')sh.pendingYard=k;else if(S.cash>=refitCost(sh,k))enterYard(sh,k);}break;
-    case 'unyard':if(sh&&sh.pendingYard!=='repair'){sh.pendingYard=(sh.yardAdd||[]).shift()||null;}break;
-    case 'unyardall':if(sh&&sh.pendingYard!=='repair'){sh.pendingYard=null;sh.yardAdd=[];sh.facPlan=null;}break;
-    case 'yardadd':if(sh)addYardJob(sh,b.dataset.k);break;
-    case 'unyardx':if(sh&&sh.state!=='yard')sh.yardAdd=(sh.yardAdd||[]).filter(x=>x!==b.dataset.k);break;
-    case 'askexit':UI.confirm=b.dataset.k+sh.id;break;
-    case 'exit':if(sh){if(sh.state==='sea'||sh.state==='repo')sh.pendingExit=b.dataset.k;else exitShip(sh,b.dataset.k);}UI.confirm=null;break;
-    case 'unexit':if(sh){sh.pendingExit=null;sh.saleAmt=null;}break;
-    case 'openline':{const rk=b.dataset.id,fee=Math.round(2500*PX());if(S.cash>=fee&&!S.lines[rk]&&routeOpen(rk,S.m)){book('office',-fee,rk);S.lines[rk]={fares:defaultFares(rk),service:1,adv:1,last:[null,null]};news(`The Morven Line opens a ${ROUTES[rk].name} service.`,'good');}break;}
-    case 'askclose':UI.confirm='close'+b.dataset.id;break;
-    case 'closeline':{const rk=b.dataset.id;delete S.lines[rk];delete S.mail[rk]; /* a rate war on the route goes on without the Line (0.35.4): closing and reopening used to end it */S.ships.forEach(x=>{if(x.line===rk){x.line=null;}});news(`The ${ROUTES[rk].name} service is closed.`);UI.confirm=null;break;}
-    case 'buy':{const s2=S.market.find(x=>x.id===+b.dataset.id);if(s2&&buyShip(s2))S.selShip=s2.id;break;}
-    case 'borrow':{const v=+b.dataset.id||10000;if(headroom()>=v&&!(S.noLend>S.m)){S.debt+=v;S.cash+=v;}break;}
-    case 'rescuepay':{const R=S.rescue;if(R&&R.loan>0){const x=Math.min(+b.dataset.id||10000,R.loan);if(S.cash>=x){R.loan-=x;S.cash-=x;if(R.loan<1){R.loan=0;news('The Line has repaid its rescue loan in full. The restrictions are lifted.','good',true);}}}break;}
-    case 'repay':repayBank(+b.dataset.id||10000);break;
-    case 'trustyes':trustAccept();break;
-    case 'trustno':trustRefuse(false);break;
-    case 'join':confJoin();break;
-    case 'leave':if(UI.confirm!=='leave')UI.confirm='leave';else{confLeave();UI.confirm=null;}break;
-    case 'accept':if(S.offer){S.mail[S.offer.route]={pay:S.offer.pay,strikes:0,ok:false};news(`Mail contract won on ${ROUTES[S.offer.route].name}: ${fmt(S.offer.pay)} per round trip. It runs for as long as the Line keeps up the sailings.`,'good');S.offer=null;}break;
-    case 'decline':if(S.offer)(S.mailNo=S.mailNo||{})[S.offer.route]=S.m+24;S.offer=null;break; // declined: not offered again for two years (0.35.7)
-    case 'safety':S.safety=+b.dataset.id;break;
-    case 'refit':{const d=b.dataset.d?JSON.parse(b.dataset.d):[+b.dataset.id];openRefit(+d[0],d[1]);break;}
-    case 'rfclose':closeRefit();break;
-    case 'rflevel':case 'rfpicks':case 'rfbook':rfAct(a,b);break;
-    case 'union':unionAnswer(b.dataset.id==='yes');break;
-    case 'mksel':UI.mkSel=UI.mkSel===b.dataset.id?null:b.dataset.id;UI.tab='finance';UI.finSub='shares';break;
-    case 'finsub':UI.tab='finance';UI.finSub=b.dataset.id;break;
-    case 'mkbuy':{const d=JSON.parse(b.dataset.d);mkBuy(d[0],+d[1],!!d[2]);break;}
-    case 'mksell':{const d=JSON.parse(b.dataset.d);mkSell(d[0],+d[1]);break;}
-    case 'mkrepay':mkRepay(+b.dataset.id);break;
-    case 'flfloat':{const d=JSON.parse(b.dataset.d);if(UI.confirm!=='fl'+d[0])UI.confirm='fl'+d[0];else{UI.confirm=null;flFloat(+d[0],!!d[1]);}break;}
-    case 'flbuyback':flBuyback(+b.dataset.id);break;
-    case 'flfounders':flFounders();break;
-    case 'fldiv':if(S.fl&&MK_DIV[b.dataset.id])S.fl.pay=b.dataset.id;break;
-    case 'flknight':flKnight(b.dataset.id);break;
-    case 'flcrown':if(UI.confirm!=='flcrown')UI.confirm='flcrown';else{UI.confirm=null;flCrown();}break;
-    case 'flappeal':flAppeal();break;
-    case 'mvraid':mvRaid(b.dataset.id);break;
-    case 'mklend':{const d=JSON.parse(b.dataset.d);mkLend(d[0],+d[1]);break;}
-    case 'officehire':mkOfficeHire(+b.dataset.id);break;
-    case 'mvtender':{const d=JSON.parse(b.dataset.d);mvTender(d[0],+d[1]);break;}
-    case 'mvproxy':mvProxy(b.dataset.id);break;
-    case 'mvshort':{const d=JSON.parse(b.dataset.d);mvShort(d[0],+d[1]);break;}
-    case 'mvcover':mvCover(b.dataset.id,false);break;
-    case 'mvbear':{const d=JSON.parse(b.dataset.d);mvBear(d[0],d[1]);break;}
-    case 'mkpct':{const d=JSON.parse(b.dataset.d);mkBuyPct(d[0],+d[1]);break;}
-    case 'ctrlset':{const d=JSON.parse(b.dataset.d);mkCtrlSet(d[0],d[1],d[2]);break;}
-    case 'ctrlpeace':mkPeace(b.dataset.id);break;
-    case 'ctrlship':{const d=JSON.parse(b.dataset.d);mkTakeShip(d[0],+d[1]);break;}
-    case 'mkmerge':if(UI.confirm!=='mkmerge'+b.dataset.id)UI.confirm='mkmerge'+b.dataset.id;else{UI.confirm=null;mkMerge(b.dataset.id);}break;
-    case 'mkwind':if(UI.confirm!=='mkwind'+b.dataset.id)UI.confirm='mkwind'+b.dataset.id;else{UI.confirm=null;mkWindUp(b.dataset.id);}break;
-    case 'mkbuyout':mkBuyout(b.dataset.id);break;
-    case 'fundopen':mkFundOpen(b.dataset.id);break;
-    case 'funddep':mkFundPay(+b.dataset.id);break;
-    case 'fundwd':mkFundTake(+b.dataset.id,false);break;
-    case 'fundclose':if(UI.confirm!=='fundclose')UI.confirm='fundclose';else{UI.confirm=null;mkFundTake(0,true);}break;
-    case 'fundbrief':if(S.ex&&S.ex.fund&&MK_BRIEF[b.dataset.id]){S.ex.fund.brief=b.dataset.id;S.ex.fund.due=S.m;}break;
-    case 'fundmgr':if(S.ex&&S.ex.fund&&(b.dataset.id==='broker'||S.ex.office)){S.ex.fund.mgr=b.dataset.id;S.ex.fund.due=S.m;}break;
-    case 'officeopen':mkOfficeOpen();break;
-    case 'officeclose':if(UI.confirm!=='officeclose')UI.confirm='officeclose';else{UI.confirm=null;mkOfficeClose();}break;
-    case 'giltbuy':gilts(true,+b.dataset.id);break;
-    case 'giltsell':gilts(false,b.dataset.id==='all'?S.gilts:+b.dataset.id);break;
-    case 'new':if(UI.confirm!=='new')UI.confirm='new';else{UI.confirm=null;newGame();}break;
-    case 'newnow':newGame();break;
-    case 'cancel':UI.confirm=null;break;
+document.addEventListener('click', (e) => {
+  if (UI.suppressClick && e.target.closest('#map')) return;
+  UI.rev = (UI.rev || 0) + 1;
+  const b = e.target.closest('[data-act]');
+  if (!b || b.disabled) return;
+  const prevTab = UI.tab;
+  {
+    const al = b.closest('.alert[data-aid]:not([data-sticky])');
+    if (al) (S.attnSeen = S.attnSeen || {})[al.dataset.aid] = true;
   }
-  save();UI.dirty=true;
-  if(UI.tab!==prevTab){render();UI.dirty=false;$('tabbody').scrollTop=0;}
+  const a = b.dataset.act,
+    sh = S.ships.find((x) => x.id === S.selShip),
+    L = S.lines[S.selLine];
+  if (
+    a !== 'cancel' &&
+    !a.startsWith('ask') &&
+    ![
+      'exit',
+      'closeline',
+      'leave',
+      'new',
+      'loadcode',
+      'fundclose',
+      'officeclose',
+      'mkmerge',
+      'mkwind',
+      'flcrown',
+    ].includes(a) &&
+    !a.startsWith('flfloat')
+  )
+    UI.confirm = null;
+  if (UI.slow && !['zoom', 'zoomfit'].includes(a)) UI.slow = null; // the owner is dealing with it: back to full speed
+  switch (a) {
+    case 'devopen':
+      UI.devOpen = !UI.devOpen;
+      break;
+    case 'devall':
+      UI.devAll = !UI.devAll;
+      break;
+    case 'gonetoggle':
+      UI.goneOpen = !UI.goneOpen;
+      break;
+    case 'follow':
+      startFollow(+b.dataset.id || null);
+      break;
+    case 'advall':
+      UI.advAll = !UI.advAll;
+      break;
+    case 'irqmode':
+      UI.irq = b.dataset.v;
+      try {
+        localStorage.setItem('ss_irq', UI.irq);
+      } catch (e) {}
+      break;
+    case 'eventmode':
+      UI.eventMode = b.dataset.v;
+      try {
+        localStorage.setItem('ss_eventmode', UI.eventMode);
+      } catch (e) {}
+      break;
+    case 'unslow':
+      UI.slow = null;
+      break;
+    case 'inscover':
+      if (sh && INS_COVER[b.dataset.v] && !(b.dataset.v === 'none' && S.debt > 0)) {
+        setCover(sh, b.dataset.v);
+        sh.ownerSet = S.t;
+      }
+      break;
+    case 'insall':
+      if (sh) {
+        const p = insOf(sh);
+        S.insDefault = { cover: p.cover, excess: p.excess };
+        S.ships.forEach((x) => setCover(x, p.cover, p.excess));
+      }
+      break;
+    case 'insexcess':
+      if (sh) setCover(sh, null, +b.dataset.v);
+      break;
+    case 'speed':
+      if (!S.over) {
+        UI.speed = +b.dataset.v;
+        if (UI.speed > 0) UI.banner = null;
+        else UI.banner = 'Paused.';
+      }
+      break;
+    case 'selship':
+      S.selShip = +b.dataset.id;
+      UI.tab = 'fleet';
+      UI.fmBack = false;
+      (S.tutSeen = S.tutSeen || {}).fleet = true;
+      break;
+    case 'selline':
+      S.selLine = b.dataset.id;
+      UI.tab = 'lines';
+      (S.tutSeen = S.tutSeen || {}).lines = true;
+      break;
+    case 'tabgo':
+      UI.tab = UI.wide && b.dataset.tab === 'overview' ? UI.tab : b.dataset.tab;
+      (S.tutSeen = S.tutSeen || {})[b.dataset.tab] = true;
+      break;
+    case 'tutoff':
+      if (S.tut) S.tut.off = true;
+      break;
+    case 'agentdrop': {
+      const [k, a] = JSON.parse(b.dataset.d);
+      if (S.shore[k] && S.shore[k][a]) {
+        delete S.shore[k][a];
+        news(
+          `The Line dismisses its ${(k === 'agents' ? AGENCY : FAGENCY)[a].name.toLowerCase()}. What it paid to appoint them is not returned.`,
+        );
+      }
+      break;
+    } // agents can be let go (0.38.0)
+    case 'confjoin':
+    case 'setfare':
+    case 'setfares':
+    case 'setlineopt':
+    case 'linehands':
+    case 'setship':
+    case 'moveship':
+    case 'setyard':
+    case 'sellship':
+    case 'hire':
+    case 'shorebuy':
+    case 'shoresell':
+    case 'deptmode':
+    case 'openmove':
+    case 'buyship':
+    case 'newhead':
+    case 'propyes':
+    case 'propno':
+    case 'build':
+    case 'scrapship':
+    case 'crewset':
+    case 'appoint':
+    case 'setwc':
+    case 'cruiseadd':
+    case 'cruisedrop':
+      {
+        const d = JSON.parse(b.dataset.d || '[]');
+        if (
+          a === 'moveship' ||
+          a === 'openmove' ||
+          a === 'setship' ||
+          a === 'setwc' ||
+          a === 'cruiseadd' ||
+          a === 'cruisedrop'
+        ) {
+          const x = S.ships.find((q) => q.id === d[0]);
+          if (x) x.ownerSet = S.t;
+        }
+        if (a === 'crewset' || a === 'appoint') {
+          const x = S.ships.find((q) => q.id === d[0]);
+          if (x) x.crewSet = S.t;
+        }
+        const big = S.ships.length > 25,
+          bef = big ? [] : advice().map((h) => [h.id, h.title]);
+        doAction(a, d);
+        ADV_CACHE.key = null;
+        UI.rev++;
+        // with a big fleet the screen works the advice out over the next frames instead (0.36.0)
+        const now = big ? new Set() : new Set(advice().map((h) => h.id)),
+          gone = bef.filter(
+            ([id]) =>
+              !now.has(id) && !(b.closest('.advice[data-key]') && b.closest('.advice[data-key]').dataset.key === id),
+          );
+        UI.advGone = gone.length && b.closest('.advice') ? { rev: UI.rev, titles: gone.map((q) => q[1]) } : null;
+      }
+      ADV_CACHE.key = null;
+      break;
+    case 'shipgrp': {
+      const o = (UI.shipGrp = UI.shipGrp || { earn: true, upkeep: true, crew: false, retire: false });
+      o[b.dataset.id] = !o[b.dataset.id];
+      break;
+    }
+    case 'plopen':
+      UI.plOpen = UI.plOpen === +b.dataset.id ? null : +b.dataset.id;
+      break;
+    case 'plmonth':
+      UI.plMonth = b.dataset.id;
+      break;
+    case 'crew':
+      openCrew(+b.dataset.id || +JSON.parse(b.dataset.d || '[]')[0] || S.selShip);
+      break;
+    case 'crewclose':
+      closeCrew();
+      break;
+    case 'crewfleet':
+      closeCrew();
+      openFleetMgr('crew');
+      break;
+    case 'fmopen':
+    case 'fmclose':
+    case 'fmview':
+    case 'fmsort':
+    case 'fmattn':
+    case 'fmclear':
+    case 'fmship':
+    case 'fmback':
+    case 'fmask':
+    case 'fmno':
+    case 'fmdo':
+      fmAct(a, b);
+      break;
+    case 'fgtoggle': {
+      const o = (UI.fgShut = UI.fgShut || {});
+      o[b.dataset.id] = !o[b.dataset.id];
+      break;
+    }
+    case 'crewship':
+      UI.crewSid = +b.dataset.id;
+      UI.crewFleet = false;
+      UI.offPool = null;
+      break;
+    case 'offpool':
+      UI.offPool = UI.offPool === b.dataset.id ? null : b.dataset.id;
+      break;
+    case 'cruisehelp':
+      UI.cruiseHelp = !UI.cruiseHelp;
+      break;
+    case 'menu':
+      UI.menu = !UI.menu;
+      break;
+    case 'perfhud':
+      UI.perf = +b.dataset.v === 1;
+      try {
+        localStorage.setItem('ss_perf', UI.perf ? '1' : '0');
+      } catch (e) {}
+      if (!UI.perf) {
+        const h = document.getElementById('perfHud');
+        if (h) h.remove();
+      }
+      break;
+    case 'fcship':
+      (UI.fcShip = UI.fcShip || {})[b.dataset.k] = +b.dataset.id;
+      break;
+    case 'cappool':
+      UI.capPool = UI.capPool === +b.dataset.id ? null : +b.dataset.id;
+      break;
+    case 'mkcode':
+      UI.copied = null;
+      (S.tutSeen = S.tutSeen || {}).code = true;
+      makeSaveCode().then((c) => {
+        UI.saveCode = c;
+        UI.saveCodeAt = dateLong(S.t) + ' (game date)';
+        UI.dirty = true;
+      });
+      break;
+    case 'copycode':
+    case 'copylink': {
+      const txt = a === 'copylink' ? location.href.split('#')[0] + '#save=' + UI.saveCode : UI.saveCode;
+      const ok = () => {
+          UI.copied = a === 'copylink' ? 'Link copied.' : 'Code copied.';
+          UI.dirty = true;
+        },
+        fail = () => {
+          UI.copied = 'Your browser blocked copying: select the text and copy it by hand.';
+          UI.dirty = true;
+        };
+      try {
+        navigator.clipboard.writeText(txt).then(ok, fail);
+      } catch (err) {
+        fail();
+      }
+      break;
+    }
+    case 'askload':
+      if (($('loadCode').value || '').trim()) UI.confirm = 'load';
+      else UI.loadMsg = { ok: false, t: 'Paste a code into the box first.' };
+      break;
+    case 'loadcode': {
+      const el = $(b.dataset.src || 'loadCode'),
+        code = el ? el.value : '';
+      UI.confirm = null;
+      loadSaveCode(code).then(
+        (s2) => {
+          UI.loadMsg = {
+            ok: true,
+            t: `Loaded: ${dateLong(s2.t)}, ${s2.ships.length} ship${s2.ships.length === 1 ? '' : 's'}.`,
+          };
+          layoutMode();
+          applyView();
+        },
+        (e2) => {
+          UI.loadMsg = { ok: false, t: e2.message || 'That code could not be read.' };
+          UI.dirty = true;
+        },
+      );
+      break;
+    }
+    case 'dismiss':
+      putAside(b.dataset.id);
+      break;
+    case 'alladvice':
+      UI.allAdvice = !UI.allAdvice;
+      break;
+    case 'newline': {
+      const rk = Object.keys(ROUTES).find((k) => !S.lines[k]);
+      if (rk) S.selLine = rk;
+      UI.tab = 'lines';
+      break;
+    }
+    case 'zoom': {
+      const m = $('map');
+      zoomAt(+b.dataset.v > 0 ? 1.3 : 1 / 1.3, m.clientWidth / 2, m.clientHeight / 2);
+      break;
+    }
+    case 'zoomfit':
+      zoomFit();
+      break;
+    case 'view':
+      UI.view = b.dataset.v;
+      break;
+    case 'shipset':
+      if (sh) {
+        sh.ownerSet = S.t;
+        if (b.dataset.k === 'autoDock') sh.autoDock = DOCK_TH[+b.dataset.v];
+        else if (b.dataset.k === 'warTop' && +b.dataset.v && !sh.warTop && shipInTrouble(sh))
+          UI.banner = `No underwriter will add cover on SS ${sh.name} now.`;
+        else sh[b.dataset.k] = +b.dataset.v;
+      }
+      break;
+    case 'alldock':
+      if (sh) S.ships.forEach((x) => (x.autoDock = sh.autoDock));
+      break;
+    case 'dzopen':
+      openDesigner();
+      break;
+    case 'dzclose':
+      closeDesigner();
+      break;
+    case 'dzview':
+      UI.dzView = b.dataset.v;
+      break;
+    case 'dzauto':
+      if (UI.dz) UI.dz.auto = { mach: true, form: true };
+      break;
+    case 'dz':
+      dzSet(b.dataset.k, b.dataset.v);
+      UI.dzMsg = null;
+      break;
+    case 'dzadm':
+      if (UI.dz) UI.dz.adm = !UI.dz.adm;
+      break;
+    case 'dzname': {
+      const L = SHIP_NAMES[UI.dz.purpose] || SHIP_NAMES.inter,
+        used = new Set(S.ships.map((x) => x.name).concat((S.orders || []).map((o) => o.d.name)));
+      const c = L.filter((n) => !used.has(n));
+      UI.dz.name = c.length ? c[Math.floor(Math.random() * c.length)] : L[0] + ' II';
+      const i = $('dzName');
+      if (i) i.value = UI.dz.name;
+      break;
+    }
+    case 'dzorder': {
+      const r = placeOrder(UI.dz);
+      if (r.ok) {
+        UI.dz = null;
+        UI.dzMsg = null;
+        closeDesigner();
+        UI.tab = 'brokers';
+      } else UI.dzMsg = r.why;
+      break;
+    }
+    case 'askcxl':
+      UI.confirm = 'cxl' + b.dataset.id;
+      break;
+    case 'cxlorder': {
+      const o = (S.orders || []).find((x) => x.id === +b.dataset.id);
+      if (o) {
+        if (o.slip) {
+          o.slip.who = null;
+          o.slip.until = S.m;
+        }
+        S.orders = S.orders.filter((x) => x !== o);
+        news(`The contract for SS ${o.d.name} is cancelled. The ${fmt(o.paid)} already paid is lost.`, 'bad');
+      }
+      UI.confirm = null;
+      break;
+    }
+    case 'headpick':
+      UI.headPick = UI.headPick === b.dataset.id ? null : b.dataset.id;
+      break;
+    case 'traytab':
+      UI.trayTab = b.dataset.id;
+      UI.trayHold = false;
+      {
+        const t = $('traybody');
+        if (t) t.scrollTop = 0;
+      }
+      break;
+    case 'advopen':
+      UI.advOpen = UI.advOpen === b.dataset.id ? null : b.dataset.id;
+      break;
+    case 'wread': {
+      const m = (S.wire || []).find((x) => x.id === +b.dataset.id);
+      if (m && m.read === false) {
+        m.read = true;
+        UI.wa = { id: m.id, txt: m.txt, mode: 'decode', made: performance.now() };
+        UI._tray = null;
+      }
+      break;
+    }
+    case 'wreadall': {
+      for (const m of S.wire || [])
+        if (m.read === false) {
+          m.read = true;
+          const e = document.querySelector(`[data-hold="${m.id}"] .tg-an`);
+          if (e) e.textContent = m.txt;
+        }
+      if (UI.wa) UI.wa.done = true;
+      UI._tray = null;
+      break;
+    }
+    case 'emmin':
+      UI.emMin = true;
+      break;
+    case 'warclose':
+      warClose();
+      break;
+    case 'reqpick':
+      reqChoose(+b.dataset.id);
+      break;
+    case 'offeryes':
+      offerTake(+b.dataset.id, true);
+      break;
+    case 'offerno':
+      offerTake(+b.dataset.id, false);
+      break;
+    case 'abid': {
+      const d = JSON.parse(b.dataset.d || '[]');
+      auctionBid(d[0], d[1]);
+      break;
+    }
+    case 'rcard':
+      UI.rcard = b.dataset.id;
+      break;
+    case 'rclose':
+      UI.rcard = null;
+      break;
+    case 'livopen':
+      livPickOpen('change');
+      break;
+    case 'livpre':
+      if (UI.liv) {
+        UI.liv.l = livFill(JSON.parse(JSON.stringify(LIV_PRESETS[+b.dataset.id])));
+      }
+      break;
+    case 'livown':
+      if (UI.liv) UI.liv.own = !UI.liv.own;
+      break;
+    case 'livok':
+      livOk();
+      break;
+    case 'livcancel':
+      livCancel();
+      break;
+    case 'dissend':
+      disSend(+b.dataset.id);
+      break;
+    case 'dismin':
+      UI.disMin = true;
+      break;
+    case 'disshow':
+      UI.disMin = false;
+      UI.disOpen = true;
+      break;
+    case 'disclose':
+      disClose();
+      break;
+    case 'emshow': {
+      UI.emMin = false;
+      const L = (S.emerg || []).filter((x) => x.known && (!x.over || S.t - x.t1 < 3));
+      if (L.length && !L.some((x) => x.id === UI.emOpen)) UI.emOpen = (L.find((x) => !x.over) || L[0]).id;
+      break;
+    }
+    case 'emtab':
+      UI.emOpen = +b.dataset.id;
+      break;
+    case 'emreport':
+      emOrder('report', +b.dataset.id);
+      break;
+    case 'emorder':
+      emOrder('order', +b.dataset.id, b.dataset.o);
+      break;
+    case 'emoffice':
+      emOrder('office', +b.dataset.id, b.dataset.o);
+      break;
+    case 'emspeed':
+      UI.emNormal = !UI.emNormal;
+      break;
+    case 'emclose': {
+      const e = (S.emerg || []).find((x) => x.id === +b.dataset.id);
+      if (e) e.t1 = -99;
+      break;
+    }
+    case 'maptoggle':
+      UI.noMap = !UI.noMap;
+      requestAnimationFrame(() => {
+        VIEW.s = null;
+        applyView();
+      });
+      break;
+    case 'wireall':
+      UI.wireAll = !UI.wireAll;
+      break;
+    case 'lineset':
+      if (L) L[b.dataset.k] = +b.dataset.v;
+      break;
+    case 'yard':
+      if (sh) {
+        const k = b.dataset.k;
+        if (sh.state === 'sea' || sh.state === 'repo') sh.pendingYard = k;
+        else if (S.cash >= refitCost(sh, k)) enterYard(sh, k);
+      }
+      break;
+    case 'unyard':
+      if (sh && sh.pendingYard !== 'repair') {
+        sh.pendingYard = (sh.yardAdd || []).shift() || null;
+      }
+      break;
+    case 'unyardall':
+      if (sh && sh.pendingYard !== 'repair') {
+        sh.pendingYard = null;
+        sh.yardAdd = [];
+        sh.facPlan = null;
+      }
+      break;
+    case 'yardadd':
+      if (sh) addYardJob(sh, b.dataset.k);
+      break;
+    case 'unyardx':
+      if (sh && sh.state !== 'yard') sh.yardAdd = (sh.yardAdd || []).filter((x) => x !== b.dataset.k);
+      break;
+    case 'askexit':
+      UI.confirm = b.dataset.k + sh.id;
+      break;
+    case 'exit':
+      if (sh) {
+        if (sh.state === 'sea' || sh.state === 'repo') sh.pendingExit = b.dataset.k;
+        else exitShip(sh, b.dataset.k);
+      }
+      UI.confirm = null;
+      break;
+    case 'unexit':
+      if (sh) {
+        sh.pendingExit = null;
+        sh.saleAmt = null;
+      }
+      break;
+    case 'openline': {
+      const rk = b.dataset.id,
+        fee = Math.round(2500 * PX());
+      if (S.cash >= fee && !S.lines[rk] && routeOpen(rk, S.m)) {
+        book('office', -fee, rk);
+        S.lines[rk] = { fares: defaultFares(rk), service: 1, adv: 1, last: [null, null] };
+        news(`The Morven Line opens a ${ROUTES[rk].name} service.`, 'good');
+      }
+      break;
+    }
+    case 'askclose':
+      UI.confirm = 'close' + b.dataset.id;
+      break;
+    case 'closeline': {
+      const rk = b.dataset.id;
+      delete S.lines[rk];
+      delete S.mail[rk];
+      /* a rate war on the route goes on without the Line (0.35.4): closing and reopening used to end it */ S.ships.forEach(
+        (x) => {
+          if (x.line === rk) {
+            x.line = null;
+          }
+        },
+      );
+      news(`The ${ROUTES[rk].name} service is closed.`);
+      UI.confirm = null;
+      break;
+    }
+    case 'buy': {
+      const s2 = S.market.find((x) => x.id === +b.dataset.id);
+      if (s2 && buyShip(s2)) S.selShip = s2.id;
+      break;
+    }
+    case 'borrow': {
+      const v = +b.dataset.id || 10000;
+      if (headroom() >= v && !(S.noLend > S.m)) {
+        S.debt += v;
+        S.cash += v;
+      }
+      break;
+    }
+    case 'rescuepay': {
+      const R = S.rescue;
+      if (R && R.loan > 0) {
+        const x = Math.min(+b.dataset.id || 10000, R.loan);
+        if (S.cash >= x) {
+          R.loan -= x;
+          S.cash -= x;
+          if (R.loan < 1) {
+            R.loan = 0;
+            news('The Line has repaid its rescue loan in full. The restrictions are lifted.', 'good', true);
+          }
+        }
+      }
+      break;
+    }
+    case 'repay':
+      repayBank(+b.dataset.id || 10000);
+      break;
+    case 'trustyes':
+      trustAccept();
+      break;
+    case 'trustno':
+      trustRefuse(false);
+      break;
+    case 'join':
+      confJoin();
+      break;
+    case 'leave':
+      if (UI.confirm !== 'leave') UI.confirm = 'leave';
+      else {
+        confLeave();
+        UI.confirm = null;
+      }
+      break;
+    case 'accept':
+      if (S.offer) {
+        S.mail[S.offer.route] = { pay: S.offer.pay, strikes: 0, ok: false };
+        news(
+          `Mail contract won on ${ROUTES[S.offer.route].name}: ${fmt(S.offer.pay)} per round trip. It runs for as long as the Line keeps up the sailings.`,
+          'good',
+        );
+        S.offer = null;
+      }
+      break;
+    case 'decline':
+      if (S.offer) (S.mailNo = S.mailNo || {})[S.offer.route] = S.m + 24;
+      S.offer = null;
+      break; // declined: not offered again for two years (0.35.7)
+    case 'safety':
+      S.safety = +b.dataset.id;
+      break;
+    case 'refit': {
+      const d = b.dataset.d ? JSON.parse(b.dataset.d) : [+b.dataset.id];
+      openRefit(+d[0], d[1]);
+      break;
+    }
+    case 'rfclose':
+      closeRefit();
+      break;
+    case 'rflevel':
+    case 'rfpicks':
+    case 'rfbook':
+      rfAct(a, b);
+      break;
+    case 'union':
+      unionAnswer(b.dataset.id === 'yes');
+      break;
+    case 'mksel':
+      UI.mkSel = UI.mkSel === b.dataset.id ? null : b.dataset.id;
+      UI.tab = 'finance';
+      UI.finSub = 'shares';
+      break;
+    case 'finsub':
+      UI.tab = 'finance';
+      UI.finSub = b.dataset.id;
+      break;
+    case 'mkbuy': {
+      const d = JSON.parse(b.dataset.d);
+      mkBuy(d[0], +d[1], !!d[2]);
+      break;
+    }
+    case 'mksell': {
+      const d = JSON.parse(b.dataset.d);
+      mkSell(d[0], +d[1]);
+      break;
+    }
+    case 'mkrepay':
+      mkRepay(+b.dataset.id);
+      break;
+    case 'flfloat': {
+      const d = JSON.parse(b.dataset.d);
+      if (UI.confirm !== 'fl' + d[0]) UI.confirm = 'fl' + d[0];
+      else {
+        UI.confirm = null;
+        flFloat(+d[0], !!d[1]);
+      }
+      break;
+    }
+    case 'flbuyback':
+      flBuyback(+b.dataset.id);
+      break;
+    case 'flfounders':
+      flFounders();
+      break;
+    case 'fldiv':
+      if (S.fl && MK_DIV[b.dataset.id]) S.fl.pay = b.dataset.id;
+      break;
+    case 'flknight':
+      flKnight(b.dataset.id);
+      break;
+    case 'flcrown':
+      if (UI.confirm !== 'flcrown') UI.confirm = 'flcrown';
+      else {
+        UI.confirm = null;
+        flCrown();
+      }
+      break;
+    case 'flappeal':
+      flAppeal();
+      break;
+    case 'mvraid':
+      mvRaid(b.dataset.id);
+      break;
+    case 'mklend': {
+      const d = JSON.parse(b.dataset.d);
+      mkLend(d[0], +d[1]);
+      break;
+    }
+    case 'officehire':
+      mkOfficeHire(+b.dataset.id);
+      break;
+    case 'mvtender': {
+      const d = JSON.parse(b.dataset.d);
+      mvTender(d[0], +d[1]);
+      break;
+    }
+    case 'mvproxy':
+      mvProxy(b.dataset.id);
+      break;
+    case 'mvshort': {
+      const d = JSON.parse(b.dataset.d);
+      mvShort(d[0], +d[1]);
+      break;
+    }
+    case 'mvcover':
+      mvCover(b.dataset.id, false);
+      break;
+    case 'mvbear': {
+      const d = JSON.parse(b.dataset.d);
+      mvBear(d[0], d[1]);
+      break;
+    }
+    case 'mkpct': {
+      const d = JSON.parse(b.dataset.d);
+      mkBuyPct(d[0], +d[1]);
+      break;
+    }
+    case 'ctrlset': {
+      const d = JSON.parse(b.dataset.d);
+      mkCtrlSet(d[0], d[1], d[2]);
+      break;
+    }
+    case 'ctrlpeace':
+      mkPeace(b.dataset.id);
+      break;
+    case 'ctrlship': {
+      const d = JSON.parse(b.dataset.d);
+      mkTakeShip(d[0], +d[1]);
+      break;
+    }
+    case 'mkmerge':
+      if (UI.confirm !== 'mkmerge' + b.dataset.id) UI.confirm = 'mkmerge' + b.dataset.id;
+      else {
+        UI.confirm = null;
+        mkMerge(b.dataset.id);
+      }
+      break;
+    case 'mkwind':
+      if (UI.confirm !== 'mkwind' + b.dataset.id) UI.confirm = 'mkwind' + b.dataset.id;
+      else {
+        UI.confirm = null;
+        mkWindUp(b.dataset.id);
+      }
+      break;
+    case 'mkbuyout':
+      mkBuyout(b.dataset.id);
+      break;
+    case 'fundopen':
+      mkFundOpen(b.dataset.id);
+      break;
+    case 'funddep':
+      mkFundPay(+b.dataset.id);
+      break;
+    case 'fundwd':
+      mkFundTake(+b.dataset.id, false);
+      break;
+    case 'fundclose':
+      if (UI.confirm !== 'fundclose') UI.confirm = 'fundclose';
+      else {
+        UI.confirm = null;
+        mkFundTake(0, true);
+      }
+      break;
+    case 'fundbrief':
+      if (S.ex && S.ex.fund && MK_BRIEF[b.dataset.id]) {
+        S.ex.fund.brief = b.dataset.id;
+        S.ex.fund.due = S.m;
+      }
+      break;
+    case 'fundmgr':
+      if (S.ex && S.ex.fund && (b.dataset.id === 'broker' || S.ex.office)) {
+        S.ex.fund.mgr = b.dataset.id;
+        S.ex.fund.due = S.m;
+      }
+      break;
+    case 'officeopen':
+      mkOfficeOpen();
+      break;
+    case 'officeclose':
+      if (UI.confirm !== 'officeclose') UI.confirm = 'officeclose';
+      else {
+        UI.confirm = null;
+        mkOfficeClose();
+      }
+      break;
+    case 'giltbuy':
+      gilts(true, +b.dataset.id);
+      break;
+    case 'giltsell':
+      gilts(false, b.dataset.id === 'all' ? S.gilts : +b.dataset.id);
+      break;
+    case 'new':
+      if (UI.confirm !== 'new') UI.confirm = 'new';
+      else {
+        UI.confirm = null;
+        newGame();
+      }
+      break;
+    case 'newnow':
+      newGame();
+      break;
+    case 'cancel':
+      UI.confirm = null;
+      break;
+  }
+  save();
+  UI.dirty = true;
+  if (UI.tab !== prevTab) {
+    render();
+    UI.dirty = false;
+    $('tabbody').scrollTop = 0;
+  }
 });
-document.addEventListener('change',e=>{
-  const t=e.target;
-  if(t.dataset.fare&&S.lines[S.selLine]){S.lines[S.selLine].fares[t.dataset.fare]=clamp(Math.round(+t.value||1),1,500);}
-  if(t.dataset.shipline){const sh=S.ships.find(x=>x.id===S.selShip);if(sh){const was=sh.line;sh.line=t.value||null;mailLeft(was);sh.ownerSet=S.t;if(sh.line&&sh.state==='laid'){sh.state='port';sh.portLeft=1;}}}
-  if(t.dataset.wirert)UI.wireRoutine=t.checked;
-  if(t.dataset.dorder){const [k,g]=t.dataset.dorder.split(':'),o=S.depts[k];if(o){o.orders=o.orders||{};o.orders[g]=t.checked;ADV_CACHE.key=null;}} // a standing order (0.36.1)
-  if(t.dataset.dzx&&UI.dz){UI.dz.extras[t.dataset.dzx]=t.checked;}
-  if(t.dataset.dzline&&UI.dz){UI.dz.line=t.value;}
-  if(t.dataset.rfjob&&UI.rf){UI.rf.jobs[t.dataset.rfjob]=t.checked;}
-  if(t.dataset.flfounders)UI.flFounders=t.checked;
-  if(UI.fmOpen)fmChange(t);
-  if(t.dataset.reserve){const x=S.ships.find(y=>y.id===+t.dataset.reserve);if(x&&!atWar())x.reserve=t.checked;}
-  if((t.dataset.livc||t.dataset.livon||t.dataset.livem||t.dataset.livdock)&&UI.liv)livInput(t);
-  t.blur();UI.rev=(UI.rev||0)+1;save();UI.dirty=true;
+document.addEventListener('change', (e) => {
+  const t = e.target;
+  if (t.dataset.fare && S.lines[S.selLine]) {
+    S.lines[S.selLine].fares[t.dataset.fare] = clamp(Math.round(+t.value || 1), 1, 500);
+  }
+  if (t.dataset.shipline) {
+    const sh = S.ships.find((x) => x.id === S.selShip);
+    if (sh) {
+      const was = sh.line;
+      sh.line = t.value || null;
+      mailLeft(was);
+      sh.ownerSet = S.t;
+      if (sh.line && sh.state === 'laid') {
+        sh.state = 'port';
+        sh.portLeft = 1;
+      }
+    }
+  }
+  if (t.dataset.wirert) UI.wireRoutine = t.checked;
+  if (t.dataset.dorder) {
+    const [k, g] = t.dataset.dorder.split(':'),
+      o = S.depts[k];
+    if (o) {
+      o.orders = o.orders || {};
+      o.orders[g] = t.checked;
+      ADV_CACHE.key = null;
+    }
+  } // a standing order (0.36.1)
+  if (t.dataset.dzx && UI.dz) {
+    UI.dz.extras[t.dataset.dzx] = t.checked;
+  }
+  if (t.dataset.dzline && UI.dz) {
+    UI.dz.line = t.value;
+  }
+  if (t.dataset.rfjob && UI.rf) {
+    UI.rf.jobs[t.dataset.rfjob] = t.checked;
+  }
+  if (t.dataset.flfounders) UI.flFounders = t.checked;
+  if (UI.fmOpen) fmChange(t);
+  if (t.dataset.reserve) {
+    const x = S.ships.find((y) => y.id === +t.dataset.reserve);
+    if (x && !atWar()) x.reserve = t.checked;
+  }
+  if ((t.dataset.livc || t.dataset.livon || t.dataset.livem || t.dataset.livdock) && UI.liv) livInput(t);
+  t.blur();
+  UI.rev = (UI.rev || 0) + 1;
+  save();
+  UI.dirty = true;
 });
-document.addEventListener('keydown',e=>{
-  if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('[role=button][data-act]')){e.preventDefault();e.target.click();return;}
-  if(e.code==='Space'&&!e.target.closest('input,select,textarea,button')){e.preventDefault();if(S.over)return;
-    if(UI.speed>0){UI.last=UI.speed;UI.speed=0;UI.banner='Paused.';}else{UI.speed=UI.last||1;UI.banner=null;}UI.dirty=true;}
+document.addEventListener('keydown', (e) => {
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('[role=button][data-act]')) {
+    e.preventDefault();
+    e.target.click();
+    return;
+  }
+  if (e.code === 'Space' && !e.target.closest('input,select,textarea,button')) {
+    e.preventDefault();
+    if (S.over) return;
+    if (UI.speed > 0) {
+      UI.last = UI.speed;
+      UI.speed = 0;
+      UI.banner = 'Paused.';
+    } else {
+      UI.speed = UI.last || 1;
+      UI.banner = null;
+    }
+    UI.dirty = true;
+  }
 });
-document.addEventListener('input',e=>{const t=e.target;
-  if(t.dataset.dz&&UI.dz){dzSet(t.dataset.dz,t.value);UI.dzMsg=null;UI.dirty=true;}
-  if(t.dataset.dzname&&UI.dz){UI.dz.name=t.value;UI.dirty=true;}
-  if(t.dataset.fmq&&UI.fmOpen){fmState().q=t.value;UI.dirty=true;}
+document.addEventListener('input', (e) => {
+  const t = e.target;
+  if (t.dataset.dz && UI.dz) {
+    dzSet(t.dataset.dz, t.value);
+    UI.dzMsg = null;
+    UI.dirty = true;
+  }
+  if (t.dataset.dzname && UI.dz) {
+    UI.dz.name = t.value;
+    UI.dirty = true;
+  }
+  if (t.dataset.fmq && UI.fmOpen) {
+    fmState().q = t.value;
+    UI.dirty = true;
+  }
 });
 // hold the tray still while the pointer or a finger is on it
-document.addEventListener('pointerover',e=>{const on=!!e.target.closest('#traybody');if(on!==!!UI.trayHover){UI.trayHover=on;UI.trayHold=on||UI.trayTouch>performance.now();if(!UI.trayHold)UI.dirty=true;}});
-document.addEventListener('touchstart',e=>{if(e.target.closest('#traybody')){UI.trayTouch=performance.now()+3000;UI.trayHold=true;setTimeout(()=>{if(!UI.trayHover&&UI.trayTouch<=performance.now()){UI.trayHold=false;UI.dirty=true;}},3100);}},{passive:true});
-document.addEventListener('scroll',e=>{if(e.target&&e.target.id==='traybody'){UI.trayTouch=performance.now()+2500;UI.trayHold=true;setTimeout(()=>{if(!UI.trayHover&&UI.trayTouch<=performance.now()){UI.trayHold=false;UI.dirty=true;}},2600);}},true);
-window.addEventListener('pagehide',()=>save());
+document.addEventListener('pointerover', (e) => {
+  const on = !!e.target.closest('#traybody');
+  if (on !== !!UI.trayHover) {
+    UI.trayHover = on;
+    UI.trayHold = on || UI.trayTouch > performance.now();
+    if (!UI.trayHold) UI.dirty = true;
+  }
+});
+document.addEventListener(
+  'touchstart',
+  (e) => {
+    if (e.target.closest('#traybody')) {
+      UI.trayTouch = performance.now() + 3000;
+      UI.trayHold = true;
+      setTimeout(() => {
+        if (!UI.trayHover && UI.trayTouch <= performance.now()) {
+          UI.trayHold = false;
+          UI.dirty = true;
+        }
+      }, 3100);
+    }
+  },
+  { passive: true },
+);
+document.addEventListener(
+  'scroll',
+  (e) => {
+    if (e.target && e.target.id === 'traybody') {
+      UI.trayTouch = performance.now() + 2500;
+      UI.trayHold = true;
+      setTimeout(() => {
+        if (!UI.trayHover && UI.trayTouch <= performance.now()) {
+          UI.trayHold = false;
+          UI.dirty = true;
+        }
+      }, 2600);
+    }
+  },
+  true,
+);
+window.addEventListener('pagehide', () => save());
 
-{const old=oldSaveNote();S=load();if(!S){newGame();if(old)news('Saves from before version 0.19 cannot be carried over: the calendar now runs from 1900, so this is a new game. The old save is left untouched in the browser.','bad');}}applyPrices();
-if(location.hash.startsWith('#save=')){const code=location.hash.slice(1);history.replaceState(null,'',location.pathname+location.search);
-  loadSaveCode(code).then(()=>news('Game loaded from a save link.'),e=>{UI.loadMsg={ok:false,t:'The save link could not be read: '+(e.message||'damaged code')};UI.menu=true;UI.dirty=true;});}
+{
+  const old = oldSaveNote();
+  S = load();
+  if (!S) {
+    newGame();
+    if (old)
+      news(
+        'Saves from before version 0.19 cannot be carried over: the calendar now runs from 1900, so this is a new game. The old save is left untouched in the browser.',
+        'bad',
+      );
+  }
+}
+applyPrices();
+if (location.hash.startsWith('#save=')) {
+  const code = location.hash.slice(1);
+  history.replaceState(null, '', location.pathname + location.search);
+  loadSaveCode(code).then(
+    () => news('Game loaded from a save link.'),
+    (e) => {
+      UI.loadMsg = { ok: false, t: 'The save link could not be read: ' + (e.message || 'damaged code') };
+      UI.menu = true;
+      UI.dirty = true;
+    },
+  );
+}
 // after an update, point the player to what is new (0.36.2)
-try{const was=localStorage.getItem('ss_seenver');if(was&&was!==GAME_VERSION&&S&&!S.over)UI.banner=`Updated to v${GAME_VERSION}. See Menu, What's new and coming next.`;localStorage.setItem('ss_seenver',GAME_VERSION);}catch(e){}
-layoutMode();UI.dirty=true;applyView();requestAnimationFrame(frame);
+try {
+  const was = localStorage.getItem('ss_seenver');
+  if (was && was !== GAME_VERSION && S && !S.over)
+    UI.banner = `Updated to v${GAME_VERSION}. See Menu, What's new and coming next.`;
+  localStorage.setItem('ss_seenver', GAME_VERSION);
+} catch (e) {}
+layoutMode();
+UI.dirty = true;
+applyView();
+requestAnimationFrame(frame);

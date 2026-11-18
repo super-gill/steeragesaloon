@@ -6,19 +6,61 @@
      - that turning a standing order off puts that kind of advice back on the owner's desk;
      - (0.36.2) that, with a line crowded, no more than one ship is advised onto any line at once.
    Usage:  node tools/desk.js [seeds] [ships]   (default 3 seeds, 70 ships) */
-const fs = require('fs'), path = require('path'), vm = require('vm');
+const fs = require('fs'),
+  path = require('path'),
+  vm = require('vm');
 const ROOT = path.join(__dirname, '..');
-const FILES = ['chart-data', 'data', 'helpers', 'economy', 'lanes', 'wireless', 'silent', 'emergency', 'disaster', 'livery', 'war', 'ledger', 'sim', 'rivals', 'companies', 'outside', 'trust', 'prewar', 'market', 'float', 'moves', 'yard', 'naval', 'facilities', 'crew', 'state', 'clock', 'advice']
-  .map(f => path.join(ROOT, 'js', f + '.js')).filter(f => fs.existsSync(f));
-const SRC = FILES.map(f => [f, fs.readFileSync(f, 'utf8')]);
+const FILES = [
+  'chart-data',
+  'data',
+  'helpers',
+  'economy',
+  'lanes',
+  'wireless',
+  'silent',
+  'emergency',
+  'disaster',
+  'livery',
+  'war',
+  'ledger',
+  'sim',
+  'rivals',
+  'companies',
+  'outside',
+  'trust',
+  'prewar',
+  'market',
+  'float',
+  'moves',
+  'yard',
+  'naval',
+  'facilities',
+  'crew',
+  'state',
+  'clock',
+  'advice',
+]
+  .map((f) => path.join(ROOT, 'js', f + '.js'))
+  .filter((f) => fs.existsSync(f));
+const SRC = FILES.map((f) => [f, fs.readFileSync(f, 'utf8')]);
 const RNG = `Math.random=(function(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};})(SEED);`;
 const N = +process.argv[3] || 70;
 function run(seed) {
-  const ctx = { console, performance: { now: () => 0 }, localStorage: { getItem() { return null; }, setItem() {} } };
+  const ctx = {
+    console,
+    performance: { now: () => 0 },
+    localStorage: {
+      getItem() {
+        return null;
+      },
+      setItem() {},
+    },
+  };
   vm.createContext(ctx);
   vm.runInContext(RNG.replace('SEED', String(seed * 31337 + 5)), ctx);
   for (const [f, s] of SRC) vm.runInContext(s, ctx, { filename: f });
-  return vm.runInContext(`(function(){
+  return vm.runInContext(
+    `(function(){
     newGame();UI.autoPause=false;UI.speed=1;const out=[];const ok=(name,v,info)=>out.push({name,v:!!v,info:info===undefined?'':String(info)});
     const lines=['liv','exp','lha','hal','nap','gny'];
     for(const k of lines)S.lines[k]=S.lines[k]||{fares:defaultFares(k),service:1,adv:1,last:[null,null]};
@@ -42,9 +84,25 @@ function run(seed) {
     {ADV_CACHE.key=null;const A=advice();const fh=A.filter(h=>h.dept==='fares'&&orderOf(h)==='fares');
      S.depts.fares.orders={fares:false};ADV_CACHE.key=null;const B=advice();const back=B.filter(h=>h.dept==='fares'&&orderOf(h)==='fares'&&!handled(h)).length;
      ok('turning off the Fares Office\\'s order on fares puts that advice on the owner\\'s desk',fh.length===0||back>0,fh.length+' fare items, '+back+' back on the desk');S.depts.fares.orders={};}
-    return out;})()`, ctx);
+    return out;})()`,
+    ctx,
+  );
 }
-const n = +process.argv[2] || 3; let bad = 0; const tally = {};
-for (let i = 1; i <= n; i++) for (const q of run(i)) { const t = tally[q.name] = tally[q.name] || { ok: 0, n: 0, info: [] }; t.n++; if (q.v) t.ok++; t.info.push(q.info); }
-for (const k in tally) { const t = tally[k]; if (t.ok < t.n) bad++; console.log(`${t.ok === t.n ? 'ok  ' : 'FAIL'} ${k}: ${t.ok}/${t.n}${t.info.some(x => x) ? ' (' + t.info.join('; ') + ')' : ''}`); }
+const n = +process.argv[2] || 3;
+let bad = 0;
+const tally = {};
+for (let i = 1; i <= n; i++)
+  for (const q of run(i)) {
+    const t = (tally[q.name] = tally[q.name] || { ok: 0, n: 0, info: [] });
+    t.n++;
+    if (q.v) t.ok++;
+    t.info.push(q.info);
+  }
+for (const k in tally) {
+  const t = tally[k];
+  if (t.ok < t.n) bad++;
+  console.log(
+    `${t.ok === t.n ? 'ok  ' : 'FAIL'} ${k}: ${t.ok}/${t.n}${t.info.some((x) => x) ? ' (' + t.info.join('; ') + ')' : ''}`,
+  );
+}
 console.log(bad ? `CHECK: ${bad} failed` : 'PASS');

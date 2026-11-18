@@ -9,18 +9,60 @@
        Line's worth; a rescued Line can neither borrow to pay off the rescue nor merge a line into it; the rescuing rival's
        shares cannot be bought; and a Line expelled by the combine cannot rejoin the conference while it lasts.
    Usage:  node tools/rescue.js [seeds]   (default 3) */
-const fs = require('fs'), path = require('path'), vm = require('vm');
+const fs = require('fs'),
+  path = require('path'),
+  vm = require('vm');
 const ROOT = path.join(__dirname, '..');
-const FILES = ['chart-data', 'data', 'helpers', 'economy', 'lanes', 'wireless', 'silent', 'emergency', 'disaster', 'livery', 'war', 'ledger', 'sim', 'rivals', 'companies', 'outside', 'trust', 'prewar', 'market', 'float', 'moves', 'yard', 'naval', 'facilities', 'crew', 'state', 'clock', 'advice']
-  .map(f => path.join(ROOT, 'js', f + '.js')).filter(f => fs.existsSync(f));
-const SRC = FILES.map(f => [f, fs.readFileSync(f, 'utf8')]);
+const FILES = [
+  'chart-data',
+  'data',
+  'helpers',
+  'economy',
+  'lanes',
+  'wireless',
+  'silent',
+  'emergency',
+  'disaster',
+  'livery',
+  'war',
+  'ledger',
+  'sim',
+  'rivals',
+  'companies',
+  'outside',
+  'trust',
+  'prewar',
+  'market',
+  'float',
+  'moves',
+  'yard',
+  'naval',
+  'facilities',
+  'crew',
+  'state',
+  'clock',
+  'advice',
+]
+  .map((f) => path.join(ROOT, 'js', f + '.js'))
+  .filter((f) => fs.existsSync(f));
+const SRC = FILES.map((f) => [f, fs.readFileSync(f, 'utf8')]);
 const RNG = `Math.random=(function(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};})(SEED);`;
 function run(seed) {
-  const ctx = { console, performance: { now: () => 0 }, localStorage: { getItem() { return null; }, setItem() {} } };
+  const ctx = {
+    console,
+    performance: { now: () => 0 },
+    localStorage: {
+      getItem() {
+        return null;
+      },
+      setItem() {},
+    },
+  };
   vm.createContext(ctx);
   vm.runInContext(RNG.replace('SEED', String(seed * 7919 + 3)), ctx);
   for (const [f, s] of SRC) vm.runInContext(s, ctx, { filename: f });
-  return vm.runInContext(`(function(){
+  return vm.runInContext(
+    `(function(){
     const out=[];const ok=(name,v,info)=>out.push({name,v:!!v,info:info===undefined?'':String(info)});
     const RC=rescueChance;const yes=()=>{rescueChance=()=>1;},no=()=>{rescueChance=RC;};
     const to=m=>{let g=0;while(!S.over&&S.m<m&&g++<100000){if(S.dis)S.dis.show=false;if(S.war)S.war.show=false;advance(1);}};
@@ -70,9 +112,25 @@ function run(seed) {
     {setup(1930);S.conf=true;S.combine=null;S.lastCombine=-999;while(S.ships.length<12){refreshMarket();const m=S.market.shift();if(!m)break;delete m.price;m.line='liv';S.ships.push(m);}
      for(const x of S.ships)x.grt=Math.max(x.grt,60000);const R0=Math.random;Math.random=()=>0.01;combineMonth();Math.random=R0;
      ok('a Line expelled by the combine cannot rejoin the conference at once',!!S.combine&&!S.conf&&!confJoin(),S.combine?'combine to '+monthName(S.combine.until):'no combine formed');}
-    return out;})()`, ctx);
+    return out;})()`,
+    ctx,
+  );
 }
-const n = +process.argv[2] || 3; let bad = 0; const tally = {};
-for (let i = 1; i <= n; i++) for (const q of run(i)) { const t = tally[q.name] = tally[q.name] || { ok: 0, n: 0, info: [] }; t.n++; if (q.v) t.ok++; t.info.push(q.info); }
-for (const k in tally) { const t = tally[k]; if (t.ok < t.n) bad++; console.log(`${t.ok === t.n ? 'ok  ' : 'FAIL'} ${k}: ${t.ok}/${t.n}${t.info.some(x => x) ? ' (' + t.info.join('; ') + ')' : ''}`); }
+const n = +process.argv[2] || 3;
+let bad = 0;
+const tally = {};
+for (let i = 1; i <= n; i++)
+  for (const q of run(i)) {
+    const t = (tally[q.name] = tally[q.name] || { ok: 0, n: 0, info: [] });
+    t.n++;
+    if (q.v) t.ok++;
+    t.info.push(q.info);
+  }
+for (const k in tally) {
+  const t = tally[k];
+  if (t.ok < t.n) bad++;
+  console.log(
+    `${t.ok === t.n ? 'ok  ' : 'FAIL'} ${k}: ${t.ok}/${t.n}${t.info.some((x) => x) ? ' (' + t.info.join('; ') + ')' : ''}`,
+  );
+}
 console.log(bad ? `CHECK: ${bad} failed` : 'PASS');
