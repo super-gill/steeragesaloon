@@ -429,6 +429,7 @@ Measured with `tools/perf.mjs` in a headless browser without a graphics card (wh
 
 Dated decisions about this page, newest first: date, decision, who decided. Dates are the release that recorded them.
 
+- 2026-11-18: **History varies per game** (Jason with Design, #22): the 1907 panic, the Crash and the Depression will vary in timing and depth across the whole economy; the share market, panic and slump lines on this page describe today's fixed history until #52 to #54 are built. Full record in `varied-history.md`.
 - 2026-10-01: **War hire stays at the Blue Book rates** (Jason): KI-024 let ships be offered for war service at any time, and left the hire as it is, since it matches the Blue Book rates against the open market (0.37.1).
 - 2026-10-01: **Rescue instead of game over** (Jason, KI-091): an insolvent Line gets a likely, not certain, rescue (banks or a rival before the 1920s, the Treasury after) with lasting costs; a second failure is final; no rescue after gross negligence. With a safety net the game may hit harder. Not built: a forced merger, and rival lines rescued by the same rules (0.37.0).
 - 2026-10-01: **Large fleets are supported, not discouraged** (Jason, KI-090): steering the player away from big fleets was decided against. Instead: make them playable (KI-001), hand routine work to masters and departments (standing orders, an inbox of the owner's decisions only), run a fleet by line, and scale shore support with the fleet (0.36.0 to 0.36.5).

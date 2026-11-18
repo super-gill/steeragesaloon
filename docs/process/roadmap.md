@@ -45,10 +45,12 @@ Smaller issues that change what a Line earns, so they go in before the balance p
 
 ## 4. Settle the share market
 
-Design questions inside 0.40.0 that move money, so they are settled, and any build issues they open are built, before the balance pass. Pillar 1 points #22 at varying the events per game.
+Design questions inside 0.40.0 that move money, so they are settled, and any build issues they open are built, before the balance pass. History varies per game (#22, agreed 18 November 2026, `docs/design/varied-history.md`).
 
-1. #22 KI-121: knowing the history (calendar exploits in the share market)
-2. #23 KI-107, #24 KI-108, #25 KI-109: the 1929 Crash, the 1930s market, the 1907 rumour (wait on #22)
+1. #52 Each game draws its own history; the 1907 panic varies (closes #25 KI-109)
+2. #53 The Depression varies per game across the whole economy (re-measures #24 KI-108)
+3. #54 The late-twenties rise and the Crash vary per game, with warnings (closes #23 KI-107)
+4. #22 KI-121: Consols, the one point still open
 
 ## 5. Balance 1900 to 1939
 
