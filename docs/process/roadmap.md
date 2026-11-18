@@ -50,7 +50,6 @@ Design questions inside 0.40.0 that move money, so they are settled, and any bui
 1. #52 Each game draws its own history; the 1907 panic varies (closes #25 KI-109)
 2. #53 The Depression varies per game across the whole economy (re-measures #24 KI-108)
 3. #54 The late-twenties rise and the Crash vary per game, with warnings (closes #23 KI-107)
-4. #22 KI-121: Consols, the one point still open
 
 ## 5. Balance 1900 to 1939
 
@@ -58,12 +57,13 @@ Root cause first, then each era against the targets in `docs/design/balance.md`.
 
 1. #14 KI-133 (S1): ships earn far too much at the loads trades really run at (carries KI-117)
 2. #36 KI-064 (S3): idle cash earns nothing (after #14, so new income does not muddy its measurement)
-3. #15 KI-065 (S2): the game is far too generous to a skilled player before 1914
-4. #16 KI-077 (S3): the Great War is almost riskless for a Line
-5. #17 KI-118 (S2): the Depression is mild (to confirm)
-6. #18 KI-119 (S2): rivals' ships booked far below the yard's price (to confirm)
-7. #19 KI-120 (S2): Imperial Atlantic fails before the war (to confirm)
-8. #20 KI-134 (S2): the Combine offers 1.3 to 1.6 times net worth
+3. #55 Consols 1929 to 1935: measure the sure gain (after #36)
+4. #15 KI-065 (S2): the game is far too generous to a skilled player before 1914
+5. #16 KI-077 (S3): the Great War is almost riskless for a Line
+6. #17 KI-118 (S2): the Depression is mild (to confirm)
+7. #18 KI-119 (S2): rivals' ships booked far below the yard's price (to confirm)
+8. #19 KI-120 (S2): Imperial Atlantic fails before the war (to confirm)
+9. #20 KI-134 (S2): the Combine offers 1.3 to 1.6 times net worth
 
 ## 6. Advice, text and polish
 

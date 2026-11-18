@@ -10,6 +10,7 @@ Decisions before 17 November 2026 were gathered from the old roadmap, the known-
 
 ## Index
 
+- 2026-11-18: Consols stay on the real yields; the 1929 to 1935 gain judged in the balance pass ([`varied-history.md`, Decision record](../design/varied-history.md#decision-record))
 - 2026-11-18: History varies per game: 1907, the Crash and the Depression, across the economy ([`varied-history.md`, Decision record](../design/varied-history.md#decision-record))
 - 2026-11-17: The five pillars; history sets the shape, not the script ([`direction.md`, Decision record](../design/direction.md#decision-record))
 - 2026-11-17: No Second World War; V1 ends at the present day, a turn after 1.0 is an idea ([`direction.md`, Decision record](../design/direction.md#decision-record))

@@ -41,10 +41,11 @@ Targets: a short opened on the 1907 rumour loses in about one game in three. For
 - Laws on their real dates, such as the Companies Act of November 1929.
 - Events that already vary: the 1912 disaster, the random panics from 1936.
 - The yearly emigration tables for 1907 and 1908.
+- **Consols** stay on the real yields. A drift of up to 0.4 points was considered and dropped: the real yield falls 1.67 points from 1929 to 1935, so even the worst case would gain about half over six years. The bet always wins; that is accepted as history, and its size is judged in the balance pass (#55).
 
 ## Open
 
-- **Consols** (point 4 on #22). A drift of up to 0.4 points on the yield was proposed, on the claim that the 1929 to 1935 bet would then sometimes lose. It would not: the real yield falls 1.67 points, and even the worst case under that drift gains about half over six years. Waiting on Jason.
+- Whether every number is drawn evenly across its range, and the warning lead of 3 to 8 months, are Design's figures awaiting Jason's word (#52, #54).
 
 ## As built
 
@@ -54,4 +55,5 @@ Nothing yet.
 
 Dated decisions about this page, newest first: date, decision, who decided.
 
+- 2026-11-18: **Consols stay on the real yields** (Jason with Design, #22): no per-game drift, since it could not make the 1929 to 1935 bet uncertain; its size is judged in the balance pass (#55).
 - 2026-11-18: **History varies per game** (Jason with Design, #22): the 1907 panic, the late-twenties rise, the Crash and the Depression vary in timing and depth as in "What varies", across the whole economy, drawn once a game and kept in the save; old saves keep today's history. KI-121's other options (leave it; cap the Line's positions) were not taken.
