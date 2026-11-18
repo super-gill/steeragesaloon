@@ -12,14 +12,13 @@ The order below was set by Build #1 from the old roadmap and the known-issues lo
 
 ## 1. Finish what is in flight
 
-The engineering passes, before any further game work. Formatting (#3, done) and the fingerprint come first so every later step can be proved.
+The engineering passes, before any further game work. Formatting (#3) and the fingerprint (#4) are done, so every later step can be proved.
 
-1. #4 Build the fingerprint tool
-2. #51 Commit a UI smoke and legacy-save check (before #52 to #54, which rely on old saves loading)
-3. #5 Move to ES modules with Vite, still JS
-4. #7 Host on GitHub Pages and retire the artifact (needs only #5, so a playable link comes before the big refactor)
-5. #6 Split the core from the screen and add the tooling
-6. #8 Convert to TypeScript, loose
+1. #51 Commit a UI smoke and legacy-save check (before #52 to #54, which rely on old saves loading)
+2. #5 Move to ES modules with Vite, still JS
+3. #7 Host on GitHub Pages and retire the artifact (needs only #5, so a playable link comes before the big refactor)
+4. #6 Split the core from the screen and add the tooling
+5. #8 Convert to TypeScript, loose
 
 TypeScript strict (#9) waits until after 0.40.0: no player sees it, and loose types give most of the safety.
 
