@@ -6,7 +6,7 @@ How the code of Steerage & Saloon is put together, as it is at 0.39.8. Search th
 
 ## The shape today
 
-A static browser game in plain JavaScript with no build step: about 1.2 MB of code in 37 scripts under `js/` (about 10,000 long lines; `chart-data.js` alone is 290 KB of generated chart), one style sheet and `index.html`. The tools in `tools/` run the same scripts headless in Node.
+A static browser game in plain JavaScript with no build step: about 1.2 MB of code in 37 scripts under `js/` (about 27,000 lines, formatted by Prettier at 120 columns since #3; `chart-data.js` alone is 290 KB of generated chart), one style sheet and `index.html`. The tools in `tools/` run the same scripts headless in Node.
 
 - **One global scope.** The scripts are not modules. `js/boot.js` loads them in the order of `BOOT_FILES`, and every script sees every other script's names. A script that uses a name must load after the one that defines it.
 - **No layering yet.** The rules (economy, simulation, rivals, markets) and the screen (panels, map, input) share that scope, and some rules files also draw. Splitting the core from the screen is #6; moving to ES modules is #5.
