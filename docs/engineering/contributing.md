@@ -28,7 +28,30 @@ These are the rules for the code **as it is** at 0.39.8: plain JavaScript in one
 
 ## Proving a change behaves the same
 
-The fingerprint (a seeded playthrough hashing the save at fixed points) is #4. Until it exists, a refactor or "should change nothing" fix is shown identical by running the harness on the same seeds before and after (`END=1922 node tools/harness.js careful 40`) and comparing the output, as 0.19.0 and 0.33.0 did.
+A refactor or "should change nothing" fix is proved with the fingerprint (#4):
+
+```
+npm run fingerprint -- <commit>
+```
+
+It plays the same fixed games on this checkout, uncommitted edits included, and on the commit named, and compares a hash of the save at the start of every month. Compare against the commit before your change (`HEAD` while the change is uncommitted, `HEAD~1` once it is committed). In a shallow clone, fetch that commit first (`git fetch --depth=50 origin main`).
+
+- **IDENTICAL**: the change plays exactly as that commit did. Put the line in the issue's closing comment.
+- **DIFFERENT**: for each game that differs, the first month and the parts of the save that differ there (`advisor seed 3  October 1913  in emerg`). A refactor must come out IDENTICAL. A change meant to alter behaviour should differ, and no earlier and no wider than it should: if it does, look there.
+- A side that stops with an error is reported with the line it failed on. If the older side fails because a refactor renamed a function the scripted owners call, the owners need the old name too, or the proof is the harness on the same seeds as before.
+
+| Run | What | Time on 2 cores |
+| --- | --- | --- |
+| `npm run fingerprint -- <commit>` | 7 owners x 3 seeds, January 1900 to the end of 1922 | about 5 minutes |
+| `... --quick` | one seed per owner, for a look while working; not the proof | about 30 seconds |
+| `... --full` | on to the end of 1945 | longer: run it as a long run (`vibe-process`, `modules/long-runs.md`) |
+| `... --seeds 5` | more seeds per owner | |
+
+What it plays: the harness's scripted owners (advisor, keen, office, careful, expander, undercutter) and `kept`, the careful owner with a benefactor who keeps the Line in cash, so every seed reaches the last year. Most of the others go bankrupt before the end, and the summary says how many games were still trading. Each side loads its own rule scripts (the `FILES` list in its own `tools/harness.js`); the owners and the dice are this checkout's on both sides.
+
+What it does not cover: anything outside the save (the advice on screen, the screen itself), branches none of the games reach (no ship was written off as a constructive total loss in the default games when this was built), and the browser. A change there needs its own check.
+
+Proved when built (#4): IDENTICAL against the commit before; a planted one-unit change in a rare branch (one more death recorded when a ship is lost, `js/emergency.js`, reached in 2 of the 21 games) came out DIFFERENT in exactly those two games, at the first monthly check after each loss, and only in `emerg`.
 
 ## Tools
 

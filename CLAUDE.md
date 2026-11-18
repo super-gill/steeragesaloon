@@ -6,7 +6,7 @@ Method: `super-gill/vibe-process` 0.1.0 (core, plus modules: `browser-game`, `ty
 
 ## What this is
 
-A real-time shipping line management game set from 1900, a static browser game in plain JavaScript (about 1.2 MB in 37 scripts sharing one global scope, no build step), with headless tools in Node. Parts today: `js/` (the game: rules and screen not yet split, see #6), `tools/` (the headless player, the harness and the checks), `css/`, `index.html`. How the code is organised: `docs/engineering/architecture.md`. Search it for the files you need; never read it whole. How the game works: `docs/design/systems.md`, the same way.
+A real-time shipping line management game set from 1900, a static browser game in plain JavaScript (about 1.2 MB in 37 scripts sharing one global scope, no build step), with headless tools in Node. Parts today: `js/` (the game: rules and screen not yet split, see #6), `tools/` (the headless player, the harness, the fingerprint and the checks), `css/`, `index.html`. How the code is organised: `docs/engineering/architecture.md`. Search it for the files you need; never read it whole. How the game works: `docs/design/systems.md`, the same way.
 
 ## Your role
 
@@ -42,7 +42,7 @@ Jason decides what the game is. He does not code: explain in plain words. When a
 **Start:** pull `main`. Check `in-progress` and label your issue. Read this file, your issue, and the design section it names. Search `architecture.md` for the files involved. Read nothing else up front.
 
 1. Post a short plan to Jason: files, approach, risks. Wait for an OK if it changes behaviour or breaks saves.
-2. Build. New behaviour comes with a check in its `tools/` script. For a refactor or "should change nothing" fix, prove it identical: the fingerprint once #4 builds it; until then the harness on the same seeds before and after (`contributing.md`, "Proving a change behaves the same").
+2. Build. New behaviour comes with a check in its `tools/` script. For a refactor or "should change nothing" fix, prove it identical with the fingerprint, `npm run fingerprint -- <commit>` (`contributing.md`, "Proving a change behaves the same").
 3. `npm run format` has been run, `node tools/lint.js` is clean and the checks for the systems touched pass (`docs/process/releasing.md`, "The checks"). There is no pre-push hook yet; give a push a 10 minute timeout.
 4. Update the docs the change touches (`contributing.md`, "Documentation"); changelog line under Unreleased if a player would notice.
 5. Close the issue with a comment: what changed, the commit, a new issue for anything left over.

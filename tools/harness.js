@@ -9,6 +9,8 @@ const fs = require('fs'),
   path = require('path'),
   vm = require('vm');
 const ROOT = path.join(__dirname, '..');
+/* The game's rule scripts, in load order: the boot list without the screen. tools/fingerprint.js reads this list from
+   each commit it compares, so keep it a plain array of names here. */
 const FILES = [
   'chart-data',
   'data',
@@ -39,11 +41,14 @@ const FILES = [
   'clock',
   'advice',
   'times',
-].map((f) => path.join(ROOT, 'js', f + '.js'));
-const SRC = FILES.map((f) => [f, fs.readFileSync(f, 'utf8')]).map(([f, s]) => [
-  f,
-  process.env.PATCH ? s.replace(/^const /gm, 'var ') : s,
-]);
+];
+const sources = (root, files) =>
+  files.map((f) => {
+    const file = path.join(root, 'js', f + '.js'),
+      s = fs.readFileSync(file, 'utf8');
+    return [file, process.env.PATCH ? s.replace(/^const /gm, 'var ') : s];
+  });
+const SRC = sources(ROOT, FILES);
 
 const PRELUDE = `
 Math.random=(function(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};})(SEED);
@@ -104,7 +109,9 @@ if(typeof PROT==='undefined'||PROT!=='0')H.warProt();
 };
 `;
 
-function runGame(strategy, seed) {
+/* Loads the rules headless with the dice fixed to the seed, and the scripted owners (H, STRATS) on top.
+   src: [file, text] pairs, this checkout's by default; tools/fingerprint.js passes another commit's. */
+function loadGame(seed, src = SRC) {
   const ctx = {
     console,
     PROT: process.env.PROT,
@@ -121,9 +128,14 @@ function runGame(strategy, seed) {
   };
   vm.createContext(ctx);
   vm.runInContext(PRELUDE.replace('SEED', String(seed * 7919 + 13)).split('const H=')[0], ctx);
-  for (const [f, s] of SRC) vm.runInContext(s, ctx, { filename: f });
+  for (const [f, s] of src) vm.runInContext(s, ctx, { filename: f });
   if (process.env.PATCH) vm.runInContext(process.env.PATCH, ctx); // e.g. PATCH='rollEmergency=()=>null' to switch a system off
   vm.runInContext(PRELUDE.slice(PRELUDE.indexOf('const H=')), ctx);
+  return ctx;
+}
+
+function runGame(strategy, seed) {
+  const ctx = loadGame(seed);
   return vm.runInContext(
     `(function(){
     newGame();UI.autoPause=false;UI.speed=1;UI.rev=0;
@@ -354,11 +366,14 @@ function report(strategy, n) {
         .join(' · '),
   );
 }
-const [, , only, nArg] = process.argv;
-const n = +nArg || 20;
-const t0 = Date.now();
-for (const s of only
-  ? [only]
-  : ['idle', 'cautious', 'careful', 'advisor', 'keen', 'expander', 'prudent', 'office', 'undercutter', 'liverpool'])
-  report(s, n);
-console.log(`\n(${((Date.now() - t0) / 1000).toFixed(1)}s)`);
+module.exports = { FILES, sources, loadGame };
+if (require.main === module) {
+  const [, , only, nArg] = process.argv;
+  const n = +nArg || 20;
+  const t0 = Date.now();
+  for (const s of only
+    ? [only]
+    : ['idle', 'cautious', 'careful', 'advisor', 'keen', 'expander', 'prudent', 'office', 'undercutter', 'liverpool'])
+    report(s, n);
+  console.log(`\n(${((Date.now() - t0) / 1000).toFixed(1)}s)`);
+}
