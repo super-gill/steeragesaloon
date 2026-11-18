@@ -9,7 +9,8 @@ These are the rules for the code **as it is** at 0.39.8: plain JavaScript in one
 ## Code
 
 - **Plain JavaScript scripts, not modules,** loaded in the order of `BOOT_FILES` in `js/boot.js` (until #5). A new file in `js/` goes into `BOOT_FILES` after everything it uses; `tools/lint.js` fails a file that is not loaded.
-- **No `//` comment in the middle of a line of code.** The lines are long, and a comment added mid-line silently swallows the code after it (it stopped the strikes and the 1912 disaster in 0.35.4, and rival dividends from 0.30.0 to 0.33.0). `tools/lint.js` finds them.
+- **Formatted by Prettier** (`.prettierrc.json`: 120 columns, single quotes, trailing commas, LF). Run `npm install` once, then `npm run format` before committing. A change that reformats many files goes in a commit of its own, with nothing else in it, and its hash goes in `.git-blame-ignore-revs` so `git blame` skips it (GitHub reads that file on its own; locally run `git config blame.ignoreRevsFile .git-blame-ignore-revs` once).
+- **No `//` comment in the middle of a line of code.** The lines used to run to hundreds of characters before #3, and a comment added mid-line silently swallows the code after it (it stopped the strikes and the 1912 disaster in 0.35.4, and rival dividends from 0.30.0 to 0.33.0). `tools/lint.js` finds them.
 - **Months by name:** `ym(year, month)`, never a bare number (architecture.md, "The calendar").
 - **Every tuning value is a named constant or data** in `js/data.js` or at the top of its system's file.
 - **The tools run the game's own scripts.** No test hooks inside the game: a headless runner sets its options through the game's own inputs, and the headless player's actions (`tools/play-lib.js`) do what the screen's buttons do and refuse what the screen would refuse.
@@ -20,7 +21,7 @@ These are the rules for the code **as it is** at 0.39.8: plain JavaScript in one
 
 ## Before pushing
 
-- `node tools/lint.js` is clean, and the checks for the systems you touched pass (`docs/process/releasing.md`, "The checks"). The whole suite before a release.
+- `npm run format:check` passes and `node tools/lint.js` is clean, and the checks for the systems you touched pass (`docs/process/releasing.md`, "The checks"). The whole suite before a release.
 - A build never writes a committed file (`dist/` is gitignored).
 - **Push** with `git fetch -q --depth=50 origin main && git rebase -q origin/main && git -c push.negotiate=true push -q origin HEAD:main`, with a 10 minute timeout.
 - There is no pre-push hook yet (#6). Run the checks yourself.
@@ -31,7 +32,7 @@ The fingerprint (a seeded playthrough hashing the save at fixed points) is #4. U
 
 ## Tools
 
-Today: `tools/lint.js` only. Prettier (#3), ES modules and Vite (#5), ESLint with the size rules, the layering check, the docs and version checks and the pre-push hook (#6), then TypeScript (#8, #9), on the settings in `vibe-process`, `modules/typescript.md`.
+Today: `tools/lint.js` and Prettier (#3). Next: ES modules and Vite (#5), ESLint with the size rules, the layering check, the docs and version checks and the pre-push hook (#6), then TypeScript (#8, #9), on the settings in `vibe-process`, `modules/typescript.md`.
 
 ## Commits
 

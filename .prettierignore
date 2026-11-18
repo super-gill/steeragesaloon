@@ -1,0 +1,9 @@
+# Prettier formats the code: js/, tools/ and css/ (#3).
+# The page: tools/build-single.py matches its loader lines by their exact text.
+index.html
+# Docs and notes are written by hand, not formatted.
+*.md
+# Build output and the test players' notes (both gitignored).
+dist/
+tools/play/
+package-lock.json

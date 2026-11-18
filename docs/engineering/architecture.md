@@ -11,7 +11,7 @@ A static browser game in plain JavaScript with no build step: about 1.2 MB of co
 - **One global scope.** The scripts are not modules. `js/boot.js` loads them in the order of `BOOT_FILES`, and every script sees every other script's names. A script that uses a name must load after the one that defines it.
 - **No layering yet.** The rules (economy, simulation, rivals, markets) and the screen (panels, map, input) share that scope, and some rules files also draw. Splitting the core from the screen is #6; moving to ES modules is #5.
 - **The state is one object,** `S`, made by `newGame()` and saved whole (`js/state.js`).
-- **No package.json, formatter or test runner yet.** The checks are the Node scripts in `tools/`, run one by one (`docs/engineering/contributing.md`, "Before pushing"). The tooling arrives with #2 to #6.
+- **A formatter, but no test runner yet.** `package.json` holds the tooling only, Prettier so far (#3); the game itself needs no install or build. The checks are the Node scripts in `tools/`, run one by one (`docs/engineering/contributing.md`, "Before pushing"). The rest of the tooling arrives with #5 and #6.
 
 ## Loading
 
@@ -86,6 +86,7 @@ All run from the repo root with Node (and Python for the bundler).
 | `node tools/warprofit.js [seeds]` | Keeps a fleet of mixed and cargo ships trading from 1911 to 1921 (default 4 seeds) and checks a trading ship's return on her 1913 worth year by year through the war and the boom, that Excess Profits Duty is charged, and that a ship sold in the 1920 boom pays duty on the gain |
 | `node tools/disasters.js [seeds]` | Plays a kept fleet from 1900 to 1945 (default 6 seeds): one great disaster in each decade from the 1920s, several kinds, the Line's ships hit in a minority; an isolation hospital slows sickness and shortens quarantine; every passenger ship has a surgeon |
 | `node tools/forecast.js [seeds]` | Forecasts every ship on her own line at five dates (1902 to 1928) and compares the next twelve months' takings and costs; checks the median of actual over forecast is within a fifth overall and a third by kind of ship |
+| `npm run format`, `npm run format:check` | Prettier (#3): formats, or checks the formatting of, everything except `index.html`, the Markdown and the gitignored folders (`.prettierignore`). Settings in `.prettierrc.json`: 120 columns, single quotes, trailing commas, LF. Needs `npm install` once. |
 | `node tools/lint.js` | Finds code hidden inside a `//` comment on a long line (a comment added mid-line swallows the code after it; it stopped the strikes and the 1912 disaster in 0.35.4). Run it before every release |
 | `tools/play-brief.md` | The brief given to test players (people or programs) for a test round: how to play through `tools/play.js` and what to record |
 | `node tools/play.js new|step|do|look <slot> ...` | Plays a real game a few months at a time from the command line, for test players (people or programs): the player's own controls as actions, a report each step, and read-only views. Saved to `tools/play/<slot>.json` between calls and loaded as the browser loads a save, so every step is also a save-and-reload test. `node tools/play.js look <slot> help` lists the actions and views. The actions are in `tools/play-lib.js` |

@@ -10,6 +10,7 @@ Every patch runs the whole suite and none ships until it passes. A milestone rel
 
 | Test | Command | Pass |
 | --- | --- | --- |
+| Format | `npm run format:check` | all files pass |
 | Lint | `node tools/lint.js` | clean |
 | Exploits | `node tools/exploits.js 3` | PASS |
 | Careful harness | `END=1922 node tools/harness.js careful 40` | 3 to 6 of 40 bankrupt |

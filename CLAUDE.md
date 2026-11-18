@@ -43,7 +43,7 @@ Jason decides what the game is. He does not code: explain in plain words. When a
 
 1. Post a short plan to Jason: files, approach, risks. Wait for an OK if it changes behaviour or breaks saves.
 2. Build. New behaviour comes with a check in its `tools/` script. For a refactor or "should change nothing" fix, prove it identical: the fingerprint once #4 builds it; until then the harness on the same seeds before and after (`contributing.md`, "Proving a change behaves the same").
-3. `node tools/lint.js` is clean and the checks for the systems touched pass (`docs/process/releasing.md`, "The checks"). There is no pre-push hook yet; give a push a 10 minute timeout.
+3. `npm run format` has been run, `node tools/lint.js` is clean and the checks for the systems touched pass (`docs/process/releasing.md`, "The checks"). There is no pre-push hook yet; give a push a 10 minute timeout.
 4. Update the docs the change touches (`contributing.md`, "Documentation"); changelog line under Unreleased if a player would notice.
 5. Close the issue with a comment: what changed, the commit, a new issue for anything left over.
 6. Give Jason the commit message.

@@ -1,0 +1,12 @@
+{
+  "name": "steeragesaloon",
+  "private": true,
+  "description": "Steerage & Saloon: the tooling only. The game needs no install or build.",
+  "scripts": {
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "prettier": "3.10.1"
+  }
+}

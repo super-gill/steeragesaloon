@@ -27,11 +27,11 @@ for (const f of fs.readdirSync(dir).filter(x => x.endsWith('.js') && x !== 'char
     }
   });
 }
-// the loader names the same version as the game, and loads every script in js/ (0.38.0)
+// the loader names the same version as the game, and loads every script in js/ (0.38.0); spaces around = allowed (#3)
 {const boot = fs.readFileSync(path.join(__dirname, '..', 'js', 'boot.js'), 'utf8'), data = fs.readFileSync(path.join(__dirname, '..', 'js', 'data.js'), 'utf8');
- const bv = (boot.match(/BOOT_VER='([^']+)'/) || [])[1], gv = (data.match(/GAME_VERSION='([^']+)'/) || [])[1];
+ const bv = (boot.match(/BOOT_VER\s*=\s*'([^']+)'/) || [])[1], gv = (data.match(/GAME_VERSION\s*=\s*'([^']+)'/) || [])[1];
  if (bv !== gv) { n++; console.log(`js/boot.js: BOOT_VER ${bv} does not match GAME_VERSION ${gv}`); }
- const listed = (boot.match(/BOOT_FILES=\[([^\]]*)\]/) || ['', ''])[1].match(/'([^']+)'/g).map(x => x.slice(1, -1));
+ const listed = (boot.match(/BOOT_FILES\s*=\s*\[([^\]]*)\]/) || ['', ''])[1].match(/'([^']+)'/g).map(x => x.slice(1, -1));
  for (const f of fs.readdirSync(path.join(__dirname, '..', 'js'))) { const k = f.replace(/\.js$/, ''); if (f.endsWith('.js') && k !== 'boot' && !listed.includes(k)) { n++; console.log(`js/${f} is not loaded by js/boot.js`); } }}
 console.log(n ? `${n} problem(s): code hidden in a comment, or the loader out of step` : 'clean');
 process.exit(n ? 1 : 0);
