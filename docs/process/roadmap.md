@@ -2,7 +2,7 @@
 
 Lifecycle: **living**
 
-What is built next, in order: milestones, and under each the issues in the order they are taken. Detail lives on the issues and design pages. The design chat keeps this order with Jason.
+What is built next, in order, towards the current milestone. The milestones themselves (0.40.0, then each era to 1.0.0) are defined in `docs/design/direction.md`, "V1". The numbered sections below are steps within the current milestone, and under each the issues in the order they are taken; a closed issue comes off the list. Detail lives on the issues and design pages. The design chat keeps this order with Jason.
 
 **Direction:** a real-time shipping line management game from 1900, in a world where the liner trade never declined ([direction.md](../design/direction.md)).
 
@@ -12,15 +12,14 @@ The order below was set by Build #1 from the old roadmap and the known-issues lo
 
 ## 1. Finish what is in flight
 
-The engineering passes, before any further game work. Formatting and the fingerprint come first so every later step can be proved.
+The engineering passes, before any further game work. Formatting (#3, done) and the fingerprint come first so every later step can be proved.
 
-1. #2 Get every test green on 0.39.8
-2. #3 Format all code with Prettier in one commit
-3. #4 Build the fingerprint tool
-4. #5 Move to ES modules with Vite, still JS
-5. #7 Host on GitHub Pages and retire the artifact (needs only #5, so a playable link comes before the big refactor)
-6. #6 Split the core from the screen and add the tooling
-7. #8 Convert to TypeScript, loose
+1. #4 Build the fingerprint tool
+2. #51 Commit a UI smoke and legacy-save check (before #52 to #54, which rely on old saves loading)
+3. #5 Move to ES modules with Vite, still JS
+4. #7 Host on GitHub Pages and retire the artifact (needs only #5, so a playable link comes before the big refactor)
+5. #6 Split the core from the screen and add the tooling
+6. #8 Convert to TypeScript, loose
 
 TypeScript strict (#9) waits until after 0.40.0: no player sees it, and loose types give most of the safety.
 
